@@ -580,7 +580,7 @@ def uniswap_top_pools(limit: int = Query(10, ge=1, le=50)):
 
 
 # ── AI Analyst (Powered by Google Gemini 3.5 Flash) ───────────────────────────
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class AIChatRequest(BaseModel):
@@ -603,6 +603,7 @@ def ai_analyst(payload: AIChatRequest):
     """Institutional financial analyst copilot powered by Gemini 3.5 Flash."""
     from backend.app.services.gemini_service import generate_gemini_analysis
     from backend.app.core.config import load_settings
+    from backend.app.risk.risk_engine import risk_from_interval
 
     settings = load_settings()
     ctx = dict(payload.context) if payload.context else {}
@@ -610,29 +611,41 @@ def ai_analyst(payload: AIChatRequest):
     # If context is incomplete, enrich it from latest model telemetry
     if not ctx.get("expected_return") or not ctx.get("last_close"):
         try:
-            pred = _predict_latest_http(
-                symbol=payload.symbol.upper(),
-                timeframe=payload.timeframe,  # type: ignore
-                horizon=payload.horizon,
-                force_update=False,
-            )
-            ctx["symbol"] = payload.symbol.upper()
-            ctx["horizon"] = payload.horizon
-            ctx["last_close"] = pred.last_close
-            ctx["expected_return"] = pred.expected_return
-            ctx["expected_price"] = pred.expected_price
-            ctx["p_up"] = pred.p_up
-            ctx["interval_low"] = pred.interval_low
-            ctx["interval_high"] = pred.interval_high
-            risk_obj = _get_risk_latest(
-                symbol=payload.symbol.upper(),
-                timeframe=payload.timeframe,  # type: ignore
-                horizon=payload.horizon,
-                force_update=False,
-            )
-            ctx["p_down_1"] = risk_obj.p_return_below_minus_1pct
-            ctx["p_down_2"] = risk_obj.p_return_below_minus_2pct
+            sym = payload.symbol.upper()
+            hz = _normalize_horizon_or_400(payload.horizon)
+            inferred_tf = _infer_timeframe_from_horizon(hz)
+            tf = _normalize_timeframe_or_400(payload.timeframe) if payload.timeframe else inferred_tf
+
+            pred = get_latest_prediction_or_none(symbol=sym, timeframe=tf, horizon=hz)
+            if pred is None:
+                pred = _predict_latest_http(
+                    symbol=sym,
+                    timeframe=tf,
+                    horizon=hz,
+                    model_version="mvp_v1",
+                    db_path=settings.data_db_path,
+                )
+
+            ctx["symbol"] = sym
+            ctx["horizon"] = hz
+            ctx["last_close"] = float(pred.last_close)
+            ctx["expected_return"] = float(pred.expected_return)
+            ctx["expected_price"] = float(pred.expected_price)
+            ctx["p_up"] = float(pred.p_up) if pred.p_up is not None else None
+            ctx["interval_low"] = float(pred.interval_low)
+            ctx["interval_high"] = float(pred.interval_high)
+
+            risk_res = risk_from_interval(interval_low=pred.interval_low, interval_high=pred.interval_high)
+            ctx["p_down_1"] = float(risk_res.p_return_below_minus_1pct)
+            ctx["p_down_2"] = float(risk_res.p_return_below_minus_2pct)
             ctx["advice_label"] = "Bullish" if pred.expected_return > 0 else "Bearish"
+            if pred.p_up is not None:
+                ctx["advice_reason"] = (
+                    f"Expected return {pred.expected_return * 100:+.2f}% with "
+                    f"{pred.p_up * 100:.1f}% upward probability."
+                )
+            else:
+                ctx["advice_reason"] = f"Expected return {pred.expected_return * 100:+.2f}%."
         except Exception as e:
             logger.warning("Could not automatically populate telemetry context: %s", e)
 
@@ -654,7 +667,7 @@ def ai_analyst(payload: AIChatRequest):
     # Fallback to local deterministic assistant
     try:
         from dashboard.assistant import answer_question
-        fallback_reply = answer_question(payload.question, ctx)
+        fallback_reply = answer_question(payload.question, ctx, use_gemini=False)
     except Exception:
         fallback_reply = (
             f"Outlook for {payload.symbol} ({payload.horizon}): "
