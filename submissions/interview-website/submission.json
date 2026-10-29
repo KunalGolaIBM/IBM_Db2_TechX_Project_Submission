@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "AI Interview Assistant",
+    "slug": "interview-website",
+    "short_description": "AI-powered interview preparation platform that evaluates candidate profiles against job descriptions and generates tailored interview reports.",
+    "category": "AI / RAG / Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/mg6129327-boop/interview-website"
+  },
+  "team": {
+    "name": "Interview Website Team",
+    "members": [
+      {
+        "name": "Mohd Gufran",
+        "github": "mg6129327-boop",
+        "email": "",
+        "role": "Full Stack & AI Integration"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker)",
+    "connector": "Db2-ready relational schema pattern / production migration path",
+    "features_used": [
+      "Relational Tables",
+      "Indexing",
+      "JSON / Document Storage",
+      "AI Report Generation"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["JavaScript", "Node.js", "React"],
+    "frameworks": ["Express", "Vite", "React", "Mongoose"],
+    "ai_models": ["Google Gemini 2.5 Flash Lite"]
+  }
+}
