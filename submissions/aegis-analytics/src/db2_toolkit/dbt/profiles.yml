@@ -1,0 +1,24 @@
+db2_aegis:
+  target: dev
+  outputs:
+    dev:
+      type: db2
+      host: "{{ env_var('DB2_HOSTNAME', 'localhost') }}"
+      port: "{{ env_var('DB2_PORT', '50000') | int }}"
+      database: "{{ env_var('DB2_DATABASE', 'BLUDB') }}"
+      schema: "{{ env_var('DB2_SCHEMA', 'DB2INST1') }}"
+      user: "{{ env_var('DB2_UID', 'db2inst1') }}"
+      password: "{{ env_var('DB2_PWD', 'your_secure_password') }}"
+      threads: 4
+      ssl: false
+    prod:
+      type: db2
+      host: "{{ env_var('DB2_HOSTNAME', 'dashdb-txn-sbox-yp-dal09-04.services.dal.bluemix.net') }}"
+      port: "{{ env_var('DB2_PORT', '50001') | int }}"
+      database: "{{ env_var('DB2_DATABASE', 'BLUDB') }}"
+      schema: "{{ env_var('DB2_SCHEMA', 'BLUADMIN') }}"
+      user: "{{ env_var('DB2_UID', 'bluadmin') }}"
+      password: "{{ env_var('DB2_PWD', 'prod_password') }}"
+      threads: 8
+      ssl: true
+

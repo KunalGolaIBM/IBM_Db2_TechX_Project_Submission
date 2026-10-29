@@ -1,0 +1,32 @@
+# 🏛️ IBM Db2 AI & Analytics Toolkit — Dependencies Manifest
+# Project: Aegis Analytics AI
+
+# ── Core IBM Db2 Database Driver ──────────────────────────────────────────────
+ibm_db>=3.2.0                    # Native C-level Db2 client driver and connection management
+# ibm-db-sa>=0.4.0               # SQLAlchemy adapter for IBM Db2 (optional)
+
+# ── SQL Dialect Transpilation ─────────────────────────────────────────────────
+sqlglot>=25.0.0                  # Cross-dialect SQL parser, AST analyzer, and Db2 transpiler
+
+# ── In-Database ELT Modeling ──────────────────────────────────────────────────
+dbt-core>=1.8.0                  # Data Build Tool core engine
+dbt-db2>=1.8.0                   # Official/community dbt adapter for IBM Db2 LUW / Cloud
+
+# ── Semantic Search & RAG Frameworks ─────────────────────────────────────────
+langchain>=0.3.0                 # LangChain orchestration framework
+langchain-community>=0.3.0       # LangChain community integrations
+llama-index-core>=0.11.0         # LlamaIndex core data framework
+haystack-ai>=2.5.0               # Deepset Haystack 2.x modular LLM framework
+
+# ── Autonomous Multi-Agent Systems ────────────────────────────────────────────
+crewai>=0.65.0                   # Multi-agent collaboration framework
+crewai-tools>=0.12.0             # Pre-built and custom toolkits for CrewAI
+
+# ── No-Code Visual Orchestration ──────────────────────────────────────────────
+# lfx-ibm>=0.1.0                 # Langflow IBM Db2 visual components extension
+
+# ── Web Framework & Validation ────────────────────────────────────────────────
+pydantic>=2.0.0                  # Data validation and settings management
+pydantic-settings>=2.0.0         # Environment settings parsing
+fastapi>=0.110.0                 # REST API endpoints
+
