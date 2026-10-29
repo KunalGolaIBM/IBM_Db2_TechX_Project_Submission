@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "KisanRakshak AI",
+    "slug": "kisanrakshak-ai",
+    "short_description": "AI-powered crop advisory and disease detection platform for small and marginal farmers using IBM Db2 and LLM-driven recommendations.",
+    "category": "AI / RAG / Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/anaskhan688700-create/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "KisanRakshak Team",
+    "members": [
+      {
+        "name": "Anas Khan",
+        "github": "anaskhan688700-create",
+        "email": "anaskhan688700@gmail.com",
+        "role": "Project Lead & AI / Db2 Integrator"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker)",
+    "connector": "ibm_db / Python",
+    "features_used": [
+      "Relational Tables",
+      "Indexing",
+      "JSON / Stored Metadata",
+      "Analytical Queries"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python"],
+    "frameworks": ["FastAPI", "LangChain"],
+    "ai_models": ["OpenAI GPT-4o mini", "Local fallback logic"]
+  }
+}
