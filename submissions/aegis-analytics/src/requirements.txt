@@ -1,0 +1,36 @@
+fastapi
+uvicorn[standard]
+streamlit
+pandas
+numpy
+scikit-learn
+lightgbm
+yfinance
+sqlalchemy
+pydantic
+pydantic-settings
+joblib
+python-dateutil
+tenacity
+apscheduler
+requests
+plotly
+
+# ── Phase 0: PostgreSQL & Migrations ──────────────────────────────────────────
+psycopg2-binary>=2.9.9          # Sync PostgreSQL driver (SQLAlchemy default)
+asyncpg>=0.29.0                 # Async PostgreSQL driver (optional future use)
+alembic>=1.13.0                 # Database migration management
+
+# ── Phase 1: Blockchain / Web3 ────────────────────────────────────────────────
+web3>=6.15.0                    # Ethereum/EVM interaction (Web3.py)
+eth-account>=0.10.0             # Wallet key management and transaction signing
+hexbytes>=0.3.0                 # Hex byte utilities used by web3
+
+# ── Phase 3: Crypto & DeFi Data ───────────────────────────────────────────────
+python-binance>=1.0.19          # Binance REST + WebSocket API client
+pycoingecko>=3.1.0              # CoinGecko market data API
+
+# ── General Utilities ─────────────────────────────────────────────────────────
+python-dotenv>=1.0.0            # .env file loading for environment variables
+httpx>=0.27.0                   # Async HTTP client for external API calls
+

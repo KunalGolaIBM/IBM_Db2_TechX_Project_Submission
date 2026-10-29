@@ -1,0 +1,20 @@
+{
+  "db2.connections": [
+    {
+      "name": "Aegis_Db2_Local",
+      "database": "BLUDB",
+      "hostname": "localhost",
+      "port": 50000,
+      "protocol": "TCPIP",
+      "uid": "db2inst1"
+    },
+    {
+      "name": "Aegis_Db2_Cloud",
+      "database": "BLUDB",
+      "hostname": "db2w-remote.databases.appdomain.cloud",
+      "port": 32459,
+      "protocol": "TCPIP",
+      "uid": "cloud_user"
+    }
+  ]
+}

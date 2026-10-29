@@ -1,37 +1,41 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "project": {
-    "title": "Project Title Here",
-    "slug": "project-slug-here",
-    "short_description": "Brief description of the project.",
-    "category": "AI / RAG / Data Engineering / Analytics",
-    "demo_url": "",
+    "title": "Aegis Analytics AI",
+    "slug": "aegis-analytics",
+    "short_description": "Enterprise Quantitative Market Intelligence, Calibrated ML Forecasting & Web3 Cryptographic Verification with IBM Db2 AI Toolkit.",
+    "category": "AI / Analytics / Quantitative Finance / Data Engineering",
+    "demo_url": "https://github.com/Uditrajput09/aegis-analytics-ai-system",
     "video_url": "",
-    "repo_url": ""
+    "repo_url": "https://github.com/Uditrajput09/aegis-analytics-ai-system"
   },
   "team": {
-    "name": "Team Name Here",
+    "name": "Aegis Systems",
     "members": [
       {
-        "name": "Full Name",
-        "github": "github-username",
-        "email": "user@example.com",
-        "role": "Backend / AI Developer"
+        "name": "Udit Rajput",
+        "github": "Uditrajput09",
+        "email": "uditrajput609@gmail.com",
+        "role": "Lead Quantitative Developer / Full Stack AI Engineer"
       }
     ]
   },
   "ibm_db2": {
-    "edition": "Db2 Community Edition (Docker)",
-    "connector": "ibm_db / SQLAlchemy",
+    "edition": "Db2 Community Edition (Docker) / Cloud / Zero-Docker Mock Sandbox",
+    "connector": "ibm_db / ibm_db_sa (SQLAlchemy) / LangChain / LlamaIndex / Haystack / CrewAI",
     "features_used": [
-      "Relational Tables",
-      "Indexing",
-      "Vector / JSON Search"
+      "Relational Tables & Hypertables",
+      "Time-Series Financial Ingestion",
+      "In-Database Risk Analytics (dbt)",
+      "Dialect Transpilation (SQLGlot)",
+      "Text-to-SQL Agents (LangChain & CrewAI)",
+      "Semantic Vector Search & RAG (LlamaIndex & Haystack)",
+      "Visual Workflow Pipelines (Langflow)"
     ]
   },
   "tech_stack": {
-    "languages": ["Python", "JavaScript"],
-    "frameworks": ["FastAPI", "React", "LangChain"],
-    "ai_models": ["watsonx.ai Granite", "OpenAI GPT-4o"]
+    "languages": ["Python", "TypeScript", "Solidity", "SQL"],
+    "frameworks": ["FastAPI", "React", "TailwindCSS", "LightGBM", "LangChain", "CrewAI", "LlamaIndex", "Haystack", "dbt", "Web3.py"],
+    "ai_models": ["Google Gemini 3.5 Flash", "LightGBM Dual-Head (Regression & Isotonic Classification)", "Conformal Prediction Bounds"]
   }
 }
