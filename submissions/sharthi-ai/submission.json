@@ -1,0 +1,37 @@
+{
+  "project_name": "Sharthi AI",
+  "project_slug": "sharthi-ai",
+  "project_title": "Sharthi AI: Db2-powered AI assistant for institutional insights",
+  "team_name": "Sharthi AI Team",
+  "team_members": [
+    {
+      "name": "Akash",
+      "email": "your-email@example.com",
+      "github": "@akash614214-dotcom",
+      "role": "Project Lead / Backend & Db2 Integration"
+    },
+    {
+      "name": "Contributor 2",
+      "email": "your-email@example.com",
+      "github": "@username",
+      "role": "AI / Frontend / Testing"
+    }
+  ],
+  "category": "AI + Database",
+  "technology_stack": [
+    "Python",
+    "IBM Db2",
+    "FastAPI",
+    "LangChain",
+    "Streamlit",
+    "SQLAlchemy"
+  ],
+  "description": "Sharthi AI is an AI-powered institutional assistance tool that allows users to ask natural-language questions and get actionable insights from IBM Db2 data.",
+  "problem_statement": "Educational data is often locked behind technical interfaces, making it difficult for students and faculty to access insights quickly.",
+  "solution_summary": "The project combines IBM Db2 with AI-powered natural language query handling to generate useful and understandable responses from structured academic data.",
+  "db2_integration": "Uses IBM Db2 tables for student, attendance, and course data with SQL-based queries and AI-driven summarization.",
+  "ai_integration": "Uses LLM-based question understanding and SQL generation to answer user prompts in natural language.",
+  "demo_url": "",
+  "video_url": "",
+  "status": "draft"
+}
