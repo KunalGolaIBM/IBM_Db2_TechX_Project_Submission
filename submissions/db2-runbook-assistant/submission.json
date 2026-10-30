@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Db2 Runbook Assistant",
+    "slug": "db2-runbook-assistant",
+    "short_description": "A RAG assistant that answers IT support questions from internal runbooks using IBM Db2 vector search, Haystack and IBM Granite models running locally with Ollama.",
+    "category": "AI / RAG",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/KashishRajawat/ProjectDB2"
+  },
+  "team": {
+    "name": "Kashish Rajawat",
+    "members": [
+      {
+        "name": "Kashish Rajawat",
+        "github": "KashishRajawat",
+        "email": "kashishrajawat2005@gmail.com",
+        "role": "Backend / AI Developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1.2.0 (Docker)",
+    "connector": "ibm-db-haystack (Haystack IBMDb2DocumentStore)",
+    "features_used": [
+      "Vector Search",
+      "Relational Tables"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python"],
+    "frameworks": ["Haystack"],
+    "ai_models": ["IBM Granite Embedding 278M", "IBM Granite 3.3 8B"]
+  }
+}
