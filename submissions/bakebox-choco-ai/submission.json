@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "BAKEBOX-AI: AUTONOMOUS AI Bakery Management AND CUSTOMER SUPPORT",
+    "slug": "bakebox-choco-ai",
+    "short_description": "Autonomous AI Bakery Management System and Intelligent Customer Support Platform powered by CHOCO AI — leveraging IBM Db2 hybrid database (relational + native vector search via DB2LlamaVS), LlamaIndex Advanced RAG with Reciprocal Rank Fusion (RRF), and real-time agentic tool calling for 24/7 customer engagement.",
+    "category": "AI / RAG / Data Engineering / Analytics",
+    "demo_url": "http://127.0.0.1:3000",
+    "video_url": "https://youtu.be/MvH82OEsDUA?si=nVuy2awvxKJAaZkV",
+    "linkedin_post": "https://lnkd.in/p/gtXgu6wq",
+    "repo_url": "https://github.com/AYUSHDHANGAR/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "BAKEBOX AI Team",
+    "members": [
+      {
+        "name": "Ayush Dhangar",
+        "github": "AYUSHDHANGAR",
+        "email": "ayushdhangar12345@gmail.com",
+        "role": "BTech CSE-AIML, 4th Year | Ex-Intern Pantech Prolab Pvt Ltd | Full-Stack & AI Systems Architect"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker / VS Code Extension - IBMDB201)",
+    "connector": "ibm_db / ibm_db_dbi / llama-index-vector-stores-db2 (DB2LlamaVS)",
+    "features_used": [
+      "Native VECTOR Column via DB2LlamaVS",
+      "In-engine Cosine Vector Search via DB2LlamaVS",
+      "Relational Transactional Tables (BB_ORDERS, BB_ORDER_ITEMS)",
+      "Hybrid Reciprocal Rank Fusion (RRF: k=60)",
+      "Hybrid Database Structure (Structured Tables + Unstructured PDFs)"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "JavaScript"],
+    "frameworks": ["LlamaIndex", "llama-index-vector-stores-db2", "FastAPI", "React 18", "Vite", "Tailwind CSS"],
+    "ai_models": ["BAAI/bge-large (Hugging Face Embeddings)", "Gemini 3.8 Flash (LLM Engine)"]
+  }
+}
