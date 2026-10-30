@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: surplussync
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    disk:
+      name: surplussync-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: /api
+      - key: SURPLUSSYNC_DB_PATH
+        value: /var/data/surplussync.db
+      - key: SURPLUSSYNC_COOKIE_SECURE
+        value: "true"
+      - key: SURPLUSSYNC_DEV_EMAIL_VERIFICATION
+        value: "0"
+      - key: SURPLUSSYNC_DEV_RESET_TOKEN
+        value: "0"
+      - key: SURPLUSSYNC_PRESENTATION_DEMO_ENABLED
+        value: "false"
+      - key: SURPLUSSYNC_PRESENTATION_DEMO_EMAIL
+        value: tournamentgaming07@gmail.com
+      - key: SURPLUSSYNC_PRESENTATION_DEMO_PASSWORD
+        sync: false
+      - key: SURPLUSSYNC_FRONTEND_URL
+        fromService:
+          type: web
+          name: surplussync
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: SURPLUSSYNC_CORS_ORIGINS
+        fromService:
+          type: web
+          name: surplussync
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: SURPLUSSYNC_SMTP_HOST
+        sync: false
+      - key: SURPLUSSYNC_SMTP_PORT
+        value: "587"
+      - key: SURPLUSSYNC_SMTP_FROM
+        sync: false
+      - key: SURPLUSSYNC_SMTP_USERNAME
+        sync: false
+      - key: SURPLUSSYNC_SMTP_PASSWORD
+        sync: false
