@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "KaamNearby",
+    "slug": "kaamnearby",
+    "short_description": "A local marketplace for connecting customers with nearby skilled workers and managing booking and price negotiation.",
+    "category": "Local Services / Marketplace",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": ""
+  },
+  "team": {
+    "name": "KaamNearby Team",
+    "members": [
+      {
+        "name": "Ashfaq Khan",
+        "github": "ashpaqkhan068-hub",
+        "email": "ashpaqkhan068@gmail.com",
+        "role": "Project Lead / Backend Developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Not currently used in this prototype",
+    "connector": "SQLite (local prototype)",
+    "features_used": [
+      "Local service data storage",
+      "Booking records",
+      "Price negotiation workflow",
+      "Worker availability tracking"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "HTML", "CSS", "JavaScript"],
+    "frameworks": ["Flask"],
+    "ai_models": []
+  }
+}
