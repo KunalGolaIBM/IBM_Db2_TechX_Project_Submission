@@ -1,0 +1,14 @@
+{
+  "project_name": "RASA AI",
+  "project_slug": "rasa-ai",
+  "description": "AI-assisted audition analysis and casting intelligence platform",
+  "github": " https://github.com/AdityaSrivastava8/Db2_Hack_2026",
+  "demo": "https://db2hack2026-9gfducsfracrhhqecjey2j.streamlit.app/",
+  "team": [
+    {
+      "name": "Aditya Srivastava",
+      "github": "AdityaSrivastava8",
+      "role": "Developer"
+    }
+  ]
+}
