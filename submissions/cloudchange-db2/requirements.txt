@@ -1,0 +1,21 @@
+# CloudChange with IBM Db2 Backend Dependencies
+
+# Official IBM Db2 Driver
+ibm_db>=3.2.0
+
+# API and Framework
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+
+# Settings and Validation
+pydantic>=2.6.0
+pydantic-settings>=2.0.0
+
+# AWS SDK (Evidence Collector and Verification)
+boto3>=1.34.0
+
+# Testing and HTTP Client
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+httpx>=0.27.0
+

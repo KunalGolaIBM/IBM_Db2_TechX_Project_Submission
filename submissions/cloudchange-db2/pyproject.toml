@@ -1,0 +1,10 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+filterwarnings = [
+    "ignore:Module already imported so cannot be rewritten; _jac_finder:pytest.PytestAssertRewriteWarning"
+]
+markers = [
+    "live_db2: marks tests requiring a live IBM Db2 instance (skipped by default in offline CI/mock suites)"
+]
+
