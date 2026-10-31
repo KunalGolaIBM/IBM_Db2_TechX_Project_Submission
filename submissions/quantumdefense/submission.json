@@ -1,0 +1,38 @@
+{
+  "project": {
+    "title": "QuantumDefense - Intelligent Cybersecurity System",
+    "slug": "quantumdefense",
+    "short_description": "A cybersecurity monitoring prototype using rule-based detection and Isolation Forest anomaly detection, with SQLite storage and an IBM Db2 integration module.",
+    "category": "AI / Cybersecurity / Data Engineering",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/KunalGolaIBM/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "QuantumDefense Team",
+    "members": [
+      {
+        "name": "NAGARAJ NAIK",
+        "github": "M1551D1A",
+        "email": "naiknagaraj374@gmail.com",
+        "role": "Project Developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 - live connection pending",
+    "connector": "ibm_db",
+    "features_used": [
+      "Db2 connection configuration",
+      "Relational database schema",
+      "Security event storage module",
+      "Security alert storage module",
+      "ML analysis result storage module"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "HTML", "CSS"],
+    "frameworks": ["Flask", "scikit-learn"],
+    "ai_models": ["Isolation Forest"]
+  }
+}
