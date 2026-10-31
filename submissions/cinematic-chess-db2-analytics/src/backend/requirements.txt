@@ -1,0 +1,7 @@
+fastapi>=0.115,<1
+ibm_db>=3.2,<4
+pydantic>=2.8,<3
+python-chess>=1.999,<2
+python-dotenv>=1.0,<2
+uvicorn[standard]>=0.30,<1
+

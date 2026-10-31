@@ -1,0 +1,5 @@
+-r requirements.txt
+langchain-core>=0.3,<1
+langchain-ollama>=0.2,<1
+langchain-openai>=0.3,<1
+
