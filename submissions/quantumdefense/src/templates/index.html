@@ -1,0 +1,567 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>QuantumDefense | Security Dashboard</title>
+
+    <style>
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #101827;
+            color: white;
+        }
+
+        header {
+            padding: 22px 35px;
+            background: #17243a;
+            border-bottom: 1px solid #34445d;
+        }
+
+        header h1 {
+            margin: 0;
+            color: #38bdf8;
+            font-size: 32px;
+        }
+
+        header p {
+            font-size: 18px;
+        }
+
+        main {
+            padding: 25px 35px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(180px, 1fr));
+            gap: 18px;
+        }
+
+        .card,
+        .panel {
+            background: #1c2a40;
+            padding: 22px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            color: #38bdf8;
+            font-size: 30px;
+        }
+
+        input,
+        select,
+        button {
+            padding: 12px;
+            margin: 7px 0;
+            border-radius: 6px;
+            border: none;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #0284c7;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #0369a1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #34445d;
+        }
+
+        .Critical {
+            color: #fb7185;
+        }
+
+        .High {
+            color: #f97316;
+        }
+
+        .Medium {
+            color: #facc15;
+        }
+
+        .Low {
+            color: #4ade80;
+        }
+
+        .message {
+            padding: 12px;
+            background: #14532d;
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+
+        .error {
+            background: #7f1d1d;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        /* ML Analysis Design */
+
+        .ml-panel {
+            border-left: 5px solid #38bdf8;
+        }
+
+        .ml-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+        }
+
+        .ml-result {
+            background: #17243a;
+            padding: 18px;
+            border-radius: 8px;
+        }
+
+        .ml-result h3 {
+            color: #38bdf8;
+            font-size: 17px;
+        }
+
+        .normal {
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        .anomaly {
+            color: #fb7185;
+            font-weight: bold;
+        }
+
+        .info {
+            color: #cbd5e1;
+            font-size: 13px;
+            margin-top: 18px;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<header>
+
+    <h1>QUANTUMDEFENSE</h1>
+
+    <p>Intelligent Cybersecurity Monitoring System</p>
+
+</header>
+
+
+<main>
+
+    <h2>Security Overview</h2>
+
+
+    <!-- Flash Messages -->
+
+    {% for category, message in
+        get_flashed_messages(with_categories=true) %}
+
+        <div class="message
+            {{ 'error' if category == 'error' else '' }}">
+
+            {{ message }}
+
+        </div>
+
+    {% endfor %}
+
+
+    <!-- Security Statistics -->
+
+    <section class="cards">
+
+        <div class="card">
+
+            <p>Total Security Events</p>
+
+            <h2>{{ total_events }}</h2>
+
+        </div>
+
+
+        <div class="card">
+
+            <p>Total Security Alerts</p>
+
+            <h2>{{ total_alerts }}</h2>
+
+        </div>
+
+
+        <div class="card">
+
+            <p>Critical Events</p>
+
+            <h2>{{ critical_alerts }}</h2>
+
+        </div>
+
+    </section>
+
+
+    <!-- ML Analysis Results -->
+
+    {% if latest_analysis %}
+
+    <section class="panel ml-panel">
+
+        <h2>AI / ML Analysis Results</h2>
+
+        <p>
+            <strong>Event Type:</strong>
+            {{ latest_analysis.event_type }}
+        </p>
+
+        <p>
+            <strong>Source IP:</strong>
+            {{ latest_analysis.source_ip }}
+        </p>
+
+
+        <div class="ml-grid">
+
+
+            <!-- Rule Detection -->
+
+            <div class="ml-result">
+
+                <h3>Rule-Based Detection</h3>
+
+                <p class="{{ latest_analysis.rule_severity }}">
+
+                    {{ latest_analysis.rule_severity }}
+
+                </p>
+
+                <p>
+                    {% if latest_analysis.rule_detected %}
+                        Suspicious event detected
+                    {% else %}
+                        No known suspicious event detected
+                    {% endif %}
+                </p>
+
+            </div>
+
+
+            <!-- ML Detection -->
+
+            <div class="ml-result">
+
+                <h3>Machine Learning Detection</h3>
+
+                {% if latest_analysis.anomaly_detected %}
+
+                    <p class="anomaly">
+                        Anomaly Detected
+                    </p>
+
+                {% else %}
+
+                    <p class="normal">
+                        Normal Activity
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+
+            <!-- Anomaly Score -->
+
+            <div class="ml-result">
+
+                <h3>Anomaly Score</h3>
+
+                <p>
+                    {{ latest_analysis.anomaly_score }}
+                </p>
+
+            </div>
+
+
+            <!-- ML Algorithm -->
+
+            <div class="ml-result">
+
+                <h3>Detection Algorithm</h3>
+
+                <p>
+                    {{ latest_analysis.method }}
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <p class="info">
+
+            Note: This prototype uses illustrative simulated
+            network metrics. It does not analyse live network traffic.
+
+        </p>
+
+    </section>
+
+    {% endif %}
+
+
+    <!-- Simulate Security Event -->
+
+    <section class="panel">
+
+        <h2>Simulate Security Event</h2>
+
+        <form action="/simulate" method="POST">
+
+            <label>Event Type</label>
+
+            <select name="event_type" required>
+
+                <option value="normal_activity">
+                    Normal Activity
+                </option>
+
+                <option value="brute_force">
+                    Brute Force
+                </option>
+
+                <option value="sql_injection">
+                    SQL Injection
+                </option>
+
+                <option value="port_scan">
+                    Port Scan
+                </option>
+
+                <option value="unauthorized_access">
+                    Unauthorized Access
+                </option>
+
+                <option value="malware_detected">
+                    Malware Detected
+                </option>
+
+            </select>
+
+
+            <label>Source IP Address</label>
+
+            <input
+                type="text"
+                name="source_ip"
+                placeholder="192.168.1.10"
+                required
+            >
+
+
+            <label>Description</label>
+
+            <input
+                type="text"
+                name="description"
+                placeholder="Enter event description"
+            >
+
+
+            <button type="submit">
+                Analyse Security Event
+            </button>
+
+        </form>
+
+    </section>
+
+    
+<!-- ML Analysis History -->
+
+<section class="panel">
+
+    <h2>Machine Learning Analysis History</h2>
+
+    <div class="table-wrap">
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Analysis ID</th>
+                    <th>Event ID</th>
+                    <th>Event Type</th>
+                    <th>Source IP</th>
+                    <th>Detection Result</th>
+                    <th>Anomaly Score</th>
+                    <th>Algorithm</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for item in ml_results %}
+
+                <tr>
+                    <td>{{ item.id }}</td>
+                    <td>{{ item.event_id }}</td>
+                    <td>{{ item.event_type }}</td>
+                    <td>{{ item.source_ip }}</td>
+
+                    <td>
+                        {% if item.anomaly_detected %}
+                            <span class="anomaly">Anomaly</span>
+                        {% else %}
+                            <span class="normal">Normal</span>
+                        {% endif %}
+                    </td>
+
+                    <td>{{ "%.4f"|format(item.anomaly_score) }}</td>
+                    <td>{{ item.algorithm }}</td>
+                    <td>{{ item.created_at }}</td>
+                </tr>
+
+                {% else %}
+
+                <tr>
+                    <td colspan="8">
+                        No ML analysis records available.
+                    </td>
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</section>
+
+
+    <!-- Security Event History -->
+
+    <section class="panel">
+
+        <h2>Security Event History</h2>
+
+        <div class="table-wrap">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+                        <th>ID</th>
+                        <th>Event</th>
+                        <th>Source IP</th>
+                        <th>Severity</th>
+                        <th>Description</th>
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for event in events %}
+
+                    <tr>
+
+                        <td>{{ event.id }}</td>
+
+                        <td>{{ event.event_type }}</td>
+
+                        <td>{{ event.source_ip }}</td>
+
+                        <td class="{{ event.severity }}">
+                            {{ event.severity }}
+                        </td>
+
+                        <td>{{ event.description }}</td>
+
+                    </tr>
+
+                    {% else %}
+
+                    <tr>
+
+                        <td colspan="5">
+                            No security events available.
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+
+    <!-- Security Alerts -->
+
+    <section class="panel">
+
+        <h2>Security Alerts</h2>
+
+        {% for alert in alerts %}
+
+            <p class="Critical">
+
+                Alert #{{ alert.id }}:
+                {{ alert.alert_message }}
+
+            </p>
+
+        {% else %}
+
+            <p>No security alerts available.</p>
+
+        {% endfor %}
+
+    </section>
+
+
+</main>
+
+</body>
+
+</html>
