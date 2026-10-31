@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}History & Saved Records — CodeFix AI{% endblock %}
+
+{% block content %}
+<div class="history-container">
+    <!-- History Header -->
+    <div class="history-page-header">
+        <div class="header-left">
+            <h2><i class="fa-solid fa-clock-rotate-left"></i> Request & Session History</h2>
+            <p class="history-subtitle">
+                Saved coding sessions, AI fixes, and refactoring records backed by IBM Db2.
+            </p>
+        </div>
+        <div class="header-right">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                <i class="fa-solid fa-plus"></i> New Request
+            </a>
+        </div>
+    </div>
+
+    <!-- Db2 Status & Setup Banner -->
+    {% if not config.is_db2_configured() %}
+    <div class="alert-banner alert-warning">
+        <div class="alert-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="alert-body">
+            <strong>IBM Db2 Setup Mode Active</strong>
+            <p>
+                IBM Db2 connection parameters (<code>DB2_HOSTNAME</code>, <code>DB2_UID</code>, <code>DB2_PWD</code>) are not yet configured in your <code>.env</code> file.
+                In this development mode, history queries will demonstrate the interface, but persistent storage requires active IBM Db2 credentials.
+            </p>
+            <div class="banner-actions">
+                <button class="btn btn-sm btn-outline" onclick="showInfoModal()">
+                    <i class="fa-solid fa-gear"></i> View Db2 Configuration Guide
+                </button>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert-banner alert-success">
+        <div class="alert-icon"><i class="fa-solid fa-circle-check"></i></div>
+        <div class="alert-body">
+            <strong>Connected to IBM Db2 Instance</strong>
+            <p>
+                Database: <code>{{ config.DB2_DATABASE }}</code> on <code>{{ config.DB2_HOSTNAME }}:{{ config.DB2_PORT }}</code>. All queries are executed using parameterized SQL statements via the official <code>ibm_db</code> driver.
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Filter & Search Toolbar -->
+    <div class="history-toolbar">
+        <div class="toolbar-filters">
+            <div class="filter-item">
+                <label for="filter-mode"><i class="fa-solid fa-sliders"></i> Mode:</label>
+                <select id="filter-mode" class="form-select-sm" onchange="filterHistory()">
+                    <option value="all">All Modes</option>
+                    <option value="write">Write Code</option>
+                    <option value="debug">Debug Code</option>
+                    <option value="improve">Improve Code</option>
+                    <option value="explain">Explain Code</option>
+                </select>
+            </div>
+
+            <div class="filter-item">
+                <label for="filter-lang"><i class="fa-solid fa-code"></i> Language:</label>
+                <select id="filter-lang" class="form-select-sm" onchange="filterHistory()">
+                    <option value="all">All Languages</option>
+                    <option value="python">Python</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="java">Java</option>
+                    <option value="cpp">C++</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="toolbar-search">
+            <div class="search-input-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="history-search" class="form-control-sm" placeholder="Search prompts..." oninput="filterHistory()">
+            </div>
+        </div>
+    </div>
+
+    <!-- History Records List -->
+    <div class="history-list" id="history-list-container">
+        {% if records and records|length > 0 %}
+            {% for item in records %}
+            <div class="history-card" data-mode="{{ item.mode }}" data-lang="{{ item.language }}" id="record-card-{{ item.id }}">
+                <div class="history-card-header">
+                    <div class="badges-row">
+                        <span class="badge badge-mode">{{ item.mode|upper }}</span>
+                        <span class="badge badge-lang">{{ item.language }}</span>
+                        <span class="badge badge-model">{{ item.model_name }}</span>
+                    </div>
+                    <div class="record-date">
+                        <i class="fa-regular fa-clock"></i> {{ item.created_at }}
+                    </div>
+                </div>
+
+                <div class="history-card-prompt">
+                    <strong>Prompt:</strong> {{ item.user_prompt|truncate(140) }}
+                </div>
+
+                {% if item.generated_code %}
+                <div class="history-card-code-preview">
+                    <pre><code class="language-{{ item.language }}">{{ item.generated_code|truncate(180) }}</code></pre>
+                </div>
+                {% endif %}
+
+                <div class="history-card-footer">
+                    <div class="session-tag">
+                        <i class="fa-solid fa-hashtag"></i> Session: <code>{{ item.session_id|truncate(12) }}</code>
+                    </div>
+                    <div class="card-actions">
+                        <a href="{{ url_for('view_history_record', record_id=item.id) }}" class="btn btn-sm btn-outline">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
+                        </a>
+                        <button class="btn btn-sm btn-outline" onclick="copySnippetText({{ item.generated_code|tojson }})">
+                            <i class="fa-regular fa-copy"></i> Copy
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteHistoryItem('{{ item.id }}')">
+                            <i class="fa-solid fa-trash-can"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-history-state" id="empty-history-view">
+                <div class="empty-icon"><i class="fa-solid fa-database"></i></div>
+                <h3>No History Records Saved</h3>
+                <p>
+                    {% if not config.is_db2_configured() %}
+                        Configure IBM Db2 credentials in <code>.env</code> to enable automatic database recording.
+                    {% else %}
+                        No requests have been executed in this session yet.
+                    {% endif %}
+                </p>
+                <a href="{{ url_for('index') }}" class="btn btn-primary mt-3">
+                    <i class="fa-solid fa-terminal"></i> Go to Workspace
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

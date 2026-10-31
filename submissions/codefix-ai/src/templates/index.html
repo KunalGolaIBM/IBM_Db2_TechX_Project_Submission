@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}Workspace — CodeFix AI Coding Agent{% endblock %}
+
+{% block content %}
+<div class="workspace-container">
+    <!-- Workspace Control Bar -->
+    <div class="workspace-header">
+        <div class="mode-tabs" role="tablist">
+            <button class="mode-tab active" data-mode="write" role="tab" aria-selected="true" id="tab-write">
+                <i class="fa-solid fa-pen-nib"></i>
+                <span>Write Code</span>
+            </button>
+            <button class="mode-tab" data-mode="debug" role="tab" aria-selected="false" id="tab-debug">
+                <i class="fa-solid fa-bug"></i>
+                <span>Debug Code</span>
+            </button>
+            <button class="mode-tab" data-mode="improve" role="tab" aria-selected="false" id="tab-improve">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>Improve Code</span>
+            </button>
+            <button class="mode-tab" data-mode="explain" role="tab" aria-selected="false" id="tab-explain">
+                <i class="fa-solid fa-book-open"></i>
+                <span>Explain Code</span>
+            </button>
+        </div>
+
+        <div class="workspace-meta-controls">
+            <div class="language-select-wrapper">
+                <label for="language-select"><i class="fa-solid fa-code"></i> Language:</label>
+                <select id="language-select" class="form-select">
+                    <option value="python" selected>Python</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="java">Java</option>
+                    <option value="cpp">C++</option>
+                </select>
+            </div>
+
+            <div class="preset-selector-wrapper">
+                <select id="sample-preset-select" class="form-select-sm" onchange="loadPresetExample(this.value)">
+                    <option value="">⚡ Load Sample Prompt...</option>
+                    <option value="calc">Write: Python Calculator</option>
+                    <option value="syntax_bug">Debug: Python Syntax & Logic Bug</option>
+                    <option value="refactor">Improve: Python List Filter Optimization</option>
+                    <option value="explain_quick">Explain: Recursive Fibonacci</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dual-Pane Workspace Grid -->
+    <div class="workspace-grid">
+        <!-- Left Pane: Input Controls -->
+        <section class="pane input-pane" aria-label="Input Configuration">
+            <div class="pane-header">
+                <div class="pane-title">
+                    <i class="fa-solid fa-terminal"></i>
+                    <span id="input-pane-heading">Task Prompt & Requirements</span>
+                </div>
+                <div class="char-count" id="char-counter">0 / {{ config.MAX_INPUT_CHARS }}</div>
+            </div>
+
+            <form id="codefix-form" onsubmit="handleFormSubmit(event)">
+                <input type="hidden" id="current-mode" name="mode" value="write">
+                <input type="hidden" id="session-id" name="session_id" value="{{ session_id }}">
+
+                <!-- Prompt Input Field -->
+                <div class="form-group" id="group-prompt">
+                    <label for="prompt-input" class="form-label">
+                        <span id="prompt-label-text">Task Description</span>
+                        <span class="required-star">*</span>
+                    </label>
+                    <textarea 
+                        id="prompt-input" 
+                        name="prompt" 
+                        class="form-control code-textarea" 
+                        rows="4" 
+                        placeholder="Describe what you want the AI to create, e.g.: 'Create a Python calculator using functions that supports addition, subtraction, multiplication, and division.'"
+                        required
+                    ></textarea>
+                </div>
+
+                <!-- Source Code Input Field (For Debug, Improve, Explain) -->
+                <div class="form-group hidden" id="group-code">
+                    <div class="label-row">
+                        <label for="code-input" class="form-label">
+                            <span id="code-label-text">Existing Source Code</span>
+                            <span class="required-star" id="code-required-star">*</span>
+                        </label>
+                        <button type="button" class="btn-text-sm" onclick="clearCodeField()">
+                            <i class="fa-solid fa-eraser"></i> Clear Code
+                        </button>
+                    </div>
+                    <textarea 
+                        id="code-input" 
+                        name="code" 
+                        class="form-control code-editor" 
+                        rows="8" 
+                        placeholder="Paste your source code here..."
+                        spellcheck="false"
+                    ></textarea>
+                </div>
+
+                <!-- Error Message / Traceback Field (Only for Debug mode) -->
+                <div class="form-group hidden" id="group-error">
+                    <label for="error-input" class="form-label">
+                        <span>Error Message / Traceback / Unexpected Behavior</span>
+                        <span class="optional-badge">Optional but recommended</span>
+                    </label>
+                    <textarea 
+                        id="error-input" 
+                        name="error_message" 
+                        class="form-control error-textarea" 
+                        rows="3" 
+                        placeholder="Paste terminal traceback, error message, or describe what went wrong..."
+                        spellcheck="false"
+                    ></textarea>
+                </div>
+
+                <!-- Action Controls -->
+                <div class="form-actions">
+                    <button type="submit" id="btn-submit" class="btn btn-primary">
+                        <i class="fa-solid fa-bolt" id="btn-submit-icon"></i>
+                        <span id="btn-submit-text">Generate Code</span>
+                    </button>
+                    
+                    <button type="button" id="btn-ast-check" class="btn btn-outline-info hidden" onclick="runStaticCheckOnly()">
+                        <i class="fa-solid fa-microscope"></i>
+                        <span>Static AST Check Only</span>
+                    </button>
+
+                    <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span>Clear</span>
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Quick Feature Tips Footer -->
+            <div class="pane-footer-tips">
+                <span class="tip-badge"><i class="fa-solid fa-keyboard"></i> Tab key supported</span>
+                <span class="tip-badge"><i class="fa-solid fa-lock"></i> No server execution (Static AST only)</span>
+            </div>
+        </section>
+
+        <!-- Right Pane: Results & Output -->
+        <section class="pane output-pane" aria-label="Agent Results">
+            <!-- Loading State View -->
+            <div id="output-loading" class="output-loading-card hidden">
+                <div class="spinner-orbit">
+                    <div class="spinner-ring"></div>
+                    <i class="fa-solid fa-code-merge spinner-icon"></i>
+                </div>
+                <h4 id="loading-title">Agent Processing</h4>
+                <p id="loading-subtitle">Executing static diagnostics and invoking Ollama local model...</p>
+                <div class="loading-progress-bar">
+                    <div class="progress-bar-fill"></div>
+                </div>
+            </div>
+
+            <!-- Empty / Default State View -->
+            <div id="output-empty" class="output-empty-card">
+                <div class="empty-icon-wrap">
+                    <i class="fa-solid fa-laptop-code"></i>
+                </div>
+                <h3>Welcome to CodeFix AI Workspace</h3>
+                <p class="empty-subtext">
+                    Select a mode above, describe your programming problem or paste code, and generate intelligent, well-structured solutions.
+                </p>
+
+                <div class="feature-guide-grid">
+                    <div class="guide-card">
+                        <div class="guide-icon"><i class="fa-solid fa-pen-nib"></i></div>
+                        <h5>Write Code</h5>
+                        <p>Generate clean, modular code with functional explanations.</p>
+                    </div>
+                    <div class="guide-card">
+                        <div class="guide-icon"><i class="fa-solid fa-bug"></i></div>
+                        <h5>Debug Code</h5>
+                        <p>AST static checks + AI root-cause diagnostic & fix.</p>
+                    </div>
+                    <div class="guide-card">
+                        <div class="guide-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                        <h5>Improve Code</h5>
+                        <p>Refactor for readability, maintainability, and efficiency.</p>
+                    </div>
+                    <div class="guide-card">
+                        <div class="guide-icon"><i class="fa-solid fa-book-open"></i></div>
+                        <h5>Explain Code</h5>
+                        <p>Deconstruct algorithms, step-by-step logic, and complexity.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Populated Results Container -->
+            <div id="output-result" class="output-result-container hidden">
+                <!-- Result Toolbar -->
+                <div class="result-toolbar">
+                    <div class="result-tags">
+                        <span class="badge badge-mode" id="res-mode-badge">WRITE</span>
+                        <span class="badge badge-lang" id="res-lang-badge">Python</span>
+                        <span class="badge badge-model" id="res-model-badge">{{ config.OLLAMA_MODEL }}</span>
+                    </div>
+                    <div class="result-actions">
+                        <button class="btn btn-sm btn-outline" id="btn-copy-code" onclick="copyGeneratedCode()">
+                            <i class="fa-regular fa-copy"></i> <span>Copy Code</span>
+                        </button>
+                        <button class="btn btn-sm btn-outline" id="btn-download-code" onclick="downloadCodeSnippet()">
+                            <i class="fa-solid fa-download"></i> <span>Download</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Static Analysis / Diagnostics Box (Conditional) -->
+                <div id="diagnostics-panel" class="diagnostics-card hidden">
+                    <div class="diagnostics-header">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <span>Static Analysis Diagnostics</span>
+                        <span class="diagnostics-source-badge" id="diag-source-badge">Python AST</span>
+                    </div>
+                    <div class="diagnostics-body" id="diagnostics-content">
+                        <!-- Diagnostics rendered here -->
+                    </div>
+                </div>
+
+                <!-- Generated / Corrected Code Block -->
+                <div class="code-output-wrapper">
+                    <div class="code-output-header">
+                        <span class="code-title"><i class="fa-solid fa-code"></i> Solution Code</span>
+                        <span class="code-lang-indicator" id="code-lang-tag">python</span>
+                    </div>
+                    <pre class="code-pre"><code id="code-block" class="language-python"># Generated solution will appear here...</code></pre>
+                </div>
+
+                <!-- Explanation / Walkthrough Box -->
+                <div class="explanation-card">
+                    <div class="explanation-header">
+                        <i class="fa-solid fa-align-left"></i>
+                        <span>Detailed Explanation & Decisions</span>
+                    </div>
+                    <div class="explanation-body" id="explanation-content">
+                        <!-- Explanation rendered dynamically -->
+                    </div>
+                </div>
+
+                <!-- Assumptions / Limitations / Suggestions Box -->
+                <div class="suggestions-card hidden" id="suggestions-panel">
+                    <div class="suggestions-header">
+                        <i class="fa-solid fa-compass"></i>
+                        <span>Assumptions & Next Steps</span>
+                    </div>
+                    <div class="suggestions-body" id="suggestions-content">
+                        <!-- Suggestions rendered dynamically -->
+                    </div>
+                </div>
+
+                <!-- Conversational Follow-Up Section -->
+                <div class="followup-section">
+                    <div class="followup-header">
+                        <i class="fa-solid fa-comments"></i>
+                        <span>Conversational Follow-Up</span>
+                        <span class="followup-sub">Session history is preserved</span>
+                    </div>
+
+                    <!-- Chat Messages Log -->
+                    <div class="chat-thread" id="chat-thread">
+                        <!-- Dynamic chat messages appended here -->
+                    </div>
+
+                    <!-- Follow-up Prompt Bar -->
+                    <form id="followup-form" onsubmit="handleFollowUpSubmit(event)" class="followup-input-bar">
+                        <input 
+                            type="text" 
+                            id="followup-input" 
+                            class="form-control followup-text" 
+                            placeholder="Ask a follow-up, e.g.: 'Make it simpler', 'Add input validation', 'Convert to Java'..."
+                            required
+                        >
+                        <button type="submit" id="btn-followup-submit" class="btn btn-primary btn-sm">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>Send</span>
+                        </button>
+                    </form>
+                    
+                    <!-- Quick Suggestion Chips -->
+                    <div class="quick-chips">
+                        <button type="button" class="chip" onclick="applyQuickChip('Explain this step by step')">Explain step-by-step</button>
+                        <button type="button" class="chip" onclick="applyQuickChip('Add thorough comments')">Add comments</button>
+                        <button type="button" class="chip" onclick="applyQuickChip('Make it simpler and more readable')">Make it simpler</button>
+                        <button type="button" class="chip" onclick="applyQuickChip('Add edge case and input validation')">Add input validation</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+

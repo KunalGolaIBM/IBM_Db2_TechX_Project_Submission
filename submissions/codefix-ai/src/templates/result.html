@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Record Details — CodeFix AI{% endblock %}
+
+{% block content %}
+<div class="result-page-container">
+    <div class="result-page-header">
+        <a href="{{ url_for('history') }}" class="btn btn-secondary btn-sm">
+            <i class="fa-solid fa-arrow-left"></i> Back to History
+        </a>
+        <div class="result-page-meta">
+            <span class="badge badge-mode">{{ record.mode|upper }}</span>
+            <span class="badge badge-lang">{{ record.language }}</span>
+            <span class="badge badge-model">{{ record.model_name }}</span>
+            <span class="timestamp-tag"><i class="fa-regular fa-clock"></i> {{ record.created_at }}</span>
+        </div>
+    </div>
+
+    <!-- Record Content Cards -->
+    <div class="result-details-grid">
+        <!-- Input Context -->
+        <div class="detail-card">
+            <div class="card-title"><i class="fa-solid fa-comment-dots"></i> User Prompt</div>
+            <div class="card-content">
+                <p class="prompt-text">{{ record.user_prompt }}</p>
+            </div>
+        </div>
+
+        {% if record.original_code %}
+        <div class="detail-card">
+            <div class="card-title"><i class="fa-solid fa-code"></i> Original Source Code</div>
+            <div class="card-content">
+                <pre><code class="language-{{ record.language }}">{{ record.original_code }}</code></pre>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if record.error_message %}
+        <div class="detail-card">
+            <div class="card-title"><i class="fa-solid fa-bug"></i> Reported Error / Traceback</div>
+            <div class="card-content">
+                <pre class="error-pre"><code>{{ record.error_message }}</code></pre>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Generated Solution -->
+        <div class="detail-card result-solution-card">
+            <div class="card-title-bar">
+                <div class="card-title"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Generated Solution</div>
+                <button class="btn btn-sm btn-outline" onclick="copySnippetText({{ record.generated_code|tojson }})">
+                    <i class="fa-regular fa-copy"></i> Copy Solution
+                </button>
+            </div>
+            <div class="card-content">
+                <pre><code class="language-{{ record.language }}">{{ record.generated_code }}</code></pre>
+            </div>
+        </div>
+
+        <!-- Explanation -->
+        {% if record.explanation %}
+        <div class="detail-card">
+            <div class="card-title"><i class="fa-solid fa-align-left"></i> Explanation & Architectural Decisions</div>
+            <div class="card-content explanation-styled">
+                {{ record.explanation|replace('\n', '<br>')|safe }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="result-page-footer">
+        <a href="{{ url_for('index') }}" class="btn btn-primary">
+            <i class="fa-solid fa-terminal"></i> Open Workspace
+        </a>
+    </div>
+</div>
+{% endblock %}
+

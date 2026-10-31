@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "CodeFix AI — Intelligent AI Coding Agent",
+    "slug": "codefix-ai",
+    "short_description": "Full-stack, local-first AI coding assistant featuring deterministic Python AST syntax inspection, LangChain Ollama local inference, and enterprise parameterized session persistence with IBM Db2.",
+    "category": "AI / Developer Tooling / Database Persistence",
+    "demo_url": "http://localhost:5000",
+    "video_url": "https://youtu.be/YOUR_DEMO_VIDEO_ID",
+    "repo_url": "https://github.com/raiakanchha07/CodeFix-AI"
+  },
+  "team": {
+    "name": "CodeFix AI Team",
+    "members": [
+      {
+        "name": "Akanchha Rai",
+        "github": "raiakanchha07",
+        "email": "raiakanchha07@gmail.com",
+        "role": "Full-Stack Developer & AI Engineer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 on Cloud / Db2 Community Edition",
+    "connector": "ibm_db (Official Python Driver)",
+    "features_used": [
+      "Relational Tables (CODEFIX_HISTORY)",
+      "Composite Indexing (SESSION_ID, CREATED_AT DESC)",
+      "CLOB Data Types (Prompt, Source Code, Explanations)",
+      "Parameterized SQL Prepared Statements (?, ?)",
+      "Automated Schema DDL Initialization"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "JavaScript", "HTML", "CSS", "SQL"],
+    "frameworks": ["Flask", "LangChain", "Prism.js", "pytest"],
+    "ai_models": ["Ollama qwen2.5-coder:1.5b", "Ollama qwen2.5-coder:3b"]
+  }
+}

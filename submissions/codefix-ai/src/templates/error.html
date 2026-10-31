@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Error {{ status_code }} — CodeFix AI{% endblock %}
+
+{% block content %}
+<div class="error-page-container">
+    <div class="error-card">
+        <div class="error-icon-box">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div class="error-status-tag">Error {{ status_code }}</div>
+        <h2 class="error-heading">{{ error_title or "An Unexpected Condition Occurred" }}</h2>
+        <p class="error-message">{{ error_message or "The requested operation could not be completed." }}</p>
+
+        {% if suggestions %}
+        <div class="error-suggestions-box">
+            <h5><i class="fa-solid fa-screwdriver-wrench"></i> Suggested Resolution</h5>
+            <ul>
+                {% for suggestion in suggestions %}
+                <li>{{ suggestion }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <div class="error-actions">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                <i class="fa-solid fa-arrow-left"></i> Return to Workspace
+            </a>
+            <a href="{{ url_for('history') }}" class="btn btn-secondary">
+                <i class="fa-solid fa-clock-rotate-left"></i> View History
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
