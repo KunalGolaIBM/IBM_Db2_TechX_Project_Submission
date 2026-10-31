@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Db2 Python Integration Starter",
+    "slug": "db2-python-starter",
+    "short_description": "A clean Python starter demonstrating secure SSL connectivity, schema verification, and relational query execution against IBM Db2 using the native ibm_db driver.",
+    "category": "Data Engineering / Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/SoumyadityaDutta-rgb/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "Soumyaditya Dutta",
+    "members": [
+      {
+        "name": "Soumyaditya Dutta",
+        "github": "SoumyadityaDutta-rgb",
+        "email": "hellosanjoydutta@gmail.com",
+        "role": "Backend / Database Developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker)",
+    "connector": "ibm_db",
+    "features_used": [
+      "Relational Tables",
+      "System Catalogs",
+      "Parameterized Queries",
+      "TLS/SSL Encrypted Connectivity"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python"
+    ],
+    "frameworks": [],
+    "ai_models": []
+  }
+}
