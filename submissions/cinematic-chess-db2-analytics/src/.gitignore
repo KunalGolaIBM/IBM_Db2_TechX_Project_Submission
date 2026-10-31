@@ -1,0 +1,24 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Local credentials and environment overrides. Keep documented placeholders.
+.env*
+!.env.example
+!backend/.env.example
+
+# Python / FastAPI
+.venv/
+venv/
+backend/.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Generated repository knowledge graph
+graphify-out/
+
+.DS_Store

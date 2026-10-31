@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Cinematic Chess 3D – IBM Db2 AI Chess Analytics",
+    "slug": "cinematic-chess-db2-analytics",
+    "short_description": "Cinematic chess with ibm_db persistence, opening analytics and optional coaching. Live Db2 testing pending; hosted demo shows original gameplay only.",
+    "category": "AI / Analytics",
+    "demo_url": "https://cinematic-chess-game3d.vercel.app/",
+    "video_url": "",
+    "repo_url": "https://github.com/srjay999-giT/cinematic-chess-game3D"
+  },
+  "team": {
+    "name": "Cinematic Chess AI",
+    "members": [
+      {
+        "name": "Jay K. Gadage",
+        "github": "srjay999-giT",
+        "email": "",
+        "role": "Individual developer: game, frontend, Db2 and analytics"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Hosted IBM Db2 (live verification pending)",
+    "connector": "ibm_db",
+    "features_used": [
+      "Relational tables",
+      "Parameterized SQL",
+      "Transactions and rollback",
+      "PGN CLOB storage",
+      "Aggregate analytics",
+      "Opening statistics"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "TypeScript",
+      "Python",
+      "SQL"
+    ],
+    "frameworks": [
+      "React",
+      "Vite",
+      "Three.js",
+      "React Three Fiber",
+      "GSAP",
+      "FastAPI",
+      "LangChain (optional)"
+    ],
+    "ai_models": [
+      "Stockfish 18",
+      "Configurable Ollama/OpenAI coaching (optional, unverified)"
+    ]
+  }
+}
