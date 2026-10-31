@@ -1,0 +1,65 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.7.0",
+  "resource_changes": [
+    {
+      "address": "aws_instance.frontend",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "frontend",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "ami": "ami-11111111",
+          "instance_type": "t3.small"
+        }
+      }
+    },
+    {
+      "address": "aws_security_group.frontend_sg",
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "frontend_sg",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "description": "Old SG"
+        },
+        "after": {
+          "description": "New SG"
+        }
+      }
+    },
+    {
+      "address": "aws_s3_bucket.static_assets",
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "static_assets",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "bucket": "static-assets-2026"
+        }
+      }
+    },
+    {
+      "address": "aws_vpc.main_network",
+      "mode": "managed",
+      "type": "aws_vpc",
+      "name": "main_network",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "cidr_block": "10.0.0.0/16"
+        }
+      }
+    }
+  ]
+}

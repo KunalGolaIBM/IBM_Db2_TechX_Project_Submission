@@ -1,0 +1,38 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.7.0",
+  "resource_changes": [
+    {
+      "address": "aws_security_group.web_sg",
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "web_sg",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "name": "web_sg",
+          "ingress": [
+            {
+              "from_port": 22,
+              "to_port": 22,
+              "protocol": "tcp",
+              "cidr_blocks": ["10.0.0.0/16"]
+            }
+          ]
+        },
+        "after": {
+          "name": "web_sg",
+          "ingress": [
+            {
+              "from_port": 22,
+              "to_port": 22,
+              "protocol": "tcp",
+              "cidr_blocks": ["0.0.0.0/0"]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

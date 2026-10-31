@@ -1,0 +1,36 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.7.0",
+  "resource_changes": [
+    {
+      "address": "data.aws_ami.ubuntu",
+      "mode": "data",
+      "type": "aws_ami",
+      "name": "ubuntu",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["read"],
+        "before": null,
+        "after": {
+          "id": "ami-0123456789abcdef0",
+          "architecture": "x86_64"
+        }
+      }
+    },
+    {
+      "address": "aws_instance.bastion",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "bastion",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "ami": "ami-0123456789abcdef0",
+          "instance_type": "t3.nano"
+        }
+      }
+    }
+  ]
+}

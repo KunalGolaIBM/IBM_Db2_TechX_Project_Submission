@@ -1,0 +1,26 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.7.0",
+  "resource_changes": [
+    {
+      "address": "aws_instance.api",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "api",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "ami": "ami-0c55b159cbfafe1f0",
+          "instance_type": "t3.medium",
+          "monitoring": false
+        },
+        "after": {
+          "ami": "ami-0c55b159cbfafe1f0",
+          "instance_type": "t3.large",
+          "monitoring": true
+        }
+      }
+    }
+  ]
+}

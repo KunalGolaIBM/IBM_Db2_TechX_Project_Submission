@@ -1,0 +1,22 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.7.0",
+  "resource_changes": [
+    {
+      "address": "aws_db_instance.database",
+      "mode": "managed",
+      "type": "aws_db_instance",
+      "name": "database",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["delete"],
+        "before": {
+          "identifier": "production-db",
+          "instance_class": "db.m5.large",
+          "allocated_storage": 100
+        },
+        "after": null
+      }
+    }
+  ]
+}

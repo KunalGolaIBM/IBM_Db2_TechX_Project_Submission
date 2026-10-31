@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="100%" height="100%" style="background:#0f172a; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <defs>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+  </defs>
+
+  <text x="30" y="40" fill="#38bdf8" font-size="20" font-weight="700">IBM Db2 Relational Schema: CloudChange Infrastructure Governance</text>
+  <text x="30" y="65" fill="#94a3b8" font-size="12">Foreign Key Relational Integrity with CASCADE Deletion, Composite B-Tree Indexes, and CLOB Payloads</text>
+
+  <!-- Table 1: cc_runs (Master) -->
+  <g transform="translate(30, 90)">
+    <rect width="280" height="260" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+    <rect width="280" height="36" rx="8" fill="#0f62fe"/>
+    <text x="15" y="24" fill="#ffffff" font-size="14" font-weight="700">cc_runs (Master Table)</text>
+
+    <text x="15" y="60" fill="#fbbf24" font-size="11" font-weight="700">PK  run_id : VARCHAR(64)</text>
+    <text x="15" y="80" fill="#e2e8f0" font-size="11">    created_at : VARCHAR(64)</text>
+    <text x="15" y="100" fill="#38bdf8" font-size="11">    status : VARCHAR(32) [INDEX]</text>
+    <text x="15" y="120" fill="#e2e8f0" font-size="11">    total_changes : INT</text>
+    <text x="15" y="140" fill="#e2e8f0" font-size="11">    action_create, update, delete, replace : INT</text>
+    <text x="15" y="160" fill="#e2e8f0" font-size="11">    findings_count : INT</text>
+    <text x="15" y="180" fill="#e2e8f0" font-size="11">    findings_high, medium, low, info : INT</text>
+    <text x="15" y="200" fill="#a78bfa" font-size="11">    summary_json : CLOB(1M)</text>
+    <text x="15" y="220" fill="#a78bfa" font-size="11">    raw_run_json : CLOB(10M)</text>
+    <text x="15" y="240" fill="#38bdf8" font-size="11">    updated_at : TIMESTAMP</text>
+  </g>
+
+  <!-- Table 2: cc_canonical_changes -->
+  <g transform="translate(360, 90)">
+    <rect width="300" height="200" rx="8" fill="#1e293b" stroke="#60a5fa" stroke-width="1.5"/>
+    <rect width="300" height="34" rx="8" fill="#1e3a8a"/>
+    <text x="15" y="23" fill="#ffffff" font-size="13" font-weight="700">cc_canonical_changes</text>
+
+    <text x="15" y="56" fill="#fbbf24" font-size="11" font-weight="700">PK  change_id : VARCHAR(64)</text>
+    <text x="15" y="76" fill="#f43f5e" font-size="11" font-weight="600">FK  run_id : VARCHAR(64) [CASCADE]</text>
+    <text x="15" y="96" fill="#38bdf8" font-size="11">    resource_address : VARCHAR(255) [INDEX]</text>
+    <text x="15" y="116" fill="#e2e8f0" font-size="11">    resource_type : VARCHAR(128)</text>
+    <text x="15" y="136" fill="#e2e8f0" font-size="11">    action : VARCHAR(32)</text>
+    <text x="15" y="156" fill="#f87171" font-size="11">    requires_replacement : SMALLINT</text>
+    <text x="15" y="176" fill="#a78bfa" font-size="11">    diffs_json, before_json, after_json : CLOB</text>
+  </g>
+
+  <!-- Table 3: cc_impact_findings -->
+  <g transform="translate(690, 90)">
+    <rect width="280" height="200" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+    <rect width="280" height="34" rx="8" fill="#78350f"/>
+    <text x="15" y="23" fill="#ffffff" font-size="13" font-weight="700">cc_impact_findings</text>
+
+    <text x="15" y="56" fill="#fbbf24" font-size="11" font-weight="700">PK  finding_id : VARCHAR(64)</text>
+    <text x="15" y="76" fill="#f43f5e" font-size="11" font-weight="600">FK  run_id : VARCHAR(64) [CASCADE]</text>
+    <text x="15" y="96" fill="#e2e8f0" font-size="11">    rule_id : VARCHAR(64)</text>
+    <text x="15" y="116" fill="#e2e8f0" font-size="11">    resource_address : VARCHAR(255)</text>
+    <text x="15" y="136" fill="#38bdf8" font-size="11">    category : VARCHAR(32) [INDEX]</text>
+    <text x="15" y="156" fill="#f59e0b" font-size="11" font-weight="700">    severity : VARCHAR(32) [INDEX]</text>
+    <text x="15" y="176" fill="#a78bfa" font-size="11">    title : VARCHAR(255) | explanation : CLOB</text>
+  </g>
+
+  <!-- Table 4: cc_predictions -->
+  <g transform="translate(30, 370)">
+    <rect width="280" height="200" rx="8" fill="#1e293b" stroke="#8b5cf6" stroke-width="1.5"/>
+    <rect width="280" height="34" rx="8" fill="#4c1d95"/>
+    <text x="15" y="23" fill="#ffffff" font-size="13" font-weight="700">cc_predictions</text>
+
+    <text x="15" y="56" fill="#fbbf24" font-size="11" font-weight="700">PK  prediction_id : VARCHAR(64)</text>
+    <text x="15" y="76" fill="#f43f5e" font-size="11" font-weight="600">FK  run_id : VARCHAR(64) [CASCADE]</text>
+    <text x="15" y="96" fill="#e2e8f0" font-size="11">    metric : VARCHAR(128)</text>
+    <text x="15" y="116" fill="#e2e8f0" font-size="11">    verification_approach : VARCHAR(64)</text>
+    <text x="15" y="136" fill="#a78bfa" font-size="11">    expected_value_json : CLOB</text>
+    <text x="15" y="156" fill="#a78bfa" font-size="11">    rationale : CLOB</text>
+    <text x="15" y="176" fill="#e2e8f0" font-size="11">    evidence_provider, service, field</text>
+  </g>
+
+  <!-- Table 5: cc_verification_results -->
+  <g transform="translate(340, 370)">
+    <rect width="320" height="200" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+    <rect width="320" height="34" rx="8" fill="#064e3b"/>
+    <text x="15" y="23" fill="#ffffff" font-size="13" font-weight="700">cc_verification_results</text>
+
+    <text x="15" y="56" fill="#fbbf24" font-size="11" font-weight="700">PK  result_id : VARCHAR(64)</text>
+    <text x="15" y="76" fill="#f43f5e" font-size="11" font-weight="600">FK  run_id : VARCHAR(64) [CASCADE]</text>
+    <text x="15" y="96" fill="#e2e8f0" font-size="11">    prediction_id : VARCHAR(64)</text>
+    <text x="15" y="116" fill="#34d399" font-size="11" font-weight="700">    status : VARCHAR(32) [INDEX]</text>
+    <text x="15" y="136" fill="#a78bfa" font-size="11">    expected_value_json : CLOB</text>
+    <text x="15" y="156" fill="#a78bfa" font-size="11">    observed_value_json : CLOB</text>
+    <text x="15" y="176" fill="#e2e8f0" font-size="11">    explanation, evidence_reference : CLOB</text>
+  </g>
+
+  <!-- Table 6: cc_audit_events -->
+  <g transform="translate(690, 370)">
+    <rect width="280" height="200" rx="8" fill="#1e293b" stroke="#06b6d4" stroke-width="1.5"/>
+    <rect width="280" height="34" rx="8" fill="#164e63"/>
+    <text x="15" y="23" fill="#ffffff" font-size="13" font-weight="700">cc_audit_events (Compliance)</text>
+
+    <text x="15" y="56" fill="#fbbf24" font-size="11" font-weight="700">PK  event_id : VARCHAR(64)</text>
+    <text x="15" y="76" fill="#f43f5e" font-size="11" font-weight="600">FK  run_id : VARCHAR(64) [CASCADE]</text>
+    <text x="15" y="96" fill="#06b6d4" font-size="11" font-weight="700">    event_type : VARCHAR(64)</text>
+    <text x="15" y="116" fill="#e2e8f0" font-size="11">    recorded_at : VARCHAR(64)</text>
+    <text x="15" y="136" fill="#e2e8f0" font-size="11">    actor : VARCHAR(128)</text>
+    <text x="15" y="156" fill="#a78bfa" font-size="11">    payload_json : CLOB(2M)</text>
+    <text x="15" y="180" fill="#34d399" font-size="10">Immutable chronological audit log</text>
+  </g>
+
+  <!-- Relational Connection Lines -->
+  <line x1="310" y1="180" x2="360" y2="180" stroke="#f43f5e" stroke-width="2" stroke-dasharray="4,4"/>
+  <line x1="660" y1="180" x2="690" y2="180" stroke="#f43f5e" stroke-width="2" stroke-dasharray="4,4"/>
+  <line x1="170" y1="350" x2="170" y2="370" stroke="#f43f5e" stroke-width="2" stroke-dasharray="4,4"/>
+  <line x1="280" y1="350" x2="340" y2="400" stroke="#f43f5e" stroke-width="2" stroke-dasharray="4,4"/>
+  <line x1="310" y1="320" x2="690" y2="420" stroke="#f43f5e" stroke-width="2" stroke-dasharray="4,4"/>
+</svg>
+

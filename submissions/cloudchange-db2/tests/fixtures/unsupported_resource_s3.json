@@ -1,0 +1,21 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.7.0",
+  "resource_changes": [
+    {
+      "address": "aws_s3_bucket.data_archive",
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "data_archive",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "bucket": "my-company-data-archive",
+          "force_destroy": false
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 680" width="100%" height="100%" style="background:#0b0f19; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <linearGradient id="gradHeader" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0f62fe" />
+      <stop offset="100%" stop-color="#8a3ffc" />
+    </linearGradient>
+    <linearGradient id="gradBox" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#161e2e" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <linearGradient id="gradDb2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#002d9c" />
+      <stop offset="100%" stop-color="#001141" />
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Title Banner -->
+  <rect x="30" y="25" width="1040" height="70" rx="12" fill="url(#gradHeader)" filter="url(#shadow)"/>
+  <text x="50" y="60" fill="#ffffff" font-size="22" font-weight="700" letter-spacing="0.5">CloudChange — IBM Db2 Enterprise Persistence &amp; Verification Architecture</text>
+  <text x="50" y="82" fill="#d0e2ff" font-size="13">Empirical Infrastructure Change Governance, ACID Relational Tracking, and Audit Trails</text>
+
+  <!-- Layer 1: Terraform & Inputs -->
+  <g transform="translate(40, 125)">
+    <rect width="220" height="490" rx="10" fill="url(#gradBox)" stroke="#334155" stroke-width="1.5" filter="url(#shadow)"/>
+    <rect width="220" height="42" rx="10" fill="#1e293b"/>
+    <text x="20" y="27" fill="#38bdf8" font-size="15" font-weight="700">1. Infrastructure Inputs</text>
+
+    <!-- Sub Item 1 -->
+    <rect x="15" y="60" width="190" height="90" rx="8" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+    <text x="25" y="85" fill="#f8fafc" font-size="13" font-weight="600">Terraform Plan</text>
+    <text x="25" y="105" fill="#94a3b8" font-size="11">plan.json artifact</text>
+    <text x="25" y="123" fill="#38bdf8" font-size="10">Normalized Resource Diffs</text>
+    <text x="25" y="137" fill="#94a3b8" font-size="10">EC2, RDS, Security Groups</text>
+
+    <!-- Sub Item 2 -->
+    <rect x="15" y="170" width="190" height="90" rx="8" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+    <text x="25" y="195" fill="#f8fafc" font-size="13" font-weight="600">Terraform State</text>
+    <text x="25" y="215" fill="#94a3b8" font-size="11">state.json post-apply</text>
+    <text x="25" y="233" fill="#a78bfa" font-size="10">Physical Resource IDs</text>
+    <text x="25" y="247" fill="#94a3b8" font-size="10">i-01234, rds-prod-01</text>
+
+    <!-- Sub Item 3 -->
+    <rect x="15" y="280" width="190" height="90" rx="8" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+    <text x="25" y="305" fill="#f8fafc" font-size="13" font-weight="600">AWS Observations</text>
+    <text x="25" y="325" fill="#94a3b8" font-size="11">Live Read-Only Evidence</text>
+    <text x="25" y="343" fill="#34d399" font-size="10">EC2 API, RDS API, VPC</text>
+    <text x="25" y="357" fill="#94a3b8" font-size="10">Empirical Configuration</text>
+
+    <!-- Sub Item 4 -->
+    <rect x="15" y="390" width="190" height="75" rx="8" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+    <text x="25" y="415" fill="#f8fafc" font-size="13" font-weight="600">Enterprise Clients</text>
+    <text x="25" y="435" fill="#94a3b8" font-size="11">CI/CD &amp; DevOps Pipelines</text>
+    <text x="25" y="450" fill="#94a3b8" font-size="10">CLI, Web Dashboard, REST</text>
+  </g>
+
+  <!-- Flow Arrow 1 to 2 -->
+  <path d="M 260 365 L 300 365" stroke="#60a5fa" stroke-width="2.5" stroke-dasharray="5,5" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Layer 2: CloudChange Core Engine -->
+  <g transform="translate(310, 125)">
+    <rect width="360" height="490" rx="10" fill="url(#gradBox)" stroke="#334155" stroke-width="1.5" filter="url(#shadow)"/>
+    <rect width="360" height="42" rx="10" fill="#1e293b"/>
+    <text x="20" y="27" fill="#60a5fa" font-size="15" font-weight="700">2. CloudChange Engine &amp; API Layer</text>
+
+    <!-- Sub Item 1: API Layer -->
+    <rect x="15" y="55" width="330" height="75" rx="8" fill="#0f172a" stroke="#3b82f6" stroke-width="1"/>
+    <text x="30" y="78" fill="#93c5fd" font-size="13" font-weight="600">FastAPI Application Routes</text>
+    <text x="30" y="98" fill="#cbd5e1" font-size="11">POST /runs (Plan Ingest) | GET /runs/{id}</text>
+    <text x="30" y="115" fill="#94a3b8" font-size="10">POST /runs/{id}/verification | GET /runs/{id}/audit</text>
+
+    <!-- Sub Item 2: Impact Analysis -->
+    <rect x="15" y="140" width="330" height="85" rx="8" fill="#0f172a" stroke="#8b5cf6" stroke-width="1"/>
+    <text x="30" y="163" fill="#c4b5fd" font-size="13" font-weight="600">Deterministic Impact Predictor</text>
+    <text x="30" y="183" fill="#cbd5e1" font-size="11">Rules: Cost Spike, Sensitive Ports, Destructive Replacement</text>
+    <text x="30" y="200" fill="#94a3b8" font-size="10">Outputs: ImpactFindings (HIGH/MED/LOW) &amp; Predictions</text>
+
+    <!-- Sub Item 3: Verification -->
+    <rect x="15" y="235" width="330" height="75" rx="8" fill="#0f172a" stroke="#10b981" stroke-width="1"/>
+    <text x="30" y="258" fill="#6ee7b7" font-size="13" font-weight="600">Verification Orchestrator</text>
+    <text x="30" y="278" fill="#cbd5e1" font-size="11">State Identity Mapping &amp; Empirical Comparison</text>
+    <text x="30" y="295" fill="#94a3b8" font-size="10">Outputs: VERIFIED, MISMATCH, NOT_OBSERVABLE</text>
+
+    <!-- Sub Item 4: Db2 Adapter & Repo -->
+    <rect x="15" y="320" width="330" height="150" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5"/>
+    <text x="30" y="345" fill="#a5b4fc" font-size="13" font-weight="700">Dedicated IBM Db2 Persistence Adapter</text>
+    <text x="30" y="365" fill="#e0e7ff" font-size="11">• Db2RunRepository (FastAPI Dependency Injection)</text>
+    <text x="30" y="383" fill="#cbd5e1" font-size="10">• Official ibm_db Driver Connection Management</text>
+    <text x="30" y="401" fill="#cbd5e1" font-size="10">• ACID Multi-Statement Transactions (Commit / Rollback)</text>
+    <text x="30" y="419" fill="#cbd5e1" font-size="10">• Parameterized SQL Queries (? Placeholders)</text>
+    <text x="30" y="437" fill="#cbd5e1" font-size="10">• Idempotent Schema Initializer (SQL0601N / SQL0605N)</text>
+    <text x="30" y="455" fill="#38bdf8" font-size="10">• Governance Analytics &amp; Compliance Audit Engine</text>
+  </g>
+
+  <!-- Flow Arrow 2 to 3 -->
+  <path d="M 670 410 L 710 410" stroke="#818cf8" stroke-width="2.5" stroke-dasharray="5,5" fill="none"/>
+
+  <!-- Layer 3: IBM Db2 Storage -->
+  <g transform="translate(720, 125)">
+    <rect width="340" height="490" rx="10" fill="url(#gradDb2)" stroke="#0f62fe" stroke-width="2" filter="url(#shadow)"/>
+    <rect width="340" height="42" rx="10" fill="#001d6c"/>
+    <text x="20" y="27" fill="#78a9ff" font-size="15" font-weight="700">3. IBM Db2 Relational Database</text>
+
+    <!-- Db2 Tables Grid -->
+    <g transform="translate(15, 55)">
+      <!-- Table 1 -->
+      <rect width="310" height="58" rx="6" fill="#121619" stroke="#4589ff" stroke-width="1"/>
+      <text x="15" y="22" fill="#edf5ff" font-size="12" font-weight="700">cc_runs</text>
+      <text x="15" y="38" fill="#a6c8ff" font-size="10">run_id (PK), status, created_at, counts, raw_run_json</text>
+      <text x="15" y="50" fill="#78a9ff" font-size="9">Indexes: idx_cc_runs_status, idx_cc_runs_created</text>
+    </g>
+
+    <g transform="translate(15, 120)">
+      <!-- Table 2 -->
+      <rect width="310" height="58" rx="6" fill="#121619" stroke="#4589ff" stroke-width="1"/>
+      <text x="15" y="22" fill="#edf5ff" font-size="12" font-weight="700">cc_canonical_changes</text>
+      <text x="15" y="38" fill="#a6c8ff" font-size="10">change_id (PK), run_id (FK), resource_address, action, diffs</text>
+      <text x="15" y="50" fill="#78a9ff" font-size="9">FK: ON DELETE CASCADE | Index: idx_cc_changes_run</text>
+    </g>
+
+    <g transform="translate(15, 185)">
+      <!-- Table 3 -->
+      <rect width="310" height="58" rx="6" fill="#121619" stroke="#4589ff" stroke-width="1"/>
+      <text x="15" y="22" fill="#edf5ff" font-size="12" font-weight="700">cc_impact_findings</text>
+      <text x="15" y="38" fill="#a6c8ff" font-size="10">finding_id (PK), run_id (FK), rule_id, severity, explanation</text>
+      <text x="15" y="50" fill="#78a9ff" font-size="9">Indexes: idx_cc_findings_sev, idx_cc_findings_cat</text>
+    </g>
+
+    <g transform="translate(15, 250)">
+      <!-- Table 4 -->
+      <rect width="310" height="58" rx="6" fill="#121619" stroke="#4589ff" stroke-width="1"/>
+      <text x="15" y="22" fill="#edf5ff" font-size="12" font-weight="700">cc_predictions</text>
+      <text x="15" y="38" fill="#a6c8ff" font-size="10">prediction_id (PK), run_id (FK), metric, expected_value, rationale</text>
+      <text x="15" y="50" fill="#78a9ff" font-size="9">Index: idx_cc_predictions_run | Approach: EXACT/CONFIG</text>
+    </g>
+
+    <g transform="translate(15, 315)">
+      <!-- Table 5 -->
+      <rect width="310" height="58" rx="6" fill="#121619" stroke="#4589ff" stroke-width="1"/>
+      <text x="15" y="22" fill="#edf5ff" font-size="12" font-weight="700">cc_verification_results</text>
+      <text x="15" y="38" fill="#a6c8ff" font-size="10">result_id (PK), prediction_id, status, observed_value, explanation</text>
+      <text x="15" y="50" fill="#78a9ff" font-size="9">Indexes: idx_cc_verif_run, idx_cc_verif_status</text>
+    </g>
+
+    <g transform="translate(15, 380)">
+      <!-- Table 6 -->
+      <rect width="310" height="58" rx="6" fill="#121619" stroke="#0043ce" stroke-width="1"/>
+      <text x="15" y="22" fill="#42be65" font-size="12" font-weight="700">cc_audit_events (Compliance Log)</text>
+      <text x="15" y="38" fill="#a6c8ff" font-size="10">event_id (PK), run_id (FK), event_type, actor, recorded_at</text>
+      <text x="15" y="50" fill="#42be65" font-size="9">Immutable chronological audit trail with JSON payloads</text>
+    </g>
+
+    <!-- Db2 Badge -->
+    <rect x="15" y="445" width="310" height="30" rx="6" fill="#002d9c"/>
+    <text x="75" y="465" fill="#ffffff" font-size="11" font-weight="600">Enterprise ACID Storage &amp; SQL Analytics</text>
+  </g>
+
+  <!-- Footer Info -->
+  <text x="40" y="645" fill="#64748b" font-size="11">IBM Db2 TechX Summit 2026 Submission • Project: cloudchange-db2 • Driver: ibm_db official C-extension</text>
+</svg>
+

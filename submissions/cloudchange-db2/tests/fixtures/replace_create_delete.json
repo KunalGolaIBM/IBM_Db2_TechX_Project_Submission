@@ -1,0 +1,27 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.7.0",
+  "resource_changes": [
+    {
+      "address": "aws_instance.worker",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "worker",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create", "delete"],
+        "before": {
+          "ami": "ami-old",
+          "instance_type": "t3.small"
+        },
+        "after": {
+          "ami": "ami-new",
+          "instance_type": "t3.small"
+        },
+        "replace_paths": [
+          ["ami"]
+        ]
+      }
+    }
+  ]
+}

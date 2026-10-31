@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "CloudChange — IBM Db2 Integration",
+    "slug": "cloudchange-db2",
+    "short_description": "Enterprise cloud infrastructure change impact analysis and empirical post-deployment verification engine powered by IBM Db2 for durable audit logging, ACID relational persistence, and governance analytics.",
+    "category": "Enterprise Data Engineering / Cloud Governance & Compliance",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/prathamesh-lang/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "CloudChange Core Team",
+    "members": [
+      {
+        "name": "Prathamesh Patil",
+        "github": "prathamesh-lang",
+        "email": "prathameshpatil.cse@gmail.com",
+        "role": "Cloud Systems & Backend Engineer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition (Docker) / Db2 Enterprise / Db2 on Cloud",
+    "connector": "ibm_db (official Python driver)",
+    "features_used": [
+      "Relational Tables with Foreign Key Cascade Constraints (ON DELETE CASCADE)",
+      "Parameterized Prepared Statements for SQL Injection Prevention",
+      "Explicit Multi-Statement ACID Transactions with Commit and Rollback",
+      "Secondary B-Tree Composite and Foreign Key Indexes for High-Throughput Queries",
+      "CLOB Document Columns for Complex Terraform Diffs and Empirical AWS Evidence",
+      "Immutable Compliance Audit Trail Event Logging (cc_audit_events)"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "Pydantic v2",
+      "ibm_db",
+      "pytest"
+    ],
+    "ai_models": []
+  }
+}
+

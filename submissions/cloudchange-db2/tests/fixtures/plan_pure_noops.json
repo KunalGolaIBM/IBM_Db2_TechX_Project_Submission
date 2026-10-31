@@ -1,0 +1,22 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.7.0",
+  "resource_changes": [
+    {
+      "address": "aws_instance.existing_server",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "existing_server",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["no-op"],
+        "before": {
+          "instance_type": "t3.medium"
+        },
+        "after": {
+          "instance_type": "t3.medium"
+        }
+      }
+    }
+  ]
+}
