@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "dbhaven: Scheduled Encrypted Database Backup & Disaster Recovery Engine for IBM Db2",
+    "slug": "dbhaven-db2",
+    "short_description": "Production-grade, scheduled, AES-256-GCM encrypted offsite backup and automated disaster recovery pipeline for IBM Db2 databases with S3/local storage and GFS retention.",
+    "category": "Data Engineering / Enterprise Infrastructure / Security",
+    "demo_url": "https://github.com/miriyaladhanwinn/dbhaven",
+    "video_url": "",
+    "repo_url": "https://github.com/miriyaladhanwinn/dbhaven"
+  },
+  "team": {
+    "name": "Dhanwinn Miriyala",
+    "members": [
+      {
+        "name": "Dhanwinn Miriyala",
+        "github": "miriyaladhanwinn",
+        "email": "dhanwinn15@gmail.com",
+        "role": "Creator & Lead Systems Engineer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1.2+ (Docker) / Db2 on Cloud / Db2 LUW Enterprise",
+    "connector": "ibm_db / Native Db2 CLI Engine & ibm_db_sa",
+    "features_used": [
+      "Online Database Hot Backups (db2 backup database online)",
+      "Streaming compressed image pipeline to S3 and local storage",
+      "Chunked authenticated AES-256-GCM encryption with SHA-256 integrity tags",
+      "Grandfather-Father-Son (GFS) lifecycle pruning and retention policies",
+      "Zero-downtime point-in-time recovery and automated verification"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Go", "Python", "SQL", "Shell"],
+    "frameworks": ["Cobra", "ibm_db", "SQLAlchemy", "MinIO / AWS S3 SDK", "cron/v3"],
+    "ai_models": []
+  }
+}

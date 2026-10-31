@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  db2:
+    image: ibmcom/db2:12.1.2.0
+    container_name: dbhaven-db2-sandbox
+    privileged: true
+    environment:
+      - LICENSE=accept
+      - DB2INSTANCE=db2inst1
+      - DB2INST1_PASSWORD=db2pwd123!
+      - DBNAME=SAMPLE
+      - BLU=false
+      - ENABLE_ORACLE_COMPATIBILITY=false
+    ports:
+      - "50000:50000"
+    volumes:
+      - db2data:/database
+
+volumes:
+  db2data:
