@@ -1,0 +1,30 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.7.0",
+  "resource_changes": [
+    {
+      "address": "aws_db_instance.db",
+      "mode": "managed",
+      "type": "aws_db_instance",
+      "name": "db",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["delete", "create"],
+        "before": {
+          "identifier": "old-db-name",
+          "allocated_storage": 20,
+          "engine": "postgres"
+        },
+        "after": {
+          "identifier": "new-db-name",
+          "allocated_storage": 50,
+          "engine": "postgres"
+        },
+        "replace_paths": [
+          ["identifier"]
+        ],
+        "action_reason": "replace_because_cannot_update"
+      }
+    }
+  ]
+}

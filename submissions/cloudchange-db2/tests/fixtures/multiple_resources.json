@@ -1,0 +1,65 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.7.0",
+  "resource_changes": [
+    {
+      "address": "aws_instance.app",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "app",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "ami": "ami-12345678",
+          "instance_type": "t3.medium"
+        }
+      }
+    },
+    {
+      "address": "aws_security_group.app_sg",
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "app_sg",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "description": "App SG",
+          "ingress": []
+        },
+        "after": {
+          "description": "App SG Updated",
+          "ingress": [
+            {
+              "from_port": 80,
+              "to_port": 80,
+              "protocol": "tcp",
+              "cidr_blocks": ["0.0.0.0/0"]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "address": "aws_db_instance.app_db",
+      "mode": "managed",
+      "type": "aws_db_instance",
+      "name": "app_db",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["delete", "create"],
+        "before": {
+          "identifier": "app-db-v1",
+          "allocated_storage": 20
+        },
+        "after": {
+          "identifier": "app-db-v2",
+          "allocated_storage": 40
+        },
+        "replace_paths": [["identifier"]]
+      }
+    }
+  ]
+}

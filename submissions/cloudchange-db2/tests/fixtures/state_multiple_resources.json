@@ -1,0 +1,52 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.7.0",
+  "serial": 2,
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "app",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "instances": [
+        {
+          "attributes": {
+            "id": "i-0987654321fedcba0",
+            "ami": "ami-12345678",
+            "instance_type": "t3.medium"
+          }
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "app_sg",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "instances": [
+        {
+          "attributes": {
+            "id": "sg-0123456789abcdef0",
+            "name": "app_sg",
+            "description": "App SG Updated"
+          }
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_db_instance",
+      "name": "app_db",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "instances": [
+        {
+          "attributes": {
+            "id": "app-db-v2",
+            "identifier": "app-db-v2",
+            "allocated_storage": 40
+          }
+        }
+      ]
+    }
+  ]
+}

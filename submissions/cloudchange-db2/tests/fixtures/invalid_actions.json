@@ -1,0 +1,17 @@
+{
+  "format_version": "1.2",
+  "resource_changes": [
+    {
+      "address": "aws_instance.noop_box",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "noop_box",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["no-op"],
+        "before": {"instance_type": "t3.micro"},
+        "after": {"instance_type": "t3.micro"}
+      }
+    }
+  ]
+}
