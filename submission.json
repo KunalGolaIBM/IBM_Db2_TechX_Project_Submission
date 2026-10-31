@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Db2 Support RAG",
+    "slug": "db2-support-rag",
+    "short_description": "A privacy-first support assistant that retrieves Db2 troubleshooting guidance with vector similarity and category filters executed inside IBM Db2.",
+    "category": "AI / RAG / Data Engineering",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/Yasharth-Singhal/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "Yasharth Singhal",
+    "members": [
+      {
+        "name": "Yasharth Singhal",
+        "github": "Yasharth-Singhal",
+        "role": "Db2 integration and application development"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1.2+ (Docker or IBM Cloud)",
+    "connector": "ibm_db",
+    "features_used": [
+      "VECTOR columns",
+      "VECTOR_DISTANCE cosine search",
+      "Parameterized SQL",
+      "Metadata filtering"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python"],
+    "frameworks": ["Standard-library CLI"],
+    "ai_models": ["Deterministic local embedding baseline; optional LLM answer layer"]
+  }
+}
