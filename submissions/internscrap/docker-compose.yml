@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  db2:
+    image: icr.io/db2_community/db2:latest
+    container_name: internscrap-db2
+    restart: unless-stopped
+    privileged: true
+    environment:
+      - LICENSE=accept
+      - DB2INSTANCE=db2inst1
+      - DB2PASSWORD=password
+      - DBNAME=testdb
+      - BLU=FALSE
+      - ENABLE_ORACLE_COMPATIBILITY=FALSE
+      - UPDATEPREVMC=TRUE
+      - SAMPLEDB=FALSE
+    ports:
+      - "50000:50000"
+    volumes:
+      - db2_data:/database
+    healthcheck:
+      test: ["CMD-SHELL", "su - db2inst1 -c 'db2 connect to testdb' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  db2_data:
+    driver: local

@@ -1,0 +1,73 @@
+-- ========================================================================
+-- InternScrap Database Views for IBM Db2
+-- Advanced SQL queries wrapped into reusable, performant Db2 views
+-- ========================================================================
+
+-- Drop existing views if needed
+-- DROP VIEW V_ACTIVE_INTERNSHIPS;
+-- DROP VIEW V_TOP_IN_DEMAND_SKILLS;
+-- DROP VIEW V_APPLICATION_FUNNEL;
+-- DROP VIEW V_UPCOMING_DEADLINES;
+
+-- 1. V_ACTIVE_INTERNSHIPS
+-- Returns all open, non-expired internship postings enriched with company metadata
+CREATE OR REPLACE VIEW V_ACTIVE_INTERNSHIPS AS
+SELECT 
+    i.ID AS INTERNSHIP_ID,
+    i.TITLE,
+    c.NAME AS COMPANY_NAME,
+    c.TIER AS COMPANY_TIER,
+    i.LOCATION,
+    CASE WHEN i.IS_REMOTE = 1 THEN 'Yes' ELSE 'No' END AS IS_REMOTE,
+    i.STIPEND_MIN,
+    i.STIPEND_MAX,
+    i.CURRENCY,
+    i.DEADLINE,
+    i.APPLY_URL,
+    i.SOURCE,
+    i.POSTED_DATE
+FROM INTERNSHIPS i
+JOIN COMPANIES c ON i.COMPANY_ID = c.ID
+WHERE i.STATUS = 'ACTIVE'
+  AND (i.DEADLINE IS NULL OR i.DEADLINE >= CURRENT DATE);
+
+-- 2. V_TOP_IN_DEMAND_SKILLS
+-- Computes the most demanded technical skills across active listings
+CREATE OR REPLACE VIEW V_TOP_IN_DEMAND_SKILLS AS
+SELECT 
+    s.NAME AS SKILL_NAME,
+    s.CATEGORY AS SKILL_CATEGORY,
+    COUNT(isk.INTERNSHIP_ID) AS LISTING_COUNT,
+    ROUND(CAST(COUNT(isk.INTERNSHIP_ID) AS DOUBLE) * 100.0 / 
+          NULLIF((SELECT COUNT(*) FROM INTERNSHIPS WHERE STATUS = 'ACTIVE'), 0), 2) AS DEMAND_PERCENTAGE
+FROM SKILLS s
+JOIN INTERNSHIP_SKILLS isk ON s.ID = isk.SKILL_ID
+JOIN INTERNSHIPS i ON isk.INTERNSHIP_ID = i.ID
+WHERE i.STATUS = 'ACTIVE'
+GROUP BY s.NAME, s.CATEGORY;
+
+-- 3. V_APPLICATION_FUNNEL
+-- Summarizes user internship applications by pipeline stage
+CREATE OR REPLACE VIEW V_APPLICATION_FUNNEL AS
+SELECT 
+    a.STATUS AS STAGE,
+    COUNT(a.ID) AS TOTAL_COUNT,
+    MIN(a.APPLIED_DATE) AS EARLIEST_APPLICATION,
+    MAX(a.APPLIED_DATE) AS LATEST_APPLICATION
+FROM APPLICATIONS a
+GROUP BY a.STATUS;
+
+-- 4. V_UPCOMING_DEADLINES
+-- Critical view to alert users of opportunities expiring within the next 14 days
+CREATE OR REPLACE VIEW V_UPCOMING_DEADLINES AS
+SELECT 
+    i.ID AS INTERNSHIP_ID,
+    i.TITLE,
+    c.NAME AS COMPANY_NAME,
+    i.DEADLINE,
+    DAYS(i.DEADLINE) - DAYS(CURRENT DATE) AS DAYS_REMAINING,
+    i.APPLY_URL
+FROM INTERNSHIPS i
+JOIN COMPANIES c ON i.COMPANY_ID = c.ID
+WHERE i.STATUS = 'ACTIVE'
+  AND i.DEADLINE BETWEEN CURRENT DATE AND CURRENT DATE + 14 DAYS;
