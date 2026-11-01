@@ -1,7 +1,7 @@
 # System Architecture: Db2 WorkRelay Intelligence
 
 ## Overview
-**Db2 WorkRelay Intelligence** is an enterprise operational incident management and runbook retrieval platform. It combines FastAPI for high-throughput operational intake, **IBM Db2 Community Edition** as the authoritative relational persistence and audit layer via native `ibm_db`, and a deterministic operational knowledge retrieval engine.
+**Db2 WorkRelay Intelligence** is an enterprise operational incident management and runbook retrieval platform. It combines FastAPI for high-throughput operational intake, **IBM Db2 Community Edition** as the authoritative relational persistence and audit layer via native `ibm_db`, and a deterministic operational knowledge retrieval engine powered by **LangChain**.
 
 The platform decouples **automated triage, classification, and runbook retrieval** from **deterministic operational lifecycle execution**, ensuring that every automated mitigation step and state transition is reproducible, structured, and permanently auditable in Db2.
 
@@ -52,9 +52,11 @@ graph TD
    - Executes multi-phase incident response: `CLASSIFYING -> INVESTIGATING -> REMEDIATING -> VERIFYING -> RESOLVED / ESCALATED`.
    - Records each granular phase transition and operational diagnostic as an immutable audit event in Db2.
 
-4. **Operational Runbook Retrieval Engine (`src/app/ai/knowledge_retriever.py`)**:
-   - Structured operational runbooks (e.g., Db2 connection pool exhaustion, transaction log saturation, JWT auth desync).
-   - Deterministic keyword and symptom overlap matching with service context scoring.
+4. **LangChain Operational Runbook Retrieval Engine (`src/app/ai/knowledge_retriever.py`)**:
+   - Structured operational runbooks (e.g., Db2 connection pool exhaustion, transaction log saturation, JWT auth desync) converted into native LangChain `Document` objects (`langchain_core.documents.Document`).
+   - Custom `LangChainRunbookRetriever` extending LangChain's `BaseRetriever`.
+   - Deterministic keyword and symptom overlap matching with service context scoring executed via LangChain's standard `invoke()` runnable interface.
+   - Fully self-contained: zero external LLM API keys, cloud services, or vector stores required.
    - Provides prioritized mitigation recommendations with exact operational command lines.
 
 5. **IBM Db2 Persistence Layer (`src/app/db/`)**:
@@ -73,7 +75,7 @@ graph TD
 | **IBM Db2 Driver Layer** | **Implemented** | Native `ibm_db` / `ibm_db_dbi` connection manager, transactional cursors, and parameter bindings. |
 | **Native Db2 DDL** | **Implemented** | `schema_db2.sql` using Db2 types (`CLOB`, `INT GENERATED ALWAYS AS IDENTITY`). |
 | **Test Environment Fallback** | **Implemented** | In-memory SQLite mode providing zero-crash local unit test execution. |
-| **Runbook Retrieval** | **Implemented** | Deterministic symptom & keyword overlap retrieval over curated runbook catalog. |
+| **LangChain Runbook Retrieval** | **Implemented** | Curated runbooks converted to LangChain Documents and queried via custom LangChain BaseRetriever. |
 | **Live Db2 Execution** | **Environment-Dependent** | Validated against Docker/Cloud Db2 when connection credentials and native drivers are present. |
 | **Native Db2 Vector Search** | **Planned / Future** | Roadmap item for Db2 12.1+ native vector embeddings (`VECTOR(n, FLOAT32)`). |
 | **LLM Inference Integration** | **Planned / Future** | Roadmap item for IBM watsonx.ai Granite / external LLM generative synthesis. |

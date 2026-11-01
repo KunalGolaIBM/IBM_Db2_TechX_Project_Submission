@@ -14,7 +14,7 @@ logger = logging.getLogger("incident_coordinator")
 class IncidentCoordinator:
     """
     Coordinates incident ingestion, automatic severity classification,
-    LlamaIndex knowledge retrieval, and deterministic workflow execution.
+    LangChain runbook retrieval, and deterministic workflow execution.
     """
 
     def __init__(self, repository: Db2IncidentRepository) -> None:

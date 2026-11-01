@@ -1,6 +1,6 @@
 # Db2 WorkRelay Intelligence
 
-> **One-Line Pitch:** An operational incident management and knowledge retrieval application that uses IBM Db2 to persist operational incidents, maintain immutable lifecycle audit logs, and provide deterministic retrieval of historical operational runbooks.
+> **One-Line Pitch:** An operational incident management and knowledge retrieval application that uses IBM Db2 to persist operational incidents, maintain immutable lifecycle audit logs, and provide deterministic retrieval of historical operational runbooks via LangChain.
 
 ---
 
@@ -35,7 +35,7 @@ Existing incident management approaches suffer from two major flaws:
 **Db2 WorkRelay Intelligence** solves these challenges by combining deterministic reliability with automated operational intelligence:
 - **FastAPI Core:** Exposes a high-throughput REST API for incident intake, lifecycle querying, and status updates.
 - **IBM Db2 Persistence:** Acts as the authoritative single source of truth for all incident records, automated diagnostic logs, and multi-step remediation actions using native `ibm_db`.
-- **Operational Runbook Retrieval:** Deterministic symptom and keyword overlap matching over operational post-mortems and runbooks to immediately recommend verified recovery steps for incoming symptoms.
+- **LangChain Runbook Retrieval:** Operational post-mortems and runbooks are modeled as LangChain `Document` objects and retrieved using a custom deterministic `BaseRetriever` with symptom/keyword overlap and service context scoring.
 - **Deterministic Workflows:** The system isolates triage and runbook recommendation from execution (controlled state machine transitioning through `CLASSIFYING -> INVESTIGATING -> REMEDIATING -> VERIFYING -> RESOLVED`).
 
 ---
@@ -57,9 +57,12 @@ Existing incident management approaches suffer from two major flaws:
 
 ---
 
-## Operational Runbook Knowledge Retrieval
-- **Mechanism:** Symptom and keyword overlap matching with service context weighting over curated operational playbooks (e.g., Db2 `SQL0964C` transaction log exhaustion, `SQL30081N` connection timeouts, JWT authentication desync).
-- **Output:** Prioritized remediation steps and operational commands mapped directly to the incident metadata.
+## LangChain Operational Runbook Knowledge Retrieval
+- **Framework:** LangChain (`langchain-core>=1.0.0,<2.0.0`).
+- **Document Model:** Curated operational playbooks (e.g., Db2 `SQL0964C` transaction log exhaustion, `SQL30081N` connection timeouts, JWT authentication desync) are modeled as native LangChain `Document` objects (`langchain_core.documents.Document`) containing incident telemetry, metadata, and structured resolution commands.
+- **Custom BaseRetriever:** Implements `LangChainRunbookRetriever` extending `langchain_core.retrievers.BaseRetriever`. It performs deterministic symptom and keyword overlap matching with service context weighting directly through LangChain's standard `invoke()` runnable interface.
+- **Zero Cloud / LLM Overhead:** The retriever operates entirely in-memory and deterministically. It requires no external LLM APIs, credentials, cloud dependencies, or vector databases, ensuring predictable, reproducible execution under critical outage conditions.
+- **Output:** Prioritized remediation steps and exact operational command lines mapped directly into the incident metadata.
 
 ---
 
@@ -75,7 +78,7 @@ Existing incident management approaches suffer from two major flaws:
 | **Native Db2 DDL** | **Implemented** | `schema_db2.sql` with native Db2 types and constraints. |
 | **Row Mapping Layer** | **Implemented** | Maps tuple results from `ibm_db_dbi` safely using `cursor.description`. |
 | **Offline Test Fallback** | **Implemented** | SQLite in-memory mode for unit tests without live database dependency. |
-| **Runbook Knowledge Matching** | **Implemented** | Deterministic keyword/token overlap matching against curated runbooks. |
+| **LangChain Runbook Retrieval** | **Implemented** | Curated runbooks converted to LangChain Documents and queried via custom LangChain BaseRetriever. |
 | **Live Db2 Integration Tests** | **Environment-Dependent** | `tests/test_db2_live.py` executes when live Db2 credentials and driver are available; skips safely otherwise. |
 | **Native Db2 Vector Search** | **Planned** | Future enhancement for Db2 12.1+ native vector embeddings. |
 | **Generative LLM Synthesis** | **Planned** | Future enhancement for IBM watsonx.ai Granite. |
@@ -84,6 +87,7 @@ Existing incident management approaches suffer from two major flaws:
 
 ## Tech Stack
 - **Backend / Core:** Python 3.10+, FastAPI, Uvicorn, Pydantic v2
+- **AI Framework:** LangChain (`langchain-core>=1.0.0,<2.0.0`, `BaseRetriever`, `Document`)
 - **Database Persistence:** IBM Db2 Community Edition (Docker / Cloud), native `ibm_db` / `ibm_db_dbi`
 - **Knowledge Catalog:** Curated Operational Runbook Engine
 - **Testing & Tooling:** Pytest, Docker, Docker Compose
@@ -178,7 +182,7 @@ PYTHONPATH=src pytest tests/ -v
 
 ### Test Suite Structure:
 - **`tests/test_models.py`**: Unit tests validating Pydantic models, state transitions, and audit timestamps.
-- **`tests/test_ai_retrieval.py`**: Unit tests validating runbook catalog indexing, query symptom matching, and custom ingestion.
+- **`tests/test_ai_retrieval.py`**: Unit tests validating LangChain Document conversion, LangChain BaseRetriever `invoke()` execution, keyword overlap matching, irrelevant query handling, custom ingestion, and coordinator integration.
 - **`tests/test_db2_repository.py`**: Repository tests validating CRUD operations, filtering, audit event logging, and SQL injection safety via SQLite in-memory mock.
 - **`tests/test_db2_internals.py`**: Unit tests validating Db2 connection failure handling, tuple-to-dictionary row mapping, and native schema SQL parsing.
 - **`tests/test_api.py`**: API endpoint validation testing health check, incident intake, querying, status patching, and 404 structured errors.
