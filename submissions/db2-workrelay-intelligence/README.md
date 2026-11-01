@@ -65,6 +65,8 @@ Existing incident management approaches suffer from two major flaws:
 
 ## Implementation Status
 
+> **Verification Notice:** Live Db2 verification has not yet been performed. The native Db2 integration code and two live integration tests are implemented, but execution against a running IBM Db2 server remains outstanding because a live Db2 instance was unavailable during development.
+
 | Feature / Component | Status | Details |
 |---|---|---|
 | **FastAPI REST API** | **Implemented** | Endpoints for `/health`, `/incidents`, `/incidents/{id}`, `/knowledge/query`, `/knowledge/ingest`. |
@@ -126,7 +128,7 @@ DB2_HOST=localhost
 DB2_PORT=50000
 DB2_DATABASE=testdb
 DB2_USER=db2inst1
-DB2_PASSWORD=YourSecurePassword123!
+DB2_PASSWORD=your_db2_password_here
 DB2_USE_MOCK=false
 ```
 
