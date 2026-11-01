@@ -1,0 +1,13 @@
+# IBM Db2 Official Python Driver
+ibm_db>=3.2.0
+
+# HTTP & Web Scraping
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+
+# Utilities & CLI Output Formatting
+python-dotenv>=1.0.0
+tabulate>=0.9.0
+
+# Testing
+pytest>=7.4.0

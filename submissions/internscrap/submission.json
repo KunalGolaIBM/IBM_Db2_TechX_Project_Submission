@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "InternScrap: IBM Db2-Powered Internship Aggregator & Lifecycle Tracker",
+    "slug": "internscrap",
+    "short_description": "An automated tech internship aggregator and application pipeline tracker demonstrating enterprise relational modeling, performance indexing, and analytical views on IBM Db2.",
+    "category": "Data Engineering / Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/Aryanshh/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "InternScrap Core",
+    "members": [
+      {
+        "name": "Aryanshh Srivastava",
+        "github": "Aryanshh",
+        "email": "aryanshh08sri@gmail.com",
+        "role": "Full Stack & Data Systems Engineer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition (Docker) / Db2 on Cloud",
+    "connector": "ibm_db (official IBM Python driver)",
+    "features_used": [
+      "Relational Schema & Foreign Key Constraints (COMPANIES, INTERNSHIPS, SKILLS, APPLICATIONS)",
+      "Performance Indexes (IX_INT_DEADLINE, IX_INT_REMOTE, IX_INT_STATUS, IX_APP_STATUS)",
+      "Advanced Db2 Views (V_ACTIVE_INTERNSHIPS, V_TOP_IN_DEMAND_SKILLS, V_APPLICATION_FUNNEL, V_UPCOMING_DEADLINES)",
+      "Db2 Developer Extension Workflows (DDL, Views, Sample Data & Query Plans)",
+      "Idempotent Upserts using Unique Constraints"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "SQL"
+    ],
+    "frameworks": [
+      "ibm_db",
+      "BeautifulSoup4",
+      "Requests",
+      "tabulate",
+      "pytest"
+    ],
+    "ai_models": []
+  }
+}
