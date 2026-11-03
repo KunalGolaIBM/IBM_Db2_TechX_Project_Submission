@@ -9,19 +9,13 @@ import re
 import shutil
 import tempfile
 import subprocess
-import sys
 from datetime import datetime
-from pathlib import Path
-
-# Ensure the project root is importable when Streamlit runs this app.py.
-PROJECT_ROOT = Path(__file__).resolve().parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.rasa_auth import (
     begin_registration, verify_registration, authenticate,
     begin_password_reset, finish_password_reset,
 )
+from pathlib import Path
 
 import streamlit as st
 from pypdf import PdfReader
@@ -465,7 +459,13 @@ if not st.session_state["rasa_user"]:
             else:
                 st.error("The Gmail ID or password is incorrect.")
 
-        with st.expander("Create account / Forgot password"):
+        # Keep the account panel open after an OTP is sent so the verification form
+        # remains visible on Streamlit's automatic rerun.
+        auth_flow_pending = bool(
+            st.session_state.get("rasa_pending_email")
+            or st.session_state.get("rasa_reset_email")
+        )
+        with st.expander("Create account / Forgot password", expanded=auth_flow_pending):
             auth_mode = st.radio(
                 "Account action", ["Create Account", "Forgot Password"],
                 label_visibility="collapsed", key="rasa_auth_mode",
@@ -473,7 +473,7 @@ if not st.session_state["rasa_user"]:
             if auth_mode == "Create Account":
                 with st.form("rasa_register_form"):
                     register_email = st.text_input("Gmail ID for registration")
-                    register_password = st.text_input("Create a password (at least 4 characters)", type="password")
+                    register_password = st.text_input("Create a unique password (at least 12 characters)", type="password")
                     register_confirm = st.text_input("Confirm password", type="password")
                     request_code = st.form_submit_button("Send verification OTP", use_container_width=True)
                 if request_code:
