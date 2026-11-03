@@ -9,13 +9,19 @@ import re
 import shutil
 import tempfile
 import subprocess
+import sys
 from datetime import datetime
+from pathlib import Path
+
+# Ensure the project root is importable when Streamlit runs this app.py.
+PROJECT_ROOT = Path(__file__).resolve().parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.rasa_auth import (
     begin_registration, verify_registration, authenticate,
     begin_password_reset, finish_password_reset,
 )
-from pathlib import Path
 
 import streamlit as st
 from pypdf import PdfReader
