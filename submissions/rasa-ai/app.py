@@ -291,7 +291,12 @@ def _render_intro_page():
         database, username, password and TLS instructions supplied by your Db2 provider.
         Do not commit credentials or share passwords.
       </p>
-      <pre><code>$env:DB2_HOST = "your-db2-host"<br>$env:DB2_PORT = "50000"<br>$env:DB2_DATABASE = "your-database"<br>$env:DB2_USER = "your-username"<br>$env:DB2_PASSWORD = "your-password"<br>$env:DB2_SSL = "true"</code></pre>
+      <pre>$env:DB2_HOST = "your-db2-host"
+$env:DB2_PORT = "50000"
+$env:DB2_DATABASE = "your-database"
+$env:DB2_USER = "your-username"
+$env:DB2_PASSWORD = "your-password"
+$env:DB2_SSL = "true"</pre>
       <ol>
         <li>Start RASA AI with <code>streamlit run app.py</code>.</li>
         <li>Open <b>Db2 Database</b> and check the connection.</li>
