@@ -344,48 +344,61 @@ Optional features such as vocal analysis or experimental facial-expression label
 
 ### Install dependencies — Windows PowerShell
 
-Open PowerShell in the RASA AI project directory (the directory containing `app.py`).
+Open PowerShell in the RASA AI project directory (the directory containing `app.py` and `requirements.txt`).
 
-Create and activate a virtual environment:
+**1. Create a Python 3.12 virtual environment**
+
+Python 3.12 is recommended for compatibility with the pinned project dependencies.
 
 ```powershell
-python -m venv .venv
+py -3.12 -m venv .venv
+```
+
+**2. Activate the virtual environment**
+
+```powershell
 .\.venv\Scripts\Activate.ps1
 ```
 
-If PowerShell blocks activation, use a process-scoped execution policy for the current terminal only:
+If PowerShell blocks activation, run:
 
 ```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 ```
 
-Upgrade pip and install the project dependencies:
+**3. Verify Python**
+
+```powershell
+python --version
+```
+
+Expected version: `Python 3.12.x`
+
+**4. Upgrade pip and install dependencies**
 
 ```powershell
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-Confirm the active Python environment:
-
-```powershell
-python --version
-python -m pip --version
-```
+Wait until the installation completes successfully before proceeding.
 
 ### Install dependencies — macOS / Linux
 
 From the RASA AI project directory:
 
 ```bash
-python3 -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
+
+python --version
+
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-Use this same virtual environment when running the application.
+Use Python 3.12 and the same virtual environment when running the application.
 
 ### Run RASA AI locally
 
@@ -401,35 +414,45 @@ Streamlit prints a local URL in the terminal. Open that URL in your browser. To 
 
 ### Gmail OTP Configuration (Local Setup)
 
-Reviewers running RASA AI locally must configure their own Gmail SMTP credentials.
+Reviewers running RASA AI locally must configure their own Gmail SMTP credentials to enable email OTP verification.
 
-Create the following file inside the `rasa-ai` directory:
+**1. Create the configuration directory**
 
-`.streamlit/secrets.toml`
+Inside the `rasa-ai` project directory, create:
 
-Add:
+`.streamlit`
+
+**2. Create the secrets file**
+
+Inside `.streamlit`, create:
+
+`secrets.toml`
+
+**3. Add your Gmail credentials**
 
 ```toml
 GMAIL_ADDRESS = "yourname@gmail.com"
 GMAIL_APP_PASSWORD = "your-16-character-gmail-app-password"
 ```
 
-**Setup instructions:**
+**4. Generate Gmail App Password**
 
 1. Use your own Gmail account.
 2. Enable Google 2-Step Verification.
 3. Generate a Gmail App Password.
-4. Add your credentials to `.streamlit/secrets.toml`.
-5. Run the application:
+4. Add your email address and App Password to `secrets.toml`.
 
-```bash
-streamlit run app.py
+**5. Launch RASA AI**
+
+```powershell
+python -m streamlit run app.py
 ```
-Alternatively, reviewers can access the deployed application:
+
+Alternatively, reviewers can access the deployed application without performing the local installation:
 
 https://db2hack2026-9gfducsfracrhhqecjey2j.streamlit.app/
 
-**Security:** Never share your personal Gmail password or commit SMTP credentials to GitHub.
+**Security Notice:** Never share your regular Gmail password or commit actual SMTP credentials or `secrets.toml` to GitHub. Each reviewer must configure their own credentials for local email OTP verification.
 
 ## Haystack retrieval
 
@@ -451,6 +474,8 @@ The connector reads connection settings from environment variables. Configure th
 
 - **Deployed application:** Add the Db2 settings using the hosting platform's environment-variable or secrets configuration. Do not ask ordinary application users to enter database credentials.
 - **Local development:** Set the variables in the same terminal session used to start Streamlit, as shown below.
+
+**Note:** IBM Db2 integration is optional for launching and exploring the main RASA AI application. Reviewers who want to test the Db2 Database workflow must configure their own accessible Db2 instance and valid connection credentials. The application does not require reviewers to use the developer's personal database credentials.
 
 Windows PowerShell:
 
@@ -489,13 +514,12 @@ For a deployed application, configure the variables in the hosting environment a
 
 Then:
 
-1.  Open RASA AI.
-3.  Open the **Db2 Database** workflow in the application.
-4.  Run the connection check.
-5.  If using the audition-record connector, initialize `RASA_AUDITIONS`
-    if needed.
-6.  Manually synchronize the local audition library if required.
-7.  Load recent Db2 records to inspect the read-back result.
+1. Open RASA AI.
+2. Open the Db2 Database workflow in the application.
+3. Run the connection check.
+4. If using the audition-record connector, initialize `RASA_AUDITIONS` if needed.
+5. Manually synchronize the local audition library if required.
+6. Load recent Db2 records to inspect the read-back result.
 
 The successful connection and actor-data SQL query execution in the
 project environment are confirmed. The audition-table initialization,
@@ -569,6 +593,48 @@ subdirectory or specify its relative path.
 Confirm that `smart_audition_search.py` is present in the expected
 project directory and that Streamlit is running with the same Python
 environment in which the project dependencies were installed.
+
+### MediaPipe installation error
+
+If dependency installation fails with an error such as:
+
+`No matching distribution found for mediapipe==0.10.21`
+
+Check your active Python version:
+
+```powershell
+python --version
+```
+
+The recommended project environment uses Python 3.12.
+
+If you created the virtual environment with an incompatible Python version:
+
+1. Deactivate the current environment:
+
+```powershell
+deactivate
+```
+
+2. Remove the old `.venv` directory.
+3. Recreate it using Python 3.12:
+
+```powershell
+py -3.12 -m venv .venv
+```
+
+4. Activate it:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+5. Reinstall the project dependencies:
+
+```powershell
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
 
 ### Haystack import or retrieval errors
 
