@@ -1,0 +1,90 @@
+{
+  "project": {
+    "title": "RASA AI — Audition Intelligence & Casting Support",
+    "slug": "rasa-ai",
+    "short_description": "An AI-assisted audition review workspace that brings screenplay context, role requirements, visual and vocal audition observations, reviewer notes, audition comparison, and audition-record retrieval into one workflow. RASA AI supports evidence-informed human casting decisions; it does not make casting decisions.",
+    "category": "AI / Computer Vision / Audio Analysis / NLP / Casting Support",
+    "demo_url": "https://db2hack2026-evlwzj2bqjgxmrv2mzbtse.streamlit.app/",
+    "repo_url": "https://github.com/AdityaSrivastava8/Db2_Hack_2026"
+  },
+  "team": {
+    "name": "RASA AI",
+    "members": [
+      {
+        "name": "Aditya Srivastava",
+        "github": "AdityaSrivastava8",
+        "role": "Developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 (Db2 LUW-style connector SQL)",
+    "connector": "Python ibm_db driver via db2_store.py",
+    "features_used": [
+      "Db2 connection checking",
+      "RASA_AUDITIONS table initialization",
+      "Manual audition-record upsert using SQL MERGE keyed by AUDITION_ID",
+      "Audition payload storage as JSON in a CLOB with summary fields",
+      "Retrieval of recent audition records and JSON payload decoding"
+    ],
+    "verification_status": {
+      "confirmed": [
+        "Db2 connectivity in the project environment",
+        "Execution of actor-data SQL queries"
+      ],
+      "requires_separate_validation": [
+        "Audition-table initialization",
+        "Manual audition-record synchronization",
+        "Audition-record read-back"
+      ]
+    },
+    "persistence_note": "The local JSON audition library remains the source of truth. Db2 synchronization is manual and does not automatically replace the local JSON storage workflow."
+  },
+  "tech_stack": {
+    "languages": [
+      "Python"
+    ],
+    "frameworks_and_libraries": [
+      "Streamlit",
+      "OpenCV",
+      "MediaPipe",
+      "NumPy",
+      "pandas",
+      "pypdf",
+      "librosa (vocal analysis)",
+      "FER (experimental facial-expression labels)",
+      "Haystack 2.x",
+      "ibm_db"
+    ],
+    "technologies": [
+      "Computer Vision",
+      "Pose and facial-landmark measurements",
+      "Audio acoustic analysis",
+      "Rule-based screenplay cue extraction",
+      "Timestamp-based visual and vocal evidence alignment",
+      "BM25 keyword retrieval",
+      "Local JSON audition-record persistence",
+      "IBM Db2 database integration"
+    ],
+    "retrieval": {
+      "framework": "Haystack 2.x",
+      "method": "BM25 keyword retrieval",
+      "storage": "In-memory document store rebuilt for each search operation",
+      "note": "BM25 scores indicate keyword relevance, not acting quality or role suitability."
+    },
+    "ai_models": [],
+    "llm_used_for_screenplay_or_retrieval": false
+  },
+  "application_workflow": [
+    "Screenplay/story text input or text-based PDF extraction",
+    "Rule-based candidate character-cue and scene-heading identification",
+    "Reviewer-defined role requirements and audition prompts",
+    "Video analysis using OpenCV and MediaPipe landmarks",
+    "Optional audio-only acoustic analysis",
+    "Timestamp-based combined visual and vocal evidence timeline",
+    "Local audition library with reviewer notes, status, shortlist markers, comparison, and export",
+    "Haystack BM25 search over saved audition records",
+    "IBM Db2 connection, table initialization, manual synchronization, and read-back"
+  ],
+  "decision_support_notice": "RASA AI does not make casting decisions. Computer-vision measurements, optional facial-expression labels, vocal features, rule-based screenplay cues, and retrieval scores are signals for human review, not validated measures of acting quality, personality, internal emotion, diagnosis, or role suitability. Qualified human reviewers remain responsible for casting decisions."
+}
