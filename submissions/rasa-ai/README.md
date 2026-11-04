@@ -20,20 +20,20 @@ workflow.
 
 ## Table of contents
 
--   [Project overview](#project-overview)
--   [Problem statement](#problem-statement)
--   [What RASA AI does](#what-rasa-ai-does)
--   [Application workflow](#application-workflow)
--   [Technology stack](#technology-stack)
--   [Project files](#project-files)
--   [Requirements and prerequisites](#requirements-and-prerequisites)
--   [Using the deployed application](#using-the-deployed-application)
--   [Local development setup](#local-development-setup)
--   [Haystack retrieval](#haystack-retrieval)
--   [IBM Db2 integration](#ibm-db2-integration)
--   [Data storage and privacy](#data-storage-and-privacy)
--   [Known limitations](#known-limitations)
--   [Troubleshooting](#troubleshooting)
+- [Project overview](#project-overview)
+- [Problem statement](#problem-statement)
+- [What RASA AI does](#what-rasa-ai-does)
+- [Application workflow](#application-workflow)
+- [Technology stack](#technology-stack)
+- [Project files](#project-files)
+- [Requirements and prerequisites](#requirements-and-prerequisites)
+- [Local development setup](#local-development-setup)
+- [Run RASA AI locally](#run-rasa-ai-locally)
+- [Haystack retrieval](#haystack-retrieval)
+- [IBM Db2 integration](#ibm-db2-integration)
+- [Data storage and privacy](#data-storage-and-privacy)
+- [Known limitations](#known-limitations)
+- [Troubleshooting](#troubleshooting)
 
 ------------------------------------------------------------------------
 
@@ -450,7 +450,7 @@ python -m streamlit run app.py
 
 Alternatively, reviewers can access the deployed application without performing the local installation:
 
-https://db2hack2026-9gfducsfracrhhqecjey2j.streamlit.app/
+[https://db2hack2026-9gfducsfracrhhqecjey2j.streamlit.app/](https://db2hack2026-evlwzj2bqjgxmrv2mzbtse.streamlit.app/)
 
 **Security Notice:** Never share your regular Gmail password or commit actual SMTP credentials or `secrets.toml` to GitHub. Each reviewer must configure their own credentials for local email OTP verification.
 
