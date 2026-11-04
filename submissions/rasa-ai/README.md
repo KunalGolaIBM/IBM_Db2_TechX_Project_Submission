@@ -399,6 +399,38 @@ Streamlit prints a local URL in the terminal. Open that URL in your browser. To 
 
 > **Important:** Run the command from the directory that actually contains `app.py`. If `app.py` is in a subdirectory, change into that directory first or provide the correct relative path.
 
+### Gmail OTP Configuration (Local Setup)
+
+Reviewers running RASA AI locally must configure their own Gmail SMTP credentials.
+
+Create the following file inside the `rasa-ai` directory:
+
+`.streamlit/secrets.toml`
+
+Add:
+
+```toml
+GMAIL_ADDRESS = "yourname@gmail.com"
+GMAIL_APP_PASSWORD = "your-16-character-gmail-app-password"
+```
+
+**Setup instructions:**
+
+1. Use your own Gmail account.
+2. Enable Google 2-Step Verification.
+3. Generate a Gmail App Password.
+4. Add your credentials to `.streamlit/secrets.toml`.
+5. Run the application:
+
+```bash
+streamlit run app.py
+```
+Alternatively, reviewers can access the deployed application:
+
+https://db2hack2026-9gfducsfracrhhqecjey2j.streamlit.app/
+
+**Security:** Never share your personal Gmail password or commit SMTP credentials to GitHub.
+
 ## Haystack retrieval
 
 Haystack is an application dependency, not a separate installation step for end users. The deployed environment must install a compatible Haystack 2.x version as part of the application's dependencies (normally through `requirements.txt`). When the deployed application is running with that dependency available, users can access the retrieval feature through the RASA AI interface without installing Haystack on their own devices.
