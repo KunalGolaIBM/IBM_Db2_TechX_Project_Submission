@@ -72,7 +72,7 @@
       "storage": "In-memory document store rebuilt for each search operation",
       "note": "BM25 scores indicate keyword relevance, not acting quality or role suitability."
     },
-    "ai_models": [NA],
+    "ai_models": [],
     "llm_used_for_screenplay_or_retrieval": false
   },
   "application_workflow": [
