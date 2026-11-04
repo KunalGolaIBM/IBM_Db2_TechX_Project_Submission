@@ -4,7 +4,7 @@
     "slug": "rasa-ai",
     "short_description": "An AI-assisted audition review workspace that brings screenplay context, role requirements, visual and vocal audition observations, reviewer notes, audition comparison, and audition-record retrieval into one workflow. RASA AI supports evidence-informed human casting decisions; it does not make casting decisions.",
     "category": "AI / Computer Vision / Audio Analysis / NLP / Casting Support",
-    "demo_url": "https://db2hack2026-9gfducsfracrhhqecjey2j.streamlit.app/",
+    "demo_url": "https://db2hack2026-evlwzj2bqjgxmrv2mzbtse.streamlit.app/",
     "repo_url": "https://github.com/AdityaSrivastava8/Db2_Hack_2026"
   },
   "team": {
@@ -51,8 +51,8 @@
       "NumPy",
       "pandas",
       "pypdf",
-      "librosa (optional vocal analysis)",
-      "FER (optional experimental facial-expression labels)",
+      "librosa (vocal analysis)",
+      "FER (experimental facial-expression labels)",
       "Haystack 2.x",
       "ibm_db"
     ],
@@ -84,7 +84,7 @@
     "Timestamp-based combined visual and vocal evidence timeline",
     "Local audition library with reviewer notes, status, shortlist markers, comparison, and export",
     "Haystack BM25 search over saved audition records",
-    "Optional IBM Db2 connection, table initialization, manual synchronization, and read-back"
+    "IBM Db2 connection, table initialization, manual synchronization, and read-back"
   ],
   "decision_support_notice": "RASA AI does not make casting decisions. Computer-vision measurements, optional facial-expression labels, vocal features, rule-based screenplay cues, and retrieval scores are signals for human review, not validated measures of acting quality, personality, internal emotion, diagnosis, or role suitability. Qualified human reviewers remain responsible for casting decisions."
 }
