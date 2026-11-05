@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "AI-Powered Recipe & Ingredient Waste Optimizer",
+    "slug": "db2-recipe-waste-optimizer",
+    "short_description": "Smart household pantry optimizer and recipe generator powered by IBM Db2 and LangChain that minimizes food waste through expiry-aware deterministic ranking.",
+    "category": "AI / RAG / Data Engineering / Sustainability",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/ashfinashfi/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "WasteNot AI",
+    "members": [
+      {
+        "name": "ashfin prem",
+        "github": "ashfinashfi",
+        "email": "ashfin96a@gmail.com",
+        "role": "Full Stack & AI Engineer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker)",
+    "connector": "ibm_db / SQLAlchemy",
+    "features_used": [
+      "Relational Tables & Constraints",
+      "ACID Inventory Transactions",
+      "Expiry-Aware Ingredient Queries",
+      "Vector Embedding Storage & Hybrid Retrieval",
+      "Audit Event Logging"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "TypeScript", "SQL"],
+    "frameworks": ["FastAPI", "LangChain", "SQLAlchemy", "React", "Vite", "TailwindCSS"],
+    "ai_models": [
+      "OpenRouter Free (meta-llama/llama-3.3-70b-instruct:free)",
+      "Sentence-Transformers (all-MiniLM-L6-v2)"
+    ]
+  }
+}

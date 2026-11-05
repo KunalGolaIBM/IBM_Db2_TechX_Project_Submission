@@ -1,0 +1,158 @@
+[
+  {
+    "name": "Spinach & Tomato Homestyle Curry",
+    "description": "A comforting, nutrient-dense curry made with fresh spinach leaves and ripe juicy tomatoes, lightly spiced with turmeric and garlic.",
+    "cuisine": "Indian",
+    "prep_minutes": 10,
+    "cook_minutes": 20,
+    "servings": 2,
+    "dietary_tags": "vegetarian, gluten-free, healthy",
+    "source_name": "Curated Home Kitchen",
+    "source_url": "https://curatedkitchen.example/spinach-tomato-curry",
+    "license_notes": "CC-BY-4.0",
+    "ingredients": [
+      {"name": "spinach", "category": "vegetables", "quantity": 150.0, "unit": "g", "is_optional": 0},
+      {"name": "tomato", "category": "vegetables", "quantity": 2.0, "unit": "pieces", "is_optional": 0},
+      {"name": "onion", "category": "vegetables", "quantity": 1.0, "unit": "pieces", "is_optional": 0},
+      {"name": "garlic", "category": "vegetables", "quantity": 3.0, "unit": "cloves", "is_optional": 0},
+      {"name": "cooking oil", "category": "pantry", "quantity": 15.0, "unit": "ml", "is_optional": 0},
+      {"name": "turmeric", "category": "spices", "quantity": 1.0, "unit": "tsp", "is_optional": 1}
+    ],
+    "instructions": [
+      "Wash and roughly chop the spinach leaves. Dice the tomatoes and onion finely.",
+      "Heat cooking oil in a pan over medium heat. Add minced garlic and diced onions, sautéing until translucent.",
+      "Add diced tomatoes and turmeric. Cook for 5 minutes until tomatoes soften into a fragrant pulp.",
+      "Add chopped spinach and stir well. Cover and simmer for 5-7 minutes until tender.",
+      "Season with salt and serve hot with flatbread or rice."
+    ]
+  },
+  {
+    "name": "Hearty Tomato & Herb Omelette",
+    "description": "Fluffy beaten eggs folded over sautéed diced tomatoes, crisp onions, and aromatics.",
+    "cuisine": "Continental",
+    "prep_minutes": 5,
+    "cook_minutes": 8,
+    "servings": 1,
+    "dietary_tags": "high-protein, gluten-free, quick",
+    "source_name": "Curated Home Kitchen",
+    "source_url": "https://curatedkitchen.example/tomato-omelette",
+    "license_notes": "CC-BY-4.0",
+    "ingredients": [
+      {"name": "eggs", "category": "dairy & poultry", "quantity": 2.0, "unit": "pieces", "is_optional": 0},
+      {"name": "tomato", "category": "vegetables", "quantity": 1.0, "unit": "pieces", "is_optional": 0},
+      {"name": "onion", "category": "vegetables", "quantity": 0.5, "unit": "pieces", "is_optional": 0},
+      {"name": "cooking oil", "category": "pantry", "quantity": 10.0, "unit": "ml", "is_optional": 0},
+      {"name": "black pepper", "category": "spices", "quantity": 0.5, "unit": "tsp", "is_optional": 1}
+    ],
+    "instructions": [
+      "In a small bowl, whisk eggs vigorously with a pinch of salt and black pepper.",
+      "Heat oil in a non-stick skillet. Sauté onions and tomatoes for 2 minutes until lightly softened.",
+      "Pour whisked eggs evenly over the vegetables.",
+      "Cook on medium-low heat until the edges set, then flip or fold in half.",
+      "Cook for another 1 minute and slide onto a warm plate."
+    ]
+  },
+  {
+    "name": "Golden Potato & Onion Stir-Fry",
+    "description": "Crispy pan-fried potato cubes tossed with golden sliced onions and aromatic spices.",
+    "cuisine": "Indian",
+    "prep_minutes": 10,
+    "cook_minutes": 18,
+    "servings": 2,
+    "dietary_tags": "vegan, vegetarian, gluten-free",
+    "source_name": "Curated Home Kitchen",
+    "source_url": "https://curatedkitchen.example/aloo-pyaza",
+    "license_notes": "CC-BY-4.0",
+    "ingredients": [
+      {"name": "potato", "category": "vegetables", "quantity": 3.0, "unit": "pieces", "is_optional": 0},
+      {"name": "onion", "category": "vegetables", "quantity": 1.0, "unit": "pieces", "is_optional": 0},
+      {"name": "cooking oil", "category": "pantry", "quantity": 15.0, "unit": "ml", "is_optional": 0},
+      {"name": "turmeric", "category": "spices", "quantity": 1.0, "unit": "tsp", "is_optional": 1},
+      {"name": "garlic", "category": "vegetables", "quantity": 2.0, "unit": "cloves", "is_optional": 1}
+    ],
+    "instructions": [
+      "Peel potatoes and cut into bite-sized 1-inch cubes. Slice onions into thin strips.",
+      "Heat oil in a wide frying pan over medium-high heat. Add garlic and onions, cooking until lightly browned.",
+      "Add cubed potatoes, turmeric, and salt. Stir to coat evenly in oil.",
+      "Cover and cook on medium-low heat for 12-15 minutes, stirring occasionally until potatoes are golden and tender.",
+      "Uncover for the last 2 minutes for extra crispiness."
+    ]
+  },
+  {
+    "name": "Rustic Spinach & Potato Mash Frittata",
+    "description": "A wholesome bake combining wilted spinach, diced tender potatoes, and eggs for a zero-waste dinner.",
+    "cuisine": "Mediterranean",
+    "prep_minutes": 10,
+    "cook_minutes": 15,
+    "servings": 2,
+    "dietary_tags": "vegetarian, high-protein, gluten-free",
+    "source_name": "Curated Home Kitchen",
+    "source_url": "https://curatedkitchen.example/spinach-potato-frittata",
+    "license_notes": "CC-BY-4.0",
+    "ingredients": [
+      {"name": "eggs", "category": "dairy & poultry", "quantity": 3.0, "unit": "pieces", "is_optional": 0},
+      {"name": "spinach", "category": "vegetables", "quantity": 100.0, "unit": "g", "is_optional": 0},
+      {"name": "potato", "category": "vegetables", "quantity": 1.0, "unit": "pieces", "is_optional": 0},
+      {"name": "onion", "category": "vegetables", "quantity": 0.5, "unit": "pieces", "is_optional": 0},
+      {"name": "cooking oil", "category": "pantry", "quantity": 10.0, "unit": "ml", "is_optional": 0}
+    ],
+    "instructions": [
+      "Parboil or microwave diced potato cubes until tender (approx 3 minutes).",
+      "Sauté onions and spinach in oil in an oven-safe skillet until spinach is wilted.",
+      "Spread boiled potatoes evenly in the pan.",
+      "Pour beaten eggs over the mixture and cook on low heat until bottom is golden.",
+      "Flip or finish under a broiler for 2 minutes until set."
+    ]
+  },
+  {
+    "name": "Creamy Tomato & Garlic Lentil Dal",
+    "description": "Hearty yellow lentils simmered with juicy tomatoes, tender spinach, and tempered with fried garlic.",
+    "cuisine": "Indian",
+    "prep_minutes": 10,
+    "cook_minutes": 25,
+    "servings": 3,
+    "dietary_tags": "vegan, vegetarian, gluten-free, high-protein",
+    "source_name": "Curated Home Kitchen",
+    "source_url": "https://curatedkitchen.example/spinach-tomato-dal",
+    "license_notes": "CC-BY-4.0",
+    "ingredients": [
+      {"name": "lentils", "category": "grains & legumes", "quantity": 150.0, "unit": "g", "is_optional": 0},
+      {"name": "spinach", "category": "vegetables", "quantity": 80.0, "unit": "g", "is_optional": 0},
+      {"name": "tomato", "category": "vegetables", "quantity": 2.0, "unit": "pieces", "is_optional": 0},
+      {"name": "garlic", "category": "vegetables", "quantity": 4.0, "unit": "cloves", "is_optional": 0},
+      {"name": "onion", "category": "vegetables", "quantity": 1.0, "unit": "pieces", "is_optional": 0},
+      {"name": "cooking oil", "category": "pantry", "quantity": 15.0, "unit": "ml", "is_optional": 0}
+    ],
+    "instructions": [
+      "Rinse lentils and pressure cook or boil in water with a pinch of turmeric until soft.",
+      "In a separate saucepan, heat oil. Add sliced garlic and onions, cooking until aromatic.",
+      "Add diced tomatoes and cook down into a sauce.",
+      "Add chopped spinach and simmer for 3 minutes.",
+      "Pour cooked lentils into the vegetable mixture, adjust salt and water, and simmer for 5 minutes."
+    ]
+  },
+  {
+    "name": "Quick Garlic Sautéed Greens",
+    "description": "Fresh vibrant spinach flash-cooked with golden garlic slices and a drizzle of olive or vegetable oil.",
+    "cuisine": "Italian",
+    "prep_minutes": 5,
+    "cook_minutes": 5,
+    "servings": 2,
+    "dietary_tags": "vegan, vegetarian, low-carb, keto",
+    "source_name": "Curated Home Kitchen",
+    "source_url": "https://curatedkitchen.example/garlic-sauteed-greens",
+    "license_notes": "CC-BY-4.0",
+    "ingredients": [
+      {"name": "spinach", "category": "vegetables", "quantity": 200.0, "unit": "g", "is_optional": 0},
+      {"name": "garlic", "category": "vegetables", "quantity": 3.0, "unit": "cloves", "is_optional": 0},
+      {"name": "cooking oil", "category": "pantry", "quantity": 10.0, "unit": "ml", "is_optional": 0}
+    ],
+    "instructions": [
+      "Thinly slice garlic cloves. Thoroughly rinse and drain spinach.",
+      "Warm oil in a skillet over medium heat. Sauté garlic for 1 minute until fragrant and lightly golden (do not burn).",
+      "Add spinach in batches, tossing gently with tongs as it wilts.",
+      "Cook for only 2-3 minutes until completely wilted but bright green.",
+      "Season with salt and serve immediately as a vibrant side dish."
+    ]
+  }
+]

@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoBite AI — IBM Db2 Recipe & Waste Optimizer</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome / Phosphor Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+            },
+            db2: {
+              blue: '#0062ff',
+              dark: '#0f62fe'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col">
+
+  <!-- Top Navbar -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-md">
+          <i class="fa-solid fa-leaf text-xl"></i>
+        </div>
+        <div>
+          <span class="font-bold text-lg text-slate-800 tracking-tight">EcoBite AI</span>
+          <span class="text-xs ml-2 px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-semibold uppercase">Powered by IBM Db2</span>
+        </div>
+      </div>
+
+      <!-- Live Db2 Status Pill -->
+      <div class="flex items-center space-x-4">
+        <div id="db2-status-pill" class="flex items-center space-x-2 text-xs px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="db2-status-text" class="font-medium">Db2: Connected (v12.1)</span>
+        </div>
+        <a href="/docs" target="_blank" class="text-xs text-slate-500 hover:text-slate-800 font-medium">
+          <i class="fa-solid fa-book-open mr-1"></i>API Docs
+        </a>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-100 flex space-x-8 text-sm font-medium">
+      <button onclick="switchTab('inventory')" id="tab-inventory" class="py-3 border-b-2 border-brand-600 text-brand-600 flex items-center space-x-2">
+        <i class="fa-solid fa-boxes-stacked"></i>
+        <span>Pantry Stock</span>
+        <span id="badge-inventory-count" class="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">0</span>
+      </button>
+      <button onclick="switchTab('recommend')" id="tab-recommend" class="py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center space-x-2">
+        <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i>
+        <span>AI Recipe Assistant</span>
+      </button>
+      <button onclick="switchTab('history')" id="tab-history" class="py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center space-x-2">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        <span>Audit Ledger & Waste</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Body -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- VIEW 1: INVENTORY MANAGEMENT -->
+    <section id="view-inventory" class="space-y-6">
+      <!-- Expiry Alerts Banner -->
+      <div id="urgent-alert-banner" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 text-lg">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <div>
+            <p class="font-semibold text-amber-900 text-sm">Action Needed: Items Nearing Expiry</p>
+            <p id="urgent-alert-text" class="text-xs text-amber-700">Spinach and Tomato should be used in the next 24-48 hours.</p>
+          </div>
+        </div>
+        <button onclick="quickSuggestForUrgent()" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition shadow-sm">
+          Optimize Meal with These
+        </button>
+      </div>
+
+      <!-- Add Item Card & Header -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Household Pantry & Fridge</h1>
+          <p class="text-sm text-slate-500">Track stock levels and expiry dates persisted directly in IBM Db2.</p>
+        </div>
+        <div class="flex items-center space-x-3">
+          <button onclick="seedDemoPantry()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 transition">
+            <i class="fa-solid fa-rotate mr-1.5"></i>Reset Demo Pantry
+          </button>
+          <button onclick="toggleAddModal(true)" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-sm transition">
+            <i class="fa-solid fa-plus mr-1.5"></i>Add Ingredient
+          </button>
+        </div>
+      </div>
+
+      <!-- Inventory Grid -->
+      <div id="inventory-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- VIEW 2: AI RECIPE ASSISTANT -->
+    <section id="view-recommend" class="hidden space-y-8">
+      <div class="max-w-3xl mx-auto text-center space-y-3">
+        <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">AI-Powered Zero-Waste Recipe Engine</h1>
+        <p class="text-slate-600 text-sm">Semantic retrieval over IBM Db2 recipe embeddings + deterministic coverage and expiry re-ranking.</p>
+      </div>
+
+      <!-- Query Form -->
+      <div class="max-w-3xl mx-auto bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-4">
+        <div class="relative">
+          <input type="text" id="recipe-query" placeholder="e.g. Suggest a quick vegetarian dinner using what I have..." 
+                 value="Suggest a quick vegetarian dinner using what I have"
+                 class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
+          <i class="fa-solid fa-sparkles text-brand-600 absolute left-4 top-3.5 text-base"></i>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          <div>
+            <label class="text-xs font-medium text-slate-600 block mb-1">Servings</label>
+            <select id="query-servings" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs">
+              <option value="1">1 Person</option>
+              <option value="2" selected>2 Servings</option>
+              <option value="4">4 Servings</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-slate-600 block mb-1">Dietary Preference</label>
+            <select id="query-diet" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs">
+              <option value="vegetarian" selected>Vegetarian</option>
+              <option value="vegan">Vegan</option>
+              <option value="gluten-free">Gluten-Free</option>
+              <option value="">Any Diet</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-slate-600 block mb-1">Max Cook Time</label>
+            <select id="query-time" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs">
+              <option value="30" selected>Under 30 mins</option>
+              <option value="45">Under 45 mins</option>
+              <option value="60">Under 60 mins</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pt-2 flex justify-end">
+          <button onclick="fetchRecommendations()" id="btn-recommend" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition shadow flex items-center space-x-2">
+            <span>Find Best Zero-Waste Recipes</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Results Container -->
+      <div id="results-area" class="max-w-4xl mx-auto space-y-6">
+        <!-- Generated Top Recipe Card -->
+        <div id="selected-recipe-card" class="hidden bg-gradient-to-br from-emerald-500/10 via-white to-slate-50 border border-emerald-200 rounded-2xl p-6 shadow-sm space-y-5">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Candidate Ranking Breakdown -->
+        <div id="candidates-container" class="space-y-4">
+          <h3 class="font-bold text-slate-800 text-base flex items-center space-x-2">
+            <i class="fa-solid fa-list-ol text-brand-600"></i>
+            <span>Db2 Candidate Re-Ranking & Score Breakdown</span>
+          </h3>
+          <div id="candidates-list" class="space-y-3">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: AUDIT HISTORY & WASTE SUMMARY -->
+    <section id="view-history" class="hidden space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Audit Event Ledger & Waste Summary</h1>
+          <p class="text-sm text-slate-500">Immutable Db2 event ledger tracking additions, cooking deductions, and discarded stock.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-xl border border-slate-200">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Consumed</p>
+          <p id="stat-consumed" class="text-3xl font-extrabold text-emerald-600 mt-2">0</p>
+          <p class="text-xs text-slate-400 mt-1">Confirmed cooking events</p>
+        </div>
+        <div class="bg-white p-5 rounded-xl border border-slate-200">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Discarded (Waste)</p>
+          <p id="stat-discarded" class="text-3xl font-extrabold text-rose-500 mt-2">0</p>
+          <p class="text-xs text-slate-400 mt-1">Items expired/spoiled</p>
+        </div>
+        <div class="bg-white p-5 rounded-xl border border-slate-200">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Waste Avoidance Ratio</p>
+          <p id="stat-ratio" class="text-3xl font-extrabold text-brand-600 mt-2">100%</p>
+          <p class="text-xs text-slate-400 mt-1">Measured proxy score</p>
+        </div>
+        <div class="bg-white p-5 rounded-xl border border-slate-200">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Db2 Ledger Records</p>
+          <p id="stat-events" class="text-3xl font-extrabold text-blue-600 mt-2">0</p>
+          <p class="text-xs text-slate-400 mt-1">INVENTORY_EVENTS table</p>
+        </div>
+      </div>
+
+      <!-- History Table -->
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+        <div class="px-6 py-4 border-b border-slate-100 font-bold text-slate-800 text-sm">
+          Recent Meals Cooked (COOKING_HISTORY)
+        </div>
+        <div class="divide-y divide-slate-100" id="cooking-history-list">
+          <p class="p-6 text-sm text-slate-400 text-center">No cooking history recorded yet. Cook a recipe from the AI Assistant to log records!</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Add Ingredient Modal -->
+  <div id="add-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="font-bold text-slate-900">Add Pantry Ingredient</h3>
+        <button onclick="toggleAddModal(false)" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="space-y-3 text-sm">
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Ingredient Name</label>
+          <input type="text" id="modal-name" placeholder="e.g. spinach, tomato, eggs" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Quantity</label>
+            <input type="number" id="modal-qty" value="1.0" step="0.1" class="w-full border rounded-lg p-2 text-xs outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Unit</label>
+            <select id="modal-unit" class="w-full border rounded-lg p-2 text-xs outline-none">
+              <option value="pieces">pieces</option>
+              <option value="g">grams (g)</option>
+              <option value="kg">kg</option>
+              <option value="ml">ml</option>
+              <option value="cloves">cloves</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Storage Location</label>
+            <select id="modal-loc" class="w-full border rounded-lg p-2 text-xs outline-none">
+              <option value="fridge">Fridge</option>
+              <option value="pantry">Pantry</option>
+              <option value="freezer">Freezer</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Expiry Date</label>
+            <input type="date" id="modal-expiry" class="w-full border rounded-lg p-2 text-xs outline-none">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-3 border-t">
+        <button onclick="toggleAddModal(false)" class="px-4 py-2 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+        <button onclick="submitNewItem()" class="px-4 py-2 text-xs bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-semibold">Save to Db2</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Application Logic -->
+  <script>
+    const API_BASE = "/api/v1";
+    let currentInventory = [];
+
+    async function checkHealth() {
+      try {
+        const res = await fetch("/health");
+        const data = await res.json();
+        const text = document.getElementById("db2-status-text");
+        if (data.database && data.database.status === "connected") {
+          text.innerText = `Db2: Connected (${data.database.dbms_name} ${data.database.dbms_version})`;
+        } else {
+          text.innerText = "Db2: Offline/Degraded";
+          document.getElementById("db2-status-pill").className = "flex items-center space-x-2 text-xs px-3 py-1.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200";
+        }
+      } catch (err) {
+        console.error("Health check failed", err);
+      }
+    }
+
+    async function loadInventory() {
+      try {
+        const res = await fetch(`${API_BASE}/inventory`);
+        currentInventory = await res.json();
+        document.getElementById("badge-inventory-count").innerText = currentInventory.length;
+        renderInventoryGrid();
+        updateUrgentAlert();
+      } catch (err) {
+        console.error("Failed to load inventory", err);
+      }
+    }
+
+    function renderInventoryGrid() {
+      const grid = document.getElementById("inventory-grid");
+      if (currentInventory.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-12 text-center text-slate-400">
+            <i class="fa-solid fa-basket-shopping text-4xl mb-2"></i>
+            <p>Your pantry is empty. Click "Reset Demo Pantry" or "Add Ingredient" to get started!</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = currentInventory.map(item => {
+        let badgeClass = "bg-slate-100 text-slate-700 border-slate-200";
+        let badgeText = item.days_until_expiry !== null ? `Expires in ${item.days_until_expiry}d` : "No expiry";
+        if (item.expiry_status === "urgent") {
+          badgeClass = "bg-rose-50 text-rose-700 border-rose-200 font-bold";
+          badgeText = `URGENT: ${item.days_until_expiry}d left!`;
+        } else if (item.expiry_status === "approaching") {
+          badgeClass = "bg-amber-50 text-amber-700 border-amber-200 font-medium";
+          badgeText = `Expiring: ${item.days_until_expiry}d`;
+        }
+
+        return `
+          <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition space-y-3 flex flex-col justify-between">
+            <div>
+              <div class="flex items-start justify-between">
+                <h4 class="font-bold text-slate-800 capitalize text-base">${item.ingredient_name}</h4>
+                <span class="text-[10px] px-2 py-0.5 rounded-full border ${badgeClass}">${badgeText}</span>
+              </div>
+              <p class="text-xs text-slate-400 capitalize mt-0.5">${item.storage_location} • ${item.category}</p>
+              <div class="mt-3">
+                <span class="text-2xl font-extrabold text-slate-900">${item.quantity}</span>
+                <span class="text-xs text-slate-500 font-medium ml-1">${item.unit}</span>
+              </div>
+            </div>
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+              <button onclick="discardItem(${item.inventory_id})" class="text-slate-400 hover:text-rose-600 transition">
+                <i class="fa-solid fa-trash-can mr-1"></i>Discard
+              </button>
+              <span class="text-[10px] text-slate-400">Db2 ID: #${item.inventory_id}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function updateUrgentAlert() {
+      const urgentItems = currentInventory.filter(i => i.expiry_status === "urgent");
+      const banner = document.getElementById("urgent-alert-banner");
+      if (urgentItems.length > 0) {
+        banner.classList.remove("hidden");
+        document.getElementById("urgent-alert-text").innerText = 
+          `${urgentItems.map(i => i.ingredient_name).join(", ")} will expire very soon! Generate an optimized recipe to avoid waste.`;
+      } else {
+        banner.classList.add("hidden");
+      }
+    }
+
+    async function discardItem(id) {
+      if (!confirm("Are you sure you want to discard this item? This will log an audit event to Db2.")) return;
+      await fetch(`${API_BASE}/inventory/${id}`, { method: "DELETE" });
+      loadInventory();
+      loadHistory();
+    }
+
+    async function seedDemoPantry() {
+      await fetch("/api/v1/recipes/seed_demo", { method: "POST" }).catch(() => {});
+      // Call reload
+      location.reload();
+    }
+
+    async function submitNewItem() {
+      const name = document.getElementById("modal-name").value;
+      const qty = parseFloat(document.getElementById("modal-qty").value);
+      const unit = document.getElementById("modal-unit").value;
+      const loc = document.getElementById("modal-loc").value;
+      const expiry = document.getElementById("modal-expiry").value || null;
+
+      if (!name) return alert("Please enter an ingredient name.");
+
+      await fetch(`${API_BASE}/inventory`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ingredient_name: name,
+          quantity: qty,
+          unit: unit,
+          storage_location: loc,
+          expiry_date: expiry
+        })
+      });
+
+      toggleAddModal(false);
+      loadInventory();
+      loadHistory();
+    }
+
+    function toggleAddModal(show) {
+      document.getElementById("add-modal").classList.toggle("hidden", !show);
+    }
+
+    function quickSuggestForUrgent() {
+      switchTab("recommend");
+      document.getElementById("recipe-query").value = "Suggest a quick dinner using my items nearing expiry";
+      fetchRecommendations();
+    }
+
+    async function fetchRecommendations() {
+      const btn = document.getElementById("btn-recommend");
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-2"></i>Analyzing Db2 Embeddings...`;
+
+      const msg = document.getElementById("recipe-query").value;
+      const servings = parseInt(document.getElementById("query-servings").value);
+      const diet = document.getElementById("query-diet").value;
+      const time = parseInt(document.getElementById("query-time").value);
+
+      const payload = {
+        message: msg,
+        servings: servings,
+        max_cooking_minutes: time,
+        dietary_preferences: diet ? [diet] : []
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/recipes/recommend`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        renderRecommendations(data);
+      } catch (err) {
+        alert("Failed to fetch recommendations: " + err);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Find Best Zero-Waste Recipes</span><i class="fa-solid fa-arrow-right text-xs"></i>`;
+      }
+    }
+
+    function renderRecommendations(data) {
+      const topRecipe = data.selected_recipe;
+      const candidates = data.top_candidates;
+
+      const card = document.getElementById("selected-recipe-card");
+      if (topRecipe) {
+        card.classList.remove("hidden");
+        card.innerHTML = `
+          <div class="flex items-start justify-between">
+            <div>
+              <span class="text-xs uppercase font-bold text-emerald-700 tracking-wider">Top Recommendation (Grounded in Inventory)</span>
+              <h2 class="text-2xl font-extrabold text-slate-900 mt-1">${topRecipe.recipe_name}</h2>
+              <p class="text-xs text-slate-500 mt-1">Serves: ${topRecipe.servings} • Prep: ${topRecipe.preparation_minutes}m • Cook: ${topRecipe.cooking_minutes}m</p>
+            </div>
+            <button onclick="confirmCooked(${topRecipe.recipe_id}, ${topRecipe.servings})" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition flex items-center space-x-1.5">
+              <i class="fa-solid fa-check"></i>
+              <span>I Cooked This Meal</span>
+            </button>
+          </div>
+
+          <div class="bg-white p-4 rounded-xl border border-emerald-100 text-xs text-emerald-900 space-y-1">
+            <p class="font-bold flex items-center"><i class="fa-solid fa-recycle mr-1.5 text-emerald-600"></i>Waste Optimization Rationale:</p>
+            <p>${topRecipe.waste_reduction_explanation}</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div class="bg-white p-4 rounded-xl border border-slate-200">
+              <p class="font-bold text-slate-800 mb-2">Ingredients in Your Pantry (${topRecipe.inventory_ingredients_used.length})</p>
+              <ul class="space-y-1.5 text-slate-600">
+                ${topRecipe.ingredients.filter(i => i.source === "inventory").map(i => `
+                  <li class="flex items-center justify-between">
+                    <span class="capitalize font-medium text-emerald-800"><i class="fa-solid fa-circle-check text-emerald-500 mr-1.5"></i>${i.name}</span>
+                    <span class="text-slate-400">${i.quantity || ''} ${i.unit || ''}</span>
+                  </li>
+                `).join("")}
+              </ul>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200">
+              <p class="font-bold text-slate-800 mb-2">Additional Ingredients Needed (${topRecipe.missing_ingredients.length})</p>
+              <ul class="space-y-1.5 text-slate-600">
+                ${topRecipe.ingredients.filter(i => i.source === "additional").length > 0 ? 
+                  topRecipe.ingredients.filter(i => i.source === "additional").map(i => `
+                    <li class="flex items-center justify-between">
+                      <span class="capitalize text-slate-700"><i class="fa-solid fa-cart-shopping text-slate-400 mr-1.5"></i>${i.name}</span>
+                      <span class="text-slate-400">${i.quantity || ''} ${i.unit || ''}</span>
+                    </li>
+                  `).join("") : '<p class="text-slate-400">Zero additional ingredients! 100% available in your pantry.</p>'}
+              </ul>
+            </div>
+          </div>
+
+          <div class="space-y-2 pt-2">
+            <p class="font-bold text-slate-800 text-xs uppercase tracking-wide">Step-by-Step Cooking Instructions</p>
+            <ol class="space-y-2 text-xs text-slate-700 list-decimal pl-4">
+              ${topRecipe.instructions.map(step => `<li class="pl-1">${step}</li>`).join("")}
+            </ol>
+          </div>
+        `;
+      }
+
+      // Render Candidate Re-Ranking List
+      const clist = document.getElementById("candidates-list");
+      clist.innerHTML = candidates.map((c, idx) => `
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-slate-300 transition flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="flex items-center space-x-2">
+              <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-600 text-xs font-bold flex items-center justify-center">#${idx + 1}</span>
+              <h4 class="font-bold text-slate-900 text-sm">${c.name}</h4>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">${c.cuisine}</span>
+            </div>
+            <p class="text-xs text-slate-500">${c.explanation}</p>
+          </div>
+          <div class="flex items-center space-x-6 text-xs text-right">
+            <div>
+              <p class="text-slate-400 text-[10px] uppercase">Coverage</p>
+              <p class="font-bold text-slate-800">${Math.round(c.coverage_score * 100)}%</p>
+            </div>
+            <div>
+              <p class="text-slate-400 text-[10px] uppercase">Db2 Semantic</p>
+              <p class="font-bold text-slate-800">${Math.round(c.semantic_score * 100)}%</p>
+            </div>
+            <div class="bg-brand-50 px-3 py-1.5 rounded-lg border border-brand-200">
+              <p class="text-brand-800 text-[10px] uppercase font-bold">Total Score</p>
+              <p class="font-extrabold text-brand-700 text-base">${(c.total_score * 100).toFixed(1)}%</p>
+            </div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    async function confirmCooked(recipeId, servings) {
+      if (!confirm("Confirm that you cooked this recipe? Your available stock in IBM Db2 will be deducted automatically!")) return;
+      try {
+        const res = await fetch(`${API_BASE}/recipes/${recipeId}/cooked`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ servings_prepared: servings })
+        });
+        const data = await res.json();
+        alert(data.message);
+        loadInventory();
+        loadHistory();
+      } catch (err) {
+        alert("Failed to confirm cooking: " + err);
+      }
+    }
+
+    async function loadHistory() {
+      try {
+        const res = await fetch(`${API_BASE}/history`);
+        const data = await res.json();
+        const summary = data.event_summary || {};
+        const events = data.cooking_events || [];
+
+        document.getElementById("stat-consumed").innerText = summary.consumed || 0;
+        document.getElementById("stat-discarded").innerText = summary.discarded || 0;
+        document.getElementById("stat-events").innerText = (summary.added || 0) + (summary.consumed || 0) + (summary.discarded || 0);
+
+        const list = document.getElementById("cooking-history-list");
+        if (events.length === 0) {
+          list.innerHTML = `<p class="p-6 text-sm text-slate-400 text-center">No meals cooked yet.</p>`;
+          return;
+        }
+
+        list.innerHTML = events.map(e => `
+          <div class="p-4 flex items-center justify-between text-xs hover:bg-slate-50">
+            <div class="flex items-center space-x-3">
+              <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+                <i class="fa-solid fa-utensils"></i>
+              </div>
+              <div>
+                <p class="font-bold text-slate-900">${e.recipe_name}</p>
+                <p class="text-slate-400 text-[10px]">Prepared ${e.servings_prepared} servings</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="text-[10px] text-slate-400">${new Date(e.cooked_at).toLocaleString()}</span>
+            </div>
+          </div>
+        `).join("");
+      } catch (err) {
+        console.error("Failed to load history", err);
+      }
+    }
+
+    function switchTab(tab) {
+      ["inventory", "recommend", "history"].forEach(t => {
+        document.getElementById(`view-${t}`).classList.toggle("hidden", t !== tab);
+        const btn = document.getElementById(`tab-${t}`);
+        if (t === tab) {
+          btn.className = "py-3 border-b-2 border-brand-600 text-brand-600 font-bold flex items-center space-x-2";
+        } else {
+          btn.className = "py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center space-x-2";
+        }
+      });
+    }
+
+    // Startup
+    checkHealth();
+    loadInventory();
+    loadHistory();
+  </script>
+</body>
+</html>
