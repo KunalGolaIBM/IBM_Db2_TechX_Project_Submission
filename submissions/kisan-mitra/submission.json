@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Kisan Mitra (किसान मित्र) - IBM Db2 AI Assistant",
+    "slug": "kisan-mitra",
+    "short_description": "Bilingual (Hindi/English) AI assistant for Indian farmers powered by IBM Db2 12.1+ relational Text-to-SQL for mandi prices, native vector similarity search for government scheme advisory, and Gramin Mitra voice narration for illiterate farmers.",
+    "category": "AI / RAG / Agentic AI",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/KunalGolaIBM/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "Kisan Mitra",
+    "members": [
+      {
+        "name": "Priyanshi Verma",
+        "github": "priyanshiverma1209",
+        "email": "priyanshiverma@example.com",
+        "role": "Lead AI & Database Developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1.2.0 (Docker)",
+    "connector": "ibm_db / SQLAlchemy",
+    "features_used": [
+      "Relational Tables (MANDI_PRICES)",
+      "Composite B-Tree Indexes",
+      "Native Db2 VECTOR(384, REAL) Column",
+      "SYSIBM.VECTOR_DISTANCE(..., COSINE) Metric",
+      "Read-Only kisan_ro Role & AST Security Guardrails"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python 3.12",
+      "SQL",
+      "HTML5 / JavaScript"
+    ],
+    "frameworks": [
+      "LangChain 0.3",
+      "Streamlit 1.42",
+      "Plotly",
+      "SQLAlchemy",
+      "gTTS / Web Speech API"
+    ],
+    "ai_models": [
+      "Google Gemini 2.5 Flash / watsonx.ai",
+      "paraphrase-multilingual-MiniLM-L12-v2 (384d Embeddings)"
+    ]
+  }
+}

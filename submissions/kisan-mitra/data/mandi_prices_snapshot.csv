@@ -1,0 +1,92 @@
+state,district,market,commodity,variety,arrival_date,min_price,max_price,modal_price
+Uttar Pradesh,Mathura,Mathura,Potato,Desi,2026-11-04,1420.00,1580.00,1520.00
+Uttar Pradesh,Mathura,Mathura,Potato,Desi,2026-11-03,1400.00,1550.00,1490.00
+Uttar Pradesh,Mathura,Mathura,Potato,Desi,2026-11-02,1380.00,1530.00,1470.00
+Uttar Pradesh,Mathura,Mathura,Potato,Desi,2026-11-01,1350.00,1500.00,1450.00
+Uttar Pradesh,Mathura,Mathura,Wheat,Dara,2026-11-04,2420.00,2560.00,2500.00
+Uttar Pradesh,Mathura,Mathura,Wheat,Dara,2026-11-03,2400.00,2540.00,2480.00
+Uttar Pradesh,Mathura,Mathura,Mustard,Black,2026-11-04,5200.00,5550.00,5400.00
+Uttar Pradesh,Mathura,Mathura,Mustard,Black,2026-11-02,5180.00,5500.00,5380.00
+Uttar Pradesh,Mathura,Mathura,Onion,Red,2026-11-04,2600.00,3100.00,2900.00
+Uttar Pradesh,Mathura,Mathura,Tomato,Hybrid,2026-11-04,1800.00,2200.00,2050.00
+Uttar Pradesh,Mathura,Kosi Kalan,Potato,Desi,2026-11-04,1400.00,1540.00,1480.00
+Uttar Pradesh,Mathura,Kosi Kalan,Wheat,Dara,2026-11-04,2410.00,2530.00,2475.00
+Uttar Pradesh,Mathura,Kosi Kalan,Mustard,Black,2026-11-04,5220.00,5520.00,5410.00
+Uttar Pradesh,Agra,Agra,Potato,Desi,2026-11-04,1450.00,1620.00,1550.00
+Uttar Pradesh,Agra,Agra,Potato,Desi,2026-11-03,1420.00,1600.00,1520.00
+Uttar Pradesh,Agra,Agra,Potato,Desi,2026-11-02,1400.00,1580.00,1500.00
+Uttar Pradesh,Agra,Agra,Potato,Desi,2026-10-30,1380.00,1540.00,1460.00
+Uttar Pradesh,Agra,Agra,Wheat,Dara,2026-11-04,2440.00,2580.00,2520.00
+Uttar Pradesh,Agra,Agra,Wheat,Dara,2026-11-01,2420.00,2550.00,2490.00
+Uttar Pradesh,Agra,Agra,Mustard,Sarson,2026-11-04,5250.00,5600.00,5450.00
+Uttar Pradesh,Agra,Agra,Onion,Red,2026-11-04,2650.00,3150.00,2950.00
+Uttar Pradesh,Agra,Agra,Tomato,Desi,2026-11-04,1750.00,2150.00,1980.00
+Uttar Pradesh,Agra,Fatehabad,Potato,Desi,2026-11-04,1420.00,1570.00,1510.00
+Uttar Pradesh,Agra,Fatehabad,Wheat,Dara,2026-11-04,2400.00,2530.00,2480.00
+Uttar Pradesh,Aligarh,Aligarh,Potato,Desi,2026-11-04,1390.00,1520.00,1460.00
+Uttar Pradesh,Aligarh,Aligarh,Wheat,Dara,2026-11-04,2430.00,2570.00,2510.00
+Uttar Pradesh,Aligarh,Aligarh,Mustard,Black,2026-11-04,5200.00,5500.00,5390.00
+Uttar Pradesh,Aligarh,Aligarh,Rice,Basmati,2026-11-04,3600.00,4200.00,3950.00
+Uttar Pradesh,Aligarh,Khair,Wheat,Dara,2026-11-04,2410.00,2540.00,2490.00
+Uttar Pradesh,Aligarh,Khair,Paddy,Common,2026-11-04,2180.00,2320.00,2280.00
+Uttar Pradesh,Hathras,Hathras,Potato,Desi,2026-11-04,1410.00,1550.00,1490.00
+Uttar Pradesh,Hathras,Hathras,Wheat,Dara,2026-11-04,2420.00,2550.00,2495.00
+Uttar Pradesh,Hathras,Hathras,Mustard,Sarson,2026-11-04,5240.00,5560.00,5420.00
+Uttar Pradesh,Lucknow,Lucknow,Potato,Desi,2026-11-04,1500.00,1680.00,1600.00
+Uttar Pradesh,Lucknow,Lucknow,Potato,Desi,2026-11-03,1480.00,1650.00,1580.00
+Uttar Pradesh,Lucknow,Lucknow,Wheat,Dara,2026-11-04,2460.00,2600.00,2550.00
+Uttar Pradesh,Lucknow,Lucknow,Wheat,Sharbati,2026-11-04,2850.00,3200.00,3050.00
+Uttar Pradesh,Lucknow,Lucknow,Wheat,Sharbati,2026-10-29,2800.00,3150.00,3000.00
+Uttar Pradesh,Lucknow,Lucknow,Rice,Basmati,2026-11-04,3800.00,4400.00,4150.00
+Uttar Pradesh,Lucknow,Lucknow,Rice,Basmati,2026-10-28,3750.00,4350.00,4100.00
+Uttar Pradesh,Lucknow,Lucknow,Mustard,Yellow,2026-11-04,5400.00,5800.00,5650.00
+Uttar Pradesh,Lucknow,Lucknow,Onion,Red,2026-11-04,2700.00,3200.00,3000.00
+Uttar Pradesh,Lucknow,Lucknow,Tomato,Hybrid,2026-11-04,1900.00,2300.00,2100.00
+Uttar Pradesh,Lucknow,Lucknow,Gram,Desi,2026-11-04,6100.00,6600.00,6400.00
+Uttar Pradesh,Lucknow,Lucknow,Gram,Desi,2026-10-30,6050.00,6550.00,6350.00
+Uttar Pradesh,Kanpur Nagar,Kanpur,Potato,Desi,2026-11-04,1480.00,1640.00,1570.00
+Uttar Pradesh,Kanpur Nagar,Kanpur,Wheat,Dara,2026-11-04,2450.00,2590.00,2540.00
+Uttar Pradesh,Kanpur Nagar,Kanpur,Mustard,Black,2026-11-04,5280.00,5620.00,5480.00
+Uttar Pradesh,Kanpur Nagar,Kanpur,Gram,Desi,2026-11-04,6150.00,6650.00,6420.00
+Uttar Pradesh,Kanpur Nagar,Kanpur,Rice,Common,2026-11-04,2500.00,2850.00,2700.00
+Uttar Pradesh,Meerut,Meerut,Wheat,Dara,2026-11-04,2470.00,2610.00,2560.00
+Uttar Pradesh,Meerut,Meerut,Potato,Desi,2026-11-04,1440.00,1590.00,1520.00
+Uttar Pradesh,Meerut,Meerut,Sugarcane,Local,2026-11-04,360.00,400.00,380.00
+Uttar Pradesh,Meerut,Meerut,Mustard,Black,2026-11-04,5300.00,5650.00,5500.00
+Uttar Pradesh,Meerut,Meerut,Rice,Basmati,2026-11-04,3900.00,4500.00,4250.00
+Uttar Pradesh,Meerut,Meerut,Rice,Basmati,2026-10-31,3850.00,4450.00,4200.00
+Uttar Pradesh,Varanasi,Varanasi,Potato,Desi,2026-11-04,1520.00,1700.00,1620.00
+Uttar Pradesh,Varanasi,Varanasi,Wheat,Dara,2026-11-04,2480.00,2620.00,2570.00
+Uttar Pradesh,Varanasi,Varanasi,Tomato,Hybrid,2026-11-04,2000.00,2400.00,2250.00
+Uttar Pradesh,Varanasi,Varanasi,Onion,Red,2026-11-04,2750.00,3250.00,3050.00
+Uttar Pradesh,Varanasi,Varanasi,Gram,Desi,2026-11-04,6200.00,6700.00,6480.00
+Uttar Pradesh,Bareilly,Bareilly,Wheat,Dara,2026-11-04,2430.00,2560.00,2510.00
+Uttar Pradesh,Bareilly,Bareilly,Rice,Common,2026-11-04,2480.00,2800.00,2660.00
+Uttar Pradesh,Bareilly,Bareilly,Mustard,Yellow,2026-11-04,5350.00,5720.00,5560.00
+Uttar Pradesh,Bareilly,Bareilly,Potato,Desi,2026-11-04,1410.00,1560.00,1500.00
+Uttar Pradesh,Gorakhpur,Gorakhpur,Wheat,Dara,2026-11-04,2450.00,2580.00,2530.00
+Uttar Pradesh,Gorakhpur,Gorakhpur,Potato,Desi,2026-11-04,1510.00,1670.00,1600.00
+Uttar Pradesh,Gorakhpur,Gorakhpur,Rice,Common,2026-11-04,2520.00,2840.00,2710.00
+Uttar Pradesh,Prayagraj,Prayagraj,Wheat,Dara,2026-11-04,2460.00,2600.00,2545.00
+Uttar Pradesh,Prayagraj,Prayagraj,Potato,Desi,2026-11-04,1490.00,1650.00,1580.00
+Uttar Pradesh,Prayagraj,Prayagraj,Mustard,Black,2026-11-04,5270.00,5600.00,5460.00
+Uttar Pradesh,Jhansi,Jhansi,Wheat,Dara,2026-11-04,2440.00,2570.00,2520.00
+Uttar Pradesh,Jhansi,Jhansi,Gram,Desi,2026-11-04,6120.00,6600.00,6390.00
+Uttar Pradesh,Jhansi,Jhansi,Gram,Desi,2026-10-28,6080.00,6560.00,6340.00
+Uttar Pradesh,Jhansi,Jhansi,Mustard,Black,2026-11-04,5250.00,5580.00,5430.00
+Uttar Pradesh,Ayodhya,Ayodhya,Wheat,Dara,2026-11-04,2450.00,2590.00,2535.00
+Uttar Pradesh,Ayodhya,Ayodhya,Potato,Desi,2026-11-04,1490.00,1660.00,1590.00
+Uttar Pradesh,Ayodhya,Ayodhya,Paddy,Common,2026-11-04,2200.00,2340.00,2290.00
+Uttar Pradesh,Muzaffarnagar,Muzaffarnagar,Sugarcane,Local,2026-11-04,365.00,405.00,385.00
+Uttar Pradesh,Muzaffarnagar,Muzaffarnagar,Wheat,Dara,2026-11-04,2460.00,2600.00,2550.00
+Uttar Pradesh,Muzaffarnagar,Muzaffarnagar,Mustard,Black,2026-11-04,5280.00,5630.00,5490.00
+Punjab,Ludhiana,Ludhiana,Wheat,Dara,2026-11-04,2480.00,2630.00,2580.00
+Punjab,Ludhiana,Ludhiana,Paddy,Basmati,2026-11-04,3950.00,4600.00,4320.00
+Haryana,Karnal,Karnal,Wheat,Dara,2026-11-04,2470.00,2620.00,2570.00
+Haryana,Karnal,Karnal,Rice,Basmati,2026-11-04,4000.00,4650.00,4380.00
+Madhya Pradesh,Indore,Indore,Wheat,Sharbati,2026-11-04,2900.00,3350.00,3180.00
+Madhya Pradesh,Indore,Indore,Soyabean,Yellow,2026-11-04,4300.00,4750.00,4550.00
+Rajasthan,Jaipur,Jaipur,Mustard,Sarson,2026-11-04,5350.00,5750.00,5580.00
+Rajasthan,Jaipur,Jaipur,Bajra,Desi,2026-11-04,2150.00,2350.00,2280.00
+Maharashtra,Nashik,Nashik,Onion,Red,2026-11-04,2500.00,3000.00,2800.00
+Maharashtra,Pune,Pune,Tomato,Hybrid,2026-11-04,1850.00,2250.00,2100.00
