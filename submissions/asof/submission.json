@@ -25,18 +25,28 @@
     "connector": "ibm_db / ibm_db_dbi, LangChain langchain-db2 (DB2VS)",
     "features_used": [
       "Bitemporal tables (BUSINESS_TIME and SYSTEM_TIME periods, history table)",
-      "FOR BUSINESS_TIME AS OF and FOR SYSTEM_TIME AS OF queries",
+      "FOR BUSINESS_TIME AS OF and FOR SYSTEM_TIME AS OF queries (as-of lookup and replay)",
       "Native VECTOR(384, FLOAT32) with VECTOR_DISTANCE in the same query as temporal predicates",
       "PRIMARY KEY ... BUSINESS_TIME WITHOUT OVERLAPS",
-      "SQL/JSON check constraints (JSON_EXISTS)",
+      "SQL PL stored procedures (APPEND_LEDGER, VERIFY_CHAIN) and SQL scalar and table functions",
+      "In-database SHA-256 hash chain with HASH(..., 2)",
+      "BEFORE UPDATE / BEFORE DELETE triggers making ledger tables append-only",
+      "SQL/JSON: JSON_TABLE, JSON_EXISTS check constraints",
       "Indexes, foreign keys and check constraints",
-      "Least-privilege Db2 users with explicit grants",
-      "LangChain DB2VS vector store"
+      "Least-privilege Db2 users: SELECT plus EXECUTE only, PUBLIC defaults revoked",
+      "LangChain DB2VS vector store (langchain-db2)"
     ]
   },
   "tech_stack": {
-    "languages": ["Python", "SQL"],
-    "frameworks": ["LangChain", "FastAPI", "Pydantic"],
+    "languages": [
+      "Python",
+      "SQL"
+    ],
+    "frameworks": [
+      "LangChain",
+      "FastAPI",
+      "Pydantic"
+    ],
     "ai_models": [
       "google/gemini-3.1-flash-lite via OpenRouter (default)",
       "qwen2.5:7b-instruct via Ollama (local, no key)",
