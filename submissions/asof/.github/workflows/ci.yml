@@ -105,6 +105,12 @@ jobs:
         run: pytest -q
       - name: Access plans for the hot queries
         run: python -m asof.explain
+      - name: dbt marts and their audit tests (own virtualenv; ibm-dbt-db2 pins ibm_db 3.2.8)
+        run: |
+          python -m venv /tmp/dbt-venv
+          /tmp/dbt-venv/bin/pip install -q -r dbt/requirements-dbt.txt
+          export DB2_PASSWORD="$(sed -n 's/^DB2_PASSWORD=//p' .env)"
+          cd dbt && DBT_PROFILES_DIR=. DBT_SEND_ANONYMOUS_USAGE_STATS=False /tmp/dbt-venv/bin/dbt build
       - name: Db2 logs on failure
         if: failure()
         run: |

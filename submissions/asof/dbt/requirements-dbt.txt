@@ -1,0 +1,5 @@
+# Its own virtualenv: ibm-dbt-db2 pins ibm_db 3.2.8, the app uses 3.3.0.
+ibm-dbt-db2==1.0.0
+dbt-core==1.11.17
+dbt-adapters==1.24.5
+ibm_db==3.2.8

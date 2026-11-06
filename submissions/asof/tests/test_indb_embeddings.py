@@ -54,12 +54,16 @@ def indb_world(admin_conn, embeddings, settings):
     if not settings.embedding_key:
         pytest.skip("no embedding API key in .env")
     name = f"ASOF_M{uuid.uuid4().hex[:6].upper()}"
-    schema.install(admin_conn, name)
-    seed.seed_policy(admin_conn, embeddings, name)
-    seed.seed_published_answers(admin_conn, name)
-    seed.seed_faq(admin_conn, embeddings, name)  # the grants file covers the FAQ table too
-    indb.register(admin_conn, settings, name)
-    schema.apply_grants(admin_conn, settings.asof_app_user, settings.asof_editor_user, name)
+    try:
+        schema.install(admin_conn, name)
+        seed.seed_policy(admin_conn, embeddings, name)
+        seed.seed_published_answers(admin_conn, name)
+        seed.seed_faq(admin_conn, embeddings, name)  # the grants file covers the FAQ table too
+        indb.register(admin_conn, settings, name)
+        schema.apply_grants(admin_conn, settings.asof_app_user, settings.asof_editor_user, name)
+    except Exception:
+        schema.drop(admin_conn, name)  # a failed setup must not leave a schema behind
+        raise
     yield name
     schema.drop(admin_conn, name)
 

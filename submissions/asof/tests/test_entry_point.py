@@ -35,3 +35,18 @@ def test_the_cookbook_recipe_is_complete_and_holds_no_secrets():
     assert all(re.match(r"^[A-Za-z0-9_.\-]+==\S+$", line) for line in
                (recipe / "requirements.txt").read_text().splitlines() if line and not line.startswith("#"))
     assert "DB2_PASSWORD=change-me" in (recipe / ".env.example").read_text()
+
+
+def test_the_dbt_project_takes_credentials_only_from_the_environment():
+    import re
+
+    root = Path(__file__).resolve().parents[1] / "dbt"
+    profile = (root / "profiles.yml").read_text()
+    assert "env_var('DB2_PASSWORD')" in profile and not re.search(r"password:\s*[^\s\"{]", profile)
+    pins = [line for line in (root / "requirements-dbt.txt").read_text().splitlines() if line and not line.startswith("#")]
+    assert pins and all("==" in line for line in pins)
+    models = sorted(p.stem for p in (root / "models").rglob("*.sql"))
+    assert models == ["mart_clause_version_outcomes", "mart_coverage_by_area", "mart_decisions_daily",
+                      "stg_claims", "stg_decisions"]
+    for sql in (root / "models").rglob("*.sql"):  # the marts never read the masked ledger text
+        assert not re.search(r"QUESTION_REDACTED|DRAFT_REDACTED|FINAL_ANSWER|VERDICTS_JSON", sql.read_text())

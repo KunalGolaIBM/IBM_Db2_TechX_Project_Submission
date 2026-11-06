@@ -38,10 +38,14 @@ def entry(**over) -> ledger.LedgerEntry:
 def scratch(admin_conn, embeddings, settings):
     """A private schema for tests that break the chain on purpose."""
     name = f"ASOF_T{uuid.uuid4().hex[:6].upper()}"
-    schema.install(admin_conn, name)
-    seed.seed_chain_head(admin_conn, name)
-    seed.seed_faq(admin_conn, embeddings, name)  # the grants cover every table, the FAQ store included
-    schema.apply_grants(admin_conn, settings.asof_app_user, settings.asof_editor_user, name)
+    try:
+        schema.install(admin_conn, name)
+        seed.seed_chain_head(admin_conn, name)
+        seed.seed_faq(admin_conn, embeddings, name)  # the grants cover every table, the FAQ store included
+        schema.apply_grants(admin_conn, settings.asof_app_user, settings.asof_editor_user, name)
+    except Exception:
+        schema.drop(admin_conn, name)  # a failed setup must not leave a schema behind
+        raise
     yield name
     schema.drop(admin_conn, name)
 

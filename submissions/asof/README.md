@@ -167,6 +167,10 @@ Things worth knowing:
 - **HTTPS is the documented path.** IBM documents external model URLs as HTTPS, and OpenRouter over HTTPS is what we run. A plain-HTTP endpoint on the same machine (for example Ollama serving `all-minilm`) also worked in our tests, but that is undocumented behaviour; AsOf accepts plain HTTP only for a local host, as a development convenience, and says so when setup runs.
 - **Optional.** Without an API key (or with `ASOF_INDB_EMBEDDINGS=off`), the app computes the same vectors and binds them as parameters. If the endpoint fails during a policy change, the change still goes through with a locally computed vector, and the response says so.
 
+### Analytics marts with dbt
+
+[dbt/](dbt/) builds three marts from the ledger with IBM's dbt adapter for Db2 (`ibm-dbt-db2`): checks per day and decision, outcomes per clause **version**, and where the policy runs out (claims no clause covered, by area). Its tests hold the ledger to the check's own rules: every CORRECTED decision had a contradicted claim, every cited clause version still exists in current rows or system-time history, and the marts add up to the ledger. A planted inconsistency in a scratch schema made the first of those fail with exactly that row. dbt runs in its own virtualenv because the adapter pins an older `ibm_db`; CI builds it on IBM's stock image.
+
 ### Check that your Db2 supports all of it: one command
 
 [src/asof/db2check.py](src/asof/db2check.py) exercises every Db2 feature AsOf depends on in a throwaway schema, prints PASS or FAIL for each, removes everything it created, and exits non-zero on any failure:

@@ -1,0 +1,15 @@
+# Credentials come from the environment (the same names as AsOf's .env); nothing is stored here.
+# Marts are built by the owner into their own schema, ASOF_MART; they read the ledger's decision and
+# verdict columns only, never its text (which the column masks would hide anyway).
+asof:
+  target: dev
+  outputs:
+    dev:
+      type: db2
+      host: "{{ env_var('DB2_HOST', 'localhost') }}"
+      port: "{{ env_var('DB2_PORT', '50000') | int }}"
+      database: "{{ env_var('DB2_DATABASE', 'testdb') }}"
+      schema: "{{ env_var('ASOF_MART_SCHEMA', 'ASOF_MART') }}"
+      username: "{{ env_var('DB2_USER', 'db2inst1') }}"
+      password: "{{ env_var('DB2_PASSWORD') }}"
+      threads: 1

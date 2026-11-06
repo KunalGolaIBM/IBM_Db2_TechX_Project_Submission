@@ -14,6 +14,8 @@ It uses the following third-party software. No third-party code is copied into t
 | SQLAlchemy | 2.1.8 | MIT |
 | sqlglot | 30.30.0 | MIT |
 | db2-sqlglot-dialect (IBM) | 1.1.0 | Apache-2.0 |
+| ibm-dbt-db2 (IBM, dbt adapter; own environment, [dbt/requirements-dbt.txt](dbt/requirements-dbt.txt)) | 1.0.0 | Apache-2.0 |
+| dbt-core (own environment) | 1.11.17 | Apache-2.0 |
 | langchain | 1.4.9 | MIT |
 | langchain-core | 1.7.6 | MIT |
 | langchain-community | 0.4.2 | MIT |
