@@ -1,7 +1,8 @@
 """One-command setup: users, schema, seed data, grants, and a check that it all works.
 
     python -m asof.setup            # safe to re-run; creates only what is missing
-    python -m asof.setup --reset    # drop the ASOF schema first (asks for confirmation)
+    python -m asof.setup --reset         # drop the ASOF schema first (asks for confirmation)
+    python -m asof.setup --reset-ledger  # DEMO ONLY: empty the ledger, keep the policy data
 
 Steps:
  1. Generate passwords for the two least-privilege users if .env has none (never printed).
@@ -157,7 +158,7 @@ def verify_least_privilege(settings: Settings, target: str) -> None:
         say(f"  as {settings.asof_app_user}: refused " + ", ".join(refused))
 
 
-def run(reset: bool = False, target: str = db.SCHEMA) -> None:
+def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False) -> None:
     schema.validate_schema(target)
     say("1/7 Passwords for the least-privilege users")
     filled = ensure_generated_passwords()
@@ -176,6 +177,9 @@ def run(reset: bool = False, target: str = db.SCHEMA) -> None:
         if reset:
             say(f"  --reset: dropping schema {target}")
             schema.drop(conn, target)
+        elif reset_ledger and schema.table_exists(conn, target, "ANSWER_LEDGER"):
+            removed = schema.reset_ledger(conn, target)
+            say(f"  --reset-ledger (demo only): dropped and recreated the ledger tables, {removed} decisions removed")
         say(f"4/7 Schema {target}")
         counts = schema.install(conn, target)
         say(f"  {counts['created']} objects created, {counts['skipped']} already present")
@@ -205,15 +209,22 @@ def run(reset: bool = False, target: str = db.SCHEMA) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m asof.setup", description=__doc__.split("\n\n")[0])
     parser.add_argument("--reset", action="store_true", help="drop the ASOF schema and rebuild it (deletes the ledger)")
-    parser.add_argument("--yes", action="store_true", help="do not ask before --reset")
+    parser.add_argument("--reset-ledger", action="store_true",
+                        help="DEMO ONLY: drop and recreate the ledger tables (deletes every recorded decision); "
+                             "policy data is kept")
+    parser.add_argument("--yes", action="store_true", help="do not ask before --reset or --reset-ledger")
     args = parser.parse_args(argv)
-    if args.reset and not args.yes:
-        answer = input("This deletes every ledger entry and policy change in schema ASOF. Type 'reset' to continue: ")
+    if args.reset and args.reset_ledger:
+        parser.error("use --reset or --reset-ledger, not both")
+    if (args.reset or args.reset_ledger) and not args.yes:
+        what = ("every ledger entry and policy change in schema ASOF" if args.reset
+                else "every recorded decision in the ASOF ledger (demo only; policy data is kept)")
+        answer = input(f"This deletes {what}. Type 'reset' to continue: ")
         if answer.strip() != "reset":
             say("Cancelled.")
             return 1
     try:
-        run(reset=args.reset)
+        run(reset=args.reset, reset_ledger=args.reset_ledger)
     except (SetupError, ConfigError, db.DatabaseError) as exc:
         say(f"\nSETUP FAILED: {exc}")
         return 1

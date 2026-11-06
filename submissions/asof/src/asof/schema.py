@@ -74,6 +74,10 @@ def _exists(conn: ibm_db_dbi.Connection, schema: str, st: Statement) -> bool:
     return bool(db.query(conn, sql, (schema, st.name)))
 
 
+def table_exists(conn: ibm_db_dbi.Connection, schema: str, table: str) -> bool:
+    return bool(db.query(conn, "SELECT 1 FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TABNAME = ?", (schema, table)))
+
+
 def install(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> dict[str, int]:
     """Create missing objects and replace routines. Returns counts of created and skipped."""
     validate_schema(schema)
@@ -148,3 +152,27 @@ def drop(conn: ibm_db_dbi.Connection, schema: str) -> None:
     if q("SELECT SCHEMANAME FROM SYSCAT.SCHEMATA WHERE SCHEMANAME = ?"):
         db.execute(conn, f"DROP SCHEMA {schema} RESTRICT")
         conn.commit()
+
+
+LEDGER_TABLES = ("CLAIM_CITATION", "ANSWER_LEDGER", "CHAIN_HEAD")  # children first
+
+
+def reset_ledger(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> int:
+    """DEMO ONLY. Drop and recreate the ledger tables, deleting every recorded decision.
+
+    The ledger is append-only by design: no user can UPDATE or DELETE its rows. This does
+    not work around that. As the owner, it drops the three ledger tables outright (their
+    triggers go with them) and rebuilds them from the same SQL files, then starts a fresh
+    chain. Policy clauses, their history and the help-centre answers are untouched.
+    Returns the number of ledger rows that existed before the reset.
+    """
+    validate_schema(schema)
+    before = int(db.query(conn, f"SELECT COUNT(*) FROM {schema}.ANSWER_LEDGER")[0][0])
+    for (trig,) in db.query(conn, "SELECT TRIGNAME FROM SYSCAT.TRIGGERS WHERE TRIGSCHEMA = ? AND TABNAME IN (?, ?, ?)",
+                            (schema, *LEDGER_TABLES)):
+        db.execute(conn, f"DROP TRIGGER {schema}.{trig.strip()}")
+    for table in LEDGER_TABLES:
+        db.execute(conn, f"DROP TABLE {schema}.{table}")
+    conn.commit()
+    install(conn, schema)  # recreates the tables, indexes, triggers and routines that are now missing
+    return before

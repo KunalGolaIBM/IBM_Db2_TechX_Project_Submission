@@ -193,3 +193,28 @@ def test_replay_shows_the_row_used_and_a_later_change(admin_conn, embeddings, sc
     assert r["status"] == "CHANGED_SINCE_DECISION"
     assert r["used"]["version_label"] == "v2" and r["held_at_decision"]["version_label"] == "v2"
     assert r["in_force_now"]["version_label"] == "v3"
+
+
+def test_demo_ledger_reset_recreates_the_tables(admin_conn, embeddings, settings, scratch):
+    seed.seed_policy(admin_conn, embeddings, scratch)
+    seed.seed_faq(admin_conn, embeddings, scratch)
+    schema.apply_grants(admin_conn, settings.asof_app_user, settings.asof_editor_user, scratch)
+    for _ in range(3):
+        ledger.append(admin_conn, entry(), scratch)
+    policy_rows = db.query(admin_conn, f"SELECT COUNT(*) FROM {scratch}.POLICY_CLAUSE")[0][0]
+
+    assert schema.reset_ledger(admin_conn, scratch) == 3
+    seed.seed_chain_head(admin_conn, scratch)
+    schema.apply_grants(admin_conn, settings.asof_app_user, settings.asof_editor_user, scratch)
+
+    assert db.query(admin_conn, f"SELECT COUNT(*) FROM {scratch}.ANSWER_LEDGER")[0][0] == 0
+    assert db.query(admin_conn, f"SELECT COUNT(*) FROM {scratch}.POLICY_CLAUSE")[0][0] == policy_rows
+    triggers = {r[0].strip() for r in db.query(admin_conn, "SELECT TRIGNAME FROM SYSCAT.TRIGGERS WHERE TRIGSCHEMA = ? "
+                                                            "AND VALID = 'Y'", (scratch,))}
+    assert {"ANSWER_LEDGER_NO_UPDATE", "ANSWER_LEDGER_NO_DELETE", "CLAIM_CITATION_NO_UPDATE"} <= triggers
+    app = db.connect(settings, "app")
+    try:
+        assert ledger.append(app, entry(), scratch).ledger_id == 1
+        assert ledger.verify_chain(app, scratch).status == "OK"
+    finally:
+        app.close()

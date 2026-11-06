@@ -228,6 +228,14 @@ A real run with `gemini-3.1-flash-lite` (abridged):
 
 Other stale FAQ entries are caught the same way: a July question about the first bag fee is corrected from $35 to $40 (BAG-001 v2), and "you can transfer your ticket for a $50 name change fee" is corrected from CHG-004.
 
+**Resetting the ledger for a demo (demo only).** The ledger is append-only by design: no user, not even the owner, can update or delete its rows. To start a recording from ledger entry 1, setup can drop and recreate the three ledger tables as the owner, which deletes every recorded decision and starts a new hash chain. Policy clauses, their history and the help-centre answers are kept. Never do this outside a demo.
+
+```bash
+python -m asof.setup --reset-ledger      # asks you to type "reset"; add --yes to skip
+```
+
+`python -m asof.setup --reset` goes further and rebuilds the whole schema from the seed data, including undoing policy changes made in the demo.
+
 **API**
 
 | Endpoint | Purpose |
