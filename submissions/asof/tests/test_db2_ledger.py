@@ -137,7 +137,7 @@ def test_db2_rejects_an_unknown_decision(app_conn, test_schema):
 
 
 def _drop_trigger(conn, schema_name, name):
-    db.execute(conn, f"DROP TRIGGER {schema_name}.{name}")
+    db.execute(conn, f"DROP TRIGGER {db.ident(schema_name)}.{db.ident(name)}")
     conn.commit()
 
 
@@ -146,7 +146,8 @@ def test_verify_chain_catches_an_owner_who_edits_a_row(admin_conn, scratch):
         ledger.append(admin_conn, entry(), scratch)
     assert ledger.verify_chain(admin_conn, scratch).status == "OK"
     _drop_trigger(admin_conn, scratch, "ANSWER_LEDGER_NO_UPDATE")
-    db.execute(admin_conn, f"UPDATE {scratch}.ANSWER_LEDGER SET FINAL_ANSWER = 'Yes, retroactive refunds are fine.' WHERE LEDGER_ID = 2")
+    db.use_schema(admin_conn, scratch)
+    db.execute(admin_conn, "UPDATE ANSWER_LEDGER SET FINAL_ANSWER = 'Yes, retroactive refunds are fine.' WHERE LEDGER_ID = 2")
     admin_conn.commit()
     status = ledger.verify_chain(admin_conn, scratch)
     assert (status.status, status.first_bad) == ("BROKEN", 2) and "content" in status.detail
@@ -155,7 +156,8 @@ def test_verify_chain_catches_an_owner_who_edits_a_row(admin_conn, scratch):
 def test_verify_chain_catches_an_edited_citation(admin_conn, scratch):
     ledger.append(admin_conn, entry(), scratch)
     _drop_trigger(admin_conn, scratch, "CLAIM_CITATION_NO_UPDATE")
-    db.execute(admin_conn, f"UPDATE {scratch}.CLAIM_CITATION SET VERDICT = 'SUPPORTED' WHERE CLAIM_NO = 1")
+    db.use_schema(admin_conn, scratch)
+    db.execute(admin_conn, "UPDATE CLAIM_CITATION SET VERDICT = 'SUPPORTED' WHERE CLAIM_NO = 1")
     admin_conn.commit()
     status = ledger.verify_chain(admin_conn, scratch)
     assert status.status == "BROKEN" and "citations" in status.detail
@@ -166,8 +168,9 @@ def test_verify_chain_catches_a_deleted_last_row(admin_conn, scratch):
         ledger.append(admin_conn, entry(), scratch)
     for trig in ("ANSWER_LEDGER_NO_DELETE", "CLAIM_CITATION_NO_DELETE"):
         _drop_trigger(admin_conn, scratch, trig)
-    db.execute(admin_conn, f"DELETE FROM {scratch}.CLAIM_CITATION WHERE LEDGER_ID = 2")
-    db.execute(admin_conn, f"DELETE FROM {scratch}.ANSWER_LEDGER WHERE LEDGER_ID = 2")
+    db.use_schema(admin_conn, scratch)
+    db.execute(admin_conn, "DELETE FROM CLAIM_CITATION WHERE LEDGER_ID = 2")
+    db.execute(admin_conn, "DELETE FROM ANSWER_LEDGER WHERE LEDGER_ID = 2")
     admin_conn.commit()
     status = ledger.verify_chain(admin_conn, scratch)
     assert status.status == "BROKEN" and "chain head" in status.detail
@@ -175,7 +178,8 @@ def test_verify_chain_catches_a_deleted_last_row(admin_conn, scratch):
 
 def test_replay_shows_the_row_used_and_a_later_change(admin_conn, embeddings, scratch):
     seed.seed_policy(admin_conn, embeddings, scratch)
-    sys_start = db.query(admin_conn, f"SELECT SYS_START FROM {scratch}.POLICY_CLAUSE WHERE CLAUSE_ID = 'BRV-002' "
+    db.use_schema(admin_conn, scratch)
+    sys_start = db.query(admin_conn, "SELECT SYS_START FROM POLICY_CLAUSE WHERE CLAUSE_ID = 'BRV-002' "
                                      "AND VERSION_LABEL = 'v2'")[0][0]
     claim = {"pass": 1, "claim_no": 1, "text": "retroactive within 90 days", "area": "bereavement", "verdict": "SUPPORTED",
              "llm_verdict": "SUPPORTED", "rule_check": "MATCH", "clause_id": "BRV-002", "clause_version": "v2",
@@ -185,7 +189,7 @@ def test_replay_shows_the_row_used_and_a_later_change(admin_conn, embeddings, sc
                                         verdicts={"claims": [claim]}), scratch)
     assert ledger.replay(admin_conn, a.ledger_id, scratch)["clauses"][0]["status"] == "UNCHANGED"
     time.sleep(1.1)
-    db.execute(admin_conn, f"UPDATE {scratch}.POLICY_CLAUSE FOR PORTION OF BUSINESS_TIME FROM ? TO ? "
+    db.execute(admin_conn, "UPDATE POLICY_CLAUSE FOR PORTION OF BUSINESS_TIME FROM ? TO ? "
                            "SET CLAUSE_TEXT = ?, VERSION_LABEL = 'v3' WHERE CLAUSE_ID = 'BRV-002'",
                ("2026-06-01", "9999-12-31", "Retroactive requests must be submitted within 30 days of ticket issue."))
     admin_conn.commit()
@@ -201,14 +205,15 @@ def test_demo_ledger_reset_recreates_the_tables(admin_conn, embeddings, settings
     schema.apply_grants(admin_conn, settings.asof_app_user, settings.asof_editor_user, scratch)
     for _ in range(3):
         ledger.append(admin_conn, entry(), scratch)
-    policy_rows = db.query(admin_conn, f"SELECT COUNT(*) FROM {scratch}.POLICY_CLAUSE")[0][0]
+    db.use_schema(admin_conn, scratch)
+    policy_rows = db.query(admin_conn, "SELECT COUNT(*) FROM POLICY_CLAUSE")[0][0]
 
     assert schema.reset_ledger(admin_conn, scratch) == 3
     seed.seed_chain_head(admin_conn, scratch)
     schema.apply_grants(admin_conn, settings.asof_app_user, settings.asof_editor_user, scratch)
 
-    assert db.query(admin_conn, f"SELECT COUNT(*) FROM {scratch}.ANSWER_LEDGER")[0][0] == 0
-    assert db.query(admin_conn, f"SELECT COUNT(*) FROM {scratch}.POLICY_CLAUSE")[0][0] == policy_rows
+    assert db.query(admin_conn, "SELECT COUNT(*) FROM ANSWER_LEDGER")[0][0] == 0
+    assert db.query(admin_conn, "SELECT COUNT(*) FROM POLICY_CLAUSE")[0][0] == policy_rows
     triggers = {r[0].strip() for r in db.query(admin_conn, "SELECT TRIGNAME FROM SYSCAT.TRIGGERS WHERE TRIGSCHEMA = ? "
                                                             "AND VALID = 'Y'", (scratch,))}
     assert {"ANSWER_LEDGER_NO_UPDATE", "ANSWER_LEDGER_NO_DELETE", "CLAIM_CITATION_NO_UPDATE"} <= triggers

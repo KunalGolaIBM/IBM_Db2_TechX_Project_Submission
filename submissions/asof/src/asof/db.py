@@ -3,13 +3,19 @@
 Rules this module enforces:
 - One connection role per purpose: `admin` (setup only), `app` (runtime), `editor` (policy changes).
 - Credentials are passed to the driver as separate arguments, never spliced into a DSN string.
-- SQL text is always a constant; every value goes through a `?` parameter marker.
+- SQL text is a string literal in the source; every value goes through a `?` parameter marker.
+  Runtime SQL uses unqualified names, and `use_schema` points the connection at a schema with
+  `SET CURRENT SCHEMA = ?` and `SET CURRENT PATH = SYSTEM PATH, ?`, so even the schema is bound.
+- Db2 cannot bind identifiers in DDL or GRANT. Setup code that must name an object or a user
+  builds that name only through `ident`, which accepts a plain upper-case identifier and nothing
+  else. `tests/test_sql_safety.py` fails the build on any other string-built SQL.
 - Driver errors are re-raised as DatabaseError with the SQLSTATE kept and nothing else leaked.
 """
 
 from __future__ import annotations
 
 import re
+import weakref
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from typing import Any, Literal
@@ -21,6 +27,9 @@ from .config import Settings
 
 Role = Literal["admin", "app", "editor"]
 SCHEMA = "ASOF"
+
+IDENT_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,127}$")
+SCHEMA_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,29}$")
 
 _SQLSTATE = re.compile(r"SQLSTATE=([0-9A-Z]{5})")
 _SQLCODE = re.compile(r"SQLCODE=(-?[0-9]+)")
@@ -125,3 +134,48 @@ def server_version(conn: ibm_db_dbi.Connection) -> str:
 def vector_literal(embedding: Sequence[float]) -> str:
     """Format an embedding for a `VECTOR(?, n, FLOAT32)` parameter, as langchain-db2 does."""
     return "[" + ",".join(f"{float(x):.8g}" for x in embedding) + "]"
+
+
+def validate_schema(schema: str) -> str:
+    """A schema name AsOf may use: upper case, starting with a letter, at most 30 characters."""
+    if not isinstance(schema, str) or not SCHEMA_RE.match(schema):
+        raise ValueError(f"invalid schema name {schema!r}")
+    return schema
+
+
+def ident(name: str) -> str:
+    """A Db2 identifier for DDL and GRANT, where Db2 accepts no parameter markers.
+
+    Only plain upper-case identifiers pass (letters, digits, underscore). Anything else,
+    including quotes, spaces, dots or semicolons, raises. Lower-case user names such as
+    `asofapp` are upper-cased first, which is how Db2 stores unquoted authorization IDs.
+    """
+    if not isinstance(name, str):
+        raise ValueError(f"invalid identifier {name!r}")
+    upper = name.strip().upper()
+    if not IDENT_RE.match(upper):
+        raise ValueError(f"invalid identifier {name!r}")
+    return upper
+
+
+_bound_schema: "weakref.WeakKeyDictionary[ibm_db_dbi.Connection, str]" = weakref.WeakKeyDictionary()
+
+
+def use_schema(conn: ibm_db_dbi.Connection, schema: str = SCHEMA) -> None:
+    """Make unqualified table, view and routine names on `conn` resolve to `schema`.
+
+    Both registers are set through parameter markers. Special registers are not undone by a
+    ROLLBACK, so this is done once per connection and schema, and repeated only on a change.
+    """
+    validate_schema(schema)
+    try:
+        if _bound_schema.get(conn) == schema:
+            return
+    except TypeError:  # a connection type that cannot be weakly referenced: always set
+        pass
+    execute(conn, "SET CURRENT SCHEMA = ?", (schema,))
+    execute(conn, "SET CURRENT PATH = SYSTEM PATH, ?", (schema,))
+    try:
+        _bound_schema[conn] = schema
+    except TypeError:
+        pass

@@ -4,7 +4,8 @@
     FOR SYSTEM_TIME   AS OF <moment>            optional: what the database held then (replay)
     VECTOR_DISTANCE(..., COSINE)                semantic rank against the claim
 
-Every value is a bound parameter. The schema is a validated constant.
+Both statements are literals and every value, the query vector included, is a bound
+parameter. The schema is bound too, by db.use_schema() on the connection.
 """
 
 from __future__ import annotations
@@ -25,14 +26,23 @@ from pydantic import ConfigDict, Field
 from . import db
 from .embeddings import DIM
 from .prompts import ClauseView
-from .schema import validate_schema
 
 MAX_K = 10
-_COLUMNS = (
-    "c.CLAUSE_ID, c.AREA, c.TITLE, c.VERSION_LABEL, c.CLAUSE_TEXT, c.RULE_JSON, "
+SQL_AS_OF = (
+    "SELECT c.CLAUSE_ID, c.AREA, c.TITLE, c.VERSION_LABEL, c.CLAUSE_TEXT, c.RULE_JSON, "
     "c.BUS_START, c.BUS_END, c.SYS_START, "
-    f"VECTOR_DISTANCE(c.EMBEDDING, VECTOR(?, {DIM}, FLOAT32), COSINE) AS DIST"
+    "VECTOR_DISTANCE(c.EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE) AS DIST "
+    "FROM POLICY_CLAUSE FOR BUSINESS_TIME AS OF ? AS c "
+    "WHERE c.DOC_ID = ? ORDER BY DIST FETCH FIRST ? ROWS ONLY"
 )
+SQL_REPLAY = (
+    "SELECT c.CLAUSE_ID, c.AREA, c.TITLE, c.VERSION_LABEL, c.CLAUSE_TEXT, c.RULE_JSON, "
+    "c.BUS_START, c.BUS_END, c.SYS_START, "
+    "VECTOR_DISTANCE(c.EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE) AS DIST "
+    "FROM POLICY_CLAUSE FOR SYSTEM_TIME AS OF ? FOR BUSINESS_TIME AS OF ? AS c "
+    "WHERE c.DOC_ID = ? ORDER BY DIST FETCH FIRST ? ROWS ONLY"
+)
+assert DIM == 384, "SQL_AS_OF and SQL_REPLAY are written for 384-dimension embeddings"
 
 
 @dataclass(frozen=True)
@@ -50,15 +60,6 @@ class RetrievedClause:
 
     def view(self) -> ClauseView:
         return ClauseView(self.clause_id, self.title, self.version_label, self.bus_start, self.bus_end, self.clause_text)
-
-
-def _sql(schema: str, replay: bool) -> str:
-    validate_schema(schema)
-    period = "FOR SYSTEM_TIME AS OF ? FOR BUSINESS_TIME AS OF ?" if replay else "FOR BUSINESS_TIME AS OF ?"
-    return (
-        f"SELECT {_COLUMNS} FROM {schema}.POLICY_CLAUSE {period} AS c "
-        "WHERE c.DOC_ID = ? ORDER BY DIST FETCH FIRST ? ROWS ONLY"
-    )
 
 
 def clauses_as_of(
@@ -79,11 +80,11 @@ def clauses_as_of(
     if len(query_vector) != DIM:
         raise ValueError(f"query vector must have {DIM} dimensions")
     vec = db.vector_literal(query_vector)
+    db.use_schema(conn, schema)
     if system_time is None:
-        params: tuple = (vec, as_of, doc_id, k)
+        rows = db.query(conn, SQL_AS_OF, (vec, as_of, doc_id, k))
     else:
-        params = (vec, system_time, as_of, doc_id, k)
-    rows = db.query(conn, _sql(schema, system_time is not None), params)
+        rows = db.query(conn, SQL_REPLAY, (vec, system_time, as_of, doc_id, k))
     return [
         RetrievedClause(
             clause_id=r[0], area=r[1], title=r[2], version_label=r[3], clause_text=r[4],

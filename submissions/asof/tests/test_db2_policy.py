@@ -54,7 +54,8 @@ def test_replay_shows_what_the_database_held_before_a_change(admin_conn, app_con
     vec = embeddings.embed_query("Pets in the cabin fee")
     before = db.query(admin_conn, "SELECT CURRENT TIMESTAMP FROM SYSIBM.SYSDUMMY1")[0][0]
     time.sleep(1.1)
-    db.execute(admin_conn, f"UPDATE {test_schema}.POLICY_CLAUSE FOR PORTION OF BUSINESS_TIME FROM ? TO ? "
+    db.use_schema(admin_conn, test_schema)
+    db.execute(admin_conn, "UPDATE POLICY_CLAUSE FOR PORTION OF BUSINESS_TIME FROM ? TO ? "
                            "SET CLAUSE_TEXT = ?, RULE_JSON = ?, VERSION_LABEL = ? WHERE CLAUSE_ID = ?",
                ("2026-12-01", "9999-12-31", "Small cats and dogs may travel in the cabin. The pet fee is $125 each way.",
                 json.dumps({"pet_fee_usd": 125}), "v2", "PET-001"))
@@ -69,9 +70,10 @@ def test_replay_shows_what_the_database_held_before_a_change(admin_conn, app_con
 
 def test_rule_json_must_be_valid(admin_conn, test_schema):
     with pytest.raises(db.DatabaseError) as err:
-        db.execute(admin_conn, f"INSERT INTO {test_schema}.POLICY_CLAUSE (CLAUSE_ID, DOC_ID, AREA, TITLE, VERSION_LABEL, "
-                               f"CLAUSE_TEXT, RULE_JSON, EMBEDDING, BUS_START, BUS_END) VALUES "
-                               f"(?, ?, ?, ?, ?, ?, ?, VECTOR(?, {DIM}, FLOAT32), ?, ?)",
+        db.use_schema(admin_conn, test_schema)
+        db.execute(admin_conn, "INSERT INTO POLICY_CLAUSE (CLAUSE_ID, DOC_ID, AREA, TITLE, VERSION_LABEL, "
+                               "CLAUSE_TEXT, RULE_JSON, EMBEDDING, BUS_START, BUS_END) VALUES "
+                               "(?, ?, ?, ?, ?, ?, ?, VECTOR(?, 384, FLOAT32), ?, ?)",
                    ("TST-001", DOC, "pets", "t", "v1", "x", "{not json", db.vector_literal([0.0] * DIM), "2026-01-01", "2026-02-01"))
     admin_conn.rollback()
     assert err.value.sqlstate == "23513"
@@ -80,9 +82,10 @@ def test_rule_json_must_be_valid(admin_conn, test_schema):
 def test_overlapping_versions_are_rejected_by_db2(admin_conn, test_schema):
     """PRIMARY KEY (CLAUSE_ID, BUSINESS_TIME WITHOUT OVERLAPS): two versions cannot both apply."""
     with pytest.raises(db.DatabaseError) as err:
-        db.execute(admin_conn, f"INSERT INTO {test_schema}.POLICY_CLAUSE (CLAUSE_ID, DOC_ID, AREA, TITLE, VERSION_LABEL, "
-                               f"CLAUSE_TEXT, RULE_JSON, EMBEDDING, BUS_START, BUS_END) VALUES "
-                               f"(?, ?, ?, ?, ?, ?, ?, VECTOR(?, {DIM}, FLOAT32), ?, ?)",
+        db.use_schema(admin_conn, test_schema)
+        db.execute(admin_conn, "INSERT INTO POLICY_CLAUSE (CLAUSE_ID, DOC_ID, AREA, TITLE, VERSION_LABEL, "
+                               "CLAUSE_TEXT, RULE_JSON, EMBEDDING, BUS_START, BUS_END) VALUES "
+                               "(?, ?, ?, ?, ?, ?, ?, VECTOR(?, 384, FLOAT32), ?, ?)",
                    ("BRV-002", DOC, "bereavement", "t", "v9", "x", "{}", db.vector_literal([0.0] * DIM), "2026-04-01", "2026-06-01"))
     admin_conn.rollback()
     assert err.value.sqlstate == "23505"

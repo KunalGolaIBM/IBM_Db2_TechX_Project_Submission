@@ -143,9 +143,10 @@ def verify_least_privilege(settings: Settings, target: str) -> None:
             if found.get("BRV-002") != want:
                 raise SetupError(f"as-of retrieval for {day} returned {found}, expected BRV-002 {want}")
         say(f"  as {settings.asof_app_user}: 2026-03-10 -> BRV-002 v1, 2026-06-02 -> BRV-002 v2")
-        for sql in (f"UPDATE {target}.POLICY_CLAUSE SET CLAUSE_TEXT = 'x'",
-                    f"DELETE FROM {target}.ANSWER_LEDGER",
-                    f"CREATE TABLE {target}.SHOULD_NOT_EXIST (X INT)"):
+        db.use_schema(conn, target)  # the statements below are literals with unqualified names
+        for label, sql in (("UPDATE", "UPDATE POLICY_CLAUSE SET CLAUSE_TEXT = 'x'"),
+                           ("DELETE", "DELETE FROM ANSWER_LEDGER"),
+                           ("CREATE TABLE", "CREATE TABLE SHOULD_NOT_EXIST (X INT)")):
             try:
                 db.execute(conn, sql)
                 conn.rollback()
@@ -154,7 +155,7 @@ def verify_least_privilege(settings: Settings, target: str) -> None:
                 conn.rollback()
                 if exc.sqlstate not in ("42501", "42502"):
                     raise SetupError(f"unexpected error for {sql}: {exc}") from None
-                refused.append(f"{sql.split()[0]} {sql.split()[1] if sql.startswith('CREATE') else ''}".strip() + f" ({exc.sqlstate})")
+                refused.append(f"{label} ({exc.sqlstate})")
         say(f"  as {settings.asof_app_user}: refused " + ", ".join(refused))
 
 

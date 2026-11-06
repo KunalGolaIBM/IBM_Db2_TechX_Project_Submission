@@ -344,6 +344,7 @@ Integration tests install everything into a throwaway `ASOF_TEST` schema, connec
 - Db2 rejecting overlapping clause versions and malformed rule JSON
 - the runtime user being refused `UPDATE`, `DELETE`, `INSERT`, `CREATE TABLE` and `DROP`, on policy and ledger tables alike
 - SQL injection strings returning nothing instead of executing, and stored as plain text in the ledger
+- no string-built SQL: an AST scan of every module and test fails the build on SQL built with f-strings, `%`, `+` or `.format()`; runtime statements are literals and even the schema is a bound parameter (`SET CURRENT SCHEMA = ?`)
 - the ledger: gapless IDs and linked hashes under three concurrent writers; triggers stopping even the owner; `VERIFY_CHAIN` catching an owner who drops a trigger and edits a row, edits a citation, or deletes the last row
 - every gate decision path with a scripted LLM, including a manipulated judge that says SUPPORTED with a real quote (the rule check still overrides it), an invented quote, a clause not in force, timeouts and a ledger outage
 - 61 rule-checker tests, mostly realistic claims against the real corpus rules, in both directions (real contradictions caught, situational numbers left alone)

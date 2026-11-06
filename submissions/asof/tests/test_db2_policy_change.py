@@ -79,11 +79,12 @@ def test_only_the_editor_can_change_policy(settings, embeddings, world):
         with pytest.raises(db.DatabaseError) as err:
             policy.apply_change(app, PET_CHANGE, embeddings, world)
         assert err.value.sqlstate == "42501"
+        db.use_schema(editor, world)  # outside the raises block: only the UPDATE may fail
         with pytest.raises(db.DatabaseError) as err:
-            db.execute(editor, f"UPDATE {world}.POLICY_CLAUSE SET CLAUSE_TEXT = 'x'")
+            db.execute(editor, "UPDATE POLICY_CLAUSE SET CLAUSE_TEXT = 'x'")
         assert err.value.sqlstate == "42501"
         with pytest.raises(db.DatabaseError) as err:
-            db.execute(editor, f"UPDATE {world}.PUBLISHED_ANSWER SET STATUS = 'LIVE'")
+            db.execute(editor, "UPDATE PUBLISHED_ANSWER SET STATUS = 'LIVE'")
         assert err.value.sqlstate == "42501"
     finally:
         app.close()

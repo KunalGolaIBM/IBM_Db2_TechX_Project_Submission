@@ -134,8 +134,9 @@ def test_moffatt_flow_through_the_api(settings, embeddings, test_schema, app_con
         assert replay["clauses"][0]["used"]["version_label"] == "v1"
         assert c.get("/healthz").json()["db2"] == "ok"
 
+    db.use_schema(app_conn, test_schema)
     with pytest.raises(db.DatabaseError) as err:  # and the app user still cannot touch the row
-        db.execute(app_conn, f"UPDATE {test_schema}.ANSWER_LEDGER SET DECISION = 'PASS' WHERE LEDGER_ID = ?",
+        db.execute(app_conn, "UPDATE ANSWER_LEDGER SET DECISION = 'PASS' WHERE LEDGER_ID = ?",
                    (body["ledger_id"],))
     assert err.value.sqlstate == "42501"
 

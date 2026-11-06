@@ -2,7 +2,8 @@
 
     python -m asof.db2check
 
-It creates a throwaway schema (ASOF_CHECK), exercises each feature with real assertions,
+It creates a throwaway schema (ASOF_CHECK), exercises each feature with real assertions
+(every statement is a literal; the schema is bound with SET CURRENT SCHEMA = ?),
 prints PASS or FAIL per check, drops everything it created, and exits non-zero on any
 failure. It needs the Db2 owner account (DB2_ADMIN_PASSWORD in .env) because it creates
 tables, triggers and procedures. It never touches the ASOF schema.
@@ -28,12 +29,12 @@ from .config import ConfigError, get_settings
 S = "ASOF_CHECK"
 DIM = 384
 
-DDL_CLAUSE = f"""
-CREATE TABLE {S}.CLAUSE (
+DDL_CLAUSE = """
+CREATE TABLE CLAUSE (
   CLAUSE_ID   VARCHAR(32)   NOT NULL,
   CLAUSE_TEXT VARCHAR(4000) NOT NULL,
   RULE_JSON   VARCHAR(2000) NOT NULL CONSTRAINT CK_RULE_JSON CHECK (JSON_EXISTS(RULE_JSON, '$')),
-  EMBEDDING   VECTOR({DIM}, FLOAT32),
+  EMBEDDING   VECTOR(384, FLOAT32),
   BUS_START   DATE NOT NULL,
   BUS_END     DATE NOT NULL,
   SYS_START   TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN,
@@ -44,8 +45,8 @@ CREATE TABLE {S}.CLAUSE (
   PRIMARY KEY (CLAUSE_ID, BUSINESS_TIME WITHOUT OVERLAPS)
 )"""
 
-DDL_LEDGER = f"""
-CREATE TABLE {S}.LEDGER (
+DDL_LEDGER = """
+CREATE TABLE LEDGER (
   ID        BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   DECISION  VARCHAR(12) NOT NULL CONSTRAINT CK_DECISION CHECK (DECISION IN ('PASS', 'CORRECTED', 'ESCALATED')),
   PAYLOAD   VARCHAR(400) NOT NULL,
@@ -53,30 +54,30 @@ CREATE TABLE {S}.LEDGER (
   ROW_HASH  CHAR(64) NOT NULL
 )"""
 
-DDL_APPEND = f"""
-CREATE OR REPLACE PROCEDURE {S}.APPEND (IN P_DECISION VARCHAR(12), IN P_PAYLOAD VARCHAR(400),
+DDL_APPEND = """
+CREATE OR REPLACE PROCEDURE APPEND (IN P_DECISION VARCHAR(12), IN P_PAYLOAD VARCHAR(400),
                                         OUT P_ID BIGINT, OUT P_HASH CHAR(64))
 LANGUAGE SQL MODIFIES SQL DATA
 BEGIN
   DECLARE V_PREV CHAR(64);
-  SET V_PREV = COALESCE((SELECT ROW_HASH FROM {S}.LEDGER ORDER BY ID DESC FETCH FIRST 1 ROW ONLY), REPEAT('0', 64));
+  SET V_PREV = COALESCE((SELECT ROW_HASH FROM LEDGER ORDER BY ID DESC FETCH FIRST 1 ROW ONLY), REPEAT('0', 64));
   SET P_HASH = LOWER(HEX(HASH(V_PREV || '|' || P_PAYLOAD, 2)));
-  INSERT INTO {S}.LEDGER (DECISION, PAYLOAD, PREV_HASH, ROW_HASH) VALUES (P_DECISION, P_PAYLOAD, V_PREV, P_HASH);
+  INSERT INTO LEDGER (DECISION, PAYLOAD, PREV_HASH, ROW_HASH) VALUES (P_DECISION, P_PAYLOAD, V_PREV, P_HASH);
   SET P_ID = IDENTITY_VAL_LOCAL();
 END"""
 
-DDL_LIST = f"""
-CREATE OR REPLACE PROCEDURE {S}.LIST_LEDGER ()
+DDL_LIST = """
+CREATE OR REPLACE PROCEDURE LIST_LEDGER ()
 LANGUAGE SQL READS SQL DATA DYNAMIC RESULT SETS 1
 BEGIN
-  DECLARE C1 CURSOR WITH RETURN TO CALLER FOR SELECT ID, DECISION, ROW_HASH FROM {S}.LEDGER ORDER BY ID;
+  DECLARE C1 CURSOR WITH RETURN TO CALLER FOR SELECT ID, DECISION, ROW_HASH FROM LEDGER ORDER BY ID;
   OPEN C1;
 END"""
 
 AS_OF_VECTOR_SQL = (
     "SELECT c.CLAUSE_ID, c.CLAUSE_TEXT, "
-    f"VECTOR_DISTANCE(c.EMBEDDING, VECTOR(?, {DIM}, FLOAT32), COSINE) AS DIST "
-    f"FROM {S}.CLAUSE FOR BUSINESS_TIME AS OF ? AS c ORDER BY DIST FETCH FIRST 5 ROWS ONLY"
+    "VECTOR_DISTANCE(c.EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE) AS DIST "
+    "FROM CLAUSE FOR BUSINESS_TIME AS OF ? AS c ORDER BY DIST FETCH FIRST 5 ROWS ONLY"
 )
 
 V1_TEXT = "Bereavement fares must be requested before travel."
@@ -143,8 +144,8 @@ def check_create_clause(c: Ctx) -> str:
 
 
 def check_history(c: Ctx) -> str:
-    c.x(f"CREATE TABLE {S}.CLAUSE_HIST LIKE {S}.CLAUSE")
-    c.x(f"ALTER TABLE {S}.CLAUSE ADD VERSIONING USE HISTORY TABLE {S}.CLAUSE_HIST")
+    c.x("CREATE TABLE CLAUSE_HIST LIKE CLAUSE")
+    c.x("ALTER TABLE CLAUSE ADD VERSIONING USE HISTORY TABLE CLAUSE_HIST")
     c.conn.commit()
     return "history table created with LIKE, system versioning on"
 
@@ -155,15 +156,15 @@ def check_insert_vectors(c: Ctx) -> str:
         ("BAG-001", "The first checked bag costs $35.", json.dumps({"first_bag_fee_usd": 35}), _vec(2), "2026-01-01", "9999-12-31"),
     ]
     for r in rows:
-        c.x(f"INSERT INTO {S}.CLAUSE (CLAUSE_ID, CLAUSE_TEXT, RULE_JSON, EMBEDDING, BUS_START, BUS_END) "
-            f"VALUES (?, ?, ?, VECTOR(?, {DIM}, FLOAT32), ?, ?)", r)
+        c.x("INSERT INTO CLAUSE (CLAUSE_ID, CLAUSE_TEXT, RULE_JSON, EMBEDDING, BUS_START, BUS_END) "
+            "VALUES (?, ?, ?, VECTOR(?, 384, FLOAT32), ?, ?)", r)
     c.conn.commit()
     return "2 rows inserted with the embedding bound as a parameter"
 
 
 def check_json_constraint(c: Ctx) -> str:
     out = c.expect_sqlstate(
-        f"INSERT INTO {S}.CLAUSE (CLAUSE_ID, CLAUSE_TEXT, RULE_JSON, BUS_START, BUS_END) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO CLAUSE (CLAUSE_ID, CLAUSE_TEXT, RULE_JSON, BUS_START, BUS_END) VALUES (?, ?, ?, ?, ?)",
         ("BAD-001", "x", '{"unterminated": 1', "2026-01-01", "2026-02-01"), ("23513",))
     c.conn.rollback()
     return f"malformed RULE_JSON {out}"
@@ -172,18 +173,18 @@ def check_json_constraint(c: Ctx) -> str:
 def check_portion_update(c: Ctx) -> str:
     c.state["t_before"] = c.q("SELECT CURRENT TIMESTAMP FROM SYSIBM.SYSDUMMY1")[0][0]
     time.sleep(1.1)
-    c.x(f"UPDATE {S}.CLAUSE FOR PORTION OF BUSINESS_TIME FROM ? TO ? "
-        f"SET CLAUSE_TEXT = ?, RULE_JSON = ?, EMBEDDING = VECTOR(?, {DIM}, FLOAT32) WHERE CLAUSE_ID = ?",
+    c.x("UPDATE CLAUSE FOR PORTION OF BUSINESS_TIME FROM ? TO ? "
+        "SET CLAUSE_TEXT = ?, RULE_JSON = ?, EMBEDDING = VECTOR(?, 384, FLOAT32) WHERE CLAUSE_ID = ?",
         ("2026-05-01", "9999-12-31", V2_TEXT, json.dumps({"retroactive_allowed": True, "request_window_days": 90}), _vec(3), "BRV-002"))
     c.conn.commit()
-    rows = c.q(f"SELECT BUS_START, BUS_END, CLAUSE_TEXT FROM {S}.CLAUSE WHERE CLAUSE_ID = ? ORDER BY BUS_START", ("BRV-002",))
+    rows = c.q("SELECT BUS_START, BUS_END, CLAUSE_TEXT FROM CLAUSE WHERE CLAUSE_ID = ? ORDER BY BUS_START", ("BRV-002",))
     assert [(r[0], r[1]) for r in rows] == [(date(2026, 1, 1), date(2026, 5, 1)), (date(2026, 5, 1), date(9999, 12, 31))], rows
     assert rows[0][2] == V1_TEXT and rows[1][2] == V2_TEXT
     return "one row became v1 [2026-01-01, 2026-05-01) and v2 [2026-05-01, open)"
 
 
 def check_history_row(c: Ctx) -> str:
-    rows = c.q(f"SELECT CLAUSE_ID, BUS_END, CLAUSE_TEXT, EMBEDDING IS NOT NULL FROM {S}.CLAUSE_HIST")
+    rows = c.q("SELECT CLAUSE_ID, BUS_END, CLAUSE_TEXT, EMBEDDING IS NOT NULL FROM CLAUSE_HIST")
     assert rows == [("BRV-002", date(9999, 12, 31), V1_TEXT, True)], rows
     return "pre-update row, including its VECTOR, moved to the history table"
 
@@ -202,7 +203,7 @@ def check_asof_v2(c: Ctx) -> str:
 
 
 def check_boundary(c: Ctx) -> str:
-    sql = f"SELECT CLAUSE_TEXT FROM {S}.CLAUSE FOR BUSINESS_TIME AS OF ? WHERE CLAUSE_ID = ?"
+    sql = "SELECT CLAUSE_TEXT FROM CLAUSE FOR BUSINESS_TIME AS OF ? WHERE CLAUSE_ID = ?"
     before = c.q(sql, ("2026-04-30", "BRV-002"))
     on = c.q(sql, ("2026-05-01", "BRV-002"))
     assert before == [(V1_TEXT,)] and on == [(V2_TEXT,)], (before, on)
@@ -210,36 +211,36 @@ def check_boundary(c: Ctx) -> str:
 
 
 def check_system_time(c: Ctx) -> str:
-    rows = c.q(f"SELECT CLAUSE_TEXT FROM {S}.CLAUSE FOR SYSTEM_TIME AS OF ? FOR BUSINESS_TIME AS OF ? WHERE CLAUSE_ID = ?",
+    rows = c.q("SELECT CLAUSE_TEXT FROM CLAUSE FOR SYSTEM_TIME AS OF ? FOR BUSINESS_TIME AS OF ? WHERE CLAUSE_ID = ?",
                (c.state["t_before"], "2026-06-02", "BRV-002"))
     assert rows == [(V1_TEXT,)], rows
     return "replay: before the change, the database said v1 applied on 2026-06-02"
 
 
 def check_system_time_vector(c: Ctx) -> str:
-    rows = c.q(f"SELECT c.CLAUSE_ID, VECTOR_DISTANCE(c.EMBEDDING, VECTOR(?, {DIM}, FLOAT32), COSINE) AS DIST "
-               f"FROM {S}.CLAUSE FOR SYSTEM_TIME AS OF ? FOR BUSINESS_TIME AS OF ? AS c ORDER BY DIST FETCH FIRST 2 ROWS ONLY",
+    rows = c.q("SELECT c.CLAUSE_ID, VECTOR_DISTANCE(c.EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE) AS DIST "
+               "FROM CLAUSE FOR SYSTEM_TIME AS OF ? FOR BUSINESS_TIME AS OF ? AS c ORDER BY DIST FETCH FIRST 2 ROWS ONLY",
                (_vec(1), c.state["t_before"], "2026-06-02"))
     assert rows[0][0] == "BRV-002" and abs(rows[0][1]) < 1e-5, rows
     return "SYSTEM_TIME + BUSINESS_TIME + VECTOR_DISTANCE in one query"
 
 
 def check_json_value(c: Ctx) -> str:
-    rows = c.q(f"SELECT BUS_START, JSON_VALUE(RULE_JSON, '$.request_window_days' RETURNING INTEGER), "
-               f"JSON_VALUE(RULE_JSON, '$.retroactive_allowed') FROM {S}.CLAUSE WHERE CLAUSE_ID = ? ORDER BY BUS_START", ("BRV-002",))
+    rows = c.q("SELECT BUS_START, JSON_VALUE(RULE_JSON, '$.request_window_days' RETURNING INTEGER), "
+               "JSON_VALUE(RULE_JSON, '$.retroactive_allowed') FROM CLAUSE WHERE CLAUSE_ID = ? ORDER BY BUS_START", ("BRV-002",))
     assert [(r[1], r[2]) for r in rows] == [(0, "false"), (90, "true")], rows
     return "typed INTEGER and boolean ('true'/'false') extraction"
 
 
 def check_json_table(c: Ctx) -> str:
-    rows = c.q(f"SELECT j.DAYS FROM {S}.CLAUSE c, JSON_TABLE(c.RULE_JSON, 'strict $' COLUMNS (DAYS INTEGER PATH '$.request_window_days') "
-               f"ERROR ON ERROR) AS j WHERE c.CLAUSE_ID = ? ORDER BY j.DAYS", ("BRV-002",))
+    rows = c.q("SELECT j.DAYS FROM CLAUSE c, JSON_TABLE(c.RULE_JSON, 'strict $' COLUMNS (DAYS INTEGER PATH '$.request_window_days') "
+               "ERROR ON ERROR) AS j WHERE c.CLAUSE_ID = ? ORDER BY j.DAYS", ("BRV-002",))
     assert rows == [(0,), (90,)], rows
     return "rule parameters as relational columns"
 
 
 def check_json_exists(c: Ctx) -> str:
-    rows = c.q(f"SELECT CLAUSE_ID FROM {S}.CLAUSE WHERE JSON_EXISTS(RULE_JSON, '$.first_bag_fee_usd')")
+    rows = c.q("SELECT CLAUSE_ID FROM CLAUSE WHERE JSON_EXISTS(RULE_JSON, '$.first_bag_fee_usd')")
     assert rows == [("BAG-001",)], rows
     return "filter rows by rule parameter presence"
 
@@ -260,16 +261,16 @@ def check_sha256_param(c: Ctx) -> str:
 
 def check_ledger_table(c: Ctx) -> str:
     c.x(DDL_LEDGER)
-    c.x(f"CREATE TRIGGER {S}.LEDGER_NO_UPDATE BEFORE UPDATE ON {S}.LEDGER FOR EACH ROW "
+    c.x("CREATE TRIGGER LEDGER_NO_UPDATE BEFORE UPDATE ON LEDGER FOR EACH ROW "
         "SIGNAL SQLSTATE '75001' SET MESSAGE_TEXT = 'Ledger rows are append-only'")
-    c.x(f"CREATE TRIGGER {S}.LEDGER_NO_DELETE BEFORE DELETE ON {S}.LEDGER FOR EACH ROW "
+    c.x("CREATE TRIGGER LEDGER_NO_DELETE BEFORE DELETE ON LEDGER FOR EACH ROW "
         "SIGNAL SQLSTATE '75001' SET MESSAGE_TEXT = 'Ledger rows are append-only'")
     c.conn.commit()
     return "identity key, CHECK constraint, BEFORE UPDATE and BEFORE DELETE triggers"
 
 
 def check_check_constraint(c: Ctx) -> str:
-    out = c.expect_sqlstate(f"INSERT INTO {S}.LEDGER (DECISION, PAYLOAD, PREV_HASH, ROW_HASH) VALUES (?, ?, ?, ?)",
+    out = c.expect_sqlstate("INSERT INTO LEDGER (DECISION, PAYLOAD, PREV_HASH, ROW_HASH) VALUES (?, ?, ?, ?)",
                             ("MAYBE", "x", "0" * 64, "0" * 64), ("23513",))
     c.conn.rollback()
     return f"DECISION outside the enum {out}"
@@ -283,8 +284,8 @@ def check_procedure(c: Ctx) -> str:
 
 
 def check_hash_chain(c: Ctx) -> str:
-    _, _, id1, h1 = c.call(f"{S}.APPEND", ("PASS", "first", 0, ""))
-    _, _, id2, h2 = c.call(f"{S}.APPEND", ("ESCALATED", "second", 0, ""))
+    _, _, id1, h1 = c.call("APPEND", ("PASS", "first", 0, ""))
+    _, _, id2, h2 = c.call("APPEND", ("ESCALATED", "second", 0, ""))
     c.conn.commit()
     zero = "0" * 64
     assert h1 == hashlib.sha256(f"{zero}|first".encode()).hexdigest()
@@ -294,36 +295,36 @@ def check_hash_chain(c: Ctx) -> str:
 
 
 def check_trigger_update(c: Ctx) -> str:
-    out = c.expect_sqlstate(f"UPDATE {S}.LEDGER SET PAYLOAD = ?", ("tampered",), ("75001",))
+    out = c.expect_sqlstate("UPDATE LEDGER SET PAYLOAD = ?", ("tampered",), ("75001",))
     c.conn.rollback()
     return f"UPDATE {out}"
 
 
 def check_trigger_delete(c: Ctx) -> str:
-    out = c.expect_sqlstate(f"DELETE FROM {S}.LEDGER WHERE ID > ?", (0,), ("75001",))
+    out = c.expect_sqlstate("DELETE FROM LEDGER WHERE ID > ?", (0,), ("75001",))
     c.conn.rollback()
     return f"DELETE {out}"
 
 
 def check_result_set(c: Ctx) -> str:
-    rows = c.call_rows(f"{S}.LIST_LEDGER", ())
+    rows = c.call_rows("LIST_LEDGER", ())
     assert [r[1] for r in rows] == ["PASS", "ESCALATED"], rows
     return "CALL returns rows to the Python driver"
 
 
 def check_vector_serialize(c: Ctx) -> str:
-    text = c.q(f"SELECT VECTOR_SERIALIZE(EMBEDDING) FROM {S}.CLAUSE WHERE CLAUSE_ID = ?", ("BAG-001",))[0][0]
+    text = c.q("SELECT VECTOR_SERIALIZE(EMBEDDING) FROM CLAUSE WHERE CLAUSE_ID = ?", ("BAG-001",))[0][0]
     values = json.loads(text)
     assert len(values) == DIM
-    return f"VECTOR read back as {DIM} floats"
+    return "VECTOR read back as 384 floats"
 
 
 def check_injection_text(c: Ctx) -> str:
     payload = "'); DROP TABLE ASOF_CHECK.CLAUSE; --"
-    c.call(f"{S}.APPEND", ("PASS", payload, 0, ""))
+    c.call("APPEND", ("PASS", payload, 0, ""))
     c.conn.commit()
-    stored = c.q(f"SELECT PAYLOAD FROM {S}.LEDGER ORDER BY ID DESC FETCH FIRST 1 ROW ONLY")[0][0]
-    still_there = c.q(f"SELECT COUNT(*) FROM {S}.CLAUSE")[0][0]
+    stored = c.q("SELECT PAYLOAD FROM LEDGER ORDER BY ID DESC FETCH FIRST 1 ROW ONLY")[0][0]
+    still_there = c.q("SELECT COUNT(*) FROM CLAUSE")[0][0]
     assert stored == payload and still_there > 0
     return "SQL in a parameter is stored as plain text"
 
@@ -358,15 +359,15 @@ CHECKS: list[tuple[str, Callable[[Ctx], str]]] = [
 ]
 
 CLEANUP = [
-    f"DROP PROCEDURE {S}.APPEND",
-    f"DROP PROCEDURE {S}.LIST_LEDGER",
-    f"DROP TRIGGER {S}.LEDGER_NO_UPDATE",
-    f"DROP TRIGGER {S}.LEDGER_NO_DELETE",
-    f"DROP TABLE {S}.LEDGER",
-    f"ALTER TABLE {S}.CLAUSE DROP VERSIONING",
-    f"DROP TABLE {S}.CLAUSE_HIST",
-    f"DROP TABLE {S}.CLAUSE",
-    f"DROP SCHEMA {S} RESTRICT",
+    "DROP PROCEDURE APPEND",
+    "DROP PROCEDURE LIST_LEDGER",
+    "DROP TRIGGER LEDGER_NO_UPDATE",
+    "DROP TRIGGER LEDGER_NO_DELETE",
+    "DROP TABLE LEDGER",
+    "ALTER TABLE CLAUSE DROP VERSIONING",
+    "DROP TABLE CLAUSE_HIST",
+    "DROP TABLE CLAUSE",
+    f"DROP SCHEMA {db.ident(S)} RESTRICT",
 ]
 
 
@@ -387,6 +388,7 @@ def run() -> int:
     except (ConfigError, db.DatabaseError) as exc:
         print(f"FAIL  cannot start: {exc}")
         return 2
+    db.use_schema(conn, S)  # every statement below is a literal with unqualified names
     ctx = Ctx(conn)
     results: list[tuple[str, bool, str]] = []
     try:
