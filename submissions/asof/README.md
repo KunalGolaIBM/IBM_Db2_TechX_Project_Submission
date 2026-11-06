@@ -7,6 +7,8 @@
 
 > **Fictional data.** "Aurelia Air" and every policy, FAQ and help-centre answer in this repository are invented for the demo. They are modelled on the kind of policy at issue in *Moffatt v. Air Canada* and describe no real airline.
 
+![AsOf checking the Moffatt scenario for a March booking: the demo assistant promised a retroactive bereavement refund, AsOf found it contradicted by clause BRV-002 v1 and released a corrected, cited answer](docs/screenshots/01-playground-moffatt-march.png)
+
 ---
 
 ## Table of Contents
@@ -59,7 +61,8 @@ Given an AI-generated answer and the date that matters (booking or travel date, 
 | Db2 schema, least-privilege users, seed data, as-of + vector retrieval, replay query | Done, tested |
 | LLM layer: provider switch, strict schemas, batched judge, hard deadlines | Done, tested |
 | Claim pipeline, deterministic rule checks, redaction, hash-chained ledger, API, LangChain runnable | Done, tested (incl. live LLM) |
-| Change impact, web UI, analytics views, evaluation results | Next |
+| Policy changes (`APPLY_POLICY_CHANGE`), change impact (`CHANGE_IMPACT`), JSON_TABLE views, web UI | Done, tested, checked in a browser |
+| Evaluation: frozen 40-case test split | Done for OpenRouter; Ollama run pending |
 
 ---
 
@@ -132,7 +135,7 @@ PASS  Trigger blocks UPDATE: UPDATE rejected with SQLSTATE 75001
 - **Backend / Core:** Python 3.12, FastAPI, Pydantic v2, pydantic-settings
 - **Database:** IBM Db2 12.1.5.0 Community Edition (Docker), `ibm_db`
 - **AI:** LangChain, `langchain-db2`, `langchain-openai` (OpenRouter), `langchain-ollama`, `sentence-transformers/all-MiniLM-L6-v2` (local, CPU)
-- **Frontend / UI:** server-rendered web UI (in progress)
+- **Frontend / UI:** plain HTML, CSS and JavaScript served by FastAPI (no framework, no build step), under a strict Content Security Policy
 - **Libraries & Tools:** Docker Compose, pytest
 
 ---
@@ -208,8 +211,26 @@ All settings are environment variables, read from `.env` ([.env.example](.env.ex
 ```bash
 python -m asof.db2check      # verify the Db2 features AsOf needs (owner account)
 python -m asof.setup         # schema, users, seed data, grants, self-check
-python -m asof.api           # API on http://127.0.0.1:8000 (interactive docs at /docs)
+python -m asof.api           # web UI at http://127.0.0.1:8000, API docs at /docs
+python -m asof.demo          # optional: record seven sample decisions so every screen has history
 ```
+
+### The web UI
+
+| Screen | What it shows |
+|---|---|
+| **Playground** | Ask the naive demo assistant (or paste a draft) for a customer date. See the decision, the draft next to what the customer receives, and every claim with its verdict, the judge's and the rule check's view, and the clause version (with its effective dates) whose quoted text is highlighted. |
+| **Policy timeline** | Every clause version on its business-time period, with its key rule parameter read out of `RULE_JSON` by a Db2 view (`$35` then `$40`, "before travel only" then "retroactive, 90 days"). Move the as-of date; click a version for its text, rule JSON and its system-time history: every row Db2 has held, when, and which user changed it. |
+| **Ledger and replay** | Every decision, a one-click `VERIFY_CHAIN`, and per entry the replay: the clause row the decision used, what Db2 held at that moment (`FOR SYSTEM_TIME AS OF`), and what applies today for that customer date (`FOR BUSINESS_TIME AS OF`), with the SQL. |
+| **Change impact** | Apply a new clause version as `asofedit` (presets included), then see which released answers are now stale, which are still right for their date, and which help-centre answers need review and from when. |
+| **Analytics** | Decisions, claims by area and rule-check overrides, from Db2 views. |
+
+| | |
+|---|---|
+| ![Policy timeline](docs/screenshots/02-policy-timeline.png) | ![Change impact after raising the pet fee from 1 Dec 2026](docs/screenshots/04-change-impact.png) |
+| ![Replay of a December pet answer after the fee change](docs/screenshots/05-replay-after-change.png) | ![Timeline and system-time history after the change](docs/screenshots/06-timeline-after-change.png) |
+
+**The change-impact story in four clicks:** run `python -m asof.demo` (it records pet-fee answers for a November and a December trip), open **Change impact**, choose the preset "Pet fee to $125 from 1 Dec 2026", and apply it. Db2 splits PET-001 into v1 (to 1 Dec) and v2 (from 1 Dec) with `FOR PORTION OF BUSINESS_TIME`. `CHANGE_IMPACT` reports the November answer as historically valid, the December answer as stale (the customer was told $100 for a trip that now costs $125), and help-centre answer PA-PET-001 as needing review from 1 Dec 2026. Replay on the December entry shows all three states side by side.
 
 **The Moffatt scenario, end to end.** Ask the naive demo assistant (which answers from a stale FAQ) and let AsOf check its draft, once for a March booking and once for a June booking:
 
@@ -246,6 +267,10 @@ python -m asof.setup --reset-ledger      # asks you to type "reset"; add --yes t
 | `GET /api/ledger`, `GET /api/ledger/{id}` | Recorded decisions and their claim citations |
 | `GET /api/ledger/{id}/replay` | The clause rows a decision used, what Db2 held at that moment, and what applies today |
 | `GET /api/chain/verify` | Run `VERIFY_CHAIN` over the whole ledger |
+| `POST /api/policy/change` | Apply a new clause version through `APPLY_POLICY_CHANGE` as the editor user. Accepted only from localhost, unless `ASOF_EDITOR_TOKEN` is set, in which case the `X-AsOf-Editor-Token` header must match. |
+| `GET /api/impact/{clause_id}` | `CHANGE_IMPACT`: stale and historically valid answers, help-centre answers to review |
+| `GET /api/policy/timeline`, `GET /api/policy/clauses/{id}/history` | Business-time versions with rule parameters; every system-time row for a clause |
+| `GET /api/analytics` | Decision, area and override statistics from the Db2 views |
 | `GET /healthz` | Db2 connectivity and the configured model |
 
 **Drop it into an existing LangChain app**

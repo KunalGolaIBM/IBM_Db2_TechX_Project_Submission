@@ -26,12 +26,14 @@
     "features_used": [
       "Bitemporal tables (BUSINESS_TIME and SYSTEM_TIME periods, history table)",
       "FOR BUSINESS_TIME AS OF and FOR SYSTEM_TIME AS OF queries (as-of lookup and replay)",
+      "UPDATE ... FOR PORTION OF BUSINESS_TIME for policy changes",
       "Native VECTOR(384, FLOAT32) with VECTOR_DISTANCE in the same query as temporal predicates",
       "PRIMARY KEY ... BUSINESS_TIME WITHOUT OVERLAPS",
-      "SQL PL stored procedures (APPEND_LEDGER, VERIFY_CHAIN) and SQL scalar and table functions",
+      "SQL PL stored procedures (APPEND_LEDGER, VERIFY_CHAIN, APPLY_POLICY_CHANGE, CHANGE_IMPACT with a dynamic result set) and SQL scalar and table functions",
       "In-database SHA-256 hash chain with HASH(..., 2)",
       "BEFORE UPDATE / BEFORE DELETE triggers making ledger tables append-only",
-      "SQL/JSON: JSON_TABLE, JSON_EXISTS check constraints",
+      "SQL/JSON: JSON_TABLE (citations and the policy timeline view), JSON_EXISTS check constraints",
+      "Views for the policy timeline and analytics",
       "Indexes, foreign keys and check constraints",
       "Least-privilege Db2 users: SELECT plus EXECUTE only, PUBLIC defaults revoked",
       "LangChain DB2VS vector store (langchain-db2)"
