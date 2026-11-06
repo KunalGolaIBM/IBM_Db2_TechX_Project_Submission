@@ -30,7 +30,7 @@ dependencies = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-asof = ["data/*.json", "sql/*.sql"]
+asof = ["data/*.json", "sql/*.sql", "eval/*.jsonl"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
