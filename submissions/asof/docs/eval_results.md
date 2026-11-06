@@ -16,8 +16,8 @@ Run 2026-11-06T06:13:45+00:00 at commit `eefc50c`, prompt version `2026-11-06.2`
 
 | Metric | Value |
 |---|---|
-| False-allow rate | **0.0%** |
-| False-block rate | 7.1% |
+| False-allow rate | **0.0% (0 of 26)** |
+| False-block rate | 7.1% (1 of 14) |
 | Safe decisions | 97.5% |
 | Ideal decisions | 92.5% |
 | Escalated / corrected | 20.0% / 47.5% |
@@ -58,14 +58,78 @@ Cases that did not get the ideal decision:
   - p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) CHG-001 v1: Basic Economy tickets cannot be changed after the 24-hour free cancellation period.
   - p2#2 NOT_COVERED (llm SUPPORTED, rule NOT_APPLICABLE) -: Basic Economy tickets cannot be upgraded after the 24-hour free cancellation period.
 
+## test split: ollama `qwen2.5:7b-instruct`
+
+Run 2026-11-06T17:23:21+00:00 at commit `4b103fd`, prompt version `2026-11-06.2`, 40 cases, cases file sha256 `bfb24f0ac4722bd6...`, wall time 1943.8 s.
+
+| Metric | Value |
+|---|---|
+| False-allow rate | **3.8% (1 of 26)** |
+| False-block rate | 21.4% (3 of 14) |
+| Safe decisions | 90.0% |
+| Ideal decisions | 82.5% |
+| Escalated / corrected | 25.0% / 45.0% |
+| Citation accuracy | 91.4% |
+| Rule overrides | 0 |
+| Errors (failed closed) | 0 |
+| Latency p50 / p90 | 37.9 s / 71.5 s |
+| LLM calls per case | 3.65 |
+
+| Category | n | False allow | False block | Safe | Ideal | Citation |
+|---|---|---|---|---|---|---|
+| supported | 8 | n/a | 0.0% | 100.0% | 100.0% | 100.0% |
+| contradicted_numbers | 6 | 0.0% | n/a | 100.0% | 100.0% | 83.3% |
+| contradicted_eligibility | 6 | 16.7% | n/a | 83.3% | 66.7% | 100.0% |
+| date_boundary | 5 | 0.0% | 0.0% | 100.0% | 100.0% | 100.0% |
+| not_covered | 5 | 0.0% | n/a | 100.0% | 100.0% | n/a |
+| counts | 4 | 0.0% | 100.0% | 50.0% | 25.0% | 100.0% |
+| multi_claim | 3 | 0.0% | 100.0% | 66.7% | 33.3% | 33.3% |
+| prompt_injection | 3 | 0.0% | n/a | 100.0% | 100.0% | 100.0% |
+
+Cases that did not get the ideal decision:
+
+- `T18` (contradicted_eligibility, 2026-10-19): expected CORRECTED, got **ESCALATED** (CORRECTION_FAILED)
+  - p1#1 NOT_COVERED (llm NOT_COVERED, rule NOT_APPLICABLE) -: Bereavement fares are available in every cabin.
+  - p1#2 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) BRV-005 v1: Bereavement fares are available in Business class.
+  - p2#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) BRV-005 v1: Bereavement fares are available in Economy class only.
+  - p2#2 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) BRV-005 v1: Bereavement fares are available in Premium Economy class only.
+  - p2#3 SUPPORTED (llm SUPPORTED, rule MATCH) BRV-005 v1: Business class is not eligible for bereavement fares.
+- `T20` (contradicted_eligibility, 2026-07-07): expected CORRECTED, got **PASS** (ALL_SUPPORTED) **FALSE ALLOW**
+  - p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) BRV-001 v1: A mother-in-law counts as immediate family.
+- `T31` (multi_claim, 2026-08-20): expected CORRECTED, got **ESCALATED** (CORRECTION_FAILED)
+  - p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) BAG-001 v2: Your first checked bag is $40 each way.
+  - p1#2 CONTRADICTED (llm CONTRADICTED, rule MATCH) BAG-002 v1: The second checked bag is $50 each way.
+  - p1#3 NOT_COVERED (llm NOT_COVERED, rule NOT_APPLICABLE) -: Your carry-on is free as long as it weighs no more than 15 kg.
+  - p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) BAG-001 v2: The first checked bag costs $40 each way.
+  - p2#2 NOT_COVERED (llm NOT_COVERED, rule NOT_APPLICABLE) -: The second checked bag costs $50 each way.
+  - p2#3 SUPPORTED (llm SUPPORTED, rule MATCH) BAG-004 v1: Your carry-on is free as long as it meets the airline's size and weight requirements.
+- `T33` (multi_claim, 2026-07-11): expected PASS, got **CORRECTED** (CORRECTED_FROM_CLAUSES) (false block)
+  - p1#1 NOT_COVERED (llm NOT_COVERED, rule NOT_APPLICABLE) -: You are entitled to $400.
+  - p1#2 CONTRADICTED (llm CONTRADICTED, rule MATCH) DLY-005 v1: You can claim it within 1 year of the flight date.
+  - p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) DLY-005 v1: You can claim delay compensation within 1 year of the flight date.
+  - p2#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) DLY-005 v1: You can submit your claim through our online claims form.
+- `T38` (counts, 2026-04-04): expected PASS, got **ESCALATED** (NOT_COVERED) (false block)
+  - p1#1 NOT_COVERED (llm NOT_COVERED, rule NOT_APPLICABLE) -: You can travel on the bereavement fare.
+  - p1#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) BRV-001 v1: Your spouse can travel on the bereavement fare.
+  - p1#3 NOT_COVERED (llm NOT_COVERED, rule NOT_APPLICABLE) -: Your two children can travel on the bereavement fare.
+  - p1#4 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) BRV-005 v1: The bereavement fare allows for a family of four to travel together.
+- `T39` (counts, 2026-10-27): expected CORRECTED, got **ESCALATED** (CORRECTION_FAILED)
+  - p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) CRD-003 v1: You can put the credits from all four of your cancelled trips toward this one booking.
+  - p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) CRD-003 v1: You can combine up to 3 travel credits from cancelled trips on a single booking.
+  - p2#2 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) CRD-003 v1: Since you have four cancelled trips, you can use credits from only 3 of them on this booki
+- `T40` (counts, 2026-08-09): expected PASS, got **ESCALATED** (CORRECTION_FAILED) (false block)
+  - p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) PET-002 v1: You can bring one small dog in the cabin on the same flight.
+  - p1#2 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) PET-002 v1: Your partner can bring one small dog in the cabin on the same flight.
+  - p2#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) PET-002 v1: Each passenger can bring one small dog in the cabin on the same flight.
+
 ## dev split: openrouter `google/gemini-3.1-flash-lite`
 
 Run 2026-11-06T06:12:51+00:00 at commit `eefc50c`, prompt version `2026-11-06.2`, 20 cases, cases file sha256 `e10900dec8690102...`, wall time 35.0 s.
 
 | Metric | Value |
 |---|---|
-| False-allow rate | **0.0%** |
-| False-block rate | 0.0% |
+| False-allow rate | **0.0% (0 of 13)** |
+| False-block rate | 0.0% (0 of 7) |
 | Safe decisions | 100.0% |
 | Ideal decisions | 95.0% |
 | Escalated / corrected | 15.0% / 50.0% |

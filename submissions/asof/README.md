@@ -62,7 +62,7 @@ Given an AI-generated answer and the date that matters (booking or travel date, 
 | LLM layer: provider switch, strict schemas, batched judge, hard deadlines | Done, tested |
 | Claim pipeline, deterministic rule checks, redaction, hash-chained ledger, API, LangChain runnable | Done, tested (incl. live LLM) |
 | Policy changes (`APPLY_POLICY_CHANGE`), change impact (`CHANGE_IMPACT`), JSON_TABLE views, web UI | Done, tested, checked in a browser |
-| Evaluation: frozen 40-case test split | Done for OpenRouter; Ollama run pending |
+| Evaluation: frozen 40-case test split | Done for OpenRouter and Ollama; results below |
 
 ---
 
@@ -200,7 +200,7 @@ All settings are environment variables, read from `.env` ([.env.example](.env.ex
 | `LLM_PROVIDER` | `openrouter` (default), `ollama`, or `openai_compatible` |
 | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | Hosted model (default `google/gemini-3.1-flash-lite`) |
 | `OLLAMA_BASE_URL`, `OLLAMA_MODEL` | Local model (default `qwen2.5:7b-instruct`) |
-| `LLM_TIMEOUT_S`, `LLM_MAX_OUTPUT_TOKENS` | Hard per-call deadline and output cap; the gate fails closed when hit. Use `LLM_TIMEOUT_S=120` for Ollama on a laptop. |
+| `LLM_TIMEOUT_S`, `LLM_MAX_OUTPUT_TOKENS` | Hard per-call deadline and output cap; the gate fails closed when hit. Use `LLM_TIMEOUT_S=180` for Ollama on a laptop (the value the recorded Ollama run used). |
 
 > **Security:** never commit `.env`. Before every commit, `python scripts/check_secrets.py` compares the staged changes against the real values in your local `.env` and against common key patterns, and fails without printing anything secret.
 
@@ -290,25 +290,35 @@ The runnable takes the assistant's draft and returns the checked answer, and eve
 
 `python -m asof.eval --split test` runs the gate on 40 labelled cases and writes [docs/eval_results.md](docs/eval_results.md), with every per-case decision recorded in [docs/eval/](docs/eval/). The 40 test cases are new scenarios, none used while building or choosing the model. They were committed (`81b5b69`) before the first run and are frozen: a unit test pins their SHA-256 and the runner refuses to run them if it changes. The 20-case dev split holds the scenarios used while debugging. Each case is labelled with the decision it should get and the clause version its key claim must be checked against.
 
-**Frozen test split, `google/gemini-3.1-flash-lite` via OpenRouter** (40 cases: 14 correct drafts, 26 wrong for their date):
+**Frozen test split, both providers** (40 cases: 14 correct drafts, 26 wrong for their date). Same prompts, same cases, same gate:
 
-| Metric | Result |
-|---|---|
-| **False-allow rate** (wrong drafts released as PASS) | **0.0%** (0 of 26) |
-| False-block rate (correct drafts rewritten or escalated) | 7.1% (1 of 14) |
-| Safe decisions | 97.5% |
-| Ideal decisions | 92.5% |
-| Citation accuracy (key claim checked against the right version) | 100% |
-| Latency p50 / p90 | 5.9 s / 8.1 s, 3.6 LLM calls per case |
+| Metric | OpenRouter `google/gemini-3.1-flash-lite` | Ollama `qwen2.5:7b-instruct` (local, no key) |
+|---|---|---|
+| **False-allow rate** (wrong drafts released as PASS) | **0.0%** (0 of 26) | **3.8%** (1 of 26) |
+| False-block rate (correct drafts rewritten or escalated) | 7.1% (1 of 14) | 21.4% (3 of 14) |
+| Safe decisions | 97.5% | 90.0% |
+| Ideal decisions | 92.5% | 82.5% |
+| Citation accuracy (key claim checked against the right version) | 100% | 91.4% |
+| Errors (failed closed) | 0 | 0 |
+| Latency per answer, p50 / p90 | 5.9 s / 8.1 s | 37.9 s / 71.5 s |
+| LLM calls per answer | 3.6 | 3.65 |
+| Whole split | 66 s (4 workers) | 32 min (1 worker) |
 
-Categories: supported 8, contradicted numbers 6, contradicted eligibility 6, date boundaries (day before and day of a version change) 5, not covered 5, relative and implied counts against limits 4, multi-claim 3, prompt injection 3. Per-category numbers are in the report.
+Categories: supported 8, contradicted numbers 6, contradicted eligibility 6, date boundaries (day before and day of a version change) 5, not covered 5, relative and implied counts against limits 4, multi-claim 3, prompt injection 3. Per-category numbers and every miss are in the [report](docs/eval_results.md).
+
+Ollama ran on the MacBook Air (M-series, 16 GB) while Db2 ran under Rosetta on the same machine. The Mac went to sleep for about 50 minutes partway through; the run's clock is monotonic and does not count sleep, and no call timed out.
 
 What went wrong, from the recorded runs (left unfixed so the numbers stay honest):
 
-- **T33 (the false block):** the extractor turned the customer's own situation ("the delay was within our control") into a policy claim. No clause covers it, so a correct answer was escalated.
-- **T31 and T36 (escalated instead of corrected):** the rewrite was right, but in the re-check the judge paraphrased its quote, the verbatim-quote rule downgraded that claim to NOT_COVERED, and the correction was held back. The strict quote rule trades some corrections for never trusting an unquoted verdict.
+- **OpenRouter T33 (false block):** the extractor turned the customer's own situation ("the delay was within our control") into a policy claim. No clause covers it, so a correct answer was escalated.
+- **OpenRouter T31 and T36 (escalated instead of corrected):** the rewrite was right, but in the re-check the judge paraphrased its quote, the verbatim-quote rule downgraded that claim to NOT_COVERED, and the correction was held back.
+- **Ollama T20 (the false allow):** the draft says a mother-in-law counts as immediate family; the policy's list does not include in-laws. The local judge quoted the real list sentence ("Immediate family means a spouse or common-law partner, parent, ...") and reasoned that "parent" includes a mother-in-law. The quote was genuine, so the verbatim rule could not catch it, and no rule parameter covers family membership. This is the limit of a 7B judge on a semantic question, and the reason the default is a hosted model.
+- **Ollama T33, T38, T40 (false blocks):** the judge marked correct claims (a 1-year claim window, a family of four on one bereavement booking, one pet per passenger) as contradicted or not covered, so good answers were rewritten or escalated.
+- **Ollama T18, T31, T39 (escalated instead of corrected):** the rewrite's re-check did not come back clean, so the answer went to a specialist instead. Safe, but slower for the customer.
 
-On the dev split the same model scored 0% false allow, 0% false block and 95% ideal decisions.
+**About the Ollama numbers.** The first Ollama run of the test split was stopped after about 4 cases: the local model looped inside the quote field until the output cap, so every answer failed closed. Two fixes followed, diagnosed and checked on dev cases only: the decoding grammar now bounds every free-text field, and the judge may only quote a real sentence of a retrieved clause (details in [architecture.md](architecture.md#design-decisions)). The test cases and the prompts were not changed; the hosted path was not changed. The numbers above are the first complete Ollama run.
+
+On the dev split, OpenRouter scored 0% false allow, 0% false block and 95% ideal decisions.
 
 ---
 
