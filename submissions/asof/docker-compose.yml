@@ -6,7 +6,7 @@
 # Silicon the stock image silently fails its first-run setup under Rosetta). The image
 # is linux/amd64 only; Apple Silicon runs it through Rosetta or QEMU.
 #
-# Reads DB2_ADMIN_PASSWORD (and optionally DB2_PORT, DB2_CONTAINER) from .env next to
+# Reads DB2_PASSWORD (or the older DB2_ADMIN_PASSWORD; optionally DB2_PORT, DB2_CONTAINER) from .env next to
 # this file. First start takes 2 to 25 minutes depending on the machine; --wait returns
 # when TESTDB accepts connections.
 name: asof
@@ -25,7 +25,7 @@ services:
     environment:
       LICENSE: accept
       DB2INSTANCE: db2inst1
-      DB2INST1_PASSWORD: ${DB2_ADMIN_PASSWORD:?Set DB2_ADMIN_PASSWORD in .env before starting Db2}
+      DB2INST1_PASSWORD: ${DB2_PASSWORD:-${DB2_ADMIN_PASSWORD:?Set DB2_PASSWORD in .env before starting Db2}}
       DBNAME: testdb
       SAMPLEDB: "false"
       ARCHIVE_LOGS: "false"

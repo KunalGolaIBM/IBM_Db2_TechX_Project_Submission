@@ -12,7 +12,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -31,6 +31,8 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
         frozen=True,
+        validate_by_name=True,  # Settings(db2_admin_password=...) in code and tests
+        validate_by_alias=True,  # DB2_USER / DB2_PASSWORD (or the older names) from the environment
     )
 
     # Db2 connection
@@ -40,9 +42,12 @@ class Settings(BaseSettings):
     db2_container: str = Field("asof-db2", pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$")
     db2_connect_timeout_s: int = Field(15, ge=1, le=120)
 
-    # Db2 users: owner (setup only), runtime app user, policy editor
-    db2_admin_user: str = Field("db2inst1", pattern=r"^[a-z][a-z0-9]{0,7}$")
-    db2_admin_password: SecretStr | None = None
+    # Db2 users: owner (setup only), runtime app user, policy editor.
+    # DB2_USER / DB2_PASSWORD are the names the organizers' guide and AI skill use; the older
+    # DB2_ADMIN_USER / DB2_ADMIN_PASSWORD are still accepted.
+    db2_admin_user: str = Field("db2inst1", pattern=r"^[a-z][a-z0-9]{0,7}$",
+                                validation_alias=AliasChoices("DB2_USER", "DB2_ADMIN_USER"))
+    db2_admin_password: SecretStr | None = Field(None, validation_alias=AliasChoices("DB2_PASSWORD", "DB2_ADMIN_PASSWORD"))
     asof_app_user: str = Field("asofapp", pattern=r"^[a-z][a-z0-9]{0,7}$")
     asof_app_password: SecretStr | None = None
     asof_editor_user: str = Field("asofedit", pattern=r"^[a-z][a-z0-9]{0,7}$")
@@ -84,7 +89,7 @@ class Settings(BaseSettings):
 
     def require(self, *names: str) -> None:
         """Fail loudly, naming the missing .env keys, before any connection is attempted."""
-        missing = [n.upper() for n in names if not _is_set(getattr(self, n))]
+        missing = [ENV_NAMES.get(n, n.upper()) for n in names if not _is_set(getattr(self, n))]
         if missing:
             raise ConfigError(
                 f"Missing required setting(s): {', '.join(missing)}. "
@@ -98,6 +103,9 @@ class Settings(BaseSettings):
             "openai_compatible": self.openai_compat_model or "",
             "ollama": self.ollama_model,
         }[self.llm_provider]
+
+
+ENV_NAMES = {"db2_admin_user": "DB2_USER", "db2_admin_password": "DB2_PASSWORD"}
 
 
 def _is_set(value: object) -> bool:

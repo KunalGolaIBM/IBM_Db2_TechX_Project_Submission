@@ -5,7 +5,7 @@
 It creates a throwaway schema (ASOF_CHECK), exercises each feature with real assertions
 (every statement is a literal; the schema is bound with SET CURRENT SCHEMA = ?),
 prints PASS or FAIL per check, drops everything it created, and exits non-zero on any
-failure. It needs the Db2 owner account (DB2_ADMIN_PASSWORD in .env) because it creates
+failure. It needs the Db2 owner account (DB2_USER / DB2_PASSWORD in .env) because it creates
 tables, triggers and procedures. It never touches the ASOF schema.
 """
 

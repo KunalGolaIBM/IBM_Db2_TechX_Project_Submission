@@ -62,7 +62,7 @@ def test_secrets_never_appear_in_repr():
 
 
 def test_require_names_missing_keys():
-    with pytest.raises(ConfigError, match="DB2_ADMIN_PASSWORD"):
+    with pytest.raises(ConfigError, match="DB2_PASSWORD"):
         Settings(_env_file=None).require("db2_admin_password")
 
 

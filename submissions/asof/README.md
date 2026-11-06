@@ -155,32 +155,51 @@ PASS  Trigger blocks UPDATE: UPDATE rejected with SQLSTATE 75001
 ## Prerequisites
 
 - **Python 3.11 or 3.12**
-- **Docker** with Compose v2 (Docker Desktop, or Colima on macOS), and about 10 GB of free disk for the Db2 image and data
-- **An LLM:** an [OpenRouter](https://openrouter.ai/keys) API key, or [Ollama](https://ollama.com) with `ollama pull qwen2.5:7b-instruct`
-- **Apple Silicon:** the Db2 image is Intel-only and runs under emulation. With Colima: `colima start --cpu 4 --memory 6 --vz-rosetta`. Use the provided Compose file (named volume, not a bind mount: Db2 cannot create its home directories on a macOS-shared folder).
+- **Docker** (Docker Desktop, Docker Engine, or Colima on macOS) and about 10 GB of free disk for the Db2 image and data
+- **IBM Db2 12.1.2 or later** (12.1.5 tested), from any of the three paths below
+- **An LLM:** an [OpenRouter](https://openrouter.ai/keys) API key, or [Ollama](https://ollama.com) with `ollama pull qwen2.5:7b-instruct` (no key)
+- **Apple Silicon only:** IBM's Db2 image is Intel-only and runs under emulation. With Colima: `colima start --cpu 4 --memory 6 --vz-rosetta`, then use path C.
 
 ---
 
 ## Setup & Installation
 
-```bash
-cd submissions/asof
+**1. Python and configuration** (from `submissions/asof`):
 
-# 1. Python environment
+```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt -c requirements.lock && pip install -e . --no-deps
+cp .env.example .env     # set DB2_PASSWORD, and OPENROUTER_API_KEY (or LLM_PROVIDER=ollama)
+```
 
-# 2. Configuration: set DB2_ADMIN_PASSWORD, and OPENROUTER_API_KEY (or LLM_PROVIDER=ollama)
-cp .env.example .env
+**2. A Db2 database.** Pick one; AsOf only needs `localhost:50000/testdb` and the owner account.
 
-# 3. Db2 (first start took about 6 minutes on an M-series MacBook Air under Rosetta)
-docker compose up -d --wait db2
+- **A. IBM Db2 Developer Extension for VS Code** (the organizers' recommended path). Install `IBM.db2-for-luw`, click the Db2 icon, then **Create Db2 instance** with host `localhost`, port `50000`, username `db2inst1`, a password, and database `testdb`. Put that password in `.env` as `DB2_PASSWORD`. The extension's container is called `db2server`, which setup finds on its own. On Apple Silicon with Colima the create flow can switch the Docker context to Docker Desktop and stall; if `docker context show` says `desktop-linux`, run `docker context use colima` and use path C.
+- **B. Plain Docker with IBM's image** (Intel or Linux). Same container and database the organizers' setup guide uses:
 
-# 4. Schema, least-privilege users, seed data, grants, self-check
+  ```bash
+  docker run -itd --name db2server --privileged=true -p 50000:50000 \
+    -e LICENSE=accept -e DBNAME=testdb \
+    -e DB2INST1_PASSWORD="$(sed -n 's/^DB2_PASSWORD=//p' .env)" \
+    -v db2data:/database icr.io/db2_community/db2:12.1.5.0
+  docker logs -f db2server     # wait for "Setup has completed", then Ctrl+C
+  ```
+
+- **C. AsOf's Compose file** (Apple Silicon, or anywhere). Builds a thin fix on top of IBM's image (see below) and waits until `testdb` accepts connections. The first start took about 6 minutes on an M-series MacBook Air under Rosetta.
+
+  ```bash
+  docker compose up -d --wait db2
+  ```
+
+**3. Schema, users and data:**
+
+```bash
 python -m asof.setup
 ```
 
-`python -m asof.setup` is safe to re-run. It generates passwords for the two least-privilege users into `.env` (never printed), creates them inside the Db2 container, installs the schema, seeds the fictional data, applies grants, and finishes by proving, as the runtime user, that the as-of query works and that writes are refused.
+`python -m asof.setup` is safe to re-run. It generates passwords for the two least-privilege users into `.env` (never printed), creates them as OS users inside the Db2 container (Db2 authenticates against the operating system), installs the schema, seeds the fictional data, applies grants, and finishes by proving, as the runtime user, that the as-of query works and that writes are refused. If it cannot reach any Db2 container (for example a remote Db2), it prints the exact `useradd` commands to run on the Db2 host.
+
+Which paths were run end to end: C on Apple Silicon (dev machine and a fresh clone). A creates the same `db2server` container and `testdb` database as B; B is the documented path for Intel and Linux.
 
 ### Why AsOf builds its own Db2 image
 
@@ -195,20 +214,19 @@ The derived image fixes this and two follow-on problems. Each change is a no-op 
 2. **Platform pinned in the Dockerfile** (`FROM --platform=linux/amd64`), because Docker's classic builder, used when the buildx plugin is absent, ignores Compose's `platform:` and looks for an arm64 image that IBM does not publish.
 3. **Stale setup marker cleared on start**, so the healthcheck cannot pass on a marker from the previous boot while setup is re-running. `docker compose up --wait` returns only once setup has finished **and** `TESTDB` accepts connections.
 
-### Using an existing Db2 instead
-
-If you already run Db2 12.1.2+ (for example from the IBM Db2 VS Code extension), skip step 3. Point `DB2_HOST`, `DB2_PORT`, `DB2_DATABASE` and `DB2_ADMIN_PASSWORD` at it and set `DB2_CONTAINER` to its container name, so setup can create the two OS users there. If setup cannot reach the container, it prints the exact `useradd` commands to run on the Db2 host.
+Use a Docker named volume (as all three paths do), not a bind mount: Db2 cannot create its home directories on a macOS-shared folder.
 
 ---
 
 ## Configuration
 
-All settings are environment variables, read from `.env` ([.env.example](.env.example) lists every one with dummy values). `.env` is gitignored.
+All settings are environment variables, read from `.env` ([.env.example](.env.example) lists every one with dummy values). `.env` is gitignored. The Db2 names are the ones the organizers' guide uses.
 
 | Variable | Purpose |
 |---|---|
-| `DB2_HOST`, `DB2_PORT`, `DB2_DATABASE`, `DB2_CONTAINER` | Where Db2 runs |
-| `DB2_ADMIN_PASSWORD` | Owner account, used only by setup and the feature check |
+| `DB2_HOST`, `DB2_PORT`, `DB2_DATABASE` | Where Db2 runs (default `localhost`, `50000`, `testdb`) |
+| `DB2_USER`, `DB2_PASSWORD` | Owner account (default `db2inst1`), used only by setup and the feature check. The older names `DB2_ADMIN_USER` / `DB2_ADMIN_PASSWORD` still work. |
+| `DB2_CONTAINER` | Container in which setup creates the two OS users (default `asof-db2`; `db2server` and any single running Db2 container are found automatically) |
 | `ASOF_APP_PASSWORD`, `ASOF_EDITOR_PASSWORD` | Least-privilege users; generated by setup if empty |
 | `LLM_PROVIDER` | `openrouter` (default), `ollama`, or `openai_compatible` |
 | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | Hosted model (default `google/gemini-3.1-flash-lite`) |

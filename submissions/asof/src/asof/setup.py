@@ -47,7 +47,7 @@ def say(msg: str) -> None:
 def ensure_generated_passwords(env_path: Path = DEFAULT_ENV_FILE) -> list[str]:
     """Fill empty ASOF_*_PASSWORD keys in .env with strong random values. Returns the keys filled."""
     if not env_path.is_file():
-        raise SetupError(f"{env_path} not found. Run: cp .env.example .env  (then set DB2_ADMIN_PASSWORD)")
+        raise SetupError(f"{env_path} not found. Run: cp .env.example .env  (then set DB2_PASSWORD)")
     lines = env_path.read_text(encoding="utf-8").splitlines()
     filled: list[str] = []
     seen: set[str] = set()
@@ -83,7 +83,7 @@ def wait_for_db2(settings: Settings, timeout_s: int = 300) -> None:
                 return
         except db.DatabaseError as exc:
             if exc.sqlstate == "08001" and "SQL30082N" in str(exc):
-                raise SetupError(f"{exc}\n  DB2_ADMIN_PASSWORD in .env does not match the Db2 instance.") from None
+                raise SetupError(f"{exc}\n  DB2_USER / DB2_PASSWORD in .env do not match the Db2 instance.") from None
             if time.monotonic() > deadline:
                 raise SetupError(f"Db2 not reachable after {timeout_s}s: {exc}") from None
             say(f"  waiting for Db2 ({exc.sqlstate or 'no answer'}), retrying in {delay:.0f}s")
@@ -101,14 +101,16 @@ def ensure_os_users(settings: Settings) -> bool:
     Passwords go to chpasswd on stdin, so they never show up in a process list.
     Returns False (with instructions) when the container cannot be reached.
     """
-    container = settings.db2_container
     if shutil.which("docker") is None:
         say("  WARNING: docker not found, so the Db2 users were not created automatically.")
         return _manual_user_help(settings)
-    state = _docker(["inspect", "-f", "{{.State.Running}}", container])
-    if state.returncode != 0 or state.stdout.strip() != "true":
-        say(f"  WARNING: Db2 container '{container}' is not running here (set DB2_CONTAINER in .env).")
+    container = find_db2_container(settings.db2_container)
+    if container is None:
+        say(f"  WARNING: no running Db2 container found (tried DB2_CONTAINER='{settings.db2_container}', "
+            f"then {', '.join(FALLBACK_CONTAINERS)}, then any single container running a Db2 image).")
         return _manual_user_help(settings)
+    if container != settings.db2_container:
+        say(f"  DB2_CONTAINER '{settings.db2_container}' is not running; using the Db2 container '{container}' instead")
     for user, secret in ((settings.asof_app_user, settings.asof_app_password),
                          (settings.asof_editor_user, settings.asof_editor_password)):
         if _docker(["exec", container, "id", "-u", user]).returncode != 0:
@@ -121,6 +123,29 @@ def ensure_os_users(settings: Settings) -> bool:
             raise SetupError(f"setting the password for {user} failed: {pw.stderr.strip()}")
     say(f"  OS users {settings.asof_app_user} and {settings.asof_editor_user} ready (passwords from .env)")
     return True
+
+
+# The organizers' guide and the IBM Db2 VS Code extension both name the container db2server;
+# AsOf's compose file names it asof-db2.
+FALLBACK_CONTAINERS = ("db2server", "asof-db2")
+
+
+def _running(container: str) -> bool:
+    state = _docker(["inspect", "-f", "{{.State.Running}}", container])
+    return state.returncode == 0 and state.stdout.strip() == "true"
+
+
+def find_db2_container(preferred: str) -> str | None:
+    """The configured container if it runs, else a known name, else the only running Db2 container."""
+    for name in (preferred, *[c for c in FALLBACK_CONTAINERS if c != preferred]):
+        if _running(name):
+            return name
+    listed = _docker(["ps", "--format", "{{.Names}}\t{{.Image}}"])
+    if listed.returncode != 0:
+        return None
+    db2 = [line.split("\t")[0] for line in listed.stdout.splitlines()
+           if "\t" in line and ("db2_community/db2" in line.split("\t")[1] or "asof-db2" in line.split("\t")[1])]
+    return db2[0] if len(db2) == 1 else None
 
 
 def _manual_user_help(settings: Settings) -> bool:
