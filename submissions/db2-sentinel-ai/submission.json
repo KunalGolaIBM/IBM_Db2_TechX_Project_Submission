@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Db2 Sentinel AI: Autonomous Financial Crime Surveillance, Multi-Agent AML & Regulatory SAR Intelligence Platform",
+    "slug": "db2-sentinel-ai",
+    "short_description": "Enterprise-grade multi-agent financial intelligence and anti-money laundering (AML) platform powered by IBM Db2 12.1+ native vector search, transactional state checkpointers, recursive CTE circular routing analytics, and automated FinCEN/RBI Suspicious Activity Report (SAR) generation.",
+    "category": "AI / Financial Crime / Multi-Agent / Regulatory Compliance",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/soham-092510/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "Db2 Sentinel Solo Innovator",
+    "members": [
+      {
+        "name": "Soham",
+        "github": "soham-092510",
+        "email": "soham092510@gmail.com",
+        "role": "AI Engineer & Full-Stack Developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 12.1.2+ (Community Edition Docker & Enterprise) with Dual-Mode Local Emulation",
+    "connector": "ibm_db / SQLAlchemy (ibm_db_sa) / Native DB2VectorStore",
+    "features_used": [
+      "Native VECTOR(384, FLOAT32) column & VECTOR_DISTANCE(..., 'COSINE') for AML typology matching",
+      "Recursive Common Table Expressions (WITH RECURSIVE CTE) for multi-hop circular fund routing detection",
+      "Window Functions (AVG, SUM, RANK OVER PARTITION) for rolling 24-hour velocity anomaly scoring",
+      "JSON Metadata & SQL/JSON querying for unstructured transaction memo parsing",
+      "ACID Transactional Checkpoint Persistence for LangGraph agent workflows",
+      "Immutable Temporal Audit Trails for regulatory compliance and audit logs"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python"
+    ],
+    "frameworks": [
+      "LangGraph",
+      "LangChain",
+      "SQLAlchemy",
+      "FastAPI",
+      "Streamlit",
+      "NetworkX",
+      "PyVis"
+    ],
+    "ai_models": [
+      "ibm-granite/granite-embedding-311m-multilingual-r2 (local/Sentence-Transformers)",
+      "Ollama granite3.3:8b / OpenAI GPT-4o / Google Gemini"
+    ]
+  }
+}
