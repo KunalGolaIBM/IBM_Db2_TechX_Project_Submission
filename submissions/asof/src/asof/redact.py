@@ -1,0 +1,55 @@
+"""Remove personal data before text reaches an LLM provider or the ledger.
+
+Masks email addresses, phone numbers, payment card numbers (Luhn-checked) and any other
+13 to 19 digit number, plus airline booking references. Policy amounts, dates and clause
+IDs never have that shape, so they survive. Names are not detected;
+the ledger stores the redacted question and draft only.
+"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+
+_EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
+_CARD = re.compile(r"\b(?:\d[ -]?){12,18}\d\b")
+_PHONE = re.compile(r"(?<![\w$])(?:\+?\d{1,3}[\s.-]?)?(?:\(\d{2,4}\)[\s.-]?|\d{2,4}[\s.-])\d{3,4}[\s.-]?\d{3,4}\b")
+_BOOKING_REF = re.compile(r"\b(?=[A-Z0-9]{6}\b)(?=[A-Z0-9]*\d)(?=[A-Z0-9]*[A-Z])[A-Z0-9]{6}\b")
+
+
+@dataclass(frozen=True)
+class Redaction:
+    text: str
+    counts: dict[str, int]
+
+
+def _luhn(digits: str) -> bool:
+    total, parity = 0, len(digits) % 2
+    for i, ch in enumerate(digits):
+        d = int(ch)
+        if i % 2 == parity:
+            d *= 2
+            if d > 9:
+                d -= 9
+        total += d
+    return total % 10 == 0
+
+
+def redact(text: str) -> Redaction:
+    counts = {"email": 0, "card": 0, "number": 0, "phone": 0, "booking_ref": 0}
+
+    def sub(pattern: re.Pattern, label: str, key: str, s: str, valid=lambda m: True) -> str:
+        def repl(m: re.Match) -> str:
+            if not valid(m):
+                return m.group(0)
+            counts[key] += 1
+            return label
+        return pattern.sub(repl, s)
+
+    out = sub(_EMAIL, "[EMAIL]", "email", text)
+    # 13 to 19 digits: a card if the Luhn check passes, otherwise still masked (account numbers).
+    out = sub(_CARD, "[CARD]", "card", out, lambda m: _luhn(re.sub(r"\D", "", m.group(0))))
+    out = sub(_CARD, "[NUMBER]", "number", out)
+    out = sub(_PHONE, "[PHONE]", "phone", out, lambda m: len(re.sub(r"\D", "", m.group(0))) >= 10)
+    out = sub(_BOOKING_REF, "[BOOKING_REF]", "booking_ref", out)
+    return Redaction(out, counts)
