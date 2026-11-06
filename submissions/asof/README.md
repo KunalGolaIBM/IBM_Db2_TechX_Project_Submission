@@ -3,7 +3,7 @@
 > **What did the policy say on that date, and what did your AI tell the customer?**
 > AsOf checks each policy claim in an AI assistant's answer against the policy version in force on the customer's date, stops answers that contradict it, and keeps a tamper-evident Db2 record of what was said and why.
 
-**Built on IBM Db2 12.1 for Db2Hack 2026.** Bitemporal tables, native `VECTOR` search, SQL/JSON, in-database SHA-256, triggers, SQL PL and least-privilege users, with LangChain and the official `langchain-db2` connector.
+**Built on IBM Db2 12.1 for Db2Hack 2026.** Source: [github.com/JustJay7/asof](https://github.com/JustJay7/asof) (standalone mirror of `submissions/asof`). Bitemporal tables, native `VECTOR` search, SQL/JSON, in-database SHA-256, triggers, SQL PL and least-privilege users, with LangChain and the official `langchain-db2` connector.
 
 > **Fictional data.** "Aurelia Air" and every policy, FAQ and help-centre answer in this repository are invented for the demo. They are modelled on the kind of policy at issue in *Moffatt v. Air Canada* and describe no real airline.
 
