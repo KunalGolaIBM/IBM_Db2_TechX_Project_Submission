@@ -22,7 +22,7 @@ SCHEMA_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,29}$")
 USER_RE = re.compile(r"^[a-z][a-z0-9]{0,7}$")
 GRANTS_PREFIX = "90_"
 NOT_HELD = "42504"  # REVOKE of a privilege that is not held
-_MARKER = re.compile(r"^--\s*(table|index|versioning|trigger|procedure|view|grant|other):\s*([A-Z0-9_]+)\s*$", re.M)
+_MARKER = re.compile(r"^--\s*(table|index|versioning|trigger|procedure|function|view|grant|other):\s*([A-Z0-9_]+)\s*$", re.M)
 _SCHEMA_TOKEN = re.compile(r"\bASOF\.")
 
 
