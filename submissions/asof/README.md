@@ -12,17 +12,18 @@
 ---
 
 ## Table of Contents
+
 - [Problem Statement](#problem-statement)
 - [Solution Overview](#solution-overview)
 - [IBM Db2 Integration](#ibm-db2-integration)
-- [AI / LLM Architecture](#ai--llm-architecture)
+- [AI / LLM Architecture (if applicable)](#ai--llm-architecture-if-applicable)
 - [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
 - [Setup & Installation](#setup--installation)
 - [Configuration](#configuration)
 - [Running the Project](#running-the-project)
-- [Evaluation](#evaluation)
 - [Testing & Verification](#testing--verification)
+- [Screenshots & Demo](#screenshots--demo)
 - [Known Limitations & Future Roadmap](#known-limitations--future-roadmap)
 - [Team Members & Credits](#team-members--credits)
 
@@ -63,6 +64,16 @@ Given an AI-generated answer and the date that matters (booking or travel date, 
 | Claim pipeline, deterministic rule checks, redaction, hash-chained ledger, API, LangChain runnable | Done, tested (incl. live LLM) |
 | Policy changes (`APPLY_POLICY_CHANGE`), change impact (`CHANGE_IMPACT`), JSON_TABLE views, web UI | Done, tested, checked in a browser |
 | Evaluation: frozen 40-case test split | Done for OpenRouter and Ollama; results below |
+
+### How AsOf compares
+
+AsOf does not claim to have invented checking AI answers against policy.
+
+- **Amazon Bedrock Automated Reasoning checks** already validate responses against policies, suggest corrections and log results.
+- **NVIDIA NeMo Guardrails** fact-checking rails score an answer against retrieved text.
+- **IBM watsonx.governance** measures RAG quality (faithfulness and related metrics).
+
+What AsOf adds is time, inside the customer's own system of record: effective-dated policy versions (what was true on date X), bitemporal replay (what the database held at moment T), and change impact on past answers and published content. It is open source, runs locally, and keeps all of it in Db2.
 
 ---
 
@@ -111,7 +122,7 @@ PASS  Trigger blocks UPDATE: UPDATE rejected with SQLSTATE 75001
 
 ---
 
-## AI / LLM Architecture
+## AI / LLM Architecture (if applicable)
 
 - **Framework:** LangChain. Structured output into strict Pydantic schemas, a custom `BaseRetriever` over the as-of query, and `langchain-db2`'s `DB2VS` vector store.
 - **Model Provider & Model:**
@@ -132,6 +143,7 @@ PASS  Trigger blocks UPDATE: UPDATE rejected with SQLSTATE 75001
 ---
 
 ## Tech Stack
+
 - **Backend / Core:** Python 3.12, FastAPI, Pydantic v2, pydantic-settings
 - **Database:** IBM Db2 12.1.5.0 Community Edition (Docker), `ibm_db`
 - **AI:** LangChain, `langchain-db2`, `langchain-openai` (OpenRouter), `langchain-ollama`, `sentence-transformers/all-MiniLM-L6-v2` (local, CPU)
@@ -141,6 +153,7 @@ PASS  Trigger blocks UPDATE: UPDATE rejected with SQLSTATE 75001
 ---
 
 ## Prerequisites
+
 - **Python 3.11 or 3.12**
 - **Docker** with Compose v2 (Docker Desktop, or Colima on macOS), and about 10 GB of free disk for the Db2 image and data
 - **An LLM:** an [OpenRouter](https://openrouter.ai/keys) API key, or [Ollama](https://ollama.com) with `ollama pull qwen2.5:7b-instruct`
@@ -211,28 +224,13 @@ All settings are environment variables, read from `.env` ([.env.example](.env.ex
 ```bash
 python -m asof.db2check      # verify the Db2 features AsOf needs (owner account)
 python -m asof.setup         # schema, users, seed data, grants, self-check
-python -m asof.api           # web UI at http://127.0.0.1:8000, API docs at /docs
+python src/main.py           # web UI at http://127.0.0.1:8000, API docs at /docs (same as python -m asof.api)
 python -m asof.demo          # optional: record seven sample decisions so every screen has history
 ```
 
-### The web UI
+### The Moffatt scenario through the API
 
-| Screen | What it shows |
-|---|---|
-| **Playground** | Ask the naive demo assistant (or paste a draft) for a customer date. See the decision, the draft next to what the customer receives, and every claim with its verdict, the judge's and the rule check's view, and the clause version (with its effective dates) whose quoted text is highlighted. |
-| **Policy timeline** | Every clause version on its business-time period, with its key rule parameter read out of `RULE_JSON` by a Db2 view (`$35` then `$40`, "before travel only" then "retroactive, 90 days"). Move the as-of date; click a version for its text, rule JSON and its system-time history: every row Db2 has held, when, and which user changed it. |
-| **Ledger and replay** | Every decision, a one-click `VERIFY_CHAIN`, and per entry the replay: the clause row the decision used, what Db2 held at that moment (`FOR SYSTEM_TIME AS OF`), and what applies today for that customer date (`FOR BUSINESS_TIME AS OF`), with the SQL. |
-| **Change impact** | Apply a new clause version as `asofedit` (presets included), then see which released answers are now stale, which are still right for their date, and which help-centre answers need review and from when. |
-| **Analytics** | Decisions, claims by area and rule-check overrides, from Db2 views. |
-
-| | |
-|---|---|
-| ![Policy timeline](docs/screenshots/02-policy-timeline.png) | ![Change impact after raising the pet fee from 1 Dec 2026](docs/screenshots/04-change-impact.png) |
-| ![Replay of a December pet answer after the fee change](docs/screenshots/05-replay-after-change.png) | ![Timeline and system-time history after the change](docs/screenshots/06-timeline-after-change.png) |
-
-**The change-impact story in four clicks:** run `python -m asof.demo` (it records pet-fee answers for a November and a December trip), open **Change impact**, choose the preset "Pet fee to $125 from 1 Dec 2026", and apply it. Db2 splits PET-001 into v1 (to 1 Dec) and v2 (from 1 Dec) with `FOR PORTION OF BUSINESS_TIME`. `CHANGE_IMPACT` reports the November answer as historically valid, the December answer as stale (the customer was told $100 for a trip that now costs $125), and help-centre answer PA-PET-001 as needing review from 1 Dec 2026. Replay on the December entry shows all three states side by side.
-
-**The Moffatt scenario, end to end.** Ask the naive demo assistant (which answers from a stale FAQ) and let AsOf check its draft, once for a March booking and once for a June booking:
+Ask the naive demo assistant (which answers from a stale FAQ) and let AsOf check its draft, once for a March booking and once for a June booking:
 
 ```bash
 curl -s -X POST localhost:8000/api/assistant/ask -H 'content-type: application/json' \
@@ -286,7 +284,38 @@ The runnable takes the assistant's draft and returns the checked answer, and eve
 
 ---
 
-## Evaluation
+## Testing & Verification
+
+```bash
+pytest -q                                 # 215 tests: unit tests plus Db2 integration tests
+pytest -q -m "not db2"                    # unit tests only, no database needed
+ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 4 live tests against the configured LLM (spends API calls)
+
+pip install -r requirements-dev.txt
+python scripts/audit_deps.py             # pip-audit over all 105 pinned packages; exit 1 on any known vulnerability
+```
+
+`requirements.txt` lists the 18 direct dependencies; `requirements.lock` pins all 105 packages, transitive ones included, at the versions tested. It is used as a pip constraints file, so Linux and Windows still get their platform-only packages. `python scripts/lock_deps.py` regenerates it, and a test fails if the two files disagree. Last audit (6 Nov 2026): no known vulnerabilities.
+
+Checked from a fresh clone on Fri 6 Nov 2026, following only this README, on a Mac that already had the pip cache and the Db2 image layers: install 68 s, Db2 healthy in 167 s, setup 30 s, 215 passed, 26/26 Db2 checks, and the Moffatt example above returned CORRECTED (BRV-002 v1) for March and PASS (BRV-002 v2) for June.
+
+Integration tests install everything into a throwaway `ASOF_TEST` schema, connect as the real least-privilege user, and drop the schema afterwards. They skip automatically when Db2 is unreachable. They cover:
+
+- the same claim reaching `BRV-002` v1 for 2026-03-10 and v2 for 2026-06-02, and both sides of the 2026-04-30 / 2026-05-01 boundary
+- replay with `FOR SYSTEM_TIME AS OF` after a policy change
+- Db2 rejecting overlapping clause versions and malformed rule JSON
+- the runtime user being refused `UPDATE`, `DELETE`, `INSERT`, `CREATE TABLE` and `DROP`, on policy and ledger tables alike
+- SQL injection strings returning nothing instead of executing, and stored as plain text in the ledger
+- no string-built SQL: an AST scan of every module and test fails the build on SQL built with f-strings, `%`, `+` or `.format()`; runtime statements are literals and even the schema is a bound parameter (`SET CURRENT SCHEMA = ?`)
+- the ledger: gapless IDs and linked hashes under three concurrent writers; triggers stopping even the owner; `VERIFY_CHAIN` catching an owner who drops a trigger and edits a row, edits a citation, or deletes the last row
+- every gate decision path with a scripted LLM, including a manipulated judge that says SUPPORTED with a real quote (the rule check still overrides it), an invented quote, a clause not in force, timeouts and a ledger outage
+- 61 rule-checker tests, mostly realistic claims against the real corpus rules, in both directions (real contradictions caught, situational numbers left alone)
+- API validation (byte limits, dates, allow-listed `doc_id`, control characters, unknown fields), body cap, rate limit and security headers
+
+> **Note on the submission validator:** `scripts/validate_submission.py` flags any `.env` or `*.pem` file under the folder, including your local `.env` and certificate files inside `.venv`. Neither is committed. Run the validator from a clean checkout to see what a reviewer sees.
+
+### Evaluation: the frozen test split
+
 
 `python -m asof.eval --split test` runs the gate on 40 labelled cases and writes [docs/eval_results.md](docs/eval_results.md), with every per-case decision recorded in [docs/eval/](docs/eval/). The 40 test cases are new scenarios, none used while building or choosing the model. They were committed (`81b5b69`) before the first run and are frozen: a unit test pins their SHA-256 and the runner refuses to run them if it changes. The 20-case dev split holds the scenarios used while debugging. Each case is labelled with the decision it should get and the clause version its key claim must be checked against.
 
@@ -322,51 +351,33 @@ On the dev split, OpenRouter scored 0% false allow, 0% false block and 95% ideal
 
 ---
 
-## Testing & Verification
+## Screenshots & Demo
 
-```bash
-pytest -q                                 # 215 tests: unit tests plus Db2 integration tests
-pytest -q -m "not db2"                    # unit tests only, no database needed
-ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 4 live tests against the configured LLM (spends API calls)
+- **Slides:** [docs/slides/AsOf_slides.pdf](docs/slides/AsOf_slides.pdf), a 13-slide overview (problem, workflow, architecture, Db2 integration, evaluation, impact).
+- **Live demo:** not hosted, on purpose. AsOf's core flows write to Db2 (the ledger, policy changes) and call a paid LLM; hosting them publicly would mean exposing a writable database or a funded API key, and a read-only snapshot would hide exactly the flows that matter. The setup above runs it locally in four commands.
+- **Screenshots:** all taken from a clean demo run (`python -m asof.setup --reset --yes`, then `python -m asof.demo`). The playground is at the top of this README.
 
-pip install -r requirements-dev.txt
-python scripts/audit_deps.py             # pip-audit over all 105 pinned packages; exit 1 on any known vulnerability
-```
+### The web UI, screen by screen
 
-`requirements.txt` lists the 18 direct dependencies; `requirements.lock` pins all 105 packages, transitive ones included, at the versions tested. It is used as a pip constraints file, so Linux and Windows still get their platform-only packages. `python scripts/lock_deps.py` regenerates it, and a test fails if the two files disagree. Last audit (6 Nov 2026): no known vulnerabilities.
+| Screen | What it shows |
+|---|---|
+| **Playground** | Ask the naive demo assistant (or paste a draft) for a customer date. See the decision, the draft next to what the customer receives, and every claim with its verdict, the judge's and the rule check's view, and the clause version (with its effective dates) whose quoted text is highlighted. |
+| **Policy timeline** | Every clause version on its business-time period, with its key rule parameter read out of `RULE_JSON` by a Db2 view (`$35` then `$40`, "before travel only" then "retroactive, 90 days"). Move the as-of date; click a version for its text, rule JSON and its system-time history: every row Db2 has held, when, and which user changed it. |
+| **Ledger and replay** | Every decision, a one-click `VERIFY_CHAIN`, and per entry the replay: the clause row the decision used, what Db2 held at that moment (`FOR SYSTEM_TIME AS OF`), and what applies today for that customer date (`FOR BUSINESS_TIME AS OF`), with the SQL. |
+| **Change impact** | Apply a new clause version as `asofedit` (presets included), then see which released answers are now stale, which are still right for their date, and which help-centre answers need review and from when. |
+| **Analytics** | Decisions, claims by area and rule-check overrides, from Db2 views. |
 
-Checked from a fresh clone on Fri 6 Nov 2026, following only this README, on a Mac that already had the pip cache and the Db2 image layers: install 68 s, Db2 healthy in 167 s, setup 30 s, 215 passed, 26/26 Db2 checks, and the Moffatt example above returned CORRECTED (BRV-002 v1) for March and PASS (BRV-002 v2) for June.
+| | |
+|---|---|
+| ![Policy timeline](docs/screenshots/02-policy-timeline.png) | ![Change impact after raising the pet fee from 1 Dec 2026](docs/screenshots/04-change-impact.png) |
+| ![Replay of a December pet answer after the fee change](docs/screenshots/05-replay-after-change.png) | ![Timeline and system-time history after the change](docs/screenshots/06-timeline-after-change.png) |
 
-Integration tests install everything into a throwaway `ASOF_TEST` schema, connect as the real least-privilege user, and drop the schema afterwards. They skip automatically when Db2 is unreachable. They cover:
-
-- the same claim reaching `BRV-002` v1 for 2026-03-10 and v2 for 2026-06-02, and both sides of the 2026-04-30 / 2026-05-01 boundary
-- replay with `FOR SYSTEM_TIME AS OF` after a policy change
-- Db2 rejecting overlapping clause versions and malformed rule JSON
-- the runtime user being refused `UPDATE`, `DELETE`, `INSERT`, `CREATE TABLE` and `DROP`, on policy and ledger tables alike
-- SQL injection strings returning nothing instead of executing, and stored as plain text in the ledger
-- no string-built SQL: an AST scan of every module and test fails the build on SQL built with f-strings, `%`, `+` or `.format()`; runtime statements are literals and even the schema is a bound parameter (`SET CURRENT SCHEMA = ?`)
-- the ledger: gapless IDs and linked hashes under three concurrent writers; triggers stopping even the owner; `VERIFY_CHAIN` catching an owner who drops a trigger and edits a row, edits a citation, or deletes the last row
-- every gate decision path with a scripted LLM, including a manipulated judge that says SUPPORTED with a real quote (the rule check still overrides it), an invented quote, a clause not in force, timeouts and a ledger outage
-- 61 rule-checker tests, mostly realistic claims against the real corpus rules, in both directions (real contradictions caught, situational numbers left alone)
-- API validation (byte limits, dates, allow-listed `doc_id`, control characters, unknown fields), body cap, rate limit and security headers
-
-> **Note on the submission validator:** `scripts/validate_submission.py` flags any `.env` or `*.pem` file under the folder, including your local `.env` and certificate files inside `.venv`. Neither is committed. Run the validator from a clean checkout to see what a reviewer sees.
-
----
-
-## How AsOf compares
-
-AsOf does not claim to have invented checking AI answers against policy.
-
-- **Amazon Bedrock Automated Reasoning checks** already validate responses against policies, suggest corrections and log results.
-- **NVIDIA NeMo Guardrails** fact-checking rails score an answer against retrieved text.
-- **IBM watsonx.governance** measures RAG quality (faithfulness and related metrics).
-
-What AsOf adds is time, inside the customer's own system of record: effective-dated policy versions (what was true on date X), bitemporal replay (what the database held at moment T), and change impact on past answers and published content. It is open source, runs locally, and keeps all of it in Db2.
+**The change-impact story in four clicks:** run `python -m asof.demo` (it records pet-fee answers for a November and a December trip), open **Change impact**, choose the preset "Pet fee to $125 from 1 Dec 2026", and apply it. Db2 splits PET-001 into v1 (to 1 Dec) and v2 (from 1 Dec) with `FOR PORTION OF BUSINESS_TIME`. `CHANGE_IMPACT` reports the November answer as historically valid, the December answer as stale (the customer was told $100 for a trip that now costs $125), and help-centre answer PA-PET-001 as needing review from 1 Dec 2026. Replay on the December entry shows all three states side by side.
 
 ---
 
 ## Known Limitations & Future Roadmap
+
 - **Current Limitations:**
   - The LLM judge is probabilistic. Deterministic rule checks and the verbatim-quote rule bound its mistakes, but do not remove them.
   - All data is synthetic, and the demo is single-node.
@@ -377,6 +388,7 @@ What AsOf adds is time, inside the customer's own system of record: effective-da
 ---
 
 ## Team Members & Credits
+
 | Name | GitHub Handle | Role / Contribution |
 |---|---|---|
 | Jay Malhotra | [@JustJay7](https://github.com/JustJay7) | Everything: design, Db2, AI pipeline, UI |
