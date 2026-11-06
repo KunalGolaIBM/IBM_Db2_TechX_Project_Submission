@@ -22,7 +22,8 @@ SCHEMA_RE = db.SCHEMA_RE
 USER_RE = re.compile(r"^[a-z][a-z0-9]{0,7}$")
 GRANTS_PREFIX = "90_"
 NOT_HELD = "42504"  # REVOKE of a privilege that is not held
-_MARKER = re.compile(r"^--\s*(table|index|versioning|trigger|procedure|function|view|grant|other):\s*([A-Z0-9_]+)\s*$", re.M)
+_MARKER = re.compile(r"^--\s*(bufferpool|tablespace|table|index|versioning|trigger|procedure|function|view|grant|other):"
+                     r"\s*([A-Z0-9_]+)\s*$", re.M)
 _SCHEMA_TOKEN = re.compile(r"\bASOF\.")
 
 
@@ -66,6 +67,10 @@ def _exists(conn: ibm_db_dbi.Connection, schema: str, st: Statement) -> bool:
         sql = "SELECT 1 FROM SYSCAT.INDEXES WHERE INDSCHEMA = ? AND INDNAME = ?"
     elif st.kind == "versioning":
         sql = "SELECT 1 FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TABNAME = ? AND TEMPORALTYPE IN ('S', 'B')"
+    elif st.kind == "bufferpool":  # database-level, shared by every AsOf schema
+        return bool(db.query(conn, "SELECT 1 FROM SYSCAT.BUFFERPOOLS WHERE BPNAME = ?", (st.name,)))
+    elif st.kind == "tablespace":
+        return bool(db.query(conn, "SELECT 1 FROM SYSCAT.TABLESPACES WHERE TBSPACE = ?", (st.name,)))
     else:
         return False  # triggers, procedures, views and grants use CREATE OR REPLACE or are idempotent
     return bool(db.query(conn, sql, (schema, st.name)))

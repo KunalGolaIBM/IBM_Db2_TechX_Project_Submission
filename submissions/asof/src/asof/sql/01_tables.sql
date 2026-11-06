@@ -10,7 +10,7 @@ CREATE TABLE ASOF.POLICY_DOC (
   OWNER_TEAM  VARCHAR(100),
   SOURCE_NOTE VARCHAR(400),
   CONSTRAINT PK_POLICY_DOC PRIMARY KEY (DOC_ID)
-)
+) IN ASOF_TS32K
 @
 
 -- table: POLICY_CLAUSE
@@ -40,11 +40,11 @@ CREATE TABLE ASOF.POLICY_CLAUSE (
   CONSTRAINT CK_CLAUSE_AREA CHECK (AREA IN ('bereavement', 'cancellation', 'change_fee', 'baggage',
                                             'refund', 'delay', 'travel_credit', 'pets', 'other')),
   CONSTRAINT CK_CLAUSE_VERSION CHECK (VERSION_LABEL LIKE 'v%')
-)
+) IN ASOF_TS32K
 @
 
 -- table: POLICY_CLAUSE_HIST
-CREATE TABLE ASOF.POLICY_CLAUSE_HIST LIKE ASOF.POLICY_CLAUSE
+CREATE TABLE ASOF.POLICY_CLAUSE_HIST LIKE ASOF.POLICY_CLAUSE IN ASOF_TS32K
 @
 
 -- versioning: POLICY_CLAUSE
@@ -59,11 +59,24 @@ CREATE INDEX ASOF.IX_CLAUSE_DOC_AREA ON ASOF.POLICY_CLAUSE (DOC_ID, AREA)
 CREATE INDEX ASOF.IX_CLAUSE_HIST_ID ON ASOF.POLICY_CLAUSE_HIST (CLAUSE_ID, SYS_END)
 @
 
+-- index: IX_CLAUSE_EMBEDDING
+-- Native approximate-nearest-neighbour index (catalog type VANN, Db2 12.1.5). With a few
+-- dozen clauses the optimizer rightly prefers an exact scan, and AsOf's temporal query asks
+-- for exact search explicitly (FETCH EXACT): an approximate top-k taken before the
+-- FOR BUSINESS_TIME filter could miss the version in force. The index is there for scale;
+-- python -m asof.vectorbench measures where Db2 starts to choose it and what it costs in recall.
+-- Storage is named explicitly. (db2look 12.1.5 prints this index without its distance metric, in
+-- SYSCATSPACE and with zero build parameters, whatever the definition; SYSCAT.INDEXES has the truth.)
+CREATE VECTOR INDEX ASOF.IX_CLAUSE_EMBEDDING ON ASOF.POLICY_CLAUSE (EMBEDDING) WITH DISTANCE COSINE
+  IN ASOF_TS32K COMPRESSED VECTORS IN ASOF_TS32K
+@
+
 -- table: ANSWER_LEDGER
 -- One row per gate decision. Rows are written only by APPEND_LEDGER, never updated or
 -- deleted (see 02_ledger_rules.sql), and each ROW_HASH covers the previous row's hash.
 -- LEDGER_ID is assigned by APPEND_LEDGER under the CHAIN_HEAD lock (1, 2, 3, ... with no
 -- gaps), so a missing row is visible as a gap, not just as a broken hash.
+-- Append-only and repetitive (JSON verdicts, model names, decisions), so it uses adaptive row compression.
 CREATE TABLE ASOF.ANSWER_LEDGER (
   LEDGER_ID         BIGINT        NOT NULL,
   REQUEST_ID        CHAR(36)      NOT NULL,
@@ -90,7 +103,7 @@ CREATE TABLE ASOF.ANSWER_LEDGER (
   CONSTRAINT CK_LEDGER_LATENCY CHECK (LATENCY_MS >= 0),
   CONSTRAINT CK_LEDGER_ID CHECK (LEDGER_ID >= 1),
   CONSTRAINT CK_LEDGER_VERDICTS CHECK (JSON_EXISTS(VERDICTS_JSON, '$'))
-)
+) IN ASOF_TS32K COMPRESS YES ADAPTIVE
 @
 
 -- index: IX_LEDGER_CREATED
@@ -129,7 +142,7 @@ CREATE TABLE ASOF.CLAIM_CITATION (
   CONSTRAINT CK_CITATION_LLM_VERDICT CHECK (LLM_VERDICT IS NULL OR LLM_VERDICT IN ('SUPPORTED', 'CONTRADICTED', 'NOT_COVERED')),
   CONSTRAINT CK_CITATION_RULE CHECK (RULE_CHECK IN ('MATCH', 'MISMATCH', 'NOT_APPLICABLE')),
   CONSTRAINT CK_CITATION_CLAUSE CHECK ((CLAUSE_ID IS NULL) = (CLAUSE_BUS_START IS NULL))
-)
+) IN ASOF_TS32K COMPRESS YES ADAPTIVE
 @
 
 -- index: IX_CITATION_CLAUSE
@@ -144,7 +157,7 @@ CREATE TABLE ASOF.CHAIN_HEAD (
   LAST_HASH      CHAR(64) NOT NULL,
   CONSTRAINT PK_CHAIN_HEAD PRIMARY KEY (HEAD_ID),
   CONSTRAINT CK_CHAIN_HEAD_SINGLE CHECK (HEAD_ID = 1)
-)
+) IN ASOF_TS32K
 @
 
 -- table: PUBLISHED_ANSWER
@@ -164,7 +177,7 @@ CREATE TABLE ASOF.PUBLISHED_ANSWER (
   CONSTRAINT FK_PUBLISHED_DOC FOREIGN KEY (DOC_ID) REFERENCES ASOF.POLICY_DOC (DOC_ID),
   CONSTRAINT CK_PUBLISHED_STATUS CHECK (STATUS IN ('LIVE', 'NEEDS_REVIEW', 'RETIRED')),
   CONSTRAINT CK_PUBLISHED_RANGE CHECK (APPLIES_TO > APPLIES_FROM)
-)
+) IN ASOF_TS32K
 @
 
 -- index: IX_PUBLISHED_CLAUSE

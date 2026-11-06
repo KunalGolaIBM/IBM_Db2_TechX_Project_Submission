@@ -1,0 +1,56 @@
+-- Every row Db2 has held for one clause (FOR SYSTEM_TIME FROM ... TO ...)
+-- Statement (as the app runs it, values bound as parameters):
+-- SELECT VERSION_LABEL, BUS_START, BUS_END, SYS_START, SYS_END, CHANGED_BY, CHANGE_NOTE, CLAUSE_TEXT FROM POLICY_CLAUSE FOR SYSTEM_TIME FROM ? TO ? WHERE CLAUSE_ID = ? ORDER BY SYS_START, BUS_START
+
+Access Plan:
+-----------
+	Total Cost: 		7.06647
+	Query Degree:		1
+
+
+                                           Rows 
+                                          RETURN
+                                          (   1)
+                                           Cost 
+                                            I/O 
+                                            |
+                                         0.124183 
+                                          TBSCAN
+                                          (   2)
+                                          7.06647 
+                                             1 
+                                            |
+                                         0.124183 
+                                          SORT  
+                                          (   3)
+                                          7.06618 
+                                             1 
+                                            |
+                                         0.124183 
+                                          UNION 
+                                          (   4)
+                                          7.06558 
+                                             1 
+                     /----------------------+----------------------\
+                    0                                             0.124183 
+                 NLJOIN                                            NLJOIN
+                 (   5)                                            (   9)
+               0.00835522                                          7.05722 
+                    0                                                 1 
+          /--------+---------\                              /--------+--------\
+         1                      0                          1                 0.124183 
+      TBSCAN                 FETCH                      TBSCAN                FETCH 
+      (   6)                 (   7)                     (  10)                (  11)
+    0.000104526            0.00762169                 0.000104526             7.05712 
+         0                      0                          0                     1 
+        |                /-----+-----\                    |                /----+----\
+         1              0               0                  1           1.11765         38 
+ TABFNC: SYSIBM      IXSCAN      TABLE: ASOF       TABFNC: SYSIBM      IXSCAN    TABLE: ASOF    
+      GENROW         (   8)    POLICY_CLAUSE_HIST       GENROW         (  12)     POLICY_CLAUSE
+        Q1         0.00745334          Q3                 Q5         0.00915896        Q7
+                        0                                                 0 
+                       |                                                 |
+                        0                                                38 
+                 INDEX: ASOF                                       INDEX: ASOF    
+                IX_CLAUSE_HIST_ID                                 PK_POLICY_CLAUSE
+                       Q3                                                Q7

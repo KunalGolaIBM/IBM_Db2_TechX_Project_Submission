@@ -33,15 +33,18 @@ SQL_AS_OF = (
     "c.BUS_START, c.BUS_END, c.SYS_START, "
     "VECTOR_DISTANCE(c.EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE) AS DIST "
     "FROM POLICY_CLAUSE FOR BUSINESS_TIME AS OF ? AS c "
-    "WHERE c.DOC_ID = ? ORDER BY DIST FETCH FIRST ? ROWS ONLY"
+    "WHERE c.DOC_ID = ? ORDER BY DIST FETCH EXACT FIRST ? ROWS ONLY"
 )
 SQL_REPLAY = (
     "SELECT c.CLAUSE_ID, c.AREA, c.TITLE, c.VERSION_LABEL, c.CLAUSE_TEXT, c.RULE_JSON, "
     "c.BUS_START, c.BUS_END, c.SYS_START, "
     "VECTOR_DISTANCE(c.EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE) AS DIST "
     "FROM POLICY_CLAUSE FOR SYSTEM_TIME AS OF ? FOR BUSINESS_TIME AS OF ? AS c "
-    "WHERE c.DOC_ID = ? ORDER BY DIST FETCH FIRST ? ROWS ONLY"
+    "WHERE c.DOC_ID = ? ORDER BY DIST FETCH EXACT FIRST ? ROWS ONLY"
 )
+# FETCH EXACT: POLICY_CLAUSE has a native vector index, and with an index Db2's default is an
+# approximate search. An approximate top-k is not guaranteed to include the version in force on
+# the customer's date, so the temporal query always asks for exact ranking.
 assert DIM == 384, "SQL_AS_OF and SQL_REPLAY are written for 384-dimension embeddings"
 
 

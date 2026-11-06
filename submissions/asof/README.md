@@ -91,13 +91,38 @@ What AsOf adds is time, inside the customer's own system of record: effective-da
   ```sql
   SELECT c.CLAUSE_ID, c.VERSION_LABEL, c.CLAUSE_TEXT, c.RULE_JSON, c.BUS_START, c.BUS_END,
          VECTOR_DISTANCE(c.EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE) AS DIST
-  FROM ASOF.POLICY_CLAUSE FOR BUSINESS_TIME AS OF ? AS c      -- the customer's date
+  FROM POLICY_CLAUSE FOR BUSINESS_TIME AS OF ? AS c           -- the customer's date
   WHERE c.DOC_ID = ?
-  ORDER BY DIST FETCH FIRST ? ROWS ONLY
+  ORDER BY DIST FETCH EXACT FIRST ? ROWS ONLY
   ```
+
+  Every value is a bound parameter, and so is the schema: the connection runs `SET CURRENT SCHEMA = ?` once, so no SQL text is ever assembled at runtime.
 
   For replay, `FOR SYSTEM_TIME AS OF ?` goes in front of `FOR BUSINESS_TIME AS OF ?`: the same question, answered from what the database held at an earlier moment. Each citation also records the clause row's `SYS_START`, so replay can show the exact row a decision used, what the database held for that customer date at decision time, and what applies today.
 - **Least privilege:** the runtime user `asofapp` holds `SELECT` on the tables it reads and `EXECUTE` on `APPEND_LEDGER` and `VERIFY_CHAIN`, nothing else: no `INSERT`, `UPDATE`, `DELETE` or DDL anywhere. The procedures run with the owner's authority. Setup revokes Db2's default `PUBLIC` database privileges.
+
+### Storage, the vector index and access plans
+
+- **Dedicated storage.** Every AsOf table lives in its own 32K-page tablespace with its own bufferpool ([00_storage.sql](src/asof/sql/00_storage.sql)). The page size is required, not a preference: a vector index key on `VECTOR(384, FLOAT32)` is 1,536 bytes, and Db2 rejects it in a 4K tablespace (SQL0614N). A ledger row with up to 30 KB of verdict JSON also fits in one page.
+- **Native vector index.** `CREATE VECTOR INDEX IX_CLAUSE_EMBEDDING ON POLICY_CLAUSE (EMBEDDING) WITH DISTANCE COSINE` (catalog type `VANN`, new in Db2 12.1.5). It coexists with system versioning and `FOR PORTION OF BUSINESS_TIME` updates (tested).
+- **Compression.** The append-only ledger tables use adaptive row compression (`COMPRESS YES ADAPTIVE`).
+- **Statistics.** Setup runs `RUNSTATS` on the five tables the hot queries read, so plans are costed from real counts.
+- **Access plans.** `python -m asof.explain` explains the exact statements the app runs, with bound values, under `SET CURRENT EXPLAIN MODE = EXPLAIN`, and writes IBM `db2exfmt` plans to [docs/explain/](docs/explain/README.md). The as-of query reads `PK_POLICY_CLAUSE` (an index scan on the business-time key), then sorts the handful of rows in force by distance.
+
+**When does Db2 use the vector index?** `python -m asof.vectorbench` measures it on synthetic, clustered 384-dimension vectors in the same tablespace with the same index type ([full results](docs/vector_benchmark.md), Db2 12.1.5 under Rosetta on a MacBook Air, top 10, 20 queries per size):
+
+| Rows | Exact search | Approximate (`FETCH APPROX`) | Recall@10 | Index chosen by the optimizer | With a date filter, recall@10 |
+|---|---|---|---|---|---|
+| 1,000 | 2.7 ms | 2.6 ms | 1.00 | no (exact scan is cheaper) | 1.00 (exact) |
+| 5,000 | 8.6 ms | 8.7 ms | 1.00 | no | 1.00 (exact) |
+| 20,000 | 30.3 ms | 6.3 ms | 1.00 | **yes** | 1.00 (exact) |
+| 100,000 | 143.0 ms | 7.7 ms | 0.95 | **yes** | **0.73** (index used) |
+
+What this means for AsOf, and two things we learned about Db2 along the way:
+
+- **The 38-clause demo uses exact search, on purpose.** At this size the optimizer would scan anyway, and AsOf's query says `FETCH EXACT`: with an index present, Db2's default is approximate.
+- **Approximate search and a date filter do not mix well.** At 100,000 rows, adding the business-time filter cut recall to 0.73: the approximate top 10 is taken before the filter, so nearer vectors from versions not in force push out the right ones. For a check whose whole point is the version in force on a date, a missed version is a wrong answer, so the temporal query stays exact. A policy library large enough to need the index would keep an exact search over the clauses in force (one `IXSCAN` on the business-time key, as the plan shows) and use approximate search only for unfiltered discovery.
+- **The index is only used when `k` is a constant.** With `FETCH APPROX FIRST ? ROWS ONLY` (a parameter marker), Db2 12.1.5 never chose the index at any size; with `FETCH APPROX FIRST 10 ROWS ONLY` it did from 20,000 rows. An optimizer guideline (`<IXSCAN TABLE='...' SEARCH_LIST_SIZE='100'/>`) also forces it.
 
 ### Check that your Db2 supports all of it: one command
 
@@ -117,7 +142,7 @@ PASS  SHA-256 in SQL (Unicode): HASH(expr, 2) equals Python SHA-256 for UTF-8 te
 PASS  Hash chain via stored procedure: each row hash covers the previous row hash, computed inside Db2
 PASS  Trigger blocks UPDATE: UPDATE rejected with SQLSTATE 75001
 ...
-26/26 Db2 feature checks passed. Schema ASOF_CHECK was removed.
+27/27 Db2 feature checks passed. Schema ASOF_CHECK was removed.
 ```
 
 ---

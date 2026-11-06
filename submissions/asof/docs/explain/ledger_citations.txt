@@ -1,0 +1,32 @@
+-- The claim citations of one decision
+-- Statement (as the app runs it, values bound as parameters):
+-- SELECT PASS_NO, CLAIM_NO, CLAIM_TEXT, AREA, VERDICT, LLM_VERDICT, RULE_CHECK, CLAUSE_ID, CLAUSE_VERSION, CLAUSE_BUS_START, CLAUSE_SYS_START, DISTANCE, QUOTED_SPAN FROM CLAIM_CITATION WHERE LEDGER_ID = ? ORDER BY PASS_NO, CLAIM_NO
+
+Access Plan:
+-----------
+	Total Cost: 		0.00762169
+	Query Degree:		1
+
+
+              Rows 
+             RETURN
+             (   1)
+              Cost 
+               I/O 
+               |
+                0 
+             FETCH 
+             (   2)
+           0.00762169 
+                0 
+          /----+----\
+         0             0 
+      IXSCAN    TABLE: ASOF    
+      (   3)    CLAIM_CITATION
+    0.00745334        Q1
+         0 
+        |
+         0 
+  INDEX: ASOF    
+ PK_CLAIM_CITATION
+        Q1

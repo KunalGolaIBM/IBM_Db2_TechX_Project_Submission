@@ -156,6 +156,38 @@ def _manual_user_help(settings: Settings) -> bool:
     return False
 
 
+STATS_TABLES = ("POLICY_CLAUSE", "POLICY_CLAUSE_HIST", "PUBLISHED_ANSWER", "ANSWER_LEDGER", "CLAIM_CITATION")
+
+
+def collect_statistics(settings: Settings, target: str) -> str:
+    """RUNSTATS on the tables the hot queries read, so the optimizer costs plans from real counts.
+
+    SYSPROC.ADMIN_CMD would do this over SQL, but it runs as a fenced routine, which crashes
+    under Rosetta on Apple Silicon (SQL1646N). So the command line processor inside the Db2
+    container is tried first, and ADMIN_CMD (with the command as a bound parameter) second.
+    Db2's automatic statistics collection catches up later in any case, so a failure here warns
+    instead of stopping setup.
+    """
+    tables = [f"{db.ident(target)}.{db.ident(t)}" for t in STATS_TABLES]
+    commands = [f"RUNSTATS ON TABLE {t} WITH DISTRIBUTION AND SAMPLED DETAILED INDEXES ALL" for t in tables]
+    container = find_db2_container(settings.db2_container) if shutil.which("docker") else None
+    if container is not None:
+        script = f"db2 connect to {db.ident(settings.db2_database)} > /dev/null && " + " && ".join(
+            f'db2 "{cmd}" > /dev/null' for cmd in commands)
+        done = subprocess.run(["docker", "exec", "-u", settings.db2_admin_user, container, "bash", "-lc", script],
+                              capture_output=True, text=True, timeout=600)
+        if done.returncode == 0:
+            return f"RUNSTATS on {len(tables)} tables (command line processor in {container})"
+    try:
+        with db.connection(settings, "admin") as conn:
+            for cmd in commands:
+                db.execute(conn, "CALL SYSPROC.ADMIN_CMD(?)", (cmd,))
+            conn.commit()
+        return f"RUNSTATS on {len(tables)} tables (SYSPROC.ADMIN_CMD)"
+    except db.DatabaseError as exc:
+        return f"WARNING: statistics not collected ({exc.sqlstate}); Db2's automatic statistics will catch up"
+
+
 def verify_least_privilege(settings: Settings, target: str) -> None:
     """Prove the runtime user can read policy as of a date and cannot write anything."""
     embeddings = get_embeddings(settings.embedding_model)
@@ -186,17 +218,17 @@ def verify_least_privilege(settings: Settings, target: str) -> None:
 
 def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False) -> None:
     schema.validate_schema(target)
-    say("1/7 Passwords for the least-privilege users")
+    say("1/8 Passwords for the least-privilege users")
     filled = ensure_generated_passwords()
     say(f"  generated {', '.join(filled)} and saved to .env (not shown)" if filled else "  already set in .env")
     get_settings.cache_clear()
     settings = get_settings()
     settings.require("db2_admin_password", "asof_app_password", "asof_editor_password")
 
-    say("2/7 Db2 connection")
+    say("2/8 Db2 connection")
     wait_for_db2(settings)
 
-    say("3/7 Operating-system users in the Db2 container")
+    say("3/8 Operating-system users in the Db2 container")
     users_ok = ensure_os_users(settings)
 
     with db.connection(settings, "admin") as conn:
@@ -206,11 +238,11 @@ def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False
         elif reset_ledger and schema.table_exists(conn, target, "ANSWER_LEDGER"):
             removed = schema.reset_ledger(conn, target)
             say(f"  --reset-ledger (demo only): dropped and recreated the ledger tables, {removed} decisions removed")
-        say(f"4/7 Schema {target}")
+        say(f"4/8 Schema {target}")
         counts = schema.install(conn, target)
         say(f"  {counts['created']} objects created, {counts['skipped']} already present")
 
-        say("5/7 Seed data (fictional Aurelia Air)")
+        say("5/8 Seed data (fictional Aurelia Air)")
         embeddings = get_embeddings(settings.embedding_model)
         n_clauses = seed.seed_policy(conn, embeddings, target)
         n_head = seed.seed_chain_head(conn, target)
@@ -219,12 +251,15 @@ def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False
         say(f"  inserted {n_clauses} clause versions, {n_pub} help-centre answers, {n_faq} FAQ entries"
             + (", chain head" if n_head else "") + (" (nothing new: already seeded)" if not any((n_clauses, n_pub, n_faq, n_head)) else ""))
 
-        say("6/7 Least-privilege grants")
+        say("6/8 Least-privilege grants")
         g = schema.apply_grants(conn, settings.asof_app_user, settings.asof_editor_user, target)
         say(f"  {g['applied']} grants and revokes applied"
             + (f"; PUBLIC already lacked {g['already_revoked']} of the 4 default database privileges" if g["already_revoked"] else ""))
 
-    say("7/7 Verify as the runtime user")
+    say("7/8 Optimizer statistics (RUNSTATS)")
+    say("  " + collect_statistics(settings, target))
+
+    say("8/8 Verify as the runtime user")
     if users_ok:
         verify_least_privilege(settings, target)
     else:

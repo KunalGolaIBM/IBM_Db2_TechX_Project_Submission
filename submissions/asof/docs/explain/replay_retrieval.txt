@@ -1,0 +1,56 @@
+-- The same, as the database held it at a past moment (replay)
+-- Statement (as the app runs it, values bound as parameters):
+-- SELECT c.CLAUSE_ID, c.AREA, c.TITLE, c.VERSION_LABEL, c.CLAUSE_TEXT, c.RULE_JSON, c.BUS_START, c.BUS_END, c.SYS_START, VECTOR_DISTANCE(c.EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE) AS DIST FROM POLICY_CLAUSE FOR SYSTEM_TIME AS OF ? FOR BUSINESS_TIME AS OF ? AS c WHERE c.DOC_ID = ? ORDER BY DIST FETCH EXACT FIRST ? ROWS ONLY
+
+Access Plan:
+-----------
+	Total Cost: 		17.3646
+	Query Degree:		1
+
+
+                              Rows 
+                             RETURN
+                             (   1)
+                              Cost 
+                               I/O 
+                               |
+                            0.156379 
+                             FILTER
+                             (   2)
+                             17.3646 
+                             2.45847 
+                               |
+                            0.469136 
+                             TBSCAN
+                             (   3)
+                             17.3628 
+                             2.45847 
+                               |
+                            0.469136 
+                             SORT  
+                             (   4)
+                             17.3625 
+                             2.45847 
+                               |
+                            0.469136 
+                             UNION 
+                             (   5)
+                             17.3617 
+                             2.45847 
+                  /------------+------------\
+                 0                         0.469136 
+              FETCH                         FETCH 
+              (   6)                        (   8)
+            0.00756064                      17.3542 
+                 0                          2.45847 
+          /-----+-----\                  /----+----\
+         0               0           4.22222         38 
+      IXSCAN      TABLE: ASOF        IXSCAN    TABLE: ASOF    
+      (   7)    POLICY_CLAUSE_HIST   (   9)     POLICY_CLAUSE
+    0.00739229          Q1          0.0261227        Q3
+         0                              0 
+        |                              |
+         0                             38 
+  INDEX: ASOF                    INDEX: ASOF    
+ IX_CLAUSE_HIST_ID              PK_POLICY_CLAUSE
+        Q1                             Q3

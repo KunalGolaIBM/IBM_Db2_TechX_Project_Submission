@@ -38,7 +38,11 @@
       "Least-privilege Db2 users: SELECT plus EXECUTE only, PUBLIC defaults revoked",
       "LangChain DB2VS vector store (langchain-db2)",
       "Catalog views (SYSCAT) for idempotent, self-checking setup",
-      "CURRENT SCHEMA and CURRENT PATH special registers set through parameter markers, so runtime SQL is literal"
+      "CURRENT SCHEMA and CURRENT PATH special registers set through parameter markers, so runtime SQL is literal",
+      "Native vector index (CREATE VECTOR INDEX ... WITH DISTANCE COSINE, type VANN) in a dedicated 32K tablespace and bufferpool, benchmarked against exact search",
+      "FETCH EXACT / FETCH APPROX vector search control",
+      "Adaptive row compression on the append-only ledger tables",
+      "RUNSTATS and EXPLAIN (db2exfmt) access plans for the hot queries"
     ]
   },
   "tech_stack": {

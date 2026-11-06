@@ -319,6 +319,36 @@ def check_vector_serialize(c: Ctx) -> str:
     return "VECTOR read back as 384 floats"
 
 
+def check_vector_index(c: Ctx) -> str:
+    # A 384-dim FLOAT32 key is 1,536 bytes, more than a 4K page allows, so the index needs a
+    # 32K tablespace. These are the same shared storage objects AsOf's setup creates.
+    for kind, name, ddl in (
+        ("BUFFERPOOLS", "ASOF_BP32K", "CREATE BUFFERPOOL ASOF_BP32K SIZE AUTOMATIC PAGESIZE 32K"),
+        ("TABLESPACES", "ASOF_TS32K", "CREATE TABLESPACE ASOF_TS32K PAGESIZE 32K MANAGED BY AUTOMATIC STORAGE "
+                                      "BUFFERPOOL ASOF_BP32K"),
+    ):
+        exists = c.q("SELECT COUNT(*) FROM SYSCAT.BUFFERPOOLS WHERE BPNAME = ?", (name,)) if kind == "BUFFERPOOLS" \
+            else c.q("SELECT COUNT(*) FROM SYSCAT.TABLESPACES WHERE TBSPACE = ?", (name,))
+        if exists[0][0] == 0:
+            c.x(ddl)
+            c.conn.commit()
+    c.x("CREATE TABLE VEC (ID INT NOT NULL PRIMARY KEY, EMBEDDING VECTOR(384, FLOAT32) NOT NULL) IN ASOF_TS32K")
+    c.conn.commit()
+    for i in range(20):
+        c.x("INSERT INTO VEC (ID, EMBEDDING) VALUES (?, VECTOR(?, 384, FLOAT32))", (i, _vec(1000 + i)))
+    c.conn.commit()
+    c.x("CREATE VECTOR INDEX VEC_ANN ON VEC (EMBEDDING) WITH DISTANCE COSINE")
+    c.conn.commit()
+    kind = c.q("SELECT INDEXTYPE FROM SYSCAT.INDEXES WHERE INDSCHEMA = CURRENT SCHEMA AND INDNAME = 'VEC_ANN'")[0][0]
+    assert kind.strip() == "VANN", f"index type {kind!r}"
+    exact = [r[0] for r in c.q("SELECT ID FROM VEC ORDER BY VECTOR_DISTANCE(EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE) "
+                               "FETCH EXACT FIRST 3 ROWS ONLY", (_vec(1005),))]
+    approx = c.q("SELECT ID FROM VEC ORDER BY VECTOR_DISTANCE(EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE) "
+                 "FETCH APPROX FIRST 3 ROWS ONLY", (_vec(1005),))
+    assert exact[0] == 5 and len(approx) == 3
+    return "CREATE VECTOR INDEX (type VANN) in a 32K tablespace; FETCH EXACT and FETCH APPROX both answer"
+
+
 def check_injection_text(c: Ctx) -> str:
     payload = "'); DROP TABLE ASOF_CHECK.CLAUSE; --"
     c.call("APPEND", ("PASS", payload, 0, ""))
@@ -355,10 +385,12 @@ CHECKS: list[tuple[str, Callable[[Ctx], str]]] = [
     ("Trigger blocks DELETE", check_trigger_delete),
     ("Procedure result set", check_result_set),
     ("VECTOR_SERIALIZE", check_vector_serialize),
+    ("Native vector index (VANN)", check_vector_index),
     ("SQL injection stored as text", check_injection_text),
 ]
 
 CLEANUP = [
+    "DROP TABLE VEC",
     "DROP PROCEDURE APPEND",
     "DROP PROCEDURE LIST_LEDGER",
     "DROP TRIGGER LEDGER_NO_UPDATE",

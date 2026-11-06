@@ -77,7 +77,7 @@ flowchart LR
 7. **Integration** ([src/asof/integration.py](src/asof/integration.py)): `as_runnable()` drops the check into an existing LangChain chain. [assistant.py](src/asof/assistant.py) is the deliberately naive demo assistant over the official `DB2VS` store.
 8. **Tooling**:
    - [setup.py](src/asof/setup.py): users, schema, seed, grants, self-check, and the demo-only `--reset-ledger`.
-   - [db2check.py](src/asof/db2check.py): the 26 Db2 feature checks.
+   - [db2check.py](src/asof/db2check.py): the 27 Db2 feature checks.
    - [eval/](src/asof/eval/): the frozen evaluation.
    - [demo.py](src/asof/demo.py): records sample history.
    - [scripts/check_secrets.py](scripts/check_secrets.py): pre-commit secret check.
@@ -138,7 +138,7 @@ Each line is a choice and the reason for it. Findings marked "spike" were verifi
 - **Strict schemas, closed enums, caps in code.** Every model reply is parsed into a Pydantic model with all fields required and extra keys forbidden. Limits such as 8 claims are enforced after parsing, because providers differ in which JSON Schema keywords they honour.
 - **Untrusted text is escaped, not just delimited.** The question, draft and claims are HTML-escaped inside `<question>`, `<answer>`, `<claims>` blocks, so a draft cannot close its block or inject a fake `<clause>` (tested), and the instruction never to follow embedded instructions is in the system message only.
 - **Compose builds the Db2 image with or without buildx.** Docker's classic builder (used when the buildx plugin is missing, as on this Mac) ignores Compose's `platform:` when resolving `FROM`, and IBM publishes no arm64 image, so the platform is pinned in the Dockerfile. `COPY --chmod` is avoided for the same reason.
-- **"Healthy" means setup finished in this boot.** IBM's setup writes `/database/config/.shared-data/setup_complete` on the data volume, and on a restart it re-runs setup (including a same-level database upgrade that holds TESTDB exclusively) while the old marker is still there. The entrypoint deletes the marker first, and the healthcheck requires the marker and a successful connection. Verified on a fresh volume (healthy after about 6 minutes) and on a restart (about 3 minutes), with the 26-check script passing immediately after `docker compose up --wait`.
+- **"Healthy" means setup finished in this boot.** IBM's setup writes `/database/config/.shared-data/setup_complete` on the data volume, and on a restart it re-runs setup (including a same-level database upgrade that holds TESTDB exclusively) while the old marker is still there. The entrypoint deletes the marker first, and the healthcheck requires the marker and a successful connection. Verified on a fresh volume (healthy after about 6 minutes) and on a restart (about 3 minutes), with the Db2 feature check passing immediately after `docker compose up --wait`.
 - **Db2 users are OS users, created by setup.** Db2 authenticates against the operating system of the Db2 server, so setup runs `useradd` inside the container and sets each password with `chpasswd` reading stdin, never a command-line argument. Passwords for `asofapp` and `asofedit` are generated into `.env` (mode 600) when empty and are never printed.
 - **PUBLIC defaults are revoked explicitly.** Setup revokes `CONNECT`, `CREATETAB`, `BINDADD` and `IMPLICIT_SCHEMA` from PUBLIC and grants `CONNECT` only to the two named users. On the TESTDB that IBM's image creates, PUBLIC already held none of the four, so these are a no-op there, but they harden databases created with Db2's usual defaults. Setup reports which case it found.
 - **`CHANGED_BY` defaults to `SESSION_USER`.** A generated column from `SESSION_USER` is rejected on Db2 LUW (SQL0548N), so the column defaults to the session user on insert and `APPLY_POLICY_CHANGE` sets it on update.
@@ -228,6 +228,16 @@ For each clause a decision cited, three queries:
 ## IBM Db2 Schema & Storage Design
 
 Db2 Community Edition 12.1.5.0, database `TESTDB`, schema `ASOF`. Full DDL: [01_tables.sql](src/asof/sql/01_tables.sql), [02_ledger_rules.sql](src/asof/sql/02_ledger_rules.sql), [03_procedures.sql](src/asof/sql/03_procedures.sql), [04_views.sql](src/asof/sql/04_views.sql), [90_grants.sql](src/asof/sql/90_grants.sql).
+
+### Storage
+
+| Object | Definition | Why |
+|---|---|---|
+| Bufferpool `ASOF_BP32K` | `SIZE AUTOMATIC PAGESIZE 32K` | Matches the tablespace page size |
+| Tablespace `ASOF_TS32K` | `PAGESIZE 32K MANAGED BY AUTOMATIC STORAGE` | Holds every AsOf table. A 384-dim vector index key needs more than a 4K page allows, and a ledger row fits in one page |
+| `IX_CLAUSE_EMBEDDING` | `CREATE VECTOR INDEX ... ON POLICY_CLAUSE (EMBEDDING) WITH DISTANCE COSINE` (type `VANN`) | Approximate nearest-neighbour search at scale; the temporal query stays exact (see [vector benchmark](docs/vector_benchmark.md)) |
+| `ANSWER_LEDGER`, `CLAIM_CITATION` | `COMPRESS YES ADAPTIVE` | Append-only, repetitive rows |
+| Statistics | `RUNSTATS ... WITH DISTRIBUTION AND SAMPLED DETAILED INDEXES ALL` in setup | Plans costed from real cardinalities; [access plans](docs/explain/README.md) |
 
 ### Tables
 
@@ -323,7 +333,7 @@ UPDATE ASOF.POLICY_CLAUSE FOR PORTION OF BUSINESS_TIME FROM P_FROM TO P_TO
 
 ### DDL as Db2 holds it
 
-The objects are created from the SQL files in [src/asof/sql/](src/asof/sql/). To show what Db2 actually holds after setup, [docs/ddl/asof_schema_db2look.sql](docs/ddl/asof_schema_db2look.sql) is the full DDL of schema `ASOF` generated from the catalog by IBM's `db2look` (`python scripts/export_ddl.py` regenerates it; the IBM Db2 Developer Extension for VS Code produces the same with Generate DDL on the schema). The core of it, unedited:
+The objects are created from the SQL files in [src/asof/sql/](src/asof/sql/). To show what Db2 actually holds after setup, [docs/ddl/asof_schema_db2look.sql](docs/ddl/asof_schema_db2look.sql) is the full DDL of schema `ASOF` generated from the catalog by IBM's `db2look` (`python scripts/export_ddl.py` regenerates it; the IBM Db2 Developer Extension for VS Code produces the same with Generate DDL on the schema). One caveat found on the way: `db2look` 12.1.5 prints the native vector index without its distance metric, in `SYSCATSPACE` and with zero build parameters, whatever its real definition, so that one statement in the file cannot be replayed as is; the file says so at the top. The core of it, unedited:
 
 ```sql
 CREATE TABLE "ASOF    "."POLICY_CLAUSE"  (
@@ -344,7 +354,7 @@ CREATE TABLE "ASOF    "."POLICY_CLAUSE"  (
 		  "TRANS_ID" TIMESTAMP(12) GENERATED ALWAYS AS TRANSACTION START ID ,
 		 PERIOD BUSINESS_TIME ("BUS_START","BUS_END") ,
 		 PERIOD SYSTEM_TIME ("SYS_START","SYS_END") )
-		 IN "USERSPACE1"
+		 IN "ASOF_TS32K"
 		 ORGANIZE BY ROW;
 
 ALTER TABLE "ASOF    "."POLICY_CLAUSE"
@@ -419,3 +429,9 @@ Each line of the judging rubric's Security criterion, and where it is met.
 **Out of scope:** the correctness of the policy text itself, the calling system's identity and date handling, and network transport security between the caller and AsOf (it binds to localhost; a deployment puts it behind TLS).
 
 Retention: the ledger is append-only by design. A deployment should set a retention period for redacted questions and drafts, as its own data policy requires. AsOf never stores the unredacted text.
+- **One 32K tablespace for every AsOf table.** A native vector index key on `VECTOR(384, FLOAT32)` is 1,536 bytes; Db2 caps an index key at a quarter of the page size, so the default 4K tablespace rejects it (SQL0614N, found in a spike). AsOf creates `ASOF_BP32K` and `ASOF_TS32K` once per database and places every table there explicitly, which also lets a 30 KB ledger row sit in one page and keeps AsOf's storage separate from anything else in the database.
+- **A native vector index, but exact search in the temporal query.** `IX_CLAUSE_EMBEDDING` (type `VANN`) is in place for scale, and the retrieval query says `FETCH EXACT` because Db2 defaults to approximate when an index exists. `python -m asof.vectorbench` showed why: with a business-time filter at 100,000 rows the approximate top 10 kept only 0.73 recall, and a missed version in force is a wrong check. Without the filter, approximate search was 18 times faster at 0.95 recall.
+- **`FETCH APPROX FIRST 10 ROWS`, not `FIRST ? ROWS`.** Found while benchmarking: with a parameter marker for k, Db2 12.1.5 never matched the vector index (exact scans at every size, 143 ms at 100,000 rows); with a constant it did (7.7 ms). Any approximate query AsOf adds will use a constant k.
+- **RUNSTATS through the command line processor.** `SYSPROC.ADMIN_CMD` is a fenced routine and crashes under Rosetta (SQL1646N), so setup runs `RUNSTATS` with `db2` inside the container and falls back to `ADMIN_CMD`, with the command as a bound parameter, where fenced routines work.
+- **Explain mode instead of `EXPLAIN PLAN FOR` text.** `python -m asof.explain` sets `CURRENT EXPLAIN MODE = EXPLAIN` and runs the app's own statement constants with bound values, so the plans are for exactly what runs and no SQL is assembled even in tooling. Explain tables come from IBM's `EXPLAIN.DDL` through the command line processor, again because `SYSINSTALLOBJECTS` is fenced.
+- **Adaptive row compression on the ledger.** The ledger is append-only and repetitive (decisions, model names, JSON keys), the textbook case for `COMPRESS YES ADAPTIVE`; it costs nothing in the write path that matters here.
