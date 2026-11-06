@@ -18,6 +18,8 @@ It uses the following third-party software. No third-party code is copied into t
 | dbt-core (own environment) | 1.11.17 | Apache-2.0 |
 | apache-airflow (own environment, [airflow/requirements-airflow.txt](airflow/requirements-airflow.txt)) | 3.4.0 | Apache-2.0 |
 | apache-airflow-providers-ibm-db2 (own environment) | 0.1.0 | Apache-2.0 |
+| lfx (Langflow executor; own environment, [langflow/requirements-langflow.txt](langflow/requirements-langflow.txt)) | 1.13.1 | MIT |
+| lfx-ibm (IBM's Langflow bundle; own environment) | 0.3.2 | MIT |
 | langchain | 1.4.9 | MIT |
 | langchain-core | 1.7.6 | MIT |
 | langchain-community | 0.4.2 | MIT |

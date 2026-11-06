@@ -63,6 +63,7 @@
       "FastAPI",
       "LangChain",
       "LangGraph",
+      "Langflow",
       "Pydantic",
       "SQLAlchemy",
       "SQLGlot",

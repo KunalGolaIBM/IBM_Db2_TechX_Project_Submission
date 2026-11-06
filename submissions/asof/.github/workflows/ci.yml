@@ -39,8 +39,13 @@ jobs:
           pip install -r requirements.txt -c requirements.lock
           pip install -e . --no-deps
           pip install -r requirements-dev.txt
+      - name: Langflow component tests (own virtualenv; Langflow pins its own LangChain)
+        run: |
+          python -m venv /tmp/lf-venv
+          /tmp/lf-venv/bin/pip install -q -r langflow/requirements-langflow.txt
+          /tmp/lf-venv/bin/python -m pytest -q langflow/tests -p no:cacheprovider
       - name: Lint (ruff, including its SQL-injection rule)
-        run: ruff check src tests scripts airflow
+        run: ruff check src tests scripts airflow langflow
       - name: Secret check over every tracked file
         run: python scripts/check_secrets.py --all
       - name: Dependency audit (pip-audit over all locked packages)
