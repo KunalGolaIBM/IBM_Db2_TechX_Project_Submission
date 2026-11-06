@@ -1,0 +1,19 @@
+# ---- Python -----------------------------------------------------------
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+python-dotenv==1.0.1
+httpx==0.28.1
+
+# ---- IBM Db2 ----------------------------------------------------------
+# ibm_db ships the Db2 CLI driver (clidriver) for Linux/Windows x64, so no
+# system-level Db2 client install is required inside the container.
+ibm_db==3.2.3
+
+# ---- AI / retrieval ---------------------------------------------------
+langgraph==0.2.60
+fastembed==0.4.2
+numpy==1.26.4
+
+# ---- Tests ------------------------------------------------------------
+pytest==8.3.4
