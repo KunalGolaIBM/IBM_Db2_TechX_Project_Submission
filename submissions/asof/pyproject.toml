@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "asof"
+version = "0.1.0"
+description = "Checks AI assistant answers against the policy in force on that date, on IBM Db2."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [{ name = "Jay Malhotra" }]
+# Exact, tested versions live in requirements.txt.
+dependencies = [
+  "ibm_db>=3.3",
+  "langchain-db2>=1.0",
+  "langchain-core>=1.7",
+  "langchain-openai>=1.7",
+  "langchain-ollama>=1.1",
+  "langchain-huggingface>=1.2",
+  "sentence-transformers>=6.2",
+  "fastapi>=0.160",
+  "uvicorn>=0.54",
+  "pydantic>=2.14",
+  "pydantic-settings>=2.16",
+  "jinja2>=3.1",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+asof = ["data/*.json", "sql/*.sql"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+  "db2: needs a running Db2 (skipped automatically when it is unreachable)",
+  "llm: calls the configured LLM provider (skipped unless ASOF_RUN_LLM_TESTS=1)",
+]

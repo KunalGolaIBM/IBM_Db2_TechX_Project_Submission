@@ -1,0 +1,28 @@
+# Exact versions tested on Python 3.12 (macOS arm64 and Linux x86_64).
+# Install with: pip install -r requirements.txt && pip install -e . --no-deps
+
+# IBM Db2 driver and the official LangChain Db2 integration
+ibm_db==3.3.0
+langchain-db2==1.0.0
+
+# LangChain core, providers and local embeddings
+langchain==1.4.9
+langchain-core==1.7.6
+langchain-community==0.4.2
+langchain-openai==1.7.4
+langchain-ollama==1.1.0
+langchain-huggingface==1.2.3
+sentence-transformers==6.2.0
+torch==2.15.0
+
+# API, validation and configuration
+fastapi==0.162.0
+uvicorn[standard]==0.54.0
+pydantic==2.14.3
+pydantic-settings==2.16.2
+python-dotenv==1.2.4
+jinja2==3.1.6
+httpx==0.28.1
+
+# Tests
+pytest==9.2.0
