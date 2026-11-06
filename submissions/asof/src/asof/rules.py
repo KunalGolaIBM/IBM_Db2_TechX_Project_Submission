@@ -45,8 +45,9 @@ _PATTERNS: list[tuple[str, re.Pattern]] = [
     ("pct", re.compile(r"\b(\d+(?:\.\d+)?)\s?(?:%|percent\b)", re.I)),
     ("duration", re.compile(rf"\b{_NUM}[\s-]*(business[\s-]days?|working[\s-]days?|days?|hours?|hrs?|weeks?|months?|years?)\b", re.I)),
     ("kg", re.compile(rf"\b{_NUM_STRICT}\s?(?:kg|kgs|kilograms?|kilos?)\b", re.I)),
-    ("count", re.compile(rf"\b{_NUM_STRICT}\s+(?:[a-z-]+\s+){{0,2}}?(passengers?|people|persons?|travell?ers?|credits?|pets?|animals?|items?|characters?|letters?)\b", re.I)),
+    ("count", re.compile(rf"\b{_NUM_STRICT}\s+((?:[a-z-]+\s+){{0,2}}?)(passengers?|people|persons?|travell?ers?|credits?|pets?|animals?|items?|characters?|letters?)\b", re.I)),
 ]
+_RELATIVE = re.compile(r"\b(additional|other|more|extra|further|accompanying)\b", re.I)
 _NOUNS = {"passenger": "passenger", "people": "passenger", "person": "passenger", "traveler": "passenger",
           "traveller": "passenger", "credit": "credit", "pet": "pet", "animal": "pet", "item": "item",
           "character": "character", "letter": "character"}
@@ -145,7 +146,10 @@ def extract_quantities(text: str) -> list[Quantity]:
             if kind == "duration":
                 forms = _forms(value, m.group(2))
             elif kind == "count":
-                noun = m.group(2).lower().rstrip("s")
+                # "three additional passengers" is relative to someone else, not a total.
+                if _RELATIVE.search(m.group(2)):
+                    continue
+                noun = m.group(3).lower().rstrip("s")
                 forms = ((f"count:{_NOUNS.get(noun, noun)}", value),)
             else:
                 forms = ((kind, value),)

@@ -27,6 +27,7 @@ def rc(clause_id: str, on: date = MARCH) -> RuleClause:
     ("A bereavement fare covers up to 4 passengers on one booking.", "BRV-005", MARCH, "MATCH"),
     ("A bereavement fare covers up to 6 passengers.", "BRV-005", MARCH, "MISMATCH"),
     ("A bereavement fare can be booked for a passenger in Economy.", "BRV-005", MARCH, "NOT_APPLICABLE"),
+    ("The discount applies to you and up to three additional passengers on your booking.", "BRV-005", MARCH, "NOT_APPLICABLE"),
     ("Bereavement fares can be booked at the airport.", "BRV-004", MARCH, "MISMATCH"),
     # Fees that changed on a date.
     ("Your first checked bag is $35 each way.", "BAG-001", JULY, "MISMATCH"),
