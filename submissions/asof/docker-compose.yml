@@ -1,0 +1,45 @@
+# IBM Db2 12.1.5.0 Community Edition for AsOf.
+#
+#   docker compose up -d --wait db2
+#
+# Builds a thin image on top of IBM's (see docker/db2/Dockerfile for why: on Apple
+# Silicon the stock image silently fails its first-run setup under Rosetta). The image
+# is linux/amd64 only; Apple Silicon runs it through Rosetta or QEMU.
+#
+# Reads DB2_ADMIN_PASSWORD (and optionally DB2_PORT, DB2_CONTAINER) from .env next to
+# this file. First start takes 2 to 25 minutes depending on the machine; --wait returns
+# when TESTDB accepts connections.
+name: asof
+
+services:
+  db2:
+    build:
+      context: ./docker/db2
+    image: asof-db2:12.1.5.0
+    platform: linux/amd64
+    container_name: ${DB2_CONTAINER:-asof-db2}
+    privileged: true # required by IBM's Db2 container for its kernel parameter setup
+    restart: unless-stopped
+    ports:
+      - "${DB2_PORT:-50000}:50000"
+    environment:
+      LICENSE: accept
+      DB2INSTANCE: db2inst1
+      DB2INST1_PASSWORD: ${DB2_ADMIN_PASSWORD:?Set DB2_ADMIN_PASSWORD in .env before starting Db2}
+      DBNAME: testdb
+      SAMPLEDB: "false"
+      ARCHIVE_LOGS: "false"
+    volumes:
+      - db2data:/database
+    healthcheck:
+      # Healthy only when IBM's setup has finished (it restarts the engine during
+      # autoconfiguration) AND TESTDB accepts a connection. The marker alone is not enough:
+      # IBM's script writes it, and logs "Setup has completed", even when setup failed.
+      test: ["CMD-SHELL", "test -f /database/config/.shared-data/setup_complete && su - db2inst1 -c 'db2 connect to testdb > /dev/null && db2 terminate > /dev/null'"]
+      interval: 15s
+      timeout: 60s
+      retries: 8
+      start_period: 25m
+
+volumes:
+  db2data:
