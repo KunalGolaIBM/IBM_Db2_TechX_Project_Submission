@@ -160,9 +160,11 @@ def build(gate: Gate, req: GateRequest):
                 for call in calls:
                     before = set(tools.found)
                     output = by_name[call["name"]].invoke(call.get("args") or {})
+                    returned = sorted(set(tools.found) - before)
                     trace.append({"pass": state["pass_no"], "tool": call["name"],
                                   "args": {k: str(v)[:120] for k, v in (call.get("args") or {}).items()},
-                                  "found": sorted(set(tools.found) - before)})
+                                  "returned": returned,  # clauses this call surfaced
+                                  "new": [c for c in returned if c not in state["pool"]]})  # not retrieved before
                     messages.append(ToolMessage(content=str(output)[:4000], tool_call_id=call.get("id") or call["name"]))
                 left -= len(calls)
         except (LLMError, db.DatabaseError, ValueError) as exc:

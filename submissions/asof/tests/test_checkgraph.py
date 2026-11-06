@@ -69,10 +69,10 @@ def test_the_agent_finds_the_clause_and_the_claim_passes_only_through_the_checks
     result = check(llm)
     assert (result.decision, result.reason_code) == ("PASS", "ALL_SUPPORTED")
     assert result.claims[0].clause.clause_id == "PET-001"
-    assert result.investigation == [{"pass": 1, "tool": "search_policy",
-                                     "args": {"query": "pets travelling in the cabin"}, "found": ["PET-001"]}]
+    assert result.investigation == [{"pass": 1, "tool": "search_policy", "args": {"query": "pets travelling in the cabin"},
+                                     "returned": ["PET-001"], "new": ["PET-001"]}]
     assert world["searches"] == [ON]  # the agent searches the customer's date, never its own
-    assert world["entries"][0].verdicts["investigation"][0]["found"] == ["PET-001"]
+    assert world["entries"][0].verdicts["investigation"][0]["new"] == ["PET-001"]
 
 
 def test_an_invented_quote_from_the_agents_evidence_still_does_not_count(world):

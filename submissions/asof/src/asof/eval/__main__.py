@@ -35,10 +35,9 @@ CATEGORY_ORDER = ["supported", "contradicted_numbers", "contradicted_eligibility
 
 
 def prepare(settings, embeddings) -> None:
-    """Fresh ledger in ASOF_EVAL; policy, help-centre answers and FAQ seeded once."""
+    """A fresh ASOF_EVAL schema for every run: same DDL, seed data and grants as setup, empty ledger."""
     with db.connection(settings, "admin") as conn:
-        if schema.table_exists(conn, EVAL_SCHEMA, "ANSWER_LEDGER"):
-            schema.reset_ledger(conn, EVAL_SCHEMA)
+        schema.drop(conn, EVAL_SCHEMA)
         schema.install(conn, EVAL_SCHEMA)
         seed.seed_policy(conn, embeddings, EVAL_SCHEMA)
         seed.seed_chain_head(conn, EVAL_SCHEMA)
