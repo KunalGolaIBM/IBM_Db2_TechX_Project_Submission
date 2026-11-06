@@ -194,7 +194,7 @@
       "versions": [
         {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
          "clause_text": "For a delay within Aurelia Air's control that makes the passenger arrive 3 hours or more, but less than 6 hours, late, the passenger is entitled to $125 in compensation.",
-         "rule": {"delay_from_hours": 3, "delay_to_hours": 6, "compensation_usd": 125}}
+         "rule": {"compensation_usd": 125, "applies_when": {"delay_hours": [3, 6]}}}
       ]
     },
     {
@@ -202,7 +202,7 @@
       "versions": [
         {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
          "clause_text": "For a delay within Aurelia Air's control that makes the passenger arrive 6 hours or more, but less than 9 hours, late, the passenger is entitled to $250 in compensation.",
-         "rule": {"delay_from_hours": 6, "delay_to_hours": 9, "compensation_usd": 250}}
+         "rule": {"compensation_usd": 250, "applies_when": {"delay_hours": [6, 9]}}}
       ]
     },
     {
@@ -210,7 +210,7 @@
       "versions": [
         {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
          "clause_text": "For a delay within Aurelia Air's control that makes the passenger arrive 9 hours or more late, the passenger is entitled to $400 in compensation.",
-         "rule": {"delay_from_hours": 9, "compensation_usd": 400}}
+         "rule": {"compensation_usd": 400, "applies_when": {"delay_hours": [9, null]}}}
       ]
     },
     {
@@ -218,7 +218,7 @@
       "versions": [
         {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
          "clause_text": "Delays caused by weather, air traffic control restrictions or security events are outside Aurelia Air's control and are not eligible for compensation. Meal vouchers are still provided for delays of 3 hours or more.",
-         "rule": {"compensation_allowed": false, "meal_voucher_from_hours": 3}}
+         "rule": {"compensation_allowed": false, "meal_voucher_min_delay_hours": 3}}
       ]
     },
     {
