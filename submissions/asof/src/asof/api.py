@@ -212,7 +212,8 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
 
     @app.exception_handler(ConfigError)
     async def _config_error(_: Request, exc: ConfigError):
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        log.error("configuration error: %s", exc)  # names the missing keys and the .env path: server log only
+        return JSONResponse({"error": "the server configuration is incomplete; see the server log"}, status_code=500)
 
     @app.exception_handler(LLMError)
     async def _llm_error(_: Request, exc: LLMError):

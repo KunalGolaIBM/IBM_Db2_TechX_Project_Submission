@@ -374,4 +374,48 @@ Each line of the judging rubric's Security criterion, and where it is met.
 | Tamper evidence (beyond the rubric) | Triggers reject UPDATE and DELETE even for the owner. The hash chain is computed inside Db2, and `VERIFY_CHAIN` catches an owner who drops a trigger and edits a row, edits a citation, or deletes the last row. | [02_ledger_rules.sql](src/asof/sql/02_ledger_rules.sql), [03_procedures.sql](src/asof/sql/03_procedures.sql); `tests/test_db2_ledger.py` |
 | Web and API hardening | CSP with no inline script or style; `X-Frame-Options: DENY`; `nosniff`; `no-store` on API responses; per-client rate limit on LLM endpoints; server binds to localhost; policy edits localhost-only unless a token is configured. | [api.py](src/asof/api.py); `test_security_headers`, `test_rate_limit_applies_to_llm_endpoints`, `test_policy_change_is_refused_from_a_remote_client` |
 
+### Threat model
+
+**What is worth protecting.**
+- the integrity of policy versions (a wrong version means a wrong check)
+- the integrity of the decision ledger (it is the evidence in a dispute)
+- customer text in questions and drafts
+- the Db2 and LLM credentials
+- the availability of the check, including LLM spend
+
+**Who and what is untrusted.**
+- **The customer**, whose question may carry instructions or personal data.
+- **The upstream assistant**, whose draft may be wrong or manipulated through the customer.
+- **The LLM provider:** its output is untrusted, and it sees whatever is sent to it.
+- **Anyone who can reach the API.**
+- **The dependency supply chain.**
+
+**Trusted, but checked.**
+- **The policy editor:** trusted for policy, never for the ledger.
+- **The Db2 owner:** trusted to run setup. Any tampering by the owner is detected, not prevented.
+
+**Trust boundaries.**
+1. Caller to AsOf API (HTTP).
+2. AsOf to the LLM provider (outbound HTTPS; replies are data).
+3. AsOf to Db2 as `asofapp` or `asofedit` (least privilege).
+4. Db2 owner to the ledger (detect tampering, cannot prevent it).
+5. Build and dependencies.
+
+| STRIDE | Threat | Mitigation | Evidence | Residual risk |
+|---|---|---|---|---|
+| Spoofing | A remote caller applies a policy change | `POST /api/policy/change` accepts localhost only, or a matching `ASOF_EDITOR_TOKEN` (constant-time compare); in Db2 only `asofedit` may `EXECUTE APPLY_POLICY_CHANGE` | `test_policy_change_is_refused_from_a_remote_client`, `test_policy_change_token_is_enforced_when_set`, `test_only_the_editor_can_change_policy` | Read and check endpoints have no user authentication (a local service by design; an optional API token is on the plan) |
+| Spoofing | The model or the draft picks a convenient date | The as-of date is a required, validated request field from the calling system; prompts never ask the model for a date | `GateIn.as_of_date`; [api.py](src/asof/api.py) | A caller that sends a false date gets a check against that date; the date's truth belongs to the booking system |
+| Tampering | Prompt injection in a question or draft gets a contradiction released | Untrusted text escaped inside delimited blocks; strict output schemas; a verdict counts only with a verbatim quote from a retrieved clause; deterministic rule checks override the judge; full re-check of any rewrite; any error escalates | `test_manipulated_judge_cannot_pass_a_contradiction`, `test_injection_in_draft_reaches_the_llm_only_as_escaped_data`, `test_invented_quote_downgrades_to_not_covered`, 3 injection cases in the frozen test split (none released) | A judge can still be wrong on a semantic point no rule parameter covers (frozen-split case T20 on the local model) |
+| Tampering | SQL injection through any input | No SQL text built at runtime; every value bound; identifiers in setup DDL only through `db.ident` | `tests/test_sql_safety.py`, `test_injection_strings_are_stored_as_plain_text`, `test_unknown_doc_or_injection_string_returns_nothing` | None known |
+| Tampering | Someone edits or deletes a ledger row | No INSERT, UPDATE or DELETE grant for any runtime user; triggers reject UPDATE and DELETE even for the owner; SHA-256 chain computed in Db2; `VERIFY_CHAIN` finds the first bad row | `test_app_user_cannot_write_ledger_tables`, `test_triggers_stop_even_the_owner`, `test_verify_chain_catches_an_owner_who_edits_a_row`, `..._an_edited_citation`, `..._a_deleted_last_row` | An owner who drops the triggers and recomputes every hash can rewrite the chain consistently. Closing that needs the chain head anchored outside Db2 (for example published periodically); not built |
+| Tampering | A policy version is changed outside the change procedure | Runtime users hold SELECT only on policy tables; changes go through `APPLY_POLICY_CHANGE`, which records `CHANGED_BY` and a change note; system versioning keeps every prior row | `test_app_user_is_read_only`, `test_replay_shows_the_row_used_and_a_later_change` | The owner can write to the history table directly; Db2 audit (`db2audit`) would record it and is not configured here |
+| Repudiation | "The assistant never said that", or "the policy said something else" | Every decision is a ledger row with the final answer, model, prompt version, verdicts and the exact clause row (`CLAUSE_BUS_START`, `CLAUSE_SYS_START`); replay shows what Db2 held at that moment | `test_replay_shows_the_row_used_and_a_later_change`, replay API | None known for decisions that went through AsOf |
+| Information disclosure | Customer personal data reaches the LLM provider or the ledger | Emails, phone numbers, card numbers (Luhn), long digit runs and booking references are masked before either | `tests/test_redact.py`, `test_personal_data_is_redacted_before_the_llm_and_the_ledger` | Names and other free-text identifiers are not redacted; the provider sees redacted text |
+| Information disclosure | Secrets leak through code, logs or errors | `SecretStr` settings; `.env` gitignored and written with mode 0600; staged changes checked against real `.env` values before every commit; passwords set with `chpasswd` on stdin; database and configuration errors reach clients only as a generic message and an SQLSTATE | `test_secrets_never_appear_in_repr`, `scripts/check_secrets.py`, `test_configuration_errors_do_not_reveal_server_paths` | `.env` is plaintext on the operator's disk |
+| Denial of service | Large or many requests, a runaway model, or a slow provider | 64 KB body cap, per-client rate limit on LLM endpoints, at most 8 claims, hard per-call deadline, output-token cap, capped retries, non-streaming local calls | `test_oversized_body_is_rejected`, `test_rate_limit_applies_to_llm_endpoints`, the `tests/test_llm.py` deadline tests | The rate limit is in-memory, per process |
+| Elevation of privilege | The runtime account is used to change data or schema | `asofapp`: SELECT plus EXECUTE on three procedures, no DDL, PUBLIC defaults revoked; setup proves the refusals on every run; LLM output is never executed or used to build SQL | `test_app_user_is_read_only`, setup step 7/7 | The owner password stays in `.env` for setup; a production deployment should keep it out of the runtime environment |
+| Elevation of privilege | A vulnerable dependency | Every package pinned (`requirements.lock`, 105 packages); pip-audit clean on 6 Nov 2026 | `scripts/audit_deps.py`, `tests/test_dependencies.py` | No hash pinning; audits are point-in-time |
+
+**Out of scope:** the correctness of the policy text itself, the calling system's identity and date handling, and network transport security between the caller and AsOf (it binds to localhost; a deployment puts it behind TLS).
+
 Retention: the ledger is append-only by design. A deployment should set a retention period for redacted questions and drafts, as its own data policy requires. AsOf never stores the unredacted text.

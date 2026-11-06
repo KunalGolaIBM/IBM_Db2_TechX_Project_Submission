@@ -198,3 +198,15 @@ def test_policy_endpoints_on_db2(settings, embeddings, test_schema):
     reused = c.post("/api/policy/change", json={**CHANGE, "clause_id": "BAG-001", "version_label": "v1",
                                                  "rule": {"first_bag_fee_usd": 45}})
     assert reused.status_code == 422 and "already in use" in reused.json()["detail"]
+
+
+def test_configuration_errors_do_not_reveal_server_paths():
+    from asof.config import ConfigError
+
+    class Broken(FakeGate):
+        def check(self, req):
+            raise ConfigError("Missing required setting(s): OPENROUTER_API_KEY. Set them in /home/x/.env")
+
+    r = client(Broken()).post("/api/gate", json=OK)
+    assert r.status_code == 500
+    assert ".env" not in r.text and "/home" not in r.text and "OPENROUTER" not in r.text
