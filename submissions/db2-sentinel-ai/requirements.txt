@@ -1,0 +1,29 @@
+# Core Python Dependencies for Db2 Sentinel AI
+# IBM Db2 Connectors
+# Note: On systems with IBM Db2 client libraries, ibm_db and ibm_db_sa connect natively.
+# The application automatically falls back to the embedded zero-setup engine if ibm_db is not installed.
+ibm_db>=3.2.0; platform_system != "Windows" or python_version < "3.11"
+ibm_db_sa>=0.6.0; platform_system != "Windows" or python_version < "3.11"
+SQLAlchemy>=2.0.0
+
+# Agentic AI & Orchestration
+langgraph>=0.2.0
+langchain>=0.3.0
+langchain-core>=0.3.0
+
+# Analytics, Vectors & Data
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn>=1.3.0
+networkx>=3.0.0
+
+# User Interface & Visualization
+streamlit>=1.30.0
+pyvis>=0.3.2
+reportlab>=4.0.0
+
+# Environment & Testing
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+pytest>=7.4.0
+rich>=13.0.0
