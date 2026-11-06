@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AsOf</title>
+  <meta name="description" content="AsOf checks what an AI assistant says against the policy in force on that date, on IBM Db2.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233142c4'/%3E%3Cpath d='M9 22l7-13 7 13M11.5 18h9' stroke='white' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#/playground" aria-label="AsOf home">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8"/><path d="M9 22l7-13 7 13M11.5 18h9"/></svg>
+      </span>
+      <span class="brand-text"><strong>AsOf</strong><span>policy time machine on IBM Db2</span></span>
+    </a>
+    <nav class="tabs" aria-label="Sections">
+      <a href="#/playground" data-route="playground">Playground</a>
+      <a href="#/timeline" data-route="timeline">Policy timeline</a>
+      <a href="#/ledger" data-route="ledger">Ledger &amp; replay</a>
+      <a href="#/impact" data-route="impact">Change impact</a>
+      <a href="#/analytics" data-route="analytics">Analytics</a>
+    </nav>
+    <div class="status" id="status" aria-live="polite"></div>
+  </header>
+  <main id="view" tabindex="-1"></main>
+  <footer class="foot">
+    Aurelia Air and all of its policies are fictional, modelled on the kind of policy at issue in
+    <em>Moffatt v. Air Canada</em>, 2024 BCCRT 149. AsOf checks claims against dated policy versions; it does not certify answers.
+  </footer>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
