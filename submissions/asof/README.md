@@ -281,6 +281,7 @@ All settings are environment variables, read from `.env` ([.env.example](.env.ex
 | `LLM_PROVIDER` | `openrouter` (default), `ollama`, or `openai_compatible` |
 | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | Hosted model (default `google/gemini-3.1-flash-lite`) |
 | `OLLAMA_BASE_URL`, `OLLAMA_MODEL` | Local model (default `qwen2.5:7b-instruct`) |
+| `LLM_FALLBACK`, `LLM_FALLBACK_TIMEOUT_S` | `ollama` (default): a call the hosted model cannot answer (timeout, transport error, no valid output) goes once to local Ollama, and the ledger's model field records it, for example `openrouter:... (fallback ollama:qwen2.5:7b-instruct on 2 of 4 calls)`. `none` turns it off. If both fail, the check fails closed. |
 | `ASOF_INDB_EMBEDDINGS`, `EMBEDDING_API_URL`, `EMBEDDING_API_MODEL`, `EMBEDDING_API_KEY` | In-database embeddings: `auto` (default, on when an API key is set), `on` or `off`; HTTPS endpoint serving the same model as the app (default OpenRouter, `sentence-transformers/all-minilm-l6-v2`); the key defaults to `OPENROUTER_API_KEY` |
 | `LLM_TIMEOUT_S`, `LLM_MAX_OUTPUT_TOKENS` | Hard per-call deadline and output cap; the gate fails closed when hit. Use `LLM_TIMEOUT_S=180` for Ollama on a laptop (the value the recorded Ollama run used). |
 

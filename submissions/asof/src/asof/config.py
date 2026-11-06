@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     llm_temperature: float | None = Field(None, ge=0, le=2)
     # Every structured reply is far below this; the cap stops runaway generations.
     llm_max_output_tokens: int = Field(1000, ge=256, le=8000)
+    # A hosted primary falls back to local Ollama for calls it cannot answer (recorded in the
+    # ledger); "none" disables it. The local model is slower, hence its own deadline.
+    llm_fallback: Literal["ollama", "none"] = "ollama"
+    llm_fallback_timeout_s: float = Field(180.0, gt=0, le=600)
 
     openrouter_api_key: SecretStr | None = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"

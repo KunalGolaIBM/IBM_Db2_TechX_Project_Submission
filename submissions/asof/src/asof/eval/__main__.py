@@ -129,7 +129,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     settings = get_settings()
     provider = args.provider or settings.llm_provider
-    llm = build_llm(settings, provider=provider, model=args.model)
+    llm = build_llm(settings, provider=provider, model=args.model, fallback=False)  # measure one provider only
     workers = args.workers or (1 if provider == "ollama" else 4)
     cases = load_cases(args.split)[: args.limit] if args.limit else load_cases(args.split)
     embeddings = get_embeddings(settings.embedding_model)

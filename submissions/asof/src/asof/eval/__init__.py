@@ -79,6 +79,9 @@ class CountingLLM:
     def info(self) -> str:
         return self.inner.info
 
+    def begin_check(self) -> None:
+        getattr(self.inner, "begin_check", lambda: None)()
+
     def structured(self, schema: type[BaseModel], messages, choices=None):
         self.calls += 1
         return self.inner.structured(schema, messages, choices)

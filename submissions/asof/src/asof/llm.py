@@ -215,11 +215,85 @@ def _non_streaming_ollama():
     return NonStreamingChatOllama
 
 
-def build_llm(settings: Settings, provider: str | None = None, model: str | None = None) -> LLMClient:
+class FallbackLLM:
+    """The primary model, with a second model for calls the primary cannot answer.
+
+    Any LLMError from the primary (a timeout, a transport error, or no valid structured output
+    after its retries) sends that same call, once, to the fallback model under the fallback's
+    own deadline. Content is never second-guessed: a valid answer from the primary is final.
+    If both fail, the error propagates and the gate fails closed as before.
+
+    Usage is tracked per check (per thread), so `info`, which the gate writes to the ledger as
+    MODEL_INFO, says when and how often the fallback answered.
+    """
+
+    def __init__(self, primary: LLMClient, fallback: LLMClient):
+        self.primary, self.fallback = primary, fallback
+        self._local = threading.local()
+
+    @property
+    def provider(self) -> str:
+        return self.primary.provider
+
+    @property
+    def model_name(self) -> str:
+        return self.primary.model_name
+
+    @property
+    def chat_model(self) -> BaseChatModel:  # the demo assistant's chain uses the primary model
+        return self.primary.chat_model
+
+    def begin_check(self) -> None:
+        self._local.used = []
+
+    @property
+    def info(self) -> str:
+        used = getattr(self._local, "used", [])
+        n = used.count("fallback")
+        if not n:
+            return self.primary.info
+        return f"{self.primary.info} (fallback {self.fallback.info} on {n} of {len(used)} calls)"
+
+    def _mark(self, which: str) -> None:
+        if not hasattr(self._local, "used"):
+            self._local.used = []
+        self._local.used.append(which)
+
+    def structured(self, schema: type[T], messages: list[tuple[str, str]],
+                   choices: dict[str, list[str]] | None = None) -> LLMResult[T]:
+        try:
+            result = self.primary.structured(schema, messages, choices)
+        except LLMError as first:
+            log.warning("%s failed (%s); trying the fallback %s", self.primary.info, first, self.fallback.info)
+            try:
+                result = self.fallback.structured(schema, messages, choices)
+            except LLMError as second:
+                raise LLMError(f"{first}; fallback {self.fallback.info} also failed: {second}") from second
+            self._mark("fallback")
+            return result
+        self._mark("primary")
+        return result
+
+    def run(self, fn):
+        return self.primary.run(fn)
+
+
+def build_llm(settings: Settings, provider: str | None = None, model: str | None = None,
+              fallback: bool = True) -> LLMClient | FallbackLLM:
+    """The configured model client; for a hosted primary, wrapped with the local fallback
+    (LLM_FALLBACK=ollama, the default). Eval passes fallback=False to measure one provider."""
+    client = _build_one(settings, provider, model)
+    if fallback and settings.llm_fallback == "ollama" and client.provider != "ollama":
+        local = _build_one(settings, "ollama", None, deadline=settings.llm_fallback_timeout_s)
+        return FallbackLLM(client, local)
+    return client
+
+
+def _build_one(settings: Settings, provider: str | None, model: str | None, deadline: float | None = None) -> LLMClient:
     """Create the configured LLM client. `provider` and `model` override settings (used by eval)."""
     provider = provider or settings.llm_provider
     attempts = 2
-    deadline = settings.llm_timeout_s
+    deadline = deadline or settings.llm_timeout_s
     max_out = settings.llm_max_output_tokens
 
     if provider == "ollama":
@@ -230,7 +304,7 @@ def build_llm(settings: Settings, provider: str | None = None, model: str | None
             temperature=0,
             num_ctx=8192,
             num_predict=max_out,
-            client_kwargs={"timeout": settings.llm_timeout_s},
+            client_kwargs={"timeout": deadline},
         )
         return LLMClient(chat, provider, name, attempts, deadline)
 

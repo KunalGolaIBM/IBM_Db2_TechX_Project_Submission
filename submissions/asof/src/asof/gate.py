@@ -218,6 +218,7 @@ class Gate:
     # ---- the decision ---------------------------------------------------------------------
     def check(self, req: GateRequest) -> GateResult:
         started = time.monotonic()
+        getattr(self.llm, "begin_check", lambda: None)()  # per-check usage, e.g. provider fallback
         request_id = str(uuid.uuid4())
         q = redact(req.question)
         d = redact(req.draft_answer)
