@@ -335,3 +335,8 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 }
 
 .replay-sql { margin-bottom: 16px; }
+
+/* Ask the ledger */
+.scroll-x { overflow-x: auto; }
+#ask-result pre.sql { white-space: pre-wrap; word-break: break-word; }
+#ask-result .card + pre.sql, #ask-result pre.sql + p { margin-top: 8px; }

@@ -35,13 +35,23 @@ def entry(**over) -> ledger.LedgerEntry:
 
 
 @pytest.fixture
-def scratch(admin_conn, settings):
+def scratch(admin_conn, embeddings, settings):
     """A private schema for tests that break the chain on purpose."""
     name = f"ASOF_T{uuid.uuid4().hex[:6].upper()}"
     schema.install(admin_conn, name)
     seed.seed_chain_head(admin_conn, name)
+    seed.seed_faq(admin_conn, embeddings, name)  # the grants cover every table, the FAQ store included
+    schema.apply_grants(admin_conn, settings.asof_app_user, settings.asof_editor_user, name)
     yield name
     schema.drop(admin_conn, name)
+
+
+@pytest.fixture
+def verifier(settings, scratch):
+    """The runtime user: the only one that reads the ledger text unmasked, so the only one that can verify."""
+    conn = db.connect(settings, "app")
+    yield lambda: ledger.verify_chain(conn, scratch)
+    conn.close()
 
 
 def test_app_user_appends_and_reads_back(app_conn, test_schema):
@@ -142,29 +152,29 @@ def _drop_trigger(conn, schema_name, name):
     conn.commit()
 
 
-def test_verify_chain_catches_an_owner_who_edits_a_row(admin_conn, scratch):
+def test_verify_chain_catches_an_owner_who_edits_a_row(admin_conn, scratch, verifier):
     for _ in range(3):
         ledger.append(admin_conn, entry(), scratch)
-    assert ledger.verify_chain(admin_conn, scratch).status == "OK"
+    assert verifier().status == "OK"
     _drop_trigger(admin_conn, scratch, "ANSWER_LEDGER_NO_UPDATE")
     db.use_schema(admin_conn, scratch)
     db.execute(admin_conn, "UPDATE ANSWER_LEDGER SET FINAL_ANSWER = 'Yes, retroactive refunds are fine.' WHERE LEDGER_ID = 2")
     admin_conn.commit()
-    status = ledger.verify_chain(admin_conn, scratch)
+    status = verifier()
     assert (status.status, status.first_bad) == ("BROKEN", 2) and "content" in status.detail
 
 
-def test_verify_chain_catches_an_edited_citation(admin_conn, scratch):
+def test_verify_chain_catches_an_edited_citation(admin_conn, scratch, verifier):
     ledger.append(admin_conn, entry(), scratch)
     _drop_trigger(admin_conn, scratch, "CLAIM_CITATION_NO_UPDATE")
     db.use_schema(admin_conn, scratch)
     db.execute(admin_conn, "UPDATE CLAIM_CITATION SET VERDICT = 'SUPPORTED' WHERE CLAIM_NO = 1")
     admin_conn.commit()
-    status = ledger.verify_chain(admin_conn, scratch)
+    status = verifier()
     assert status.status == "BROKEN" and "citations" in status.detail
 
 
-def test_verify_chain_catches_a_deleted_last_row(admin_conn, scratch):
+def test_verify_chain_catches_a_deleted_last_row(admin_conn, scratch, verifier):
     for _ in range(2):
         ledger.append(admin_conn, entry(), scratch)
     for trig in ("ANSWER_LEDGER_NO_DELETE", "CLAIM_CITATION_NO_DELETE"):
@@ -173,8 +183,19 @@ def test_verify_chain_catches_a_deleted_last_row(admin_conn, scratch):
     db.execute(admin_conn, "DELETE FROM CLAIM_CITATION WHERE LEDGER_ID = 2")
     db.execute(admin_conn, "DELETE FROM ANSWER_LEDGER WHERE LEDGER_ID = 2")
     admin_conn.commit()
-    status = ledger.verify_chain(admin_conn, scratch)
+    status = verifier()
     assert status.status == "BROKEN" and "chain head" in status.detail
+
+
+def test_the_owner_reads_masked_text_and_cannot_verify_through_the_mask(admin_conn, scratch, verifier):
+    ledger.append(admin_conn, entry(), scratch)
+    db.use_schema(admin_conn, scratch)
+    row = db.query(admin_conn, "SELECT QUESTION_REDACTED, DRAFT_REDACTED, FINAL_ANSWER, DECISION FROM ANSWER_LEDGER")[0]
+    assert row == ("[masked]", "[masked]", "[masked]", "ESCALATED")  # column masks: text only for ASOF_TEXT_READER
+    with pytest.raises(db.DatabaseError) as err:  # a false "BROKEN" over masked values would be worse than refusing
+        ledger.verify_chain(admin_conn, scratch)
+    assert err.value.sqlstate == "75030"
+    assert verifier().status == "OK"
 
 
 def test_replay_shows_the_row_used_and_a_later_change(admin_conn, embeddings, scratch):

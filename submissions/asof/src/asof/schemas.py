@@ -70,3 +70,14 @@ class JudgeResult(_Strict):
 
 class RewriteResult(_Strict):
     answer: str = Field(description="The corrected answer for the customer.")
+
+
+# "Ask the ledger" (asof/askledger.py). The SQL is only a proposal: it runs only if the
+# SQLGlot gate accepts it, and then only as the read-only analyst.
+class LedgerSql(_Strict):
+    sql: str = Field(description="Exactly one Db2 SELECT statement over the views given.")
+    explanation: str = Field(description="One short sentence: what the query counts or lists.")
+
+
+class LedgerAnswer(_Strict):
+    answer: str = Field(description="The answer to the question, written only from the rows returned.")

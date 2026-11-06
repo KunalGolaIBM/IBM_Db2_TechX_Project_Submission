@@ -7,7 +7,7 @@ from datetime import date, datetime
 from asof.corpus import load_corpus
 from asof.llm import LLMError, LLMResult
 from asof.retriever import RetrievedClause
-from asof.schemas import ClaimVerdict, ExtractedClaim, ExtractionResult, JudgeResult, RewriteResult
+from asof.schemas import ClaimVerdict, ExtractedClaim, ExtractionResult, JudgeResult, LedgerAnswer, LedgerSql, RewriteResult
 
 
 class ScriptedLLM:
@@ -15,8 +15,9 @@ class ScriptedLLM:
 
     info = "scripted:test"
 
-    def __init__(self, extract=(), judge=(), rewrite=(), tools=()):
-        self.queues = {ExtractionResult: list(extract), JudgeResult: list(judge), RewriteResult: list(rewrite)}
+    def __init__(self, extract=(), judge=(), rewrite=(), tools=(), sql=(), answer=()):
+        self.queues = {ExtractionResult: list(extract), JudgeResult: list(judge), RewriteResult: list(rewrite),
+                       LedgerSql: list(sql), LedgerAnswer: list(answer)}
         self.tool_replies = list(tools)  # AIMessages for the investigate agent; none queued means "no tool calls"
         self.calls: list[tuple[type, list]] = []
 

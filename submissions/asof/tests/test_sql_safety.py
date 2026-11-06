@@ -13,6 +13,11 @@ Scans every module under src/asof, and every test, with the Python AST (no impor
 Two documented exceptions build no SQL from input: schema.load_statements substitutes the
 validated schema name for the `ASOF.` token in the bundled DDL files, and seed.faq_store gives
 langchain-db2 a validated table name. Both are covered by the identifier tests below.
+
+"Ask the ledger" (askledger.py) is the one place where SQL text comes from a model. It is not
+built by string operations either: what runs is SQLGlot's regeneration of a parse tree that
+askledger.validate accepted, executed as a user that can only SELECT six views.
+tests/test_askledger.py proves that only validate()'s output ever reaches Db2.
 """
 
 from __future__ import annotations
@@ -28,7 +33,7 @@ from asof import db
 SRC = Path(__file__).resolve().parents[1] / "src" / "asof"
 TESTS = Path(__file__).resolve().parent
 RUNTIME = {"api.py", "gate.py", "checkgraph.py", "impactagent.py", "ledger.py", "policy.py", "retriever.py",
-           "assistant.py", "integration.py"}
+           "assistant.py", "integration.py", "askledger.py"}
 # Statement shapes, matched on the literal text of a string with its placeholders removed,
 # so "SELECT * FROM {t} WHERE ..." is caught but an error message like "CALL {proc} failed" is not.
 SQL_TEXT = re.compile(

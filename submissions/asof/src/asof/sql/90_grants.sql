@@ -1,5 +1,6 @@
 -- Least-privilege grants. Applied after the schema exists and seed data is loaded.
--- ASOF_APP_USER and ASOF_EDITOR_USER are replaced by the validated user names from .env.
+-- ASOF_APP_USER, ASOF_EDITOR_USER and ASOF_ANALYST_USER are replaced by the validated user names
+-- from .env.
 -- "ASOF." is replaced by the target schema. REVOKEs that find nothing to revoke are skipped.
 
 -- Db2 grants these to PUBLIC by default. Take them away so only named users can connect,
@@ -102,4 +103,46 @@ GRANT SELECT ON TABLE ASOF.ANSWER_SUGGESTION TO USER ASOF_EDITOR_USER
 @
 -- grant: EDITOR_EXECUTE_DECIDE_SUGGESTION
 GRANT EXECUTE ON PROCEDURE ASOF.DECIDE_SUGGESTION TO USER ASOF_EDITOR_USER
+@
+
+-- Roles (database-wide, shared by every AsOf schema). Created if missing; need SECADM.
+-- ASOF_TEXT_READER: may read the ledger's free text (see the masks in 05_masks.sql).
+-- role: ASOF_TEXT_READER
+CREATE ROLE ASOF_TEXT_READER
+@
+-- ASOF_ANALYST: the read-only analyst behind "Ask the ledger". Audit views only.
+-- role: ASOF_ANALYST
+CREATE ROLE ASOF_ANALYST
+@
+-- Only the runtime user reads the real values: it writes and verifies the chain and serves the
+-- ledger screens. The owner is masked too (Db2 does not let it grant itself a role, SQL0554N).
+-- It holds SECADM and could drop the masks, but that is a catalog change, not a silent read.
+-- grant: TEXT_READER_APP
+GRANT ROLE ASOF_TEXT_READER TO USER ASOF_APP_USER
+@
+-- Read-only analyst: connect, and SELECT on the audit and analytics views. No tables, no
+-- procedures, and not in ASOF_TEXT_READER, so the ledger's free text comes back masked.
+-- grant: ANALYST_ROLE
+GRANT ROLE ASOF_ANALYST TO USER ASOF_ANALYST_USER
+@
+-- grant: ANALYST_CONNECT
+GRANT CONNECT ON DATABASE TO ROLE ASOF_ANALYST
+@
+-- grant: ANALYST_SELECT_V_AUDIT_DECISIONS
+GRANT SELECT ON TABLE ASOF.V_AUDIT_DECISIONS TO ROLE ASOF_ANALYST
+@
+-- grant: ANALYST_SELECT_V_AUDIT_CLAIMS
+GRANT SELECT ON TABLE ASOF.V_AUDIT_CLAIMS TO ROLE ASOF_ANALYST
+@
+-- grant: ANALYST_SELECT_V_POLICY_TIMELINE
+GRANT SELECT ON TABLE ASOF.V_POLICY_TIMELINE TO ROLE ASOF_ANALYST
+@
+-- grant: ANALYST_SELECT_V_DECISION_STATS
+GRANT SELECT ON TABLE ASOF.V_DECISION_STATS TO ROLE ASOF_ANALYST
+@
+-- grant: ANALYST_SELECT_V_CLAIM_OUTCOMES_BY_AREA
+GRANT SELECT ON TABLE ASOF.V_CLAIM_OUTCOMES_BY_AREA TO ROLE ASOF_ANALYST
+@
+-- grant: ANALYST_SELECT_V_RULE_OVERRIDES
+GRANT SELECT ON TABLE ASOF.V_RULE_OVERRIDES TO ROLE ASOF_ANALYST
 @

@@ -210,3 +210,32 @@ def test_configuration_errors_do_not_reveal_server_paths():
     r = client(Broken()).post("/api/gate", json=OK)
     assert r.status_code == 500
     assert ".env" not in r.text and "/home" not in r.text and "OPENROUTER" not in r.text
+
+
+class FakeAsker:
+    def __init__(self):
+        self.questions: list[str] = []
+
+    def ask(self, question):
+        from asof.askledger import AskResult
+
+        self.questions.append(question)
+        return AskResult(question=question, status="ANSWERED", answer="2 escalated.", sql="SELECT 1",
+                         columns=["N"], rows=[[2]])
+
+
+@pytest.mark.parametrize("question", ["", "hi", "x" * 501, "bad\x00byte"])
+def test_ask_the_ledger_validates_the_question(question):
+    asker = FakeAsker()
+    app = create_app(Settings(_env_file=None), gate=FakeGate(), assistant=FakeAssistant(), asker=asker)
+    assert TestClient(app).post("/api/ledger/ask", json={"question": question}).status_code == 422
+    assert asker.questions == []
+
+
+def test_ask_the_ledger_returns_the_sql_and_rows_with_the_answer():
+    asker = FakeAsker()
+    app = create_app(Settings(_env_file=None), gate=FakeGate(), assistant=FakeAssistant(), asker=asker)
+    r = TestClient(app).post("/api/ledger/ask", json={"question": "How many were escalated?", "extra": 1})
+    assert r.status_code == 422  # unknown fields are refused
+    r = TestClient(app).post("/api/ledger/ask", json={"question": "How many were escalated?"})
+    assert r.status_code == 200 and r.json()["sql"] == "SELECT 1" and r.json()["rows"] == [[2]]

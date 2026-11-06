@@ -10,6 +10,10 @@ It uses the following third-party software. No third-party code is copied into t
 |---|---|---|
 | ibm_db | 3.3.0 | Apache-2.0 |
 | langchain-db2 | 1.0.0 | MIT |
+| ibm-db-sa | 0.4.4 | Apache-2.0 |
+| SQLAlchemy | 2.1.8 | MIT |
+| sqlglot | 30.30.0 | MIT |
+| db2-sqlglot-dialect (IBM) | 1.1.0 | Apache-2.0 |
 | langchain | 1.4.9 | MIT |
 | langchain-core | 1.7.6 | MIT |
 | langchain-community | 0.4.2 | MIT |

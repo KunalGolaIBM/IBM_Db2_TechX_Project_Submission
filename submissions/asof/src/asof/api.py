@@ -27,6 +27,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
 from . import __version__, db, impactagent, ledger, policy
+from .askledger import LedgerAsker
 from .assistant import DemoAssistant
 from .config import ConfigError, Settings, get_settings
 from .embeddings import get_embeddings
@@ -159,15 +160,19 @@ class RateLimiter:
             return True
 
 
+class LedgerQuestionIn(_In):
+    question: Annotated[str, Field(min_length=3, max_length=500), AfterValidator(_text(500))]
+
+
 class SuggestionDecision(BaseModel):
     model_config = ConfigDict(extra="forbid")
     approve: bool
 
 
 def create_app(settings: Settings | None = None, *, gate: Gate | None = None, assistant: DemoAssistant | None = None,
-               schema: str = db.SCHEMA, rate_limit: int = 30) -> FastAPI:
+               asker: LedgerAsker | None = None, schema: str = db.SCHEMA, rate_limit: int = 30) -> FastAPI:
     settings = settings or get_settings()
-    state: dict[str, Any] = {"gate": gate, "assistant": assistant}
+    state: dict[str, Any] = {"gate": gate, "assistant": assistant, "asker": asker}
     limiter = RateLimiter(rate_limit)
 
     def app_conn():
@@ -180,6 +185,11 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
             state["gate"] = state["gate"] or Gate(llm, emb, app_conn, schema)
             state["assistant"] = state["assistant"] or DemoAssistant(llm, emb, app_conn, schema)
         return state["gate"], state["assistant"]
+
+    def ledger_asker() -> LedgerAsker:
+        if state["asker"] is None:
+            state["asker"] = LedgerAsker(components()[0].llm, settings, schema)
+        return state["asker"]
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -269,6 +279,16 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
             conn.close()
         return [{k: r[k] for k in ("ledger_id", "created_at", "channel", "as_of_date", "decision", "reason_code",
                                    "question_redacted", "model_info", "latency_ms", "row_hash")} for r in rows]
+
+    @app.post("/api/ledger/ask")
+    def ask_the_ledger(body: LedgerQuestionIn):
+        """Plain-English questions over the audit views, answered as the read-only analyst.
+
+        The generated SQL runs only after the SQLGlot check, and is returned with the rows so the
+        answer can be checked against them. The SQL and any Db2 message shown are the analyst's
+        own query, never the application's.
+        """
+        return ledger_asker().ask(body.question).as_dict()
 
     @app.get("/api/ledger/{ledger_id}")
     def ledger_entry(ledger_id: Annotated[int, Path(ge=1)]):

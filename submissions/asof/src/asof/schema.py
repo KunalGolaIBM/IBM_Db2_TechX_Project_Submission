@@ -22,7 +22,8 @@ SCHEMA_RE = db.SCHEMA_RE
 USER_RE = re.compile(r"^[a-z][a-z0-9]{0,7}$")
 GRANTS_PREFIX = "90_"
 NOT_HELD = "42504"  # REVOKE of a privilege that is not held
-_MARKER = re.compile(r"^--\s*(bufferpool|tablespace|table|index|versioning|trigger|procedure|function|view|grant|other):"
+_MARKER = re.compile(r"^--\s*(bufferpool|tablespace|table|index|versioning|trigger|procedure|function|view|mask|role"
+                     r"|grant|other):"
                      r"\s*([A-Z0-9_]+)\s*$", re.M)
 _SCHEMA_TOKEN = re.compile(r"\bASOF\.")
 
@@ -98,14 +99,23 @@ def install(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> dict[str, i
     return counts
 
 
-def apply_grants(conn: ibm_db_dbi.Connection, app_user: str, editor_user: str, schema: str = db.SCHEMA) -> dict[str, int]:
-    """Revoke PUBLIC defaults and grant the two users exactly what they need."""
-    for user in (app_user, editor_user):
+DEFAULT_ANALYST_USER = "asofread"
+ALREADY_GRANTED = ("42502", "01548")  # role already granted (error on some levels, warning on others)
+
+
+def apply_grants(conn: ibm_db_dbi.Connection, app_user: str, editor_user: str, schema: str = db.SCHEMA,
+                 analyst_user: str = DEFAULT_ANALYST_USER) -> dict[str, int]:
+    """Revoke PUBLIC defaults, create the two roles if missing, and grant each user exactly what it needs."""
+    for user in (app_user, editor_user, analyst_user):
         if not USER_RE.match(user):
             raise ValueError(f"invalid Db2 user name {user!r}")
+    names = {"ASOF_APP_USER": db.ident(app_user), "ASOF_EDITOR_USER": db.ident(editor_user),
+             "ASOF_ANALYST_USER": db.ident(analyst_user)}
     counts = {"applied": 0, "already_revoked": 0}
     for st in load_statements(schema, grants=True):
-        sql = st.sql.replace("ASOF_APP_USER", db.ident(app_user)).replace("ASOF_EDITOR_USER", db.ident(editor_user))
+        if st.kind == "role" and db.query(conn, "SELECT 1 FROM SYSCAT.ROLES WHERE ROLENAME = ?", (st.name,)):
+            continue
+        sql = re.sub(r"\bASOF_(APP|EDITOR|ANALYST)_USER\b", lambda m: names[m.group(0)], st.sql)
         try:
             db.execute(conn, sql)
             conn.commit()
@@ -114,6 +124,8 @@ def apply_grants(conn: ibm_db_dbi.Connection, app_user: str, editor_user: str, s
             conn.rollback()
             if sql.startswith("REVOKE") and exc.sqlstate == NOT_HELD:
                 counts["already_revoked"] += 1
+                continue
+            if sql.startswith("GRANT ROLE") and exc.sqlstate in ALREADY_GRANTED:
                 continue
             raise db.DatabaseError(f"{st.source} {st.name}: {exc}", exc.sqlstate, exc.sqlcode) from None
     return counts

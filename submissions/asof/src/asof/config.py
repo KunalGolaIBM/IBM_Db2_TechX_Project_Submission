@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     db2_container: str = Field("asof-db2", pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$")
     db2_connect_timeout_s: int = Field(15, ge=1, le=120)
 
-    # Db2 users: owner (setup only), runtime app user, policy editor.
+    # Db2 users: owner (setup only), runtime app user, policy editor, read-only analyst.
     # DB2_USER / DB2_PASSWORD are the names the organizers' guide and AI skill use; the older
     # DB2_ADMIN_USER / DB2_ADMIN_PASSWORD are still accepted.
     db2_admin_user: str = Field("db2inst1", pattern=r"^[a-z][a-z0-9]{0,7}$",
@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     asof_app_password: SecretStr | None = None
     asof_editor_user: str = Field("asofedit", pattern=r"^[a-z][a-z0-9]{0,7}$")
     asof_editor_password: SecretStr | None = None
+    # Read-only analyst ("Ask the ledger"): SELECT on the audit views only, ledger text masked.
+    asof_analyst_user: str = Field("asofread", pattern=r"^[a-z][a-z0-9]{0,7}$")
+    asof_analyst_password: SecretStr | None = None
     # Policy changes over HTTP: localhost only, unless this token is set, in which case the
     # X-AsOf-Editor-Token header must match it.
     asof_editor_token: SecretStr | None = None

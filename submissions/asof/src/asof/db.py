@@ -1,7 +1,8 @@
 """Db2 connections and query helpers.
 
 Rules this module enforces:
-- One connection role per purpose: `admin` (setup only), `app` (runtime), `editor` (policy changes).
+- One connection role per purpose: `admin` (setup only), `app` (runtime), `editor` (policy changes),
+  `analyst` (read-only audit views, ledger text masked).
 - Credentials are passed to the driver as separate arguments, never spliced into a DSN string.
 - SQL text is a string literal in the source; every value goes through a `?` parameter marker.
   Runtime SQL uses unqualified names, and `use_schema` points the connection at a schema with
@@ -27,7 +28,7 @@ import ibm_db_dbi
 
 from .config import Settings
 
-Role = Literal["admin", "app", "editor"]
+Role = Literal["admin", "app", "editor", "analyst"]
 SCHEMA = "ASOF"
 
 IDENT_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,127}$")
@@ -70,6 +71,9 @@ def _credentials(settings: Settings, role: Role) -> tuple[str, str]:
     if role == "editor":
         settings.require("asof_editor_password")
         return settings.asof_editor_user, settings.asof_editor_password.get_secret_value()  # type: ignore[union-attr]
+    if role == "analyst":
+        settings.require("asof_analyst_password")
+        return settings.asof_analyst_user, settings.asof_analyst_password.get_secret_value()  # type: ignore[union-attr]
     raise ValueError(f"unknown role {role!r}")
 
 

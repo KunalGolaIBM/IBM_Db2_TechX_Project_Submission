@@ -378,6 +378,21 @@ def check_injection_text(c: Ctx) -> str:
     return "SQL in a parameter is stored as plain text"
 
 
+def check_column_mask(c: Ctx) -> str:
+    # RCAC needs SECURED triggers on the table (else SQL20469N reason code 37); both need SECADM.
+    c.x("ALTER TRIGGER LEDGER_NO_UPDATE SECURED")
+    c.x("ALTER TRIGGER LEDGER_NO_DELETE SECURED")
+    c.x("CREATE OR REPLACE MASK M_PAYLOAD ON LEDGER FOR COLUMN PAYLOAD RETURN CASE "
+        "WHEN VERIFY_ROLE_FOR_USER(SESSION_USER, 'ASOF_TEXT_READER') = 1 THEN PAYLOAD ELSE '[masked]' END ENABLE")
+    c.x("ALTER TABLE LEDGER ACTIVATE COLUMN ACCESS CONTROL")
+    c.conn.commit()
+    shown = {r[0] for r in c.q("SELECT PAYLOAD FROM LEDGER")}
+    assert shown == {"[masked]"}, shown  # the owner holds no ASOF_TEXT_READER role
+    counted = c.q("SELECT COUNT(*) FROM LEDGER WHERE PAYLOAD = ?", ("first",))[0][0]
+    assert counted == 1, counted  # masks apply to values returned, not to predicates
+    return "owner reads '[masked]'; predicates still see the real value (why Ask the ledger refuses them)"
+
+
 CHECKS: list[tuple[str, Callable[[Ctx], str]]] = [
     ("Db2 version supports VECTOR", check_version),
     ("Bitemporal table with VECTOR column", check_create_clause),
@@ -407,6 +422,7 @@ CHECKS: list[tuple[str, Callable[[Ctx], str]]] = [
     ("Native vector index (VANN)", check_vector_index),
     ("In-database AI functions (12.1.5)", check_indb_ai_functions),
     ("SQL injection stored as text", check_injection_text),
+    ("Column mask (RCAC) with SECURED triggers", check_column_mask),
 ]
 
 CLEANUP = [

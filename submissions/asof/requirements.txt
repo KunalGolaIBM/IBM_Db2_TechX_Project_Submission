@@ -4,6 +4,11 @@
 # IBM Db2 driver and the official LangChain Db2 integration
 ibm_db==3.3.0
 langchain-db2==1.0.0
+# "Ask the ledger": SQLAlchemy over IBM's Db2 dialect, and SQLGlot with the Db2 dialect plugin
+ibm-db-sa==0.4.4
+SQLAlchemy==2.1.8
+sqlglot==30.30.0
+db2-sqlglot-dialect==1.1.0
 
 # LangChain core, providers and local embeddings
 langchain==1.4.9

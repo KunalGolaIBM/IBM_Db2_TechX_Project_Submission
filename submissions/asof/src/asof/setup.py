@@ -5,7 +5,7 @@
     python -m asof.setup --reset-ledger  # DEMO ONLY: empty the ledger, keep the policy data
 
 Steps:
- 1. Generate passwords for the two least-privilege users if .env has none (never printed).
+ 1. Generate passwords for the three least-privilege users if .env has none (never printed).
  2. Wait until Db2 accepts connections as the owner.
  3. Create the OS users inside the Db2 container (Db2 authenticates against the OS).
  4. Create tables, history table, indexes, triggers and procedures in schema ASOF.
@@ -33,7 +33,7 @@ from .config import DEFAULT_ENV_FILE, ConfigError, Settings, get_settings
 from .embeddings import get_embeddings
 from .retriever import clauses_as_of
 
-GENERATED_KEYS = ("ASOF_APP_PASSWORD", "ASOF_EDITOR_PASSWORD")
+GENERATED_KEYS = ("ASOF_APP_PASSWORD", "ASOF_EDITOR_PASSWORD", "ASOF_ANALYST_PASSWORD")
 DOCKER_TIMEOUT_S = 60
 
 
@@ -97,7 +97,7 @@ def _docker(args: list[str], stdin: str | None = None) -> subprocess.CompletedPr
 
 
 def ensure_os_users(settings: Settings) -> bool:
-    """Create the two users inside the Db2 container and set their passwords from .env.
+    """Create the three users inside the Db2 container and set their passwords from .env.
 
     Passwords go to chpasswd on stdin, so they never show up in a process list.
     Returns False (with instructions) when the container cannot be reached.
@@ -113,7 +113,8 @@ def ensure_os_users(settings: Settings) -> bool:
     if container != settings.db2_container:
         say(f"  DB2_CONTAINER '{settings.db2_container}' is not running; using the Db2 container '{container}' instead")
     for user, secret in ((settings.asof_app_user, settings.asof_app_password),
-                         (settings.asof_editor_user, settings.asof_editor_password)):
+                         (settings.asof_editor_user, settings.asof_editor_password),
+                         (settings.asof_analyst_user, settings.asof_analyst_password)):
         if _docker(["exec", container, "id", "-u", user]).returncode != 0:
             made = _docker(["exec", container, "useradd", "--no-create-home", "--shell", "/sbin/nologin", user])
             if made.returncode != 0:
@@ -122,7 +123,8 @@ def ensure_os_users(settings: Settings) -> bool:
         pw = _docker(["exec", "-i", container, "chpasswd"], stdin=f"{user}:{secret.get_secret_value()}\n")  # type: ignore[union-attr]
         if pw.returncode != 0:
             raise SetupError(f"setting the password for {user} failed: {pw.stderr.strip()}")
-    say(f"  OS users {settings.asof_app_user} and {settings.asof_editor_user} ready (passwords from .env)")
+    say(f"  OS users {settings.asof_app_user}, {settings.asof_editor_user} and {settings.asof_analyst_user} ready "
+        "(passwords from .env)")
     return True
 
 
@@ -151,7 +153,8 @@ def find_db2_container(preferred: str) -> str | None:
 
 def _manual_user_help(settings: Settings) -> bool:
     say("  Db2 authenticates against operating-system users on the Db2 server. Create them there:")
-    for user, key in ((settings.asof_app_user, "ASOF_APP_PASSWORD"), (settings.asof_editor_user, "ASOF_EDITOR_PASSWORD")):
+    for user, key in ((settings.asof_app_user, "ASOF_APP_PASSWORD"), (settings.asof_editor_user, "ASOF_EDITOR_PASSWORD"),
+                      (settings.asof_analyst_user, "ASOF_ANALYST_PASSWORD")):
         say(f"    useradd --no-create-home --shell /sbin/nologin {user} && passwd {user}   # password = {key} in .env")
     say("  Setup continues; the grants work without the OS users, but the app cannot log in until they exist.")
     return False
@@ -246,7 +249,7 @@ def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False
     say(f"  generated {', '.join(filled)} and saved to .env (not shown)" if filled else "  already set in .env")
     get_settings.cache_clear()
     settings = get_settings()
-    settings.require("db2_admin_password", "asof_app_password", "asof_editor_password")
+    settings.require("db2_admin_password", "asof_app_password", "asof_editor_password", "asof_analyst_password")
 
     say("2/9 Db2 connection")
     wait_for_db2(settings)
@@ -279,7 +282,8 @@ def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False
             + (" (nothing new: already seeded)" if not any((n_clauses, n_pub, n_faq, n_head)) else ""))
 
         say("7/9 Least-privilege grants")
-        g = schema.apply_grants(conn, settings.asof_app_user, settings.asof_editor_user, target)
+        g = schema.apply_grants(conn, settings.asof_app_user, settings.asof_editor_user, target,
+                                analyst_user=settings.asof_analyst_user)
         say(f"  {g['applied']} grants and revokes applied"
             + (f"; PUBLIC already lacked {g['already_revoked']} of the 4 default database privileges"
                if g["already_revoked"] else ""))

@@ -60,3 +60,31 @@ CREATE OR REPLACE VIEW ASOF.V_RULE_OVERRIDES AS
   JOIN ASOF.ANSWER_LEDGER L ON L.LEDGER_ID = C.LEDGER_ID
   WHERE C.LLM_VERDICT = 'SUPPORTED' AND C.VERDICT = 'CONTRADICTED' AND C.RULE_CHECK = 'MISMATCH'
 @
+
+-- The audit views below are the only objects the read-only analyst (role ASOF_ANALYST) can
+-- query, and the only ones "Ask the ledger" may name. They carry decisions, verdicts and the
+-- clause versions cited. QUESTION_REDACTED and FINAL_ANSWER are included so the analyst can
+-- see that they exist, but the column masks in 05_masks.sql return '[masked]' for anyone
+-- without the ASOF_TEXT_READER role.
+
+-- view: V_AUDIT_DECISIONS
+-- One row per decision.
+CREATE OR REPLACE VIEW ASOF.V_AUDIT_DECISIONS AS
+  SELECT L.LEDGER_ID, L.CREATED_AT, L.CHANNEL, L.DOC_ID, L.AS_OF_DATE, L.DECISION, L.REASON_CODE,
+         L.MODEL_INFO, L.PROMPT_VERSION, L.LATENCY_MS,
+         (SELECT COUNT(*) FROM ASOF.CLAIM_CITATION C WHERE C.LEDGER_ID = L.LEDGER_ID AND C.PASS_NO = 1) AS CLAIMS,
+         (SELECT COUNT(*) FROM ASOF.CLAIM_CITATION C
+           WHERE C.LEDGER_ID = L.LEDGER_ID AND C.PASS_NO = 1 AND C.VERDICT = 'CONTRADICTED') AS CONTRADICTED_CLAIMS,
+         L.QUESTION_REDACTED, L.FINAL_ANSWER
+  FROM ASOF.ANSWER_LEDGER L
+@
+
+-- view: V_AUDIT_CLAIMS
+-- One row per checked claim, with the decision it fed into and the exact clause version cited.
+CREATE OR REPLACE VIEW ASOF.V_AUDIT_CLAIMS AS
+  SELECT C.LEDGER_ID, L.CREATED_AT, L.CHANNEL, L.AS_OF_DATE, L.DECISION, C.PASS_NO, C.CLAIM_NO, C.AREA,
+         C.CLAIM_TEXT, C.VERDICT, C.LLM_VERDICT, C.RULE_CHECK, C.CLAUSE_ID, C.CLAUSE_VERSION,
+         C.CLAUSE_BUS_START, C.DISTANCE
+  FROM ASOF.CLAIM_CITATION C
+  JOIN ASOF.ANSWER_LEDGER L ON L.LEDGER_ID = C.LEDGER_ID
+@
