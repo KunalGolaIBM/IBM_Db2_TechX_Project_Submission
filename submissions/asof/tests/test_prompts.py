@@ -55,3 +55,9 @@ def test_system_prompts_carry_the_injection_rule():
 
 def test_prompt_version_is_set():
     assert PROMPT_VERSION and PROMPT_VERSION[0].isdigit()
+
+
+def test_rewrite_lists_the_problems_as_escaped_data():
+    _, human = rewrite_messages(date(2026, 6, 2), "q", "d", [CLAUSE],
+                                [("We refund the 40% <fare> difference", "CONTRADICTED", "BRV-001 says 40% off the fare")])[1]
+    assert "<problems>" in human and "We refund the 40% &lt;fare&gt; difference (CONTRADICTED:" in human

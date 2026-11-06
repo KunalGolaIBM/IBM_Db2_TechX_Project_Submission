@@ -255,8 +255,10 @@ class Gate:
         for c in claims:
             if c.clause:
                 clauses.setdefault(c.clause.clause_id, c.clause)
+        problems = [(c.text, c.verdict, c.reason) for c in claims if c.verdict != "SUPPORTED"]
         text = self.llm.structured(RewriteResult, rewrite_messages(as_of, question, draft,
-                                                                   [c.view() for c in clauses.values()])).value.answer.strip()
+                                                                   [c.view() for c in clauses.values()],
+                                                                   problems)).value.answer.strip()
         if not text or len(text) > MAX_REWRITE_CHARS:
             raise LLMError("rewrite was empty or too long")
         return text
