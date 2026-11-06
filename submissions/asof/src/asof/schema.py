@@ -117,21 +117,49 @@ def apply_grants(conn: ibm_db_dbi.Connection, app_user: str, editor_user: str, s
     return counts
 
 
+def _drop_code_objects(conn: ibm_db_dbi.Connection, schema: str) -> None:
+    """Drop every view, trigger, procedure and function in `schema`, whatever depends on what.
+
+    Each pass drops what it can; objects still needed by another are retried in the next
+    pass. Recreating routines from scratch (rather than CREATE OR REPLACE over invalidated
+    ones) also avoids Db2 keeping an old resolution timestamp on a revalidated procedure,
+    which made it miss a function replaced after it (SQL0440N).
+    """
+    validate_schema(schema)
+    q = lambda sql: [r[0].strip() for r in db.query(conn, sql, (schema,))]  # noqa: E731
+    pending = (
+        [f"DROP VIEW {schema}.{n}" for n in q("SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'V'")]
+        + [f"DROP TRIGGER {schema}.{n}" for n in q("SELECT TRIGNAME FROM SYSCAT.TRIGGERS WHERE TRIGSCHEMA = ?")]
+        + [f"DROP SPECIFIC PROCEDURE {schema}.{n}" for n in q(
+            "SELECT SPECIFICNAME FROM SYSCAT.ROUTINES WHERE ROUTINESCHEMA = ? AND ROUTINETYPE = 'P'")]
+        + [f"DROP SPECIFIC FUNCTION {schema}.{n}" for n in q(
+            "SELECT SPECIFICNAME FROM SYSCAT.ROUTINES WHERE ROUTINESCHEMA = ? AND ROUTINETYPE = 'F'")]
+    )
+    for _ in range(len(pending) + 1):
+        if not pending:
+            return
+        left = []
+        for stmt in pending:
+            try:
+                db.execute(conn, stmt)
+                conn.commit()
+            except db.DatabaseError:
+                conn.rollback()
+                left.append(stmt)
+        if len(left) == len(pending):
+            break
+        pending = left
+    if pending:
+        raise db.DatabaseError(f"could not drop in {schema}: {pending}")
+
+
 def drop(conn: ibm_db_dbi.Connection, schema: str) -> None:
     """Remove every object in `schema`, then the schema. Used by tests and `setup --reset`."""
     validate_schema(schema)
     q = lambda sql: [r[0].strip() for r in db.query(conn, sql, (schema,))]  # noqa: E731
-    steps: list[str] = []
-    steps += [f"DROP TRIGGER {schema}.{n}" for n in q("SELECT TRIGNAME FROM SYSCAT.TRIGGERS WHERE TRIGSCHEMA = ?")]
-    steps += [f"DROP SPECIFIC PROCEDURE {schema}.{n}" for n in q(
-        "SELECT SPECIFICNAME FROM SYSCAT.ROUTINES WHERE ROUTINESCHEMA = ? AND ROUTINETYPE = 'P'")]
-    steps += [f"DROP SPECIFIC FUNCTION {schema}.{n}" for n in q(
-        "SELECT SPECIFICNAME FROM SYSCAT.ROUTINES WHERE ROUTINESCHEMA = ? AND ROUTINETYPE = 'F'")]
-    steps += [f"DROP VIEW {schema}.{n}" for n in q("SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'V'")]
-    steps += [f"ALTER TABLE {schema}.{n} DROP VERSIONING" for n in q(
-        "SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TEMPORALTYPE IN ('S', 'B')")]
-    for stmt in steps:
-        db.execute(conn, stmt)
+    _drop_code_objects(conn, schema)
+    for name in q("SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TEMPORALTYPE IN ('S', 'B')"):
+        db.execute(conn, f"ALTER TABLE {schema}.{name} DROP VERSIONING")
     conn.commit()
     # Tables in dependency order: children first. Retry passes handle foreign keys.
     remaining = q("SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'T'")
@@ -163,14 +191,13 @@ def reset_ledger(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> int:
     The ledger is append-only by design: no user can UPDATE or DELETE its rows. This does
     not work around that. As the owner, it drops the three ledger tables outright (their
     triggers go with them) and rebuilds them from the same SQL files, then starts a fresh
-    chain. Policy clauses, their history and the help-centre answers are untouched.
+    chain. Views, triggers and routines are rebuilt too. Policy clauses, their history and
+    the help-centre answers are untouched.
     Returns the number of ledger rows that existed before the reset.
     """
     validate_schema(schema)
     before = int(db.query(conn, f"SELECT COUNT(*) FROM {schema}.ANSWER_LEDGER")[0][0])
-    for (trig,) in db.query(conn, "SELECT TRIGNAME FROM SYSCAT.TRIGGERS WHERE TRIGSCHEMA = ? AND TABNAME IN (?, ?, ?)",
-                            (schema, *LEDGER_TABLES)):
-        db.execute(conn, f"DROP TRIGGER {schema}.{trig.strip()}")
+    _drop_code_objects(conn, schema)  # views, triggers and routines are rebuilt by install()
     for table in LEDGER_TABLES:
         db.execute(conn, f"DROP TABLE {schema}.{table}")
     conn.commit()

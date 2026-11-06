@@ -212,6 +212,9 @@ def test_demo_ledger_reset_recreates_the_tables(admin_conn, embeddings, settings
     triggers = {r[0].strip() for r in db.query(admin_conn, "SELECT TRIGNAME FROM SYSCAT.TRIGGERS WHERE TRIGSCHEMA = ? "
                                                             "AND VALID = 'Y'", (scratch,))}
     assert {"ANSWER_LEDGER_NO_UPDATE", "ANSWER_LEDGER_NO_DELETE", "CLAIM_CITATION_NO_UPDATE"} <= triggers
+    invalid = db.query(admin_conn, "SELECT ROUTINENAME FROM SYSCAT.ROUTINES WHERE ROUTINESCHEMA = ? AND VALID <> 'Y'",
+                       (scratch,))
+    assert invalid == []
     app = db.connect(settings, "app")
     try:
         assert ledger.append(app, entry(), scratch).ledger_id == 1
