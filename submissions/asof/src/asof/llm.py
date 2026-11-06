@@ -83,6 +83,17 @@ class LLMClient:
     def info(self) -> str:
         return f"{self.provider}:{self.model_name}"
 
+    def run(self, fn):
+        """Run any LLM-backed callable (for example a LangChain chain) under the same deadline."""
+        try:
+            return _run_with_deadline(fn, self._deadline_s)
+        except TimeoutError as exc:
+            raise LLMError(f"{self.info} did not answer within {self._deadline_s:.0f}s") from exc
+        except LLMError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            raise LLMError(f"{self.info} call failed: {type(exc).__name__}") from exc
+
     def structured(self, schema: type[T], messages: list[tuple[str, str]]) -> LLMResult[T]:
         """Call the model and parse its reply into `schema`, or raise LLMError.
 
