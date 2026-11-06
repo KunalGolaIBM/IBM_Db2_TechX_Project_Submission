@@ -37,8 +37,11 @@ CREATE TABLE ASOF.POLICY_CLAUSE (
   CONSTRAINT PK_POLICY_CLAUSE PRIMARY KEY (CLAUSE_ID, BUSINESS_TIME WITHOUT OVERLAPS),
   CONSTRAINT FK_CLAUSE_DOC FOREIGN KEY (DOC_ID) REFERENCES ASOF.POLICY_DOC (DOC_ID),
   CONSTRAINT CK_CLAUSE_RULE_JSON CHECK (JSON_EXISTS(RULE_JSON, '$')),
+  -- The areas of both fictional domains (schemas.Area and schemas.BankArea; a test keeps them in step).
   CONSTRAINT CK_CLAUSE_AREA CHECK (AREA IN ('bereavement', 'cancellation', 'change_fee', 'baggage',
-                                            'refund', 'delay', 'travel_credit', 'pets', 'other')),
+                                            'refund', 'delay', 'travel_credit', 'pets', 'other',
+                                            'overdraft', 'fee_refund', 'monthly_fee', 'foreign_transaction',
+                                            'wire_transfer', 'atm', 'dispute', 'account_closure', 'checks')),
   CONSTRAINT CK_CLAUSE_VERSION CHECK (VERSION_LABEL LIKE 'v%')
 ) IN ASOF_TS32K
 @

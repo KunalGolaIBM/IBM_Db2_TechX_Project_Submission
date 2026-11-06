@@ -147,6 +147,7 @@ def tool_loop(gate: Gate, messages: list, tools: _Tools, left: int, pass_no: int
 
 def build(gate: Gate, req: GateRequest):
     """Compile the graph for one request (nodes close over the gate and the request)."""
+    domain = gate.domain(req.doc_id)  # from the validated doc_id, never from the model
 
     def guarded(fn):
         def node(state: CheckState) -> dict[str, Any]:
@@ -164,21 +165,23 @@ def build(gate: Gate, req: GateRequest):
         return node
 
     def extract(state: CheckState) -> dict[str, Any]:
-        return {"claims": gate.extract(state["question"], state["text"]), "per_claim": [], "pool": {}, "outcomes": []}
+        return {"claims": gate.extract(state["question"], state["text"], domain), "per_claim": [], "pool": {},
+                "outcomes": []}
 
     def retrieve(state: CheckState) -> dict[str, Any]:
         per_claim = gate.retrieve(state["claims"], req.as_of, req.doc_id)
         return {"per_claim": per_claim, "pool": pool_of(per_claim)}
 
     def judge(state: CheckState) -> dict[str, Any]:
-        return {"outcomes": gate.judge(state["claims"], state["per_claim"], state["pool"], req.as_of)}
+        return {"outcomes": gate.judge(state["claims"], state["per_claim"], state["pool"], req.as_of, domain=domain)}
 
     def investigate(state: CheckState) -> dict[str, Any]:
         outcomes: list[ClaimOutcome] = list(state["outcomes"])
         open_idx = [i for i, o in enumerate(outcomes) if o.verdict == "NOT_COVERED"]
         tools = _Tools(gate, req.as_of, req.doc_id)
         (_, system), (_, human) = investigate_messages(req.as_of, [outcomes[i].text for i in open_idx],
-                                                      [c.view() for c in state["pool"].values()])
+                                                      [c.view() for c in state["pool"].values()],
+                                                      domain.investigate_system)
         steps, left = tool_loop(gate, [SystemMessage(system), HumanMessage(human)], tools,
                                 state.get("tool_calls_left", MAX_TOOL_CALLS), state["pass_no"], set(state["pool"]))
         trace = list(state.get("investigation", [])) + steps
@@ -188,7 +191,8 @@ def build(gate: Gate, req: GateRequest):
         pool = {**state["pool"], **new}
         claims = [state["claims"][i] for i in open_idx]
         found = [list(state["per_claim"][i]) + list(new.values()) for i in open_idx]
-        rejudged = gate.judge(claims, found, pool, req.as_of, numbers=[outcomes[i].claim_no for i in open_idx])
+        rejudged = gate.judge(claims, found, pool, req.as_of, numbers=[outcomes[i].claim_no for i in open_idx],
+                              domain=domain)
         for i, o in zip(open_idx, rejudged, strict=True):
             outcomes[i] = o
         return {"outcomes": outcomes, "pool": pool, "investigation": trace, "tool_calls_left": left}
@@ -204,7 +208,7 @@ def build(gate: Gate, req: GateRequest):
         return {"second": outcomes, "decision": "ESCALATED", "reason": "CORRECTION_FAILED", "final": HOLDING_REPLY}
 
     def rewrite(state: CheckState) -> dict[str, Any]:
-        text = gate._rewrite(state["question"], state["text"], req.as_of, state["first"])
+        text = gate._rewrite(state["question"], state["text"], req.as_of, state["first"], domain)
         return {"rewrite": text, "text": text, "pass_no": 2}
 
     def fail_closed(state: CheckState) -> dict[str, Any]:

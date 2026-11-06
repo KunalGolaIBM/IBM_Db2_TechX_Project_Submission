@@ -36,7 +36,6 @@ from .llm import LLMError, build_llm
 
 log = logging.getLogger("asof.api")
 
-DOC_IDS = ("AURELIA-CSP",)
 MIN_DATE, MAX_DATE = date(2020, 1, 1), date(2035, 12, 31)
 MAX_BODY_BYTES = 64 * 1024
 UI_DIR = __import__("pathlib").Path(__file__).with_name("ui")
@@ -63,7 +62,7 @@ def _in_range(value: date) -> date:
 Question = Annotated[str, Field(min_length=1, max_length=2000), AfterValidator(_text(2000))]
 Draft = Annotated[str, Field(min_length=1, max_length=4000), AfterValidator(_text(4000))]
 AsOfDate = Annotated[date, AfterValidator(_in_range)]
-DocId = Literal["AURELIA-CSP"]
+DocId = Literal["AURELIA-CSP", "FERNHOLLOW-FEES"]  # the policy documents in domains.DOMAINS
 Channel = Literal["chat", "email", "faq", "api", "demo"]
 
 
@@ -322,10 +321,10 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         return {"status": s.status, "rows_checked": s.checked, "first_bad_ledger_id": s.first_bad, "detail": s.detail}
 
     @app.get("/api/policy/timeline")
-    def policy_timeline():
+    def policy_timeline(doc_id: DocId | None = None):
         conn = app_conn()
         try:
-            return policy.timeline(conn, schema)
+            return policy.timeline(conn, schema, doc_id)
         finally:
             conn.close()
 

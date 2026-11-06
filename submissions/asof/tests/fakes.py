@@ -34,9 +34,10 @@ class ScriptedLLM:
 
     def structured(self, schema, messages, choices=None):
         self.calls.append((schema, messages))
-        if not self.queues[schema]:
+        queue = self.queues[ExtractionResult if issubclass(schema, ExtractionResult) else schema]  # bank schema too
+        if not queue:
             raise LLMError(f"no scripted reply left for {schema.__name__}")
-        reply = self.queues[schema].pop(0)
+        reply = queue.pop(0)
         if isinstance(reply, BaseException):
             raise reply
         return LLMResult(reply, 5, 10, 10, 1)

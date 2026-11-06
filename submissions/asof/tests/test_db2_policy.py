@@ -126,3 +126,18 @@ def test_app_user_can_read_faq_store_through_db2vs(settings, embeddings, test_sc
         assert hit.metadata["faq_id"] == "FAQ-01"
     finally:
         conn.close()
+
+
+BANK = "FERNHOLLOW-FEES"
+REFUND_CLAIM = "Overdraft fees are refunded automatically."
+
+
+@pytest.mark.parametrize("day, label", [(date(2026, 7, 31), "v1"), (date(2026, 8, 1), "v2")])
+def test_the_bank_fee_schedule_has_its_own_versions_and_never_mixes_with_the_airline(app_conn, embeddings, test_schema,
+                                                                                     day, label):
+    vec = embeddings.embed_query(REFUND_CLAIM)
+    bank = clauses_as_of(app_conn, vec, day, BANK, 4, schema=test_schema)
+    assert (bank[0].clause_id, bank[0].version_label) == ("FRV-001", label)
+    assert all(not c.clause_id.startswith(("BRV", "BAG", "RFD")) for c in bank)  # the same query, one document
+    airline = clauses_as_of(app_conn, vec, day, DOC, 4, schema=test_schema)
+    assert airline and not {c.clause_id for c in airline} & {c.clause_id for c in bank}

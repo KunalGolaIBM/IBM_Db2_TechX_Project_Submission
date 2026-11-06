@@ -186,8 +186,11 @@ def test_policy_change_input_is_validated(change):
 def test_policy_endpoints_on_db2(settings, embeddings, test_schema):
     app = create_app(settings, gate=FakeGate(), assistant=FakeAssistant(), schema=test_schema)
     c = TestClient(app, client=("127.0.0.1", 50000))
-    timeline = c.get("/api/policy/timeline").json()
-    assert len(timeline) == 34
+    timeline = c.get("/api/policy/timeline?doc_id=AURELIA-CSP").json()
+    assert len(timeline) == 34 and {x["doc_id"] for x in timeline} == {"AURELIA-CSP"}
+    assert len(c.get("/api/policy/timeline?doc_id=FERNHOLLOW-FEES").json()) == 18
+    assert len(c.get("/api/policy/timeline").json()) == 52
+    assert c.get("/api/policy/timeline?doc_id=OTHER").status_code == 422
     brv = next(x for x in timeline if x["clause_id"] == "BRV-002")
     assert [v["params"]["retroactive_allowed"] for v in brv["versions"]] == ["false", "true"]
     assert c.get("/api/policy/clauses/BRV-002/history").status_code == 200

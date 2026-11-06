@@ -31,13 +31,14 @@ import ibm_db_dbi
 from langchain_core.embeddings import Embeddings
 
 from . import db, ledger
+from .domains import AIRLINE, DOMAINS, Domain
 from .llm import LLMClient, LLMError
-from .prompts import PROMPT_VERSION, extract_messages, judge_messages, rewrite_messages
+from .prompts import extract_messages, judge_messages, rewrite_messages
 from .redact import redact
 from .retriever import RetrievedClause, clauses_as_of
 from .rules import RuleClause
 from .rules import check as rule_check
-from .schemas import MAX_CLAIMS, ExtractionResult, JudgeResult, RewriteResult
+from .schemas import MAX_CLAIMS, JudgeResult, RewriteResult
 
 log = logging.getLogger(__name__)
 
@@ -165,8 +166,15 @@ class Gate:
         self.investigate = investigate  # let the agent look further when a claim matches no clause
 
     # ---- the steps of one pass (graph nodes call these) ------------------------------------
-    def extract(self, question: str, text: str):
-        extracted = self.llm.structured(ExtractionResult, extract_messages(question, text)).value.claims
+    @staticmethod
+    def domain(doc_id: str) -> Domain:
+        """The domain's prompts for a document. An unknown document (the API never lets one through)
+        gets the airline wording and retrieves nothing for that doc_id, so it escalates."""
+        return DOMAINS.get(doc_id, AIRLINE)
+
+    def extract(self, question: str, text: str, domain: Domain = AIRLINE):
+        extracted = self.llm.structured(domain.extraction_schema,
+                                        extract_messages(question, text, domain.extract_system)).value.claims
         if len(extracted) > MAX_CLAIMS:
             raise TooManyClaims(f"{len(extracted)} claims")
         return extracted
@@ -181,7 +189,7 @@ class Gate:
             conn.close()
 
     def judge(self, claims, per_claim, pool: dict[str, RetrievedClause], as_of: date,
-              numbers: list[int] | None = None) -> list[ClaimOutcome]:
+              numbers: list[int] | None = None, domain: Domain = AIRLINE) -> list[ClaimOutcome]:
         """One batched judge call over `claims`, then the verbatim-quote rule and the rule check."""
         numbers = numbers or list(range(1, len(claims) + 1))
         if not pool:
@@ -189,7 +197,7 @@ class Gate:
                                  None, f"no policy clause is in force on {as_of.isoformat()}", list(found))
                     for n, c, found in zip(numbers, claims, per_claim, strict=True)]
         judged = self.llm.structured(JudgeResult, judge_messages(as_of, [c.text for c in claims],
-                                                                 [c.view() for c in pool.values()]),
+                                                                 [c.view() for c in pool.values()], domain.judge_system),
                                      choices={"clause_id": list(pool), "quoted_span": clause_sentences(pool.values())}).value
         by_no = {v.claim_no: v for v in judged.verdicts}
         return [self._settle(n, claim, found, pool, by_no.get(i))
@@ -197,11 +205,12 @@ class Gate:
 
     def evaluate(self, question: str, answer: str, as_of: date, doc_id: str) -> list[ClaimOutcome]:
         """One pass without the agent: extract, retrieve, judge, verify."""
-        extracted = self.extract(question, answer)
+        domain = self.domain(doc_id)
+        extracted = self.extract(question, answer, domain)
         if not extracted:
             return []
         per_claim = self.retrieve(extracted, as_of, doc_id)
-        return self.judge(extracted, per_claim, pool_of(per_claim), as_of)
+        return self.judge(extracted, per_claim, pool_of(per_claim), as_of, domain=domain)
 
     def _settle(self, no, claim, found, pool, v) -> ClaimOutcome:
         base = dict(claim_no=no, text=claim.text, area=claim.area, claim_type=claim.claim_type, candidates=found)
@@ -250,26 +259,28 @@ class Gate:
             return "ESCALATED", "NOT_COVERED", HOLDING_REPLY
         return "PASS", "ALL_SUPPORTED", draft + references(claims)
 
-    def _rewrite(self, question: str, draft: str, as_of: date, claims: list[ClaimOutcome]) -> str:
+    def _rewrite(self, question: str, draft: str, as_of: date, claims: list[ClaimOutcome],
+                 domain: Domain = AIRLINE) -> str:
         clauses: dict[str, RetrievedClause] = {}
         for c in claims:
             if c.clause:
                 clauses.setdefault(c.clause.clause_id, c.clause)
         problems = [(c.text, c.verdict, c.reason) for c in claims if c.verdict != "SUPPORTED"]
-        return self._rewrite_from(question, draft, as_of, list(clauses.values()), problems)
+        return self._rewrite_from(question, draft, as_of, list(clauses.values()), problems, domain)
 
     def _rewrite_from(self, question: str, draft: str, as_of: date, clauses: list[RetrievedClause],
-                      problems: list[tuple[str, str, str]]) -> str:
+                      problems: list[tuple[str, str, str]], domain: Domain = AIRLINE) -> str:
         """Rewrite strictly from the given clause texts (also used by the change-impact agent)."""
         text = self.llm.structured(RewriteResult, rewrite_messages(as_of, question, draft, [c.view() for c in clauses],
-                                                                   problems)).value.answer.strip()
+                                                                   problems, domain.rewrite_system)).value.answer.strip()
         if not text or len(text) > MAX_REWRITE_CHARS:
             raise LLMError("rewrite was empty or too long")
         return text
 
     def _record(self, req: GateRequest, q_red: str, d_red: str, result: GateResult, q_counts, d_counts) -> None:
+        prompt_version = self.domain(req.doc_id).prompt_version
         verdicts = {
-            "version": 1, "prompt_version": PROMPT_VERSION, "as_of": req.as_of.isoformat(),
+            "version": 1, "prompt_version": prompt_version, "as_of": req.as_of.isoformat(),
             "claims": [c.as_json(1) for c in result.claims] + [c.as_json(2) for c in result.rewrite_claims],
             "rewrite": result.rewrite[:MAX_REWRITE_CHARS] if result.rewrite else None,
             "redactions": {"question": q_counts, "draft": d_counts},
@@ -281,7 +292,7 @@ class Gate:
             # The caller gets the answer as written; the ledger keeps the redacted form.
             question_redacted=q_red, draft_redacted=d_red, final_answer=redact(result.final_answer).text[:4000],
             decision=result.decision, reason_code=result.reason_code, model_info=result.model_info[:200],
-            prompt_version=PROMPT_VERSION, latency_ms=result.latency_ms, verdicts=verdicts,
+            prompt_version=prompt_version, latency_ms=result.latency_ms, verdicts=verdicts,
         )
         try:
             conn = self.connect()

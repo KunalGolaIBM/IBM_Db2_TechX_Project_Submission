@@ -82,7 +82,9 @@ def draft_fixes(gate: Gate, clause_id: str) -> list[dict[str, Any]]:
         try:
             # 1. Look up what else the answer relies on (agent with Db2 tools, bounded).
             tools = _Tools(gate, stale_from, answer["doc_id"])
-            (_, system), (_, human) = impact_messages(stale_from, answer["question"], answer["answer_text"], changed.view())
+            domain = gate.domain(answer["doc_id"])
+            (_, system), (_, human) = impact_messages(stale_from, answer["question"], answer["answer_text"], changed.view(),
+                                                      domain.impact_system)
             trace, _ = tool_loop(gate, [SystemMessage(system), HumanMessage(human)], tools, MAX_TOOL_CALLS, 1,
                                  {changed.clause_id})
             context = [changed] + [c for cid, c in tools.found.items() if cid != changed.clause_id]
@@ -90,7 +92,7 @@ def draft_fixes(gate: Gate, clause_id: str) -> list[dict[str, Any]]:
             problems = [(answer["answer_text"][:300], "STALE",
                          f"written from {clause_id} {answer['cited_version']}; {changed.version_label} applies from "
                          f"{stale_from.isoformat()}")]
-            draft = gate._rewrite_from(answer["question"], answer["answer_text"], stale_from, context, problems)
+            draft = gate._rewrite_from(answer["question"], answer["answer_text"], stale_from, context, problems, domain)
             # 3. The full check, on the date the answer must hold from. It records its own ledger row.
             checked = gate.check(GateRequest(answer["question"], draft, stale_from, answer["doc_id"], "faq"))
             text = checked.final_answer if checked.decision in ("PASS", "CORRECTED") else draft

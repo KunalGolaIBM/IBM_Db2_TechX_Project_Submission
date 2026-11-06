@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from asof.corpus import load_corpus
-from asof.eval import DECISIONS, FROZEN_TEST_SHA256, load_cases, split_sha256, summarize
+from asof.eval import DECISIONS, FROZEN, FROZEN_TEST_SHA256, SPLITS, load_cases, split_sha256, summarize
 
 
 def test_test_split_is_frozen():
@@ -13,10 +13,16 @@ def test_test_split_is_frozen():
     assert split_sha256("test") == FROZEN_TEST_SHA256
 
 
+@pytest.mark.parametrize("split", sorted(FROZEN))
+def test_every_frozen_split_is_unchanged(split):
+    """The bank test split was pinned in the commit that added it, before its first run."""
+    assert split_sha256(split) == FROZEN[split]
+
+
 def test_split_sizes_and_unique_ids():
-    dev, test = load_cases("dev"), load_cases("test")
-    assert (len(dev), len(test)) == (20, 40)
-    ids = [c.id for c in dev + test]
+    sizes = {s: len(load_cases(s)) for s in SPLITS}
+    assert sizes == {"dev": 20, "test": 40, "bank-dev": 12, "bank-test": 26}
+    ids = [c.id for s in SPLITS for c in load_cases(s)]
     assert len(ids) == len(set(ids))
 
 
@@ -24,9 +30,11 @@ def test_debugged_scenarios_are_in_dev_only():
     test_drafts = {c.draft for c in load_cases("test")}
     for c in load_cases("dev")[:4]:  # D01-D04: March/June Moffatt, bag fee, ticket transfer
         assert c.draft not in test_drafts
+    bank_test = {c.draft for c in load_cases("bank-test")}
+    assert not bank_test & {c.draft for c in load_cases("bank-dev")}
 
 
-@pytest.mark.parametrize("split", ["dev", "test"])
+@pytest.mark.parametrize("split", list(SPLITS))
 def test_labels_are_consistent_with_the_corpus(split):
     corpus = load_corpus()
     for c in load_cases(split):

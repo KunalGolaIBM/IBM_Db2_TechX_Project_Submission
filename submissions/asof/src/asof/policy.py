@@ -211,7 +211,7 @@ def change_impact(conn: ibm_db_dbi.Connection, clause_id: str, schema: str = db.
     return out
 
 
-_TIMELINE_KEYS = ("clause_id", "area", "title", "version_label", "bus_start", "bus_end", "changed_by", "change_note",
+_TIMELINE_KEYS = ("clause_id", "doc_id", "area", "title", "version_label", "bus_start", "bus_end", "changed_by", "change_note",
                   "sys_start", "clause_text", "rule_json", "first_bag_fee_usd", "second_bag_fee_usd", "change_fee_usd",
                   "pet_fee_usd", "cancellation_fee_usd", "compensation_usd", "discount_pct", "request_window_days",
                   "free_cancel_window_hours", "min_days_before_departure", "credit_validity_months", "max_passengers",
@@ -221,8 +221,8 @@ _TIMELINE_KEYS = ("clause_id", "area", "title", "version_label", "bus_start", "b
 SQL_CLAUSE_TITLE = "SELECT TITLE FROM POLICY_CLAUSE WHERE CLAUSE_ID = ? FETCH FIRST 1 ROW ONLY"
 SQL_EMBEDDER_EXISTS = ("SELECT COUNT(*) FROM SYSCAT.EXTERNALMODELS WHERE MODELSCHEMA = CURRENT SCHEMA "
                        "AND MODELNAME = 'EMBEDDER'")
-SQL_TIMELINE = ("SELECT CLAUSE_ID, AREA, TITLE, VERSION_LABEL, BUS_START, BUS_END, CHANGED_BY, CHANGE_NOTE, SYS_START, "
-                "CLAUSE_TEXT, RULE_JSON, FIRST_BAG_FEE_USD, SECOND_BAG_FEE_USD, CHANGE_FEE_USD, PET_FEE_USD, "
+SQL_TIMELINE = ("SELECT CLAUSE_ID, DOC_ID, AREA, TITLE, VERSION_LABEL, BUS_START, BUS_END, CHANGED_BY, CHANGE_NOTE, "
+                "SYS_START, CLAUSE_TEXT, RULE_JSON, FIRST_BAG_FEE_USD, SECOND_BAG_FEE_USD, CHANGE_FEE_USD, PET_FEE_USD, "
                 "CANCELLATION_FEE_USD, COMPENSATION_USD, DISCOUNT_PCT, REQUEST_WINDOW_DAYS, FREE_CANCEL_WINDOW_HOURS, "
                 "MIN_DAYS_BEFORE_DEPARTURE, CREDIT_VALIDITY_MONTHS, MAX_PASSENGERS, RETROACTIVE_ALLOWED, "
                 "TRANSFER_ALLOWED, CHANGES_ALLOWED FROM V_POLICY_TIMELINE ORDER BY CLAUSE_ID, BUS_START")
@@ -237,17 +237,20 @@ SQL_OVERRIDES = ("SELECT LEDGER_ID, AS_OF_DATE, CLAIM_TEXT, CLAUSE_ID, CLAUSE_VE
                  "ORDER BY LEDGER_ID DESC FETCH FIRST 20 ROWS ONLY")
 
 
-def timeline(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> list[dict[str, Any]]:
-    """Every clause with its versions in business-time order, key parameters from RULE_JSON."""
+def timeline(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA, doc_id: str | None = None) -> list[dict[str, Any]]:
+    """Every clause (of one document, if given) with its versions in business-time order, key parameters
+    from RULE_JSON."""
     db.use_schema(conn, schema)
     keys = list(_TIMELINE_KEYS)
     rows = db.query(conn, SQL_TIMELINE)
     clauses: dict[str, dict[str, Any]] = {}
     for r in rows:
         d = dict(zip(keys, r, strict=True))
-        params = {k: (float(d[k]) if hasattr(d[k], "is_finite") else d[k]) for k in keys[11:] if d[k] is not None}
-        c = clauses.setdefault(d["clause_id"], {"clause_id": d["clause_id"], "area": d["area"], "title": d["title"],
-                                                "versions": []})
+        if doc_id and d["doc_id"] != doc_id:
+            continue
+        params = {k: (float(d[k]) if hasattr(d[k], "is_finite") else d[k]) for k in keys[12:] if d[k] is not None}
+        c = clauses.setdefault(d["clause_id"], {"clause_id": d["clause_id"], "doc_id": d["doc_id"], "area": d["area"],
+                                                "title": d["title"], "versions": []})
         c["title"] = d["title"]
         c["versions"].append({"version": d["version_label"], "from": d["bus_start"], "to": d["bus_end"],
                               "changed_by": d["changed_by"].strip(), "change_note": d["change_note"],

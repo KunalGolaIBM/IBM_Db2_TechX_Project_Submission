@@ -13,11 +13,23 @@ from asof.corpus import Clause, load_corpus
 
 def test_corpus_shape():
     corpus = load_corpus()
-    assert len(corpus.clauses) == 34
-    assert {c.area for c in corpus.clauses} == {
+    airline = [c for c in corpus.clauses if c.doc_id == "AURELIA-CSP"]
+    bank = [c for c in corpus.clauses if c.doc_id == "FERNHOLLOW-FEES"]
+    assert (len(airline), len(bank), len(corpus.clauses)) == (34, 18, 52)
+    assert {c.area for c in airline} == {
         "bereavement", "cancellation", "change_fee", "baggage", "refund", "delay", "travel_credit", "pets"}
-    multi = {c.clause_id for c in corpus.clauses if len(c.versions) > 1}
+    assert {c.area for c in bank} == {"overdraft", "fee_refund", "monthly_fee", "foreign_transaction", "wire_transfer",
+                                      "atm", "dispute", "account_closure", "checks"}
+    multi = {c.clause_id for c in airline if len(c.versions) > 1}
     assert multi == {"BRV-002", "CXL-001", "CHG-002", "BAG-001"}
+    assert {c.clause_id for c in bank if len(c.versions) > 1} == {
+        "OVD-001", "OVD-003", "FRV-001", "MTF-001", "MTF-002", "FXF-001", "ATM-001", "CLS-001"}
+
+
+@pytest.mark.parametrize("on, label", [(date(2026, 6, 30), "v1"), (date(2026, 7, 1), "v2")])
+def test_the_bank_overdraft_fee_changes_on_1_july(on, label):
+    v = load_corpus().version_in_force("OVD-001", on)
+    assert v.version_label == label and v.rule["overdraft_fee_usd"] == (35 if label == "v1" else 25)
 
 
 @pytest.mark.parametrize("on, label", [

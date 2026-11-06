@@ -1,0 +1,400 @@
+{
+ "notice": "Fernhollow Bank and its fee schedule are fictional, written for the AsOf demo as a second domain. They do not describe any real bank.",
+ "documents": [
+  {
+   "doc_id": "FERNHOLLOW-FEES",
+   "title": "Fernhollow Bank Personal Account Fee Schedule",
+   "owner_team": "Retail Banking Policy",
+   "source_note": "Fictional fee schedule for the AsOf demo."
+  }
+ ],
+ "clauses": [
+  {
+   "clause_id": "OVD-001",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "overdraft",
+   "title": "Overdraft fee",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "2026-07-01",
+     "clause_text": "An overdraft fee of $35 is charged for each item we pay when the account does not have enough available funds.",
+     "rule": {
+      "overdraft_fee_usd": 35
+     }
+    },
+    {
+     "version_label": "v2",
+     "bus_start": "2026-07-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "An overdraft fee of $25 is charged for each item we pay when the account does not have enough available funds.",
+     "rule": {
+      "overdraft_fee_usd": 25
+     }
+    }
+   ]
+  },
+  {
+   "clause_id": "OVD-002",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "overdraft",
+   "title": "Overdraft fee limits",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "We charge no more than 3 overdraft fees per business day. No overdraft fee is charged if the account is overdrawn by $5 or less at the end of the business day.",
+     "rule": {
+      "max_overdraft_fees_per_day": 3,
+      "max_no_fee_overdraft_usd": 5
+     }
+    }
+   ]
+  },
+  {
+   "clause_id": "OVD-003",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "overdraft",
+   "title": "Overdraft protection transfers",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "2026-10-01",
+     "clause_text": "Each overdraft protection transfer from a linked Fernhollow savings account costs $10.",
+     "rule": {
+      "overdraft_transfer_fee_usd": 10
+     }
+    },
+    {
+     "version_label": "v2",
+     "bus_start": "2026-10-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "Overdraft protection transfers from a linked Fernhollow savings account are free.",
+     "rule": {
+      "overdraft_transfer_fee_usd": 0
+     }
+    }
+   ]
+  },
+  {
+   "clause_id": "FRV-001",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "fee_refund",
+   "title": "Courtesy refund of overdraft fees",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "2026-08-01",
+     "clause_text": "Overdraft fees are not refunded automatically. A customer may ask for a courtesy refund of one overdraft fee in any 12-month period. The request must be made within 30 days of the date the fee was charged.",
+     "rule": {
+      "automatic_refund": false,
+      "courtesy_refunds_per_year": 1,
+      "request_window_days": 30,
+      "courtesy_period_months": 12
+     }
+    },
+    {
+     "version_label": "v2",
+     "bus_start": "2026-08-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "Overdraft fees are not refunded automatically. A customer may ask for a courtesy refund of up to two overdraft fees in any 12-month period. The request must be made within 60 days of the date the fee was charged.",
+     "rule": {
+      "automatic_refund": false,
+      "courtesy_refunds_per_year": 2,
+      "request_window_days": 60,
+      "courtesy_period_months": 12
+     }
+    }
+   ]
+  },
+  {
+   "clause_id": "FRV-002",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "fee_refund",
+   "title": "Refund of fees charged in error",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "A fee charged in error is refunded in full to the account within 5 business days of our confirming the error.",
+     "rule": {
+      "error_refund_business_days": 5
+     }
+    }
+   ]
+  },
+  {
+   "clause_id": "MTF-001",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "monthly_fee",
+   "title": "Monthly maintenance fee",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "2026-09-01",
+     "clause_text": "The Everyday Checking account has a monthly maintenance fee of $12.",
+     "rule": {
+      "monthly_fee_usd": 12
+     }
+    },
+    {
+     "version_label": "v2",
+     "bus_start": "2026-09-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "The Everyday Checking account has a monthly maintenance fee of $15.",
+     "rule": {
+      "monthly_fee_usd": 15
+     }
+    }
+   ]
+  },
+  {
+   "clause_id": "MTF-002",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "monthly_fee",
+   "title": "Monthly fee waiver",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "2026-09-01",
+     "clause_text": "The monthly maintenance fee is waived for any statement period in which the account keeps a minimum daily balance of at least $1,500.",
+     "rule": {
+      "min_daily_balance_usd": 1500
+     }
+    },
+    {
+     "version_label": "v2",
+     "bus_start": "2026-09-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "The monthly maintenance fee is waived for any statement period in which the account keeps a minimum daily balance of at least $1,000.",
+     "rule": {
+      "min_daily_balance_usd": 1000
+     }
+    }
+   ]
+  },
+  {
+   "clause_id": "MTF-003",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "monthly_fee",
+   "title": "Paper statements",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "Paper statements cost $2 per statement. Electronic statements are free.",
+     "rule": {
+      "paper_statement_fee_usd": 2
+     }
+    }
+   ]
+  },
+  {
+   "clause_id": "FXF-001",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "foreign_transaction",
+   "title": "Foreign transaction fee",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "2026-06-01",
+     "clause_text": "Debit card purchases and ATM withdrawals made in a currency other than US dollars carry a foreign transaction fee of 3% of the amount.",
+     "rule": {
+      "foreign_transaction_fee_pct": 3
+     }
+    },
+    {
+     "version_label": "v2",
+     "bus_start": "2026-06-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "Debit card purchases and ATM withdrawals made in a currency other than US dollars carry a foreign transaction fee of 1% of the amount.",
+     "rule": {
+      "foreign_transaction_fee_pct": 1
+     }
+    }
+   ]
+  },
+  {
+   "clause_id": "WIR-001",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "wire_transfer",
+   "title": "Outgoing domestic wire transfers",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "An outgoing domestic wire transfer costs $30.",
+     "rule": {
+      "domestic_wire_fee_usd": 30
+     }
+    }
+   ]
+  },
+  {
+   "clause_id": "WIR-002",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "wire_transfer",
+   "title": "Outgoing international wire transfers",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "An outgoing international wire transfer costs $45.",
+     "rule": {
+      "international_wire_fee_usd": 45
+     }
+    }
+   ]
+  },
+  {
+   "clause_id": "WIR-003",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "wire_transfer",
+   "title": "Incoming wire transfers",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "Incoming wire transfers, domestic or international, are free.",
+     "rule": {
+      "incoming_wire_fee_usd": 0
+     }
+    }
+   ]
+  },
+  {
+   "clause_id": "ATM-001",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "atm",
+   "title": "Out-of-network ATM fee",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "2026-10-01",
+     "clause_text": "We charge $3 for each withdrawal at an ATM outside the Fernhollow network. The ATM's owner may charge its own fee as well.",
+     "rule": {
+      "out_of_network_atm_fee_usd": 3
+     }
+    },
+    {
+     "version_label": "v2",
+     "bus_start": "2026-10-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "We charge $4 for each withdrawal at an ATM outside the Fernhollow network. The ATM's owner may charge its own fee as well.",
+     "rule": {
+      "out_of_network_atm_fee_usd": 4
+     }
+    }
+   ]
+  },
+  {
+   "clause_id": "ATM-002",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "atm",
+   "title": "Daily ATM withdrawal limit",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "You can withdraw up to $800 per day from ATMs with your debit card.",
+     "rule": {
+      "max_daily_withdrawal_usd": 800
+     }
+    }
+   ]
+  },
+  {
+   "clause_id": "DSP-001",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "dispute",
+   "title": "Reporting unauthorized card transactions",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "Report an unauthorized debit card transaction within 60 days of the date of the statement on which it first appeared.",
+     "rule": {
+      "report_window_days": 60
+     }
+    }
+   ]
+  },
+  {
+   "clause_id": "DSP-002",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "dispute",
+   "title": "Provisional credit during an investigation",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "If our investigation of a reported error takes longer than 10 business days, we give a provisional credit for the disputed amount within 10 business days of the report while we finish it.",
+     "rule": {
+      "provisional_credit_business_days": 10
+     }
+    }
+   ]
+  },
+  {
+   "clause_id": "CLS-001",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "account_closure",
+   "title": "Early account closure fee",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "2026-10-01",
+     "clause_text": "An account closed within 90 days of opening is charged an early closure fee of $25.",
+     "rule": {
+      "early_closure_fee_usd": 25,
+      "early_closure_window_days": 90
+     }
+    },
+    {
+     "version_label": "v2",
+     "bus_start": "2026-10-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "There is no fee to close an account, however soon after opening it is closed.",
+     "rule": {
+      "early_closure_fee_usd": 0
+     }
+    }
+   ]
+  },
+  {
+   "clause_id": "STP-001",
+   "doc_id": "FERNHOLLOW-FEES",
+   "area": "checks",
+   "title": "Stop payment orders",
+   "versions": [
+    {
+     "version_label": "v1",
+     "bus_start": "2026-01-01",
+     "bus_end": "9999-12-31",
+     "clause_text": "A stop payment order on a check costs $30 and stays in effect for 6 months.",
+     "rule": {
+      "stop_payment_fee_usd": 30,
+      "stop_payment_validity_months": 6
+     }
+    }
+   ]
+  }
+ ]
+}

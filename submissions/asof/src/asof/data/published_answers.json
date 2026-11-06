@@ -1,33 +1,125 @@
 {
-  "notice": "Fictional Aurelia Air help-centre answers. Each one records the clause version it was written from and the travel dates it applies to, so a policy change can find the answers it makes stale.",
-  "answers": [
-    {"answer_id": "PA-BRV-001", "doc_id": "AURELIA-CSP",
-     "question": "Can I get a bereavement fare after I have travelled?",
-     "answer_text": "No. Bereavement fares must be requested before travel begins. Once any part of the journey has been flown, the bereavement fare cannot be applied and no refund of the fare difference is available.",
-     "cited_clause_id": "BRV-002", "cited_bus_start": "2026-01-01", "applies_from": "2026-01-01", "applies_to": "2026-05-01"},
-    {"answer_id": "PA-BRV-002", "doc_id": "AURELIA-CSP",
-     "question": "Can I get a bereavement fare after I have travelled?",
-     "answer_text": "Yes. You can request the bereavement fare retroactively within 90 days of the date your ticket was issued. Send the documentation described in our bereavement policy and we refund the fare difference to your original form of payment.",
-     "cited_clause_id": "BRV-002", "cited_bus_start": "2026-05-01", "applies_from": "2026-05-01", "applies_to": "9999-12-31"},
-    {"answer_id": "PA-BAG-001", "doc_id": "AURELIA-CSP",
-     "question": "How much is the first checked bag?",
-     "answer_text": "The first checked bag costs $40 each way on Economy fares.",
-     "cited_clause_id": "BAG-001", "cited_bus_start": "2026-06-01", "applies_from": "2026-06-01", "applies_to": "9999-12-31"},
-    {"answer_id": "PA-CHG-001", "doc_id": "AURELIA-CSP",
-     "question": "How much does it cost to change a Standard Economy ticket?",
-     "answer_text": "There is no change fee for Standard Economy tickets. If the new flight costs more, you pay the difference in fare.",
-     "cited_clause_id": "CHG-002", "cited_bus_start": "2026-09-01", "applies_from": "2026-09-01", "applies_to": "9999-12-31"},
-    {"answer_id": "PA-PET-001", "doc_id": "AURELIA-CSP",
-     "question": "Can my pet travel in the cabin with me?",
-     "answer_text": "Yes. Small cats and dogs can travel in the cabin if the pet and its carrier together weigh no more than 8 kg. The pet fee is $100 each way.",
-     "cited_clause_id": "PET-001", "cited_bus_start": "2026-01-01", "applies_from": "2026-01-01", "applies_to": "9999-12-31"},
-    {"answer_id": "PA-DLY-001", "doc_id": "AURELIA-CSP",
-     "question": "What do I get if my flight arrives 7 hours late?",
-     "answer_text": "If the delay was within Aurelia Air's control and you arrived 6 hours or more but less than 9 hours late, you are entitled to $250 in compensation.",
-     "cited_clause_id": "DLY-002", "cited_bus_start": "2026-01-01", "applies_from": "2026-01-01", "applies_to": "9999-12-31"},
-    {"answer_id": "PA-CRD-001", "doc_id": "AURELIA-CSP",
-     "question": "How long is a travel credit valid?",
-     "answer_text": "Travel credits are valid for 12 months from the date they are issued. You need to book before the credit expires, but your flight can be after the expiry date.",
-     "cited_clause_id": "CRD-001", "cited_bus_start": "2026-01-01", "applies_from": "2026-01-01", "applies_to": "9999-12-31"}
-  ]
+ "notice": "Fictional Aurelia Air and Fernhollow Bank help-centre answers. Each one records the clause version it was written from and the dates it applies to, so a policy change can find the answers it makes stale.",
+ "answers": [
+  {
+   "answer_id": "PA-BRV-001",
+   "doc_id": "AURELIA-CSP",
+   "question": "Can I get a bereavement fare after I have travelled?",
+   "answer_text": "No. Bereavement fares must be requested before travel begins. Once any part of the journey has been flown, the bereavement fare cannot be applied and no refund of the fare difference is available.",
+   "cited_clause_id": "BRV-002",
+   "cited_bus_start": "2026-01-01",
+   "applies_from": "2026-01-01",
+   "applies_to": "2026-05-01"
+  },
+  {
+   "answer_id": "PA-BRV-002",
+   "doc_id": "AURELIA-CSP",
+   "question": "Can I get a bereavement fare after I have travelled?",
+   "answer_text": "Yes. You can request the bereavement fare retroactively within 90 days of the date your ticket was issued. Send the documentation described in our bereavement policy and we refund the fare difference to your original form of payment.",
+   "cited_clause_id": "BRV-002",
+   "cited_bus_start": "2026-05-01",
+   "applies_from": "2026-05-01",
+   "applies_to": "9999-12-31"
+  },
+  {
+   "answer_id": "PA-BAG-001",
+   "doc_id": "AURELIA-CSP",
+   "question": "How much is the first checked bag?",
+   "answer_text": "The first checked bag costs $40 each way on Economy fares.",
+   "cited_clause_id": "BAG-001",
+   "cited_bus_start": "2026-06-01",
+   "applies_from": "2026-06-01",
+   "applies_to": "9999-12-31"
+  },
+  {
+   "answer_id": "PA-CHG-001",
+   "doc_id": "AURELIA-CSP",
+   "question": "How much does it cost to change a Standard Economy ticket?",
+   "answer_text": "There is no change fee for Standard Economy tickets. If the new flight costs more, you pay the difference in fare.",
+   "cited_clause_id": "CHG-002",
+   "cited_bus_start": "2026-09-01",
+   "applies_from": "2026-09-01",
+   "applies_to": "9999-12-31"
+  },
+  {
+   "answer_id": "PA-PET-001",
+   "doc_id": "AURELIA-CSP",
+   "question": "Can my pet travel in the cabin with me?",
+   "answer_text": "Yes. Small cats and dogs can travel in the cabin if the pet and its carrier together weigh no more than 8 kg. The pet fee is $100 each way.",
+   "cited_clause_id": "PET-001",
+   "cited_bus_start": "2026-01-01",
+   "applies_from": "2026-01-01",
+   "applies_to": "9999-12-31"
+  },
+  {
+   "answer_id": "PA-DLY-001",
+   "doc_id": "AURELIA-CSP",
+   "question": "What do I get if my flight arrives 7 hours late?",
+   "answer_text": "If the delay was within Aurelia Air's control and you arrived 6 hours or more but less than 9 hours late, you are entitled to $250 in compensation.",
+   "cited_clause_id": "DLY-002",
+   "cited_bus_start": "2026-01-01",
+   "applies_from": "2026-01-01",
+   "applies_to": "9999-12-31"
+  },
+  {
+   "answer_id": "PA-CRD-001",
+   "doc_id": "AURELIA-CSP",
+   "question": "How long is a travel credit valid?",
+   "answer_text": "Travel credits are valid for 12 months from the date they are issued. You need to book before the credit expires, but your flight can be after the expiry date.",
+   "cited_clause_id": "CRD-001",
+   "cited_bus_start": "2026-01-01",
+   "applies_from": "2026-01-01",
+   "applies_to": "9999-12-31"
+  },
+  {
+   "answer_id": "PA-OVD-001",
+   "doc_id": "FERNHOLLOW-FEES",
+   "question": "How much is the overdraft fee?",
+   "answer_text": "We charge an overdraft fee of $35 for each item we pay when your account does not have enough available funds.",
+   "cited_clause_id": "OVD-001",
+   "cited_bus_start": "2026-01-01",
+   "applies_from": "2026-01-01",
+   "applies_to": "2026-07-01"
+  },
+  {
+   "answer_id": "PA-OVD-002",
+   "doc_id": "FERNHOLLOW-FEES",
+   "question": "How much is the overdraft fee?",
+   "answer_text": "We charge an overdraft fee of $25 for each item we pay when your account does not have enough available funds.",
+   "cited_clause_id": "OVD-001",
+   "cited_bus_start": "2026-07-01",
+   "applies_from": "2026-07-01",
+   "applies_to": "9999-12-31"
+  },
+  {
+   "answer_id": "PA-FRV-001",
+   "doc_id": "FERNHOLLOW-FEES",
+   "question": "Can I get an overdraft fee refunded?",
+   "answer_text": "Overdraft fees are not refunded automatically. You can ask us for a courtesy refund of one overdraft fee in any 12-month period, within 30 days of the date the fee was charged.",
+   "cited_clause_id": "FRV-001",
+   "cited_bus_start": "2026-01-01",
+   "applies_from": "2026-01-01",
+   "applies_to": "2026-08-01"
+  },
+  {
+   "answer_id": "PA-FRV-002",
+   "doc_id": "FERNHOLLOW-FEES",
+   "question": "Can I get an overdraft fee refunded?",
+   "answer_text": "Overdraft fees are not refunded automatically. You can ask us for a courtesy refund of up to two overdraft fees in any 12-month period, within 60 days of the date the fee was charged.",
+   "cited_clause_id": "FRV-001",
+   "cited_bus_start": "2026-08-01",
+   "applies_from": "2026-08-01",
+   "applies_to": "9999-12-31"
+  },
+  {
+   "answer_id": "PA-MTF-001",
+   "doc_id": "FERNHOLLOW-FEES",
+   "question": "How do I avoid the monthly maintenance fee?",
+   "answer_text": "The monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+   "cited_clause_id": "MTF-002",
+   "cited_bus_start": "2026-09-01",
+   "applies_from": "2026-09-01",
+   "applies_to": "9999-12-31"
+  }
+ ]
 }

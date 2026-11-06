@@ -1,4 +1,4 @@
-"""The fictional Aurelia Air policy corpus, loaded and validated before it is seeded into Db2."""
+"""The fictional policy corpora (Aurelia Air, Fernhollow Bank), loaded and validated before they are seeded."""
 
 from __future__ import annotations
 
@@ -10,9 +10,11 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from .schemas import Area
+from .schemas import AnyArea
 
 CORPUS_PATH = Path(__file__).with_name("data") / "policy_corpus.json"
+BANK_CORPUS_PATH = Path(__file__).with_name("data") / "bank_corpus.json"
+CORPUS_PATHS = (CORPUS_PATH, BANK_CORPUS_PATH)
 OPEN_END = date(9999, 12, 31)
 
 
@@ -44,7 +46,7 @@ class ClauseVersion(_Strict):
 class Clause(_Strict):
     clause_id: str = Field(pattern=r"^[A-Z]{3}-[0-9]{3}$")
     doc_id: str
-    area: Area
+    area: AnyArea
     title: str = Field(min_length=1, max_length=200)
     versions: list[ClauseVersion] = Field(min_length=1)
 
@@ -84,6 +86,10 @@ class Corpus(_Strict):
         return next((v for v in clause.versions if v.bus_start <= on < v.bus_end), None)
 
 
-@lru_cache(maxsize=1)
-def load_corpus(path: Path = CORPUS_PATH) -> Corpus:
-    return Corpus.model_validate(json.loads(path.read_text(encoding="utf-8")))
+@lru_cache(maxsize=4)
+def load_corpus(paths: tuple[Path, ...] = CORPUS_PATHS) -> Corpus:
+    """Every corpus file, merged into one validated corpus (clause IDs are unique across them)."""
+    parts = [json.loads(p.read_text(encoding="utf-8")) for p in paths]
+    return Corpus.model_validate({"notice": " ".join(p["notice"] for p in parts),
+                                  "documents": [d for p in parts for d in p["documents"]],
+                                  "clauses": [c for p in parts for c in p["clauses"]]})

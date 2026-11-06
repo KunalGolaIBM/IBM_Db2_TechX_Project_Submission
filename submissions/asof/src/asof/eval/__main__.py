@@ -1,7 +1,8 @@
 """Run the evaluation and write the report.
 
     python -m asof.eval --split dev
-    python -m asof.eval --split test                       # frozen 40-case split
+    python -m asof.eval --split test                       # frozen 40-case airline split
+    python -m asof.eval --split bank-test                  # frozen 26-case bank split
     LLM_TIMEOUT_S=180 python -m asof.eval --split test --provider ollama
 
 Runs against its own schema (ASOF_EVAL), with a fresh ledger each run, so evaluation never
@@ -22,11 +23,11 @@ from datetime import UTC, datetime
 
 from .. import db, schema, seed
 from ..config import PROJECT_ROOT, get_settings
+from ..domains import domain_for
 from ..embeddings import get_embeddings
 from ..gate import Gate, GateRequest
 from ..llm import build_llm
-from ..prompts import PROMPT_VERSION
-from . import EVAL_SCHEMA, FROZEN_TEST_SHA256, CountingLLM, load_cases, score, split_sha256, summarize
+from . import EVAL_SCHEMA, FROZEN, SPLIT_DOC, SPLITS, CountingLLM, load_cases, score, split_sha256, summarize
 
 OUT_DIR = PROJECT_ROOT / "docs" / "eval"
 REPORT = PROJECT_ROOT / "docs" / "eval_results.md"
@@ -74,9 +75,11 @@ def render_report(results: list[dict]) -> str:
              "- **Citation accuracy**: the key claim was checked against the right clause version for the date.",
              "- **Rule overrides**: claims the deterministic rule check turned from the judge's SUPPORTED to "
              "CONTRADICTED.",
-             "", "The test split (40 cases) was committed in `81b5b69` before any run and is frozen: the runner refuses "
-             "to run it if its SHA-256 changes. The dev split (20 cases) holds the scenarios used while building.", ""]
-    order = {"test": 0, "dev": 1}
+             "", "The airline test split (40 cases) was committed in `81b5b69` before any run and is frozen: the runner "
+             "refuses to run it if its SHA-256 changes. The dev split (20 cases) holds the scenarios used while building. "
+             "The bank splits (Fernhollow Bank, the second fictional domain) work the same way: `bank-test` (26 cases) "
+             "was committed and pinned before its first run, and `bank-dev` (12 cases) is for iterating.", ""]
+    order = {"test": 0, "bank-test": 1, "dev": 2, "bank-dev": 3}
     providers = {"openrouter": 0, "openai_compatible": 1, "ollama": 2}  # the default provider first
     newest_first = sorted(results, key=lambda r: r["started_at"], reverse=True)
     for r in sorted(newest_first, key=lambda r: (order.get(r["split"], 9), providers.get(r["provider"], 9), r["model"])):
@@ -117,16 +120,17 @@ def render_report(results: list[dict]) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m asof.eval")
-    p.add_argument("--split", choices=["dev", "test"], required=True)
+    p.add_argument("--split", choices=list(SPLITS), required=True)
     p.add_argument("--provider", choices=["openrouter", "ollama", "openai_compatible"])
     p.add_argument("--model")
     p.add_argument("--workers", type=int, help="parallel cases (default 4 hosted, 1 for ollama)")
     p.add_argument("--limit", type=int, help="run only the first N cases (smoke test; not written)")
     args = p.parse_args(argv)
 
-    if args.split == "test" and split_sha256("test") != FROZEN_TEST_SHA256:
-        print("Refusing to run: the frozen test split has changed since commit 81b5b69.")
+    if args.split in FROZEN and split_sha256(args.split) != FROZEN[args.split]:
+        print(f"Refusing to run: the frozen {args.split} split has changed since it was pinned.")
         return 2
+    domain = domain_for(SPLIT_DOC[args.split])
     settings = get_settings()
     provider = args.provider or settings.llm_provider
     llm = build_llm(settings, provider=provider, model=args.model, fallback=False)  # measure one provider only
@@ -139,7 +143,7 @@ def main(argv: list[str] | None = None) -> int:
     def one(case):
         counting = CountingLLM(llm)
         gate = Gate(counting, embeddings, lambda: db.connect(settings, "app"), EVAL_SCHEMA)
-        result = gate.check(GateRequest(case.question, case.draft, case.as_of, "AURELIA-CSP", "eval"))
+        result = gate.check(GateRequest(case.question, case.draft, case.as_of, domain.doc_id, "eval"))
         rec = score(case, result) | {"llm_calls": counting.calls}
         flag = "ok  " if rec["safe"] else "MISS"
         print(f"  {flag} {case.id} {case.category:<24} expected {case.expected:<9} got {rec['decision']:<9} "
@@ -166,7 +170,7 @@ def main(argv: list[str] | None = None) -> int:
 
     result = {"split": args.split, "provider": provider, "model": llm.model_name,
               "started_at": started.isoformat(timespec="seconds"),
-              "git_commit": _git_commit(), "prompt_version": PROMPT_VERSION, "cases_sha256": split_sha256(args.split),
+              "git_commit": _git_commit(), "prompt_version": domain.prompt_version, "cases_sha256": split_sha256(args.split),
               "workers": workers, "wall_time_s": wall, "ledger_chain": chain.status, "summary": summary, "records": records}
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     slug = re.sub(r"[^A-Za-z0-9.]+", "-", llm.model_name).strip("-")

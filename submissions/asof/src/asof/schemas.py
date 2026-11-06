@@ -23,6 +23,21 @@ Area = Literal[
     "pets",
     "other",
 ]
+# The second, fictional domain: a bank's personal account fee schedule. Its claims get their
+# own schema, so the airline's requests stay byte for byte what they were.
+BankArea = Literal[
+    "overdraft",
+    "fee_refund",
+    "monthly_fee",
+    "foreign_transaction",
+    "wire_transfer",
+    "atm",
+    "dispute",
+    "account_closure",
+    "checks",
+    "other",
+]
+AnyArea = Literal[Area, BankArea]
 ClaimType = Literal["eligibility", "amount", "deadline", "procedure", "other"]
 Verdict = Literal["SUPPORTED", "CONTRADICTED", "NOT_COVERED"]
 
@@ -47,6 +62,16 @@ class ExtractedClaim(_Strict):
 
 class ExtractionResult(_Strict):
     claims: list[ExtractedClaim] = Field(
+        description="Policy claims found in the answer. Empty if there are none."
+    )
+
+
+class BankExtractedClaim(ExtractedClaim):
+    area: BankArea = Field(description="The fee schedule area the claim is about.")  # type: ignore[assignment]
+
+
+class BankExtractionResult(ExtractionResult):
+    claims: list[BankExtractedClaim] = Field(  # type: ignore[assignment]
         description="Policy claims found in the answer. Empty if there are none."
     )
 

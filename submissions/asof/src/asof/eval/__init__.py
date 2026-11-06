@@ -1,8 +1,9 @@
 """Evaluation of the gate on labelled cases.
 
-Two splits: `dev` (20 cases, including the scenarios used while debugging; fine to iterate
-on) and `test` (40 new cases, committed before the first run and frozen: the runner refuses
-to run it if the file's SHA-256 changes).
+Airline (Aurelia Air): `dev` (20 cases, including the scenarios used while debugging; fine to
+iterate on) and `test` (40 new cases, committed before the first run and frozen: the runner
+refuses to run it if the file's SHA-256 changes). Bank (Fernhollow Bank, the second domain):
+`bank-dev` (12) and `bank-test` (26), frozen the same way before its first run.
 
 Metrics:
 - false-allow rate: drafts that are wrong for their date but were released as PASS,
@@ -26,9 +27,14 @@ from typing import Any
 
 from pydantic import BaseModel
 
-SPLITS = {"dev": "cases_dev.jsonl", "test": "cases_test.jsonl"}
+SPLITS = {"dev": "cases_dev.jsonl", "test": "cases_test.jsonl",
+          "bank-dev": "bank_cases_dev.jsonl", "bank-test": "bank_cases_test.jsonl"}
+SPLIT_DOC = {"dev": "AURELIA-CSP", "test": "AURELIA-CSP", "bank-dev": "FERNHOLLOW-FEES", "bank-test": "FERNHOLLOW-FEES"}
 # Pinned when the test split was committed (81b5b69), before any run.
 FROZEN_TEST_SHA256 = "bfb24f0ac4722bd6925e4e12a4820bc1e498f15958f9701c447161e78cffd5b2"
+# Each frozen split, pinned in the commit that added it and before its first run.
+FROZEN = {"test": FROZEN_TEST_SHA256,
+          "bank-test": "ad6907ec5ffdc572a6232f1599c7eddfc65fdb8d5e39ef4837e14e2c3593a3f9"}
 EVAL_SCHEMA = "ASOF_EVAL"
 DECISIONS = ("PASS", "CORRECTED", "ESCALATED")
 

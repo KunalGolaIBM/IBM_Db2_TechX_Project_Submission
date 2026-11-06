@@ -49,15 +49,18 @@ _PATTERNS: list[tuple[str, re.Pattern]] = [
                             r"|years?)\b", re.I)),
     ("kg", re.compile(rf"\b{_NUM_STRICT}\s?(?:kg|kgs|kilograms?|kilos?)\b", re.I)),
     ("count", re.compile(rf"\b{_NUM_STRICT}\s+((?:[a-z-]+\s+){{0,2}}?)"
-                         r"(passengers?|people|persons?|travell?ers?|credits?|pets?|animals?|items?|characters?|letters?)\b",
+                         r"(passengers?|people|persons?|travell?ers?|credits?|pets?|animals?|items?|characters?|letters?"
+                         r"|fees?|refunds?|reversals?)\b",
                          re.I)),
 ]
 _RELATIVE = re.compile(r"\b(additional|other|more|extra|further|accompanying)\b", re.I)
 _NOUNS = {"passenger": "passenger", "people": "passenger", "person": "passenger", "traveler": "passenger",
           "traveller": "passenger", "credit": "credit", "pet": "pet", "animal": "pet", "item": "item",
-          "character": "character", "letter": "character"}
+          "character": "character", "letter": "character", "fee": "fee", "refund": "refund", "reversal": "refund"}
 _COUNT_KEYS = {"max_passengers": "passenger", "max_credits_per_booking": "credit", "max_pets_per_passenger": "pet",
-               "max_pets_per_flight": "pet", "personal_items": "item", "free_name_correction_chars": "character"}
+               "max_pets_per_flight": "pet", "personal_items": "item", "free_name_correction_chars": "character",
+               # Fernhollow Bank (the second domain); keys that only its fee schedule uses
+               "max_overdraft_fees_per_day": "fee", "courtesy_refunds_per_year": "refund"}
 _SUFFIXES = [("_business_days", "days"), ("_days", "days"), ("_hours", "hours"), ("_months", "months"),
              ("_usd", "usd"), ("_pct", "pct"), ("_kg", "kg")]
 _SITUATION_UNITS = {"delay_hours": "hours"}
@@ -80,6 +83,8 @@ _FLAG_CUES: dict[str, re.Pattern] = {
     "travel_agency_allowed": re.compile(r"travel agen", re.I),
     "business_class_allowed": re.compile(r"\bbusiness(?: class)?\b", re.I),
     "fare_difference_applies": re.compile(r"fare difference|difference in (?:the )?fare", re.I),
+    # Fernhollow Bank
+    "automatic_refund": re.compile(r"\bautomatic|without (?:you )?(?:having to )?(?:ask|request)", re.I),
 }
 
 
@@ -240,21 +245,29 @@ def check(claim: str, clause: RuleClause, candidates: Sequence[RuleClause] = (),
     statuses: list[Status] = []
     details: list[str] = []
     units = {u for i, q in enumerate(quantities) if i not in situational for u in q.units()}
+    # An amount that matches a parameter in one of its units is settled: "a 12-month period" that
+    # matches period_months=12 is not also a wrong number of days.
+    settled = {i for i, q in enumerate(quantities) if i not in situational
+               and any(p.unit == u and _close(v, p.value, u) for u, v in q.forms for p in params)}
     for unit in sorted(units):
-        qs = [(q, q.value_in(unit)) for i, q in enumerate(quantities) if i not in situational and q.value_in(unit) is not None]
+        qs = [(i, q, q.value_in(unit)) for i, q in enumerate(quantities)
+              if i not in situational and q.value_in(unit) is not None]
         values = [p for p in params if p.unit == unit and not p.limit]
         limits = [p for p in params if p.unit == unit and p.limit]
         if not values and not limits:
             continue
-        if any(_close(v, p.value, unit) for _, v in qs for p in values + limits):
+        if any(_close(v, p.value, unit) for _, _, v in qs for p in values + limits):
             statuses.append("MATCH")
             continue
-        claimed = ", ".join(q.text for q, _ in qs)
+        qs = [(i, q, v) for i, q, v in qs if i not in settled]
+        if not qs:
+            continue
+        claimed = ", ".join(q.text for _, q, _ in qs)
         if values:
             statuses.append("MISMATCH")
             details.append(f"claim says {claimed}; {clause.clause_id} says "
                            + ", ".join(f"{p.key}={p.value:g}" for p in values))
-        elif any(q.limit for q, _ in qs):
+        elif any(q.limit for _, q, _ in qs):
             statuses.append("MISMATCH")
             details.append(f"claim states the limit {claimed}; {clause.clause_id} limits are "
                            + ", ".join(f"{p.key}={p.value:g}" for p in limits))
