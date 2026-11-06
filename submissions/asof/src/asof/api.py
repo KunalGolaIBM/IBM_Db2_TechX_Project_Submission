@@ -10,6 +10,7 @@ endpoints are rate-limited per client. Errors never expose stack traces or SQL.
 from __future__ import annotations
 
 import argparse
+import hmac
 import logging
 import re
 import threading
@@ -20,11 +21,12 @@ from contextlib import asynccontextmanager
 from datetime import date
 from typing import Annotated, Any, Literal
 
-from fastapi import FastAPI, HTTPException, Path, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Header, HTTPException, Path, Query, Request
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
-from . import __version__, db, ledger
+from . import __version__, db, ledger, policy
 from .assistant import DemoAssistant
 from .config import ConfigError, Settings, get_settings
 from .embeddings import get_embeddings
@@ -36,6 +38,8 @@ log = logging.getLogger("asof.api")
 DOC_IDS = ("AURELIA-CSP",)
 MIN_DATE, MAX_DATE = date(2020, 1, 1), date(2035, 12, 31)
 MAX_BODY_BYTES = 64 * 1024
+UI_DIR = __import__("pathlib").Path(__file__).with_name("ui")
+LOCAL_CLIENTS = {"127.0.0.1", "::1"}
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 
@@ -195,8 +199,8 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
-            "script-src 'self' https://cdn.jsdelivr.net; frame-ancestors 'none'")
+            "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
+            "connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
         if request.url.path.startswith("/api/"):
             response.headers["Cache-Control"] = "no-store"
         return response
@@ -290,6 +294,71 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         finally:
             conn.close()
         return {"status": s.status, "rows_checked": s.checked, "first_bad_ledger_id": s.first_bad, "detail": s.detail}
+
+    @app.get("/api/policy/timeline")
+    def policy_timeline():
+        conn = app_conn()
+        try:
+            return policy.timeline(conn, schema)
+        finally:
+            conn.close()
+
+    @app.get("/api/policy/clauses/{clause_id}/history")
+    def clause_history(clause_id: Annotated[str, Path(pattern=r"^[A-Z]{3}-[0-9]{3}$")]):
+        conn = app_conn()
+        try:
+            rows = policy.history(conn, clause_id, schema)
+        finally:
+            conn.close()
+        if not rows:
+            raise HTTPException(404, "no such clause")
+        return rows
+
+    @app.get("/api/impact/{clause_id}")
+    def impact(clause_id: Annotated[str, Path(pattern=r"^[A-Z]{3}-[0-9]{3}$")]):
+        conn = app_conn()
+        try:
+            return policy.change_impact(conn, clause_id, schema)
+        finally:
+            conn.close()
+
+    @app.get("/api/analytics")
+    def analytics():
+        conn = app_conn()
+        try:
+            return policy.analytics(conn, schema)
+        finally:
+            conn.close()
+
+    @app.post("/api/policy/change")
+    def change_policy(body: policy.PolicyChange, request: Request,
+                      x_asof_editor_token: Annotated[str | None, Header()] = None):
+        token = settings.asof_editor_token.get_secret_value() if settings.asof_editor_token else None
+        if token:
+            if not x_asof_editor_token or not hmac.compare_digest(x_asof_editor_token, token):
+                raise HTTPException(403, "policy changes need a valid X-AsOf-Editor-Token")
+        elif (request.client.host if request.client else "") not in LOCAL_CLIENTS:
+            raise HTTPException(403, "policy changes are only accepted from localhost unless ASOF_EDITOR_TOKEN is set")
+        editor = db.connect(settings, "editor")
+        try:
+            try:
+                result = policy.apply_change(editor, body, get_embeddings(settings.embedding_model), schema)
+            except ValueError as exc:
+                raise HTTPException(422, str(exc)) from None
+            except db.DatabaseError as exc:
+                if exc.sqlstate and exc.sqlstate.startswith("750"):
+                    raise HTTPException(422, str(exc).split(": ", 1)[-1]) from None
+                raise
+            return result | {"impact": policy.change_impact(editor, body.clause_id, schema)}
+        finally:
+            editor.close()
+
+    @app.get("/", include_in_schema=False)
+    def root():
+        return RedirectResponse("/ui/")
+
+    if UI_DIR.is_dir():
+        app.mount("/ui", StaticFiles(directory=UI_DIR, html=True), name="ui")
 
     return app
 

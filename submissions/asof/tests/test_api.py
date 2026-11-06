@@ -138,3 +138,62 @@ def test_moffatt_flow_through_the_api(settings, embeddings, test_schema, app_con
         db.execute(app_conn, f"UPDATE {test_schema}.ANSWER_LEDGER SET DECISION = 'PASS' WHERE LEDGER_ID = ?",
                    (body["ledger_id"],))
     assert err.value.sqlstate == "42501"
+
+
+# ---- UI and policy endpoints -----------------------------------------------------------------
+
+def test_ui_is_served_with_a_strict_csp():
+    c = client()
+    r = c.get("/", follow_redirects=False)
+    assert r.status_code in (302, 307) and r.headers["location"] == "/ui/"
+    page = c.get("/ui/")
+    assert page.status_code == 200 and "<title>AsOf</title>" in page.text
+    csp = page.headers["content-security-policy"]
+    assert "script-src 'self'" in csp and "unsafe-inline" not in csp
+    assert c.get("/ui/app.js").status_code == 200
+
+
+CHANGE = {"clause_id": "PET-001", "effective_from": "2026-12-01", "version_label": "v2",
+          "clause_text": "Small cats and dogs may travel in the cabin. The pet fee is $125 each way.",
+          "rule": {"pet_fee_usd": 125}, "change_note": "Pet fee rises"}
+
+
+def test_policy_change_is_refused_from_a_remote_client():
+    app = create_app(Settings(_env_file=None), gate=FakeGate(), assistant=FakeAssistant())
+    remote = TestClient(app, client=("203.0.113.7", 50000))
+    assert remote.post("/api/policy/change", json=CHANGE).status_code == 403
+
+
+def test_policy_change_token_is_enforced_when_set():
+    app = create_app(Settings(_env_file=None, asof_editor_token="s3cret-token"), gate=FakeGate(), assistant=FakeAssistant())
+    local = TestClient(app, client=("127.0.0.1", 50000))
+    assert local.post("/api/policy/change", json=CHANGE).status_code == 403
+    assert local.post("/api/policy/change", json=CHANGE, headers={"X-AsOf-Editor-Token": "wrong"}).status_code == 403
+
+
+@pytest.mark.parametrize("change", [
+    {"rule": {"nested": {"deep": 1}}}, {"version_label": "latest"}, {"clause_id": "PET-1"},
+    {"effective_from": "2019-01-01"}, {"clause_text": "short"},
+])
+def test_policy_change_input_is_validated(change):
+    local = TestClient(create_app(Settings(_env_file=None), gate=FakeGate(), assistant=FakeAssistant()),
+                       client=("127.0.0.1", 50000))
+    assert local.post("/api/policy/change", json={**CHANGE, **change}).status_code == 422
+
+
+@pytest.mark.db2
+def test_policy_endpoints_on_db2(settings, embeddings, test_schema):
+    app = create_app(settings, gate=FakeGate(), assistant=FakeAssistant(), schema=test_schema)
+    c = TestClient(app, client=("127.0.0.1", 50000))
+    timeline = c.get("/api/policy/timeline").json()
+    assert len(timeline) == 34
+    brv = next(x for x in timeline if x["clause_id"] == "BRV-002")
+    assert [v["params"]["retroactive_allowed"] for v in brv["versions"]] == ["false", "true"]
+    assert c.get("/api/policy/clauses/BRV-002/history").status_code == 200
+    assert c.get("/api/policy/clauses/ZZZ-999/history").status_code == 404
+    impact = c.get("/api/impact/BAG-001").json()
+    assert any(r["kind"] == "PUBLISHED" and r["ref_id"] == "PA-BAG-001" for r in impact)
+    assert "decisions" in c.get("/api/analytics").json()
+    reused = c.post("/api/policy/change", json={**CHANGE, "clause_id": "BAG-001", "version_label": "v1",
+                                                 "rule": {"first_bag_fee_usd": 45}})
+    assert reused.status_code == 422 and "already in use" in reused.json()["detail"]

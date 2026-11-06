@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     asof_app_password: SecretStr | None = None
     asof_editor_user: str = Field("asofedit", pattern=r"^[a-z][a-z0-9]{0,7}$")
     asof_editor_password: SecretStr | None = None
+    # Policy changes over HTTP: localhost only, unless this token is set, in which case the
+    # X-AsOf-Editor-Token header must match it.
+    asof_editor_token: SecretStr | None = None
 
     # LLM provider
     llm_provider: LLMProvider = "openrouter"
