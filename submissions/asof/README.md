@@ -325,10 +325,12 @@ On the dev split, OpenRouter scored 0% false allow, 0% false block and 95% ideal
 ## Testing & Verification
 
 ```bash
-pytest -q                                 # 182 tests: unit tests plus Db2 integration tests
+pytest -q                                 # 215 tests: unit tests plus Db2 integration tests
 pytest -q -m "not db2"                    # unit tests only, no database needed
 ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 4 live tests against the configured LLM (spends API calls)
 ```
+
+Checked from a fresh clone on Fri 6 Nov 2026, following only this README, on a Mac that already had the pip cache and the Db2 image layers: install 68 s, Db2 healthy in 167 s, setup 30 s, 215 passed, 26/26 Db2 checks, and the Moffatt example above returned CORRECTED (BRV-002 v1) for March and PASS (BRV-002 v2) for June.
 
 Integration tests install everything into a throwaway `ASOF_TEST` schema, connect as the real least-privilege user, and drop the schema afterwards. They skip automatically when Db2 is unreachable. They cover:
 
