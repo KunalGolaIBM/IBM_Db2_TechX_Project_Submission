@@ -40,7 +40,7 @@ jobs:
           pip install -e . --no-deps
           pip install -r requirements-dev.txt
       - name: Lint (ruff, including its SQL-injection rule)
-        run: ruff check src tests scripts
+        run: ruff check src tests scripts airflow
       - name: Secret check over every tracked file
         run: python scripts/check_secrets.py --all
       - name: Dependency audit (pip-audit over all locked packages)
@@ -111,6 +111,19 @@ jobs:
           /tmp/dbt-venv/bin/pip install -q -r dbt/requirements-dbt.txt
           export DB2_PASSWORD="$(sed -n 's/^DB2_PASSWORD=//p' .env)"
           cd dbt && DBT_PROFILES_DIR=. DBT_SEND_ANONYMOUS_USAGE_STATS=False /tmp/dbt-venv/bin/dbt build
+      - name: Airflow nightly audit DAG (own virtualenv; tests, then a real run against Db2)
+        run: |
+          python -m venv /tmp/af-venv
+          /tmp/af-venv/bin/pip install -q -r airflow/requirements-airflow.txt
+          APP_PW="$(sed -n 's/^ASOF_APP_PASSWORD=//p' .env)"
+          echo "::add-mask::$APP_PW"
+          export AIRFLOW_HOME=/tmp/af-home AIRFLOW__CORE__LOAD_EXAMPLES=False AIRFLOW__CORE__DAGS_FOLDER="$PWD/airflow/dags"
+          export AIRFLOW_CONN_ASOF_DB2_APP="{\"conn_type\": \"ibmdb2\", \"host\": \"localhost\", \"port\": 50000, \"schema\": \"testdb\", \"login\": \"asofapp\", \"password\": \"$APP_PW\"}"
+          /tmp/af-venv/bin/pytest -q airflow/tests -p no:cacheprovider
+          /tmp/af-venv/bin/airflow db migrate > /dev/null
+          /tmp/af-venv/bin/airflow dags test asof_nightly_audit > /tmp/dag-run.log 2>&1 || true
+          grep -E "VERIFY_CHAIN:|nightly audit:" /tmp/dag-run.log | tail -3
+          grep -q "state=success" /tmp/dag-run.log
       - name: Db2 logs on failure
         if: failure()
         run: |

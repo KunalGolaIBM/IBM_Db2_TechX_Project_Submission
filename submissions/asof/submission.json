@@ -49,7 +49,8 @@
       "Read-only analyst user with SELECT on six audit views only, queried through SQLAlchemy (ibm_db_sa) and LangChain's SQLDatabase",
       "LLM-generated SQL checked with SQLGlot and IBM's db2-sqlglot-dialect, then run with a Db2 statement timeout (SQL_ATTR_QUERY_TIMEOUT)",
       "Two fictional policy documents (an airline and a bank fee schedule) in the same bitemporal tables, separated by DOC_ID in every as-of query, with a CHECK constraint covering both domains' areas",
-      "dbt marts over the ledger with IBM's ibm-dbt-db2 adapter, with audit tests (CORRECTED implies a contradiction, every cited clause version exists in current or history rows, marts add up to the ledger)"
+      "dbt marts over the ledger with IBM's ibm-dbt-db2 adapter, with audit tests (CORRECTED implies a contradiction, every cited clause version exists in current or history rows, marts add up to the ledger)",
+      "Apache Airflow DAG with the IBM Db2 provider: nightly VERIFY_CHAIN, system-time detection of changed clauses, CHANGE_IMPACT per clause as mapped tasks"
     ]
   },
   "tech_stack": {
@@ -58,6 +59,7 @@
       "SQL"
     ],
     "frameworks": [
+      "Apache Airflow",
       "FastAPI",
       "LangChain",
       "LangGraph",

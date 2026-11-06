@@ -171,6 +171,10 @@ Things worth knowing:
 
 [dbt/](dbt/) builds three marts from the ledger with IBM's dbt adapter for Db2 (`ibm-dbt-db2`): checks per day and decision, outcomes per clause **version**, and where the policy runs out (claims no clause covered, by area). Its tests hold the ledger to the check's own rules: every CORRECTED decision had a contradicted claim, every cited clause version still exists in current rows or system-time history, and the marts add up to the ledger. A planted inconsistency in a scratch schema made the first of those fail with exactly that row. dbt runs in its own virtualenv because the adapter pins an older `ibm_db`; CI builds it on IBM's stock image.
 
+### A nightly audit with Apache Airflow
+
+[airflow/](airflow/) holds a DAG for the IBM Db2 Airflow provider that runs as the runtime user every night: `VERIFY_CHAIN` (a broken chain fails the run), then the clause versions recorded in the last 24 hours (system time), then `CHANGE_IMPACT` for each of them as a mapped task, then a report. Against the dev database after the demo's pet fee change it found `PET-001` and its impact (1 historically valid answer, 1 stale, 1 help-centre answer to review); on a quiet night it reports zeros. Its tests, including that a broken chain fails the run, and a real `airflow dags test` run in CI.
+
 ### Check that your Db2 supports all of it: one command
 
 [src/asof/db2check.py](src/asof/db2check.py) exercises every Db2 feature AsOf depends on in a throwaway schema, prints PASS or FAIL for each, removes everything it created, and exits non-zero on any failure:
