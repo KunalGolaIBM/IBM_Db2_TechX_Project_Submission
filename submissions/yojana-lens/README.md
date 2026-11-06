@@ -317,6 +317,7 @@ Offline, the suite runs in under a second.
 ## Screenshots & Demo
 
 - `docs/demo-script.md` — a three-minute walkthrough with timings and the exact narration
+- `docs/presentation/YojanaLens-Pitch-Deck.pdf` — the 12-slide pitch deck (editable `.pptx` alongside it)
 - `docs/screenshots/` — place the submission screenshots here (`01-results.png`, `02-rule-trace.png`, `03-audit-record.png`)
 
 Suggested captures:
