@@ -77,10 +77,19 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "qwen2.5:7b-instruct"
 
-    # Embeddings (local, CPU)
+    # Embeddings (local, CPU): claims are embedded here, and clauses too unless Db2 does it
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
 
-    @field_validator("openrouter_base_url", "ollama_base_url", "openai_compat_base_url")
+    # In-database embeddings (Db2 12.1.5 CREATE EXTERNAL MODEL + TO_EMBEDDING). "auto" turns them
+    # on when an API key is available. The endpoint must serve the same model as embedding_model,
+    # so clause vectors made in Db2 and claim vectors made here are interchangeable (setup checks).
+    # IBM documents HTTPS endpoints; plain HTTP is accepted only for a local endpoint (dev use).
+    asof_indb_embeddings: Literal["auto", "on", "off"] = "auto"
+    embedding_api_url: str = "https://openrouter.ai/api/v1/embeddings"
+    embedding_api_model: str = "sentence-transformers/all-minilm-l6-v2"
+    embedding_api_key: SecretStr | None = None  # falls back to OPENROUTER_API_KEY
+
+    @field_validator("openrouter_base_url", "ollama_base_url", "openai_compat_base_url", "embedding_api_url")
     @classmethod
     def _http_url(cls, value: str | None) -> str | None:
         if value is not None and not value.startswith(("http://", "https://")):
@@ -95,6 +104,16 @@ class Settings(BaseSettings):
                 f"Missing required setting(s): {', '.join(missing)}. "
                 f"Set them in {DEFAULT_ENV_FILE} (copy .env.example to start)."
             )
+
+    @property
+    def embedding_key(self) -> SecretStr | None:
+        return self.embedding_api_key if _is_set(self.embedding_api_key) else self.openrouter_api_key
+
+    @property
+    def indb_embeddings_wanted(self) -> bool:
+        if self.asof_indb_embeddings == "off":
+            return False
+        return self.asof_indb_embeddings == "on" or _is_set(self.embedding_key)
 
     @property
     def llm_model_name(self) -> str:

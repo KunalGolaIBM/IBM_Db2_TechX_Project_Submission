@@ -8,7 +8,9 @@ Rules this module enforces:
   `SET CURRENT SCHEMA = ?` and `SET CURRENT PATH = SYSTEM PATH, ?`, so even the schema is bound.
 - Db2 cannot bind identifiers in DDL or GRANT. Setup code that must name an object or a user
   builds that name only through `ident`, which accepts a plain upper-case identifier and nothing
-  else. `tests/test_sql_safety.py` fails the build on any other string-built SQL.
+  else. `CREATE EXTERNAL MODEL` takes its URL and key only as literals; those go through
+  `string_literal`, which rejects quotes and spaces. `tests/test_sql_safety.py` fails the build
+  on any other string-built SQL.
 - Driver errors are re-raised as DatabaseError with the SQLSTATE kept and nothing else leaked.
 """
 
@@ -156,6 +158,22 @@ def ident(name: str) -> str:
     if not IDENT_RE.match(upper):
         raise ValueError(f"invalid identifier {name!r}")
     return upper
+
+
+LITERAL_RE = re.compile(r"^[A-Za-z0-9_\-.:/]{1,500}$")
+
+
+def string_literal(value: str) -> str:
+    """A quoted SQL string constant, for the few DDL clauses that accept no parameter marker.
+
+    CREATE EXTERNAL MODEL takes its model ID, URL and API key only as string literals. This
+    accepts letters, digits and `_ - . : /` and nothing else (no quote, space, semicolon or
+    comment marker can pass), so the value can never end the literal. The caller is
+    responsible for never logging the statement when it carries a key.
+    """
+    if not isinstance(value, str) or not LITERAL_RE.match(value):
+        raise ValueError("value is not safe as an SQL string literal")
+    return "'" + value + "'"
 
 
 _bound_schema: "weakref.WeakKeyDictionary[ibm_db_dbi.Connection, str]" = weakref.WeakKeyDictionary()

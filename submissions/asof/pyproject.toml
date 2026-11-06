@@ -38,4 +38,5 @@ addopts = "-ra"
 markers = [
   "db2: needs a running Db2 (skipped automatically when it is unreachable)",
   "llm: calls the configured LLM provider (skipped unless ASOF_RUN_LLM_TESTS=1)",
+  "network: Db2 calls the remote embedding endpoint (skipped unless ASOF_RUN_NETWORK_TESTS=1)",
 ]

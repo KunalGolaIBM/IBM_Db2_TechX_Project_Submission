@@ -42,7 +42,8 @@
       "Native vector index (CREATE VECTOR INDEX ... WITH DISTANCE COSINE, type VANN) in a dedicated 32K tablespace and bufferpool, benchmarked against exact search",
       "FETCH EXACT / FETCH APPROX vector search control",
       "Adaptive row compression on the append-only ledger tables",
-      "RUNSTATS and EXPLAIN (db2exfmt) access plans for the hot queries"
+      "RUNSTATS and EXPLAIN (db2exfmt) access plans for the hot queries",
+      "In-database embeddings: CREATE EXTERNAL MODEL over HTTPS and TO_EMBEDDING in seeding and inside the APPLY_POLICY_CHANGE procedure (Db2 12.1.5)"
     ]
   },
   "tech_stack": {

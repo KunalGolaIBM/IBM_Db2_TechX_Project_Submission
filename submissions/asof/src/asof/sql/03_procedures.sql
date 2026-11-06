@@ -504,6 +504,13 @@ CREATE OR REPLACE PROCEDURE ASOF.APPLY_POLICY_CHANGE (
   LANGUAGE SQL
   MODIFIES SQL DATA
 BEGIN
+  -- P_EMBEDDING NULL means: Db2 embeds the new text itself with the in-database model
+  -- (TO_EMBEDDING ... USING EMBEDDER, registered by setup). Dynamic SQL, so the procedure
+  -- compiles whether or not a model is configured.
+  DECLARE V_VEC   VECTOR(384, FLOAT32);
+  DECLARE V_TITLE VARCHAR(200);
+  DECLARE S_EMBED STATEMENT;
+  DECLARE C_EMBED CURSOR FOR S_EMBED;
   IF P_FROM IS NULL OR P_TO IS NULL OR P_TO <= P_FROM THEN
     SIGNAL SQLSTATE '75010' SET MESSAGE_TEXT = 'The change must end after it starts';
   END IF;
@@ -514,12 +521,27 @@ BEGIN
     SIGNAL SQLSTATE '75012' SET MESSAGE_TEXT = 'That version label is already in use for this clause';
   END IF;
 
+  IF P_EMBEDDING IS NULL THEN
+    BEGIN
+      DECLARE EXIT HANDLER FOR SQLEXCEPTION
+        SIGNAL SQLSTATE '75014' SET MESSAGE_TEXT = 'In-database embedding failed: no EMBEDDER model, or the endpoint refused';
+      SET V_TITLE = (SELECT TITLE FROM ASOF.POLICY_CLAUSE WHERE CLAUSE_ID = P_CLAUSE_ID FETCH FIRST 1 ROW ONLY);
+      -- Same text the seed embeds: title, a full stop, the clause (embeddings.clause_embedding_text).
+      PREPARE S_EMBED FROM 'VALUES TO_EMBEDDING(CAST(? AS VARCHAR(4300)) USING ASOF.EMBEDDER)';
+      OPEN C_EMBED USING V_TITLE || '. ' || P_TEXT;
+      FETCH C_EMBED INTO V_VEC;
+      CLOSE C_EMBED;
+    END;
+  ELSE
+    SET V_VEC = VECTOR(P_EMBEDDING, 384, FLOAT32);
+  END IF;
+
   UPDATE ASOF.POLICY_CLAUSE
     FOR PORTION OF BUSINESS_TIME FROM P_FROM TO P_TO
     SET VERSION_LABEL = P_VERSION_LABEL,
         CLAUSE_TEXT   = P_TEXT,
         RULE_JSON     = P_RULE_JSON,
-        EMBEDDING     = VECTOR(P_EMBEDDING, 384, FLOAT32),
+        EMBEDDING     = V_VEC,
         CHANGE_NOTE   = P_NOTE,
         CHANGED_BY    = SESSION_USER
     WHERE CLAUSE_ID = P_CLAUSE_ID;

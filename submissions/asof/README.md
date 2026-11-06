@@ -124,6 +124,31 @@ What this means for AsOf, and two things we learned about Db2 along the way:
 - **Approximate search and a date filter do not mix well.** At 100,000 rows, adding the business-time filter cut recall to 0.73: the approximate top 10 is taken before the filter, so nearer vectors from versions not in force push out the right ones. For a check whose whole point is the version in force on a date, a missed version is a wrong answer, so the temporal query stays exact. A policy library large enough to need the index would keep an exact search over the clauses in force (one `IXSCAN` on the business-time key, as the plan shows) and use approximate search only for unfiltered discovery.
 - **The index is only used when `k` is a constant.** With `FETCH APPROX FIRST ? ROWS ONLY` (a parameter marker), Db2 12.1.5 never chose the index at any size; with `FETCH APPROX FIRST 10 ROWS ONLY` it did from 20,000 rows. An optimizer guideline (`<IXSCAN TABLE='...' SEARCH_LIST_SIZE='100'/>`) also forces it.
 
+### In-database embeddings (Db2 12.1.5)
+
+Db2 embeds the policy text itself. Setup registers the model once:
+
+```sql
+CREATE EXTERNAL MODEL ASOF.EMBEDDER PROVIDER OPENAI
+  ID 'sentence-transformers/all-minilm-l6-v2'
+  URL 'https://openrouter.ai/api/v1/embeddings'
+  TYPE TEXT_EMBEDDING RETURNING VECTOR(384, FLOAT32)
+  KEY '<from .env, never logged>'
+```
+
+From then on Db2 calls it with `TO_EMBEDDING(text USING EMBEDDER)`:
+
+- when the corpus is seeded, inside each `INSERT`
+- inside `APPLY_POLICY_CHANGE`, which embeds a new clause version itself when no vector is passed (dynamic SQL, so the procedure compiles with or without a model)
+
+Things worth knowing:
+
+- **Same model on both sides.** Claims are still embedded by the app, locally: one HTTPS round trip per claim from the database would cost about 1.7 s on this Mac, against milliseconds locally. Both sides run all-MiniLM-L6-v2, and setup refuses to use Db2's model unless its vector for a test sentence matches the local one (cosine 1.0 in our runs).
+- **The key.** Db2 accepts the key only as a string literal in the DDL, not as a parameter. So it passes through a validator that admits letters, digits and `_ - . : /` only, and the statement is never logged. Our checks found the key in no catalog view (`SYSCAT.EXTERNALMODELS`, `EXTERNALMODELOPTIONS`) and not in the package cache.
+- **Least privilege.** Only the policy editor gets `USAGE` on the model.
+- **HTTPS is the documented path.** IBM documents external model URLs as HTTPS, and OpenRouter over HTTPS is what we run. A plain-HTTP endpoint on the same machine (for example Ollama serving `all-minilm`) also worked in our tests, but that is undocumented behaviour; AsOf accepts plain HTTP only for a local host, as a development convenience, and says so when setup runs.
+- **Optional.** Without an API key (or with `ASOF_INDB_EMBEDDINGS=off`), the app computes the same vectors and binds them as parameters. If the endpoint fails during a policy change, the change still goes through with a locally computed vector, and the response says so.
+
 ### Check that your Db2 supports all of it: one command
 
 [src/asof/db2check.py](src/asof/db2check.py) exercises every Db2 feature AsOf depends on in a throwaway schema, prints PASS or FAIL for each, removes everything it created, and exits non-zero on any failure:
@@ -142,7 +167,7 @@ PASS  SHA-256 in SQL (Unicode): HASH(expr, 2) equals Python SHA-256 for UTF-8 te
 PASS  Hash chain via stored procedure: each row hash covers the previous row hash, computed inside Db2
 PASS  Trigger blocks UPDATE: UPDATE rejected with SQLSTATE 75001
 ...
-27/27 Db2 feature checks passed. Schema ASOF_CHECK was removed.
+28/28 Db2 feature checks passed. Schema ASOF_CHECK was removed.
 ```
 
 ---
@@ -256,6 +281,7 @@ All settings are environment variables, read from `.env` ([.env.example](.env.ex
 | `LLM_PROVIDER` | `openrouter` (default), `ollama`, or `openai_compatible` |
 | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | Hosted model (default `google/gemini-3.1-flash-lite`) |
 | `OLLAMA_BASE_URL`, `OLLAMA_MODEL` | Local model (default `qwen2.5:7b-instruct`) |
+| `ASOF_INDB_EMBEDDINGS`, `EMBEDDING_API_URL`, `EMBEDDING_API_MODEL`, `EMBEDDING_API_KEY` | In-database embeddings: `auto` (default, on when an API key is set), `on` or `off`; HTTPS endpoint serving the same model as the app (default OpenRouter, `sentence-transformers/all-minilm-l6-v2`); the key defaults to `OPENROUTER_API_KEY` |
 | `LLM_TIMEOUT_S`, `LLM_MAX_OUTPUT_TOKENS` | Hard per-call deadline and output cap; the gate fails closed when hit. Use `LLM_TIMEOUT_S=180` for Ollama on a laptop (the value the recorded Ollama run used). |
 
 > **Security:** never commit `.env`. Before every commit, `python scripts/check_secrets.py` compares the staged changes against the real values in your local `.env` and against common key patterns, and fails without printing anything secret.

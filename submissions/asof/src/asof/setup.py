@@ -25,9 +25,10 @@ import sys
 import tempfile
 import time
 from datetime import date
+from urllib.parse import urlparse
 from pathlib import Path
 
-from . import db, schema, seed
+from . import db, indb, schema, seed
 from .config import DEFAULT_ENV_FILE, ConfigError, Settings, get_settings
 from .embeddings import get_embeddings
 from .retriever import clauses_as_of
@@ -156,6 +157,28 @@ def _manual_user_help(settings: Settings) -> bool:
     return False
 
 
+def register_embedder(conn, settings: Settings, embeddings, target: str) -> bool:
+    """Register Db2's own embedding model if wanted, and use it only if it agrees with the local one."""
+    if not settings.indb_embeddings_wanted:
+        say("  off (no API key, or ASOF_INDB_EMBEDDINGS=off): the app embeds clauses itself")
+        return False
+    try:
+        endpoint = indb.register(conn, settings, target)
+        result = indb.probe(conn, embeddings, target)
+    except indb.InDbError as exc:
+        if indb.model_exists(conn, target):  # registered but untrusted: never let APPLY_POLICY_CHANGE use it
+            db.execute(conn, f"DROP EXTERNAL MODEL {db.ident(target)}.{db.ident(indb.MODEL_NAME)}")
+            conn.commit()
+        say(f"  WARNING: {exc}. The app embeds clauses itself instead.")
+        return False
+    host = urlparse(endpoint.url).hostname
+    say(f"  {target}.{indb.MODEL_NAME}: {settings.embedding_api_model} at {host}; Db2's vector matches the local one "
+        f"(cosine {result.agreement}), {result.latency_ms} ms per call")
+    if not endpoint.documented:
+        say("  note: plain HTTP to a local endpoint works but is undocumented by IBM (HTTPS is); development use only")
+    return True
+
+
 STATS_TABLES = ("POLICY_CLAUSE", "POLICY_CLAUSE_HIST", "PUBLISHED_ANSWER", "ANSWER_LEDGER", "CLAIM_CITATION")
 
 
@@ -218,17 +241,17 @@ def verify_least_privilege(settings: Settings, target: str) -> None:
 
 def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False) -> None:
     schema.validate_schema(target)
-    say("1/8 Passwords for the least-privilege users")
+    say("1/9 Passwords for the least-privilege users")
     filled = ensure_generated_passwords()
     say(f"  generated {', '.join(filled)} and saved to .env (not shown)" if filled else "  already set in .env")
     get_settings.cache_clear()
     settings = get_settings()
     settings.require("db2_admin_password", "asof_app_password", "asof_editor_password")
 
-    say("2/8 Db2 connection")
+    say("2/9 Db2 connection")
     wait_for_db2(settings)
 
-    say("3/8 Operating-system users in the Db2 container")
+    say("3/9 Operating-system users in the Db2 container")
     users_ok = ensure_os_users(settings)
 
     with db.connection(settings, "admin") as conn:
@@ -238,28 +261,31 @@ def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False
         elif reset_ledger and schema.table_exists(conn, target, "ANSWER_LEDGER"):
             removed = schema.reset_ledger(conn, target)
             say(f"  --reset-ledger (demo only): dropped and recreated the ledger tables, {removed} decisions removed")
-        say(f"4/8 Schema {target}")
+        say(f"4/9 Schema {target}")
         counts = schema.install(conn, target)
         say(f"  {counts['created']} objects created, {counts['skipped']} already present")
 
-        say("5/8 Seed data (fictional Aurelia Air)")
         embeddings = get_embeddings(settings.embedding_model)
-        n_clauses = seed.seed_policy(conn, embeddings, target)
+        say("5/9 In-database embeddings (CREATE EXTERNAL MODEL, TO_EMBEDDING)")
+        in_db = register_embedder(conn, settings, embeddings, target)
+
+        say("6/9 Seed data (fictional Aurelia Air)")
+        n_clauses = seed.seed_policy(conn, embeddings, target, in_db=in_db)
         n_head = seed.seed_chain_head(conn, target)
         n_pub = seed.seed_published_answers(conn, target)
         n_faq = seed.seed_faq(conn, embeddings, target)
         say(f"  inserted {n_clauses} clause versions, {n_pub} help-centre answers, {n_faq} FAQ entries"
             + (", chain head" if n_head else "") + (" (nothing new: already seeded)" if not any((n_clauses, n_pub, n_faq, n_head)) else ""))
 
-        say("6/8 Least-privilege grants")
+        say("7/9 Least-privilege grants")
         g = schema.apply_grants(conn, settings.asof_app_user, settings.asof_editor_user, target)
         say(f"  {g['applied']} grants and revokes applied"
             + (f"; PUBLIC already lacked {g['already_revoked']} of the 4 default database privileges" if g["already_revoked"] else ""))
 
-    say("7/8 Optimizer statistics (RUNSTATS)")
+    say("8/9 Optimizer statistics (RUNSTATS)")
     say("  " + collect_statistics(settings, target))
 
-    say("8/8 Verify as the runtime user")
+    say("9/9 Verify as the runtime user")
     if users_ok:
         verify_least_privilege(settings, target)
     else:

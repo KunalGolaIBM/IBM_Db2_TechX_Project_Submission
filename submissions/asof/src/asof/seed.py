@@ -24,6 +24,10 @@ SQL_INSERT_DOC = "INSERT INTO POLICY_DOC (DOC_ID, TITLE, OWNER_TEAM, SOURCE_NOTE
 SQL_INSERT_CLAUSE = ("INSERT INTO POLICY_CLAUSE (CLAUSE_ID, DOC_ID, AREA, TITLE, VERSION_LABEL, CLAUSE_TEXT, RULE_JSON, "
                      "EMBEDDING, CHANGE_NOTE, BUS_START, BUS_END) "
                      "VALUES (?, ?, ?, ?, ?, ?, ?, VECTOR(?, 384, FLOAT32), ?, ?, ?)")
+# Same row, but Db2 computes the embedding itself with the registered in-database model.
+SQL_INSERT_CLAUSE_INDB = ("INSERT INTO POLICY_CLAUSE (CLAUSE_ID, DOC_ID, AREA, TITLE, VERSION_LABEL, CLAUSE_TEXT, "
+                          "RULE_JSON, EMBEDDING, CHANGE_NOTE, BUS_START, BUS_END) "
+                          "VALUES (?, ?, ?, ?, ?, ?, ?, TO_EMBEDDING(CAST(? AS VARCHAR(4300)) USING EMBEDDER), ?, ?, ?)")
 SQL_INSERT_HEAD = "INSERT INTO CHAIN_HEAD (HEAD_ID, LAST_LEDGER_ID, LAST_HASH) VALUES (1, 0, ?)"
 SQL_INSERT_PUBLISHED = ("INSERT INTO PUBLISHED_ANSWER (ANSWER_ID, DOC_ID, QUESTION, ANSWER_TEXT, CITED_CLAUSE_ID, "
                         "CITED_VERSION, CITED_BUS_START, APPLIES_FROM, APPLIES_TO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
@@ -39,19 +43,25 @@ def _count(conn: ibm_db_dbi.Connection, schema: str, sql: str) -> int:
     return int(db.query(conn, sql)[0][0])
 
 
-def seed_policy(conn: ibm_db_dbi.Connection, embeddings: Embeddings, schema: str = db.SCHEMA) -> int:
-    """Insert every clause version with its embedding. Returns rows inserted (0 if already seeded)."""
+def seed_policy(conn: ibm_db_dbi.Connection, embeddings: Embeddings, schema: str = db.SCHEMA,
+                in_db: bool = False) -> int:
+    """Insert every clause version with its embedding. Returns rows inserted (0 if already seeded).
+
+    With in_db=True, Db2 embeds each clause itself (TO_EMBEDDING ... USING EMBEDDER); otherwise
+    the vectors are computed here with the same model and bound as parameters.
+    """
     if _count(conn, schema, SQL_COUNT_CLAUSES) > 0:
         return 0
     corpus = load_corpus()
     for d in corpus.documents:
         db.execute(conn, SQL_INSERT_DOC, (d.doc_id, d.title, d.owner_team, d.source_note))
     rows = [(c, v) for c in corpus.clauses for v in c.versions]
-    vectors = embeddings.embed_documents([clause_embedding_text(c.title, v.clause_text) for c, v in rows])
+    texts = [clause_embedding_text(c.title, v.clause_text) for c, v in rows]
+    vectors = [db.vector_literal(x) for x in embeddings.embed_documents(texts)] if not in_db else texts
     for (c, v), vec in zip(rows, vectors, strict=True):
-        db.execute(conn, SQL_INSERT_CLAUSE, (c.clause_id, c.doc_id, c.area, c.title, v.version_label, v.clause_text,
-                               json.dumps(v.rule, sort_keys=True), db.vector_literal(vec), "Initial policy load",
-                               v.bus_start, v.bus_end))
+        db.execute(conn, SQL_INSERT_CLAUSE_INDB if in_db else SQL_INSERT_CLAUSE,
+                   (c.clause_id, c.doc_id, c.area, c.title, v.version_label, v.clause_text,
+                    json.dumps(v.rule, sort_keys=True), vec, "Initial policy load", v.bus_start, v.bus_end))
     conn.commit()
     return len(rows)
 

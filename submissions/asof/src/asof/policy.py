@@ -7,6 +7,7 @@ user holds no UPDATE privilege, and the runtime user cannot call the procedure.
 from __future__ import annotations
 
 import json
+import logging
 from datetime import date
 from typing import Annotated, Any
 
@@ -19,6 +20,7 @@ from .corpus import OPEN_END
 from .embeddings import clause_embedding_text
 
 MAX_RULE_BYTES = 2000
+log = logging.getLogger(__name__)
 
 
 def _bytes(limit: int):
@@ -70,28 +72,53 @@ class PolicyChange(BaseModel):
         return self.effective_to or OPEN_END
 
 
-def apply_change(conn: ibm_db_dbi.Connection, change: PolicyChange, embeddings: Embeddings,
-                 schema: str = db.SCHEMA) -> dict[str, int]:
-    """Apply a change as the connected user (the editor). Commits. Returns rows split and answers flagged."""
+def apply_change(conn: ibm_db_dbi.Connection, change: PolicyChange, embeddings: Embeddings | None,
+                 schema: str = db.SCHEMA, in_db: bool | None = None) -> dict[str, Any]:
+    """Apply a change as the connected user (the editor). Commits.
+
+    The new version's embedding is made by Db2 itself inside APPLY_POLICY_CHANGE when the
+    in-database model is registered (in_db=None means: use it if it exists), otherwise here.
+    Returns rows split, help-centre answers flagged, and where the embedding was made.
+    """
     if change.end <= change.effective_from:
         raise ValueError("effective_to must be after effective_from")
     db.use_schema(conn, schema)
     rows = db.query(conn, SQL_CLAUSE_TITLE, (change.clause_id,))
     if not rows:
         raise ValueError(f"unknown clause {change.clause_id}")
-    vector = embeddings.embed_query(clause_embedding_text(rows[0][0], change.clause_text))
-    cur = conn.cursor()
+    if in_db is None:
+        in_db = db.query(conn, SQL_EMBEDDER_EXISTS)[0][0] > 0
+    if not in_db and embeddings is None:
+        raise ValueError("no in-database embedding model, so a local embeddings model is required")
+
+    def local_vector() -> str:
+        return db.vector_literal(embeddings.embed_query(clause_embedding_text(rows[0][0], change.clause_text)))
+
+    def call(vector: str | None) -> list:
+        cur = conn.cursor()
+        try:
+            out = cur.callproc("APPLY_POLICY_CHANGE", (
+                change.clause_id, change.effective_from, change.end, change.version_label, change.clause_text,
+                json.dumps(change.rule, sort_keys=True), vector, change.change_note, 0, 0))
+            conn.commit()
+            return out
+        except Exception as exc:  # noqa: BLE001
+            conn.rollback()
+            raise db.wrap_error(exc, "APPLY_POLICY_CHANGE failed") from None
+        finally:
+            cur.close()
+
+    embedded_in = "db2" if in_db else "app"
     try:
-        out = cur.callproc("APPLY_POLICY_CHANGE", (
-            change.clause_id, change.effective_from, change.end, change.version_label, change.clause_text,
-            json.dumps(change.rule, sort_keys=True), db.vector_literal(vector), change.change_note, 0, 0))
-        conn.commit()
-    except Exception as exc:  # noqa: BLE001
-        conn.rollback()
-        raise db.wrap_error(exc, "APPLY_POLICY_CHANGE failed") from None
-    finally:
-        cur.close()
-    return {"rows_changed": int(out[8]), "published_flagged": int(out[9])}
+        out = call(None if in_db else local_vector())
+    except db.DatabaseError as exc:
+        # 75014: the in-database model failed (endpoint down, key revoked). The change still goes
+        # through, with the same model run here; the response says so.
+        if not (in_db and exc.sqlstate == "75014" and embeddings is not None):
+            raise
+        log.warning("in-database embedding failed for %s; embedding locally instead", change.clause_id)
+        out, embedded_in = call(local_vector()), "app (Db2 model unavailable)"
+    return {"rows_changed": int(out[8]), "published_flagged": int(out[9]), "embedded_in": embedded_in}
 
 
 _IMPACT_KEYS = ("kind", "ref_id", "for_from", "for_to", "state", "created_at", "cited_version", "current_version",
@@ -125,6 +152,8 @@ _TIMELINE_KEYS = ("clause_id", "area", "title", "version_label", "bus_start", "b
 
 # Every statement below is a literal. Names are unqualified: db.use_schema() binds the schema.
 SQL_CLAUSE_TITLE = "SELECT TITLE FROM POLICY_CLAUSE WHERE CLAUSE_ID = ? FETCH FIRST 1 ROW ONLY"
+SQL_EMBEDDER_EXISTS = ("SELECT COUNT(*) FROM SYSCAT.EXTERNALMODELS WHERE MODELSCHEMA = CURRENT SCHEMA "
+                       "AND MODELNAME = 'EMBEDDER'")
 SQL_TIMELINE = ("SELECT CLAUSE_ID, AREA, TITLE, VERSION_LABEL, BUS_START, BUS_END, CHANGED_BY, CHANGE_NOTE, SYS_START, "
                 "CLAUSE_TEXT, RULE_JSON, FIRST_BAG_FEE_USD, SECOND_BAG_FEE_USD, CHANGE_FEE_USD, PET_FEE_USD, "
                 "CANCELLATION_FEE_USD, COMPENSATION_USD, DISCOUNT_PCT, REQUEST_WINDOW_DAYS, FREE_CANCEL_WINDOW_HOURS, "

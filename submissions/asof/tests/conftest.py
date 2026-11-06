@@ -12,15 +12,19 @@ TEST_SCHEMA = "ASOF_TEST"
 
 
 def pytest_collection_modifyitems(config, items):
-    """Tests that call a real LLM run only when asked: ASOF_RUN_LLM_TESTS=1 pytest -m llm"""
+    """Tests that call paid or remote services run only when asked:
+    ASOF_RUN_LLM_TESTS=1 pytest -m llm, and ASOF_RUN_NETWORK_TESTS=1 pytest -m network."""
     import os
 
-    if os.environ.get("ASOF_RUN_LLM_TESTS") == "1":
-        return
-    skip = pytest.mark.skip(reason="calls a real LLM; set ASOF_RUN_LLM_TESTS=1 to run")
-    for item in items:
-        if "llm" in item.keywords:
-            item.add_marker(skip)
+    gates = {"llm": ("ASOF_RUN_LLM_TESTS", "calls a real LLM"),
+             "network": ("ASOF_RUN_NETWORK_TESTS", "Db2 calls a remote embedding endpoint")}
+    for marker, (env, why) in gates.items():
+        if os.environ.get(env) == "1":
+            continue
+        skip = pytest.mark.skip(reason=f"{why}; set {env}=1 to run")
+        for item in items:
+            if marker in item.keywords:
+                item.add_marker(skip)
 
 
 @pytest.fixture(scope="session")

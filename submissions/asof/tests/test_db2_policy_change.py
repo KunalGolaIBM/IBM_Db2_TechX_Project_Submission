@@ -50,7 +50,7 @@ def test_change_splits_the_version_and_reports_impact(settings, embeddings, worl
         time.sleep(1.1)
 
         result = policy.apply_change(editor, PET_CHANGE, embeddings, world)
-        assert result == {"rows_changed": 1, "published_flagged": 1}
+        assert result == {"rows_changed": 1, "published_flagged": 1, "embedded_in": "app"}  # no Db2 model here
 
         impact = {(r["kind"], r["ref_id"]): r for r in policy.change_impact(editor, "PET-001", world)}
         assert impact[("ANSWER", str(november))]["status"] == "HISTORICALLY_VALID"
@@ -117,3 +117,22 @@ def test_change_input_is_validated(field, value):
 
     with pytest.raises(ValidationError):
         policy.PolicyChange.model_validate(PET_CHANGE.model_dump() | {field: value})
+
+
+def test_if_the_db2_model_is_missing_the_change_still_lands_with_a_local_vector(settings, embeddings, world):
+    editor = db.connect(settings, "editor")
+    try:
+        result = policy.apply_change(editor, PET_CHANGE, embeddings, world, in_db=True)
+    finally:
+        editor.close()
+    assert result["embedded_in"] == "app (Db2 model unavailable)" and result["rows_changed"] == 1
+
+
+def test_without_a_db2_model_or_local_embeddings_the_procedure_refuses(settings, world):
+    editor = db.connect(settings, "editor")
+    try:
+        with pytest.raises(db.DatabaseError) as err:
+            policy.apply_change(editor, PET_CHANGE, None, world, in_db=True)
+        assert err.value.sqlstate == "75014"
+    finally:
+        editor.close()

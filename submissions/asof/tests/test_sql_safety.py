@@ -36,7 +36,7 @@ SQL_TEXT = re.compile(
     r"|trigger|specific|external\s+model)\b|\b(grant|revoke)\b.+\b(on|to|from)\b|\bset\s+current\b|^\s*values\b"
     r"|\bwhere\b.+[=<>]",
     re.I | re.S)
-SAFE_CALLS = {"ident"}
+SAFE_CALLS = {"ident", "string_literal"}
 
 
 def _literal_text(node: ast.AST) -> str:

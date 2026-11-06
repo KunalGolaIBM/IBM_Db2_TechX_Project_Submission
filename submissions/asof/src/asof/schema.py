@@ -160,6 +160,9 @@ def drop(conn: ibm_db_dbi.Connection, schema: str) -> None:
     validate_schema(schema)
     q = lambda sql: [r[0].strip() for r in db.query(conn, sql, (schema,))]  # noqa: E731
     _drop_code_objects(conn, schema)
+    for name in q("SELECT MODELNAME FROM SYSCAT.EXTERNALMODELS WHERE MODELSCHEMA = ?"):  # in-database models
+        db.execute(conn, f"DROP EXTERNAL MODEL {db.ident(schema)}.{db.ident(name)}")
+    conn.commit()
     for name in q("SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TEMPORALTYPE IN ('S', 'B')"):
         db.execute(conn, f"ALTER TABLE {db.ident(schema)}.{db.ident(name)} DROP VERSIONING")
     conn.commit()

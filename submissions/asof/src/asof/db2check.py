@@ -349,6 +349,21 @@ def check_vector_index(c: Ctx) -> str:
     return "CREATE VECTOR INDEX (type VANN) in a 32K tablespace; FETCH EXACT and FETCH APPROX both answer"
 
 
+def check_indb_ai_functions(c: Ctx) -> str:
+    # Db2 12.1.5 adds CREATE EXTERNAL MODEL, TO_EMBEDDING and TEXT_GENERATION. Calling them with a
+    # model that does not exist must fail with "undefined name" (42704), not "unknown function".
+    for fn in ("VALUES TO_EMBEDDING(CAST('x' AS VARCHAR(10)) USING ASOF_CHECK.NO_SUCH_MODEL)",
+               "VALUES TEXT_GENERATION(CAST('x' AS VARCHAR(10)) USING ASOF_CHECK.NO_SUCH_MODEL)"):
+        try:
+            c.q(fn)
+        except db.DatabaseError as exc:
+            assert exc.sqlstate == "42704", f"{fn.split('(')[0]} failed with SQLSTATE {exc.sqlstate}"
+            continue
+        raise AssertionError("a call to a missing model succeeded")
+    c.q("SELECT COUNT(*) FROM SYSCAT.EXTERNALMODELS")
+    return "TO_EMBEDDING, TEXT_GENERATION and SYSCAT.EXTERNALMODELS present (setup registers the model)"
+
+
 def check_injection_text(c: Ctx) -> str:
     payload = "'); DROP TABLE ASOF_CHECK.CLAUSE; --"
     c.call("APPEND", ("PASS", payload, 0, ""))
@@ -386,6 +401,7 @@ CHECKS: list[tuple[str, Callable[[Ctx], str]]] = [
     ("Procedure result set", check_result_set),
     ("VECTOR_SERIALIZE", check_vector_serialize),
     ("Native vector index (VANN)", check_vector_index),
+    ("In-database AI functions (12.1.5)", check_indb_ai_functions),
     ("SQL injection stored as text", check_injection_text),
 ]
 
