@@ -1,0 +1,62 @@
+-- Views for the policy timeline and analytics. The runtime user reads these with SELECT.
+
+-- view: V_POLICY_TIMELINE
+-- Every clause version with its key rule parameters as relational columns, read out of
+-- RULE_JSON with JSON_TABLE. This is how the timeline shows "first bag $35 -> $40".
+CREATE OR REPLACE VIEW ASOF.V_POLICY_TIMELINE AS
+  SELECT C.CLAUSE_ID, C.DOC_ID, C.AREA, C.TITLE, C.VERSION_LABEL, C.BUS_START, C.BUS_END,
+         C.CHANGED_BY, C.CHANGE_NOTE, C.SYS_START, C.CLAUSE_TEXT, C.RULE_JSON,
+         J.FIRST_BAG_FEE_USD, J.SECOND_BAG_FEE_USD, J.CHANGE_FEE_USD, J.PET_FEE_USD, J.CANCELLATION_FEE_USD,
+         J.COMPENSATION_USD, J.DISCOUNT_PCT, J.REQUEST_WINDOW_DAYS, J.FREE_CANCEL_WINDOW_HOURS,
+         J.MIN_DAYS_BEFORE_DEPARTURE, J.CREDIT_VALIDITY_MONTHS, J.MAX_PASSENGERS, J.RETROACTIVE_ALLOWED,
+         J.TRANSFER_ALLOWED, J.CHANGES_ALLOWED
+  FROM ASOF.POLICY_CLAUSE C,
+       JSON_TABLE(C.RULE_JSON, 'strict $'
+         COLUMNS (FIRST_BAG_FEE_USD         DECIMAL(9, 2) PATH '$.first_bag_fee_usd',
+                  SECOND_BAG_FEE_USD        DECIMAL(9, 2) PATH '$.second_bag_fee_usd',
+                  CHANGE_FEE_USD            DECIMAL(9, 2) PATH '$.change_fee_usd',
+                  PET_FEE_USD               DECIMAL(9, 2) PATH '$.pet_fee_usd',
+                  CANCELLATION_FEE_USD      DECIMAL(9, 2) PATH '$.cancellation_fee_usd',
+                  COMPENSATION_USD          DECIMAL(9, 2) PATH '$.compensation_usd',
+                  DISCOUNT_PCT              DECIMAL(5, 2) PATH '$.discount_pct',
+                  REQUEST_WINDOW_DAYS       INTEGER       PATH '$.request_window_days',
+                  FREE_CANCEL_WINDOW_HOURS  INTEGER       PATH '$.free_cancel_window_hours',
+                  MIN_DAYS_BEFORE_DEPARTURE INTEGER       PATH '$.min_days_before_departure',
+                  CREDIT_VALIDITY_MONTHS    INTEGER       PATH '$.credit_validity_months',
+                  MAX_PASSENGERS            INTEGER       PATH '$.max_passengers',
+                  RETROACTIVE_ALLOWED       VARCHAR(5)    PATH '$.retroactive_allowed',
+                  TRANSFER_ALLOWED          VARCHAR(5)    PATH '$.transfer_allowed',
+                  CHANGES_ALLOWED           VARCHAR(5)    PATH '$.changes_allowed')
+         ERROR ON ERROR) AS J
+@
+
+-- view: V_DECISION_STATS
+CREATE OR REPLACE VIEW ASOF.V_DECISION_STATS AS
+  SELECT CHANNEL, DECISION, REASON_CODE, COUNT(*) AS DECISIONS,
+         INTEGER(AVG(LATENCY_MS)) AS AVG_LATENCY_MS, MIN(CREATED_AT) AS FIRST_AT, MAX(CREATED_AT) AS LAST_AT
+  FROM ASOF.ANSWER_LEDGER
+  GROUP BY CHANNEL, DECISION, REASON_CODE
+@
+
+-- view: V_CLAIM_OUTCOMES_BY_AREA
+-- Verdicts on the drafts as they arrived (PASS_NO 1), by policy area.
+CREATE OR REPLACE VIEW ASOF.V_CLAIM_OUTCOMES_BY_AREA AS
+  SELECT AREA,
+         SUM(CASE WHEN VERDICT = 'SUPPORTED' THEN 1 ELSE 0 END)    AS SUPPORTED,
+         SUM(CASE WHEN VERDICT = 'CONTRADICTED' THEN 1 ELSE 0 END) AS CONTRADICTED,
+         SUM(CASE WHEN VERDICT = 'NOT_COVERED' THEN 1 ELSE 0 END)  AS NOT_COVERED,
+         COUNT(*) AS CLAIMS
+  FROM ASOF.CLAIM_CITATION
+  WHERE PASS_NO = 1
+  GROUP BY AREA
+@
+
+-- view: V_RULE_OVERRIDES
+-- Claims where the deterministic rule check overruled the LLM judge's SUPPORTED.
+CREATE OR REPLACE VIEW ASOF.V_RULE_OVERRIDES AS
+  SELECT L.LEDGER_ID, L.CREATED_AT, L.AS_OF_DATE, L.DECISION, C.PASS_NO, C.CLAIM_NO, C.CLAIM_TEXT,
+         C.CLAUSE_ID, C.CLAUSE_VERSION
+  FROM ASOF.CLAIM_CITATION C
+  JOIN ASOF.ANSWER_LEDGER L ON L.LEDGER_ID = C.LEDGER_ID
+  WHERE C.LLM_VERDICT = 'SUPPORTED' AND C.VERDICT = 'CONTRADICTED' AND C.RULE_CHECK = 'MISMATCH'
+@

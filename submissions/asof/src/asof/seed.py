@@ -69,9 +69,10 @@ def seed_published_answers(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA)
         if cited is None:
             raise ValueError(f"{a['answer_id']} cites a clause version that does not exist")
         db.execute(conn, f"INSERT INTO {schema}.PUBLISHED_ANSWER (ANSWER_ID, DOC_ID, QUESTION, ANSWER_TEXT, "
-                         "CITED_CLAUSE_ID, CITED_BUS_START, APPLIES_FROM, APPLIES_TO) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                         "CITED_CLAUSE_ID, CITED_VERSION, CITED_BUS_START, APPLIES_FROM, APPLIES_TO) "
+                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                    (a["answer_id"], a["doc_id"], a["question"], a["answer_text"], a["cited_clause_id"],
-                    a["cited_bus_start"], a["applies_from"], a["applies_to"]))
+                    cited.version_label, a["cited_bus_start"], a["applies_from"], a["applies_to"]))
     conn.commit()
     return len(answers)
 
