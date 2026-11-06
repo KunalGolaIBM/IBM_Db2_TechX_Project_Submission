@@ -1,37 +1,46 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "project": {
-    "title": "Project Title Here",
-    "slug": "project-slug-here",
-    "short_description": "Brief description of the project.",
-    "category": "AI / RAG / Data Engineering / Analytics",
+    "title": "AsOf",
+    "slug": "asof",
+    "short_description": "AsOf checks each policy claim in an AI assistant's answer against the policy version in force on the customer's date, stops answers that contradict it, and keeps a tamper-evident Db2 record of what was said and why. Built for the kind of failure at issue in Moffatt v. Air Canada.",
+    "category": "AI / Compliance / Data Engineering",
     "demo_url": "",
     "video_url": "",
-    "repo_url": ""
+    "repo_url": "https://github.com/JustJay7/asof"
   },
   "team": {
-    "name": "Team Name Here",
+    "name": "Jay Malhotra",
     "members": [
       {
-        "name": "Full Name",
-        "github": "github-username",
-        "email": "user@example.com",
-        "role": "Backend / AI Developer"
+        "name": "Jay Malhotra",
+        "github": "JustJay7",
+        "email": "",
+        "role": "Solo developer: design, Db2, AI pipeline, UI"
       }
     ]
   },
   "ibm_db2": {
-    "edition": "Db2 Community Edition (Docker)",
-    "connector": "ibm_db / SQLAlchemy",
+    "edition": "IBM Db2 Community Edition 12.1.5.0 (Docker)",
+    "connector": "ibm_db / ibm_db_dbi, LangChain langchain-db2 (DB2VS)",
     "features_used": [
-      "Relational Tables",
-      "Indexing",
-      "Vector / JSON Search"
+      "Bitemporal tables (BUSINESS_TIME and SYSTEM_TIME periods, history table)",
+      "FOR BUSINESS_TIME AS OF and FOR SYSTEM_TIME AS OF queries",
+      "Native VECTOR(384, FLOAT32) with VECTOR_DISTANCE in the same query as temporal predicates",
+      "PRIMARY KEY ... BUSINESS_TIME WITHOUT OVERLAPS",
+      "SQL/JSON check constraints (JSON_EXISTS)",
+      "Indexes, foreign keys and check constraints",
+      "Least-privilege Db2 users with explicit grants",
+      "LangChain DB2VS vector store"
     ]
   },
   "tech_stack": {
-    "languages": ["Python", "JavaScript"],
-    "frameworks": ["FastAPI", "React", "LangChain"],
-    "ai_models": ["watsonx.ai Granite", "OpenAI GPT-4o"]
+    "languages": ["Python", "SQL"],
+    "frameworks": ["LangChain", "FastAPI", "Pydantic"],
+    "ai_models": [
+      "google/gemini-3.1-flash-lite via OpenRouter (default)",
+      "qwen2.5:7b-instruct via Ollama (local, no key)",
+      "sentence-transformers/all-MiniLM-L6-v2 (local embeddings)"
+    ]
   }
 }
