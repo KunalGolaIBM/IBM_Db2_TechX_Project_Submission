@@ -502,6 +502,10 @@ The two misses were both escalations instead of corrections. **BT10:** the judge
   - On Apple Silicon under Rosetta, Db2 *fenced* routines crash, so AsOf deliberately uses only built-in SQL, triggers and SQL PL, which run inside the engine.
 - **Next Steps:** see [Build status](#build-status).
 
+### Contributing back to IBM's Db2 AI Cookbook
+
+[cookbook/09-as-of-search/](cookbook/09-as-of-search/) is AsOf's core pattern as a recipe in the format of IBM's [db2-ai-cookbook](https://github.com/IBM/db2-ai-cookbook): a module README with its recipe table, and one recipe (`python-local-embeddings`) with the cookbook's README shape (a "Last checked" line, quick start, expected output, concepts, then a host appendix), pinned `requirements.txt`, `.env.example` and a notebook. It shows `FOR BUSINESS_TIME AS OF` with `VECTOR_DISTANCE` in one statement, `FOR PORTION OF BUSINESS_TIME`, and `FOR SYSTEM_TIME AS OF` replay, on three fictional clauses in a throwaway schema. It was executed end to end with nbconvert against Db2 12.1.5 on 6 Nov 2026, and the committed notebook holds that run's outputs (stdout only; library warnings on stderr were dropped). The cookbook has no temporal-data module yet, so the recipe fills a gap rather than repeating one. To contribute it: fork `IBM/db2-ai-cookbook`, copy the folder in as the next module number, add its row to the cookbook's module table, and open a pull request.
+
 ---
 
 ## Team Members & Credits
