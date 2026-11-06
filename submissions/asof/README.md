@@ -19,6 +19,7 @@
 - [Setup & Installation](#setup--installation)
 - [Configuration](#configuration)
 - [Running the Project](#running-the-project)
+- [Evaluation](#evaluation)
 - [Testing & Verification](#testing--verification)
 - [Known Limitations & Future Roadmap](#known-limitations--future-roadmap)
 - [Team Members & Credits](#team-members--credits)
@@ -257,6 +258,32 @@ answer = chain.invoke({"question": "Can I get a bereavement fare after I travel?
 ```
 
 The runnable takes the assistant's draft and returns the checked answer, and every decision lands in the Db2 ledger.
+
+---
+
+## Evaluation
+
+`python -m asof.eval --split test` runs the gate on 40 labelled cases and writes [docs/eval_results.md](docs/eval_results.md), with every per-case decision recorded in [docs/eval/](docs/eval/). The 40 test cases are new scenarios, none used while building or choosing the model. They were committed (`81b5b69`) before the first run and are frozen: a unit test pins their SHA-256 and the runner refuses to run them if it changes. The 20-case dev split holds the scenarios used while debugging. Each case is labelled with the decision it should get and the clause version its key claim must be checked against.
+
+**Frozen test split, `google/gemini-3.1-flash-lite` via OpenRouter** (40 cases: 14 correct drafts, 26 wrong for their date):
+
+| Metric | Result |
+|---|---|
+| **False-allow rate** (wrong drafts released as PASS) | **0.0%** (0 of 26) |
+| False-block rate (correct drafts rewritten or escalated) | 7.1% (1 of 14) |
+| Safe decisions | 97.5% |
+| Ideal decisions | 92.5% |
+| Citation accuracy (key claim checked against the right version) | 100% |
+| Latency p50 / p90 | 5.9 s / 8.1 s, 3.6 LLM calls per case |
+
+Categories: supported 8, contradicted numbers 6, contradicted eligibility 6, date boundaries (day before and day of a version change) 5, not covered 5, relative and implied counts against limits 4, multi-claim 3, prompt injection 3. Per-category numbers are in the report.
+
+What went wrong, from the recorded runs (left unfixed so the numbers stay honest):
+
+- **T33 (the false block):** the extractor turned the customer's own situation ("the delay was within our control") into a policy claim. No clause covers it, so a correct answer was escalated.
+- **T31 and T36 (escalated instead of corrected):** the rewrite was right, but in the re-check the judge paraphrased its quote, the verbatim-quote rule downgraded that claim to NOT_COVERED, and the correction was held back. The strict quote rule trades some corrections for never trusting an unquoted verdict.
+
+On the dev split the same model scored 0% false allow, 0% false block and 95% ideal decisions.
 
 ---
 
