@@ -227,6 +227,10 @@ docker exec -it custodian-db2 su - db2inst1 -c "db2 connect to CUSTDB && \
 ## Screenshots & Demo
 - **Live Demo Link:** Not hosted. Db2 runs locally via `docker compose`; see Setup.
 - **Demo Video Link:** _added with the submission PR_
+- **Db2 installation proof:** `db2level` and a live query in the running container (real output):
+
+![IBM Db2 12.1.5.0 installation proof](docs/screenshots/00-db2-installation.png)
+
 - Screenshots are taken from the running app (`docs/screenshots/`):
 
 | | |
