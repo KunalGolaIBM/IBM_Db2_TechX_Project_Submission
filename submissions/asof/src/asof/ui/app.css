@@ -340,3 +340,8 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .scroll-x { overflow-x: auto; }
 #ask-result pre.sql { white-space: pre-wrap; word-break: break-word; }
 #ask-result .card + pre.sql, #ask-result pre.sql + p { margin-top: 8px; }
+
+/* API token prompt (only when the server sets ASOF_API_TOKEN) */
+.token-bar { display: flex; gap: 10px; align-items: center; justify-content: center; padding: 10px 16px;
+  background: var(--hold-bg); border-bottom: 1px solid var(--hold-line); color: var(--hold); flex-wrap: wrap; }
+.token-bar input { max-width: 280px; }

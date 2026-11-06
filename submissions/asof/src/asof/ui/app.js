@@ -27,8 +27,31 @@ function mount(el, view) {
 }
 
 // ---------- API ----------
+// Optional API token (ASOF_API_TOKEN on the server): asked for once per tab, kept in sessionStorage.
+const TOKEN_KEY = "asof-api-token";
+function savedToken() { try { return sessionStorage.getItem(TOKEN_KEY) || ""; } catch { return ""; } }
+function askToken() {
+  if ($("#token-form")) return;
+  const form = document.createElement("form");
+  form.id = "token-form";
+  form.className = "token-bar";
+  form.innerHTML = '<label for="api-token">This AsOf server needs its API token</label>'
+    + '<input id="api-token" type="password" autocomplete="off" required><button class="btn sm" type="submit">Use token</button>';
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    try { sessionStorage.setItem(TOKEN_KEY, $("#api-token").value.trim()); } catch { /* private mode: ask again next time */ }
+    form.remove();
+    status();
+    route();
+  });
+  document.body.prepend(form);
+}
 async function api(path, options = {}) {
-  const res = await fetch(path, { headers: { "content-type": "application/json" }, ...options });
+  const headers = { "content-type": "application/json" };
+  const token = savedToken();
+  if (token) headers.authorization = `Bearer ${token}`;
+  const res = await fetch(path, { ...options, headers });
+  if (res.status === 401) { askToken(); throw new Error("This AsOf server needs an API token: enter it at the top of the page."); }
   let body = null;
   try { body = await res.json(); } catch { /* empty body */ }
   if (!res.ok && res.status !== 503) throw new Error(errorText(body, res.status));

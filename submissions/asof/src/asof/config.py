@@ -8,6 +8,7 @@ so nothing read from the environment can reach SQL text.
 from __future__ import annotations
 
 import os
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -58,6 +59,9 @@ class Settings(BaseSettings):
     # Policy changes over HTTP: localhost only, unless this token is set, in which case the
     # X-AsOf-Editor-Token header must match it.
     asof_editor_token: SecretStr | None = None
+    # Optional API token. When set, every /api/ request needs "Authorization: Bearer <token>"
+    # (constant-time compare); /healthz and the static UI stay open. Unset: localhost binding only.
+    asof_api_token: SecretStr | None = None
 
     # LLM provider
     llm_provider: LLMProvider = "openrouter"
@@ -95,6 +99,13 @@ class Settings(BaseSettings):
     embedding_api_url: str = "https://openrouter.ai/api/v1/embeddings"
     embedding_api_model: str = "sentence-transformers/all-minilm-l6-v2"
     embedding_api_key: SecretStr | None = None  # falls back to OPENROUTER_API_KEY
+
+    @field_validator("asof_api_token", "asof_editor_token")
+    @classmethod
+    def _token(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is not None and value.get_secret_value() and not re.fullmatch(r"[\x21-\x7e]{16,256}", value.get_secret_value()):
+            raise ValueError("tokens must be 16 to 256 printable ASCII characters, no spaces")
+        return value
 
     @field_validator("openrouter_base_url", "ollama_base_url", "openai_compat_base_url", "embedding_api_url")
     @classmethod

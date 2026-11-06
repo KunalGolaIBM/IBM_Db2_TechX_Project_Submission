@@ -166,7 +166,8 @@ def test_policy_change_is_refused_from_a_remote_client():
 
 
 def test_policy_change_token_is_enforced_when_set():
-    app = create_app(Settings(_env_file=None, asof_editor_token="s3cret-token"), gate=FakeGate(), assistant=FakeAssistant())
+    app = create_app(Settings(_env_file=None, asof_editor_token="s3cret-editor-token"), gate=FakeGate(),
+                     assistant=FakeAssistant())
     local = TestClient(app, client=("127.0.0.1", 50000))
     assert local.post("/api/policy/change", json=CHANGE).status_code == 403
     assert local.post("/api/policy/change", json=CHANGE, headers={"X-AsOf-Editor-Token": "wrong"}).status_code == 403
@@ -242,3 +243,26 @@ def test_ask_the_ledger_returns_the_sql_and_rows_with_the_answer():
     assert r.status_code == 422  # unknown fields are refused
     r = TestClient(app).post("/api/ledger/ask", json={"question": "How many were escalated?"})
     assert r.status_code == 200 and r.json()["sql"] == "SELECT 1" and r.json()["rows"] == [[2]]
+
+
+def test_the_optional_api_token_guards_every_api_route_but_not_health_or_the_ui():
+    app = create_app(Settings(_env_file=None, asof_api_token="a-long-test-token-0123"), gate=FakeGate(),
+                     assistant=FakeAssistant())
+    c = TestClient(app)
+    assert c.post("/api/gate", json=OK).status_code == 401
+    assert c.get("/api/ledger").status_code == 401
+    assert c.post("/api/gate", json=OK, headers={"Authorization": "Bearer wrong"}).status_code == 401
+    assert c.post("/api/gate", json=OK, headers={"Authorization": "Basic t0ken"}).status_code == 401
+    assert c.post("/api/gate", json=OK, headers={"Authorization": "Bearer a-long-test-token-0123"}).status_code == 200
+    assert c.get("/healthz").status_code == 200 and c.get("/ui/").status_code == 200
+    assert c.post("/api/gate", json=OK).headers["www-authenticate"] == "Bearer"
+
+
+def test_tokens_with_unusual_characters_are_refused_not_crashed():
+    from asof.api import token_matches
+
+    assert token_matches("abc", "abc") and not token_matches("abd", "abc") and not token_matches(None, "abc")
+    assert not token_matches("\u00e9t\u00e9", "abc")  # str compare_digest would raise on non-ASCII
+    for bad in ("short", "has a space in it ok", "t\u00f6ken-with-umlaut-1234"):
+        with pytest.raises(ValueError):
+            Settings(_env_file=None, asof_api_token=bad)

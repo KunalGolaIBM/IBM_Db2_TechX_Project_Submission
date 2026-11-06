@@ -53,6 +53,11 @@ def _text(max_bytes: int) -> Callable[[str], str]:
     return check
 
 
+def token_matches(given: str | None, expected: str) -> bool:
+    """Constant-time comparison on UTF-8 bytes (hmac.compare_digest refuses non-ASCII str)."""
+    return bool(given) and hmac.compare_digest(given.encode("utf-8"), expected.encode("utf-8"))
+
+
 def _in_range(value: date) -> date:
     if not MIN_DATE <= value <= MAX_DATE:
         raise ValueError(f"must be between {MIN_DATE} and {MAX_DATE}")
@@ -172,6 +177,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
                asker: LedgerAsker | None = None, schema: str = db.SCHEMA, rate_limit: int = 30) -> FastAPI:
     settings = settings or get_settings()
     state: dict[str, Any] = {"gate": gate, "assistant": assistant, "asker": asker}
+    api_token = settings.asof_api_token.get_secret_value() if settings.asof_api_token else None
     limiter = RateLimiter(rate_limit)
 
     def app_conn():
@@ -206,6 +212,12 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         length = request.headers.get("content-length")
         if length and length.isdigit() and int(length) > MAX_BODY_BYTES:
             return JSONResponse({"error": "request body too large"}, status_code=413)
+        if api_token and request.url.path.startswith("/api/"):
+            auth = request.headers.get("authorization", "")
+            given = auth[7:].strip() if auth[:7].lower() == "bearer " else None
+            if not token_matches(given, api_token):
+                return JSONResponse({"error": "this AsOf server needs an API token (Authorization: Bearer ...)"},
+                                    status_code=401, headers={"WWW-Authenticate": "Bearer"})
         if request.method == "POST" and not limiter.allow(request.client.host if request.client else "unknown"):
             return JSONResponse({"error": "too many requests, try again in a minute"}, status_code=429)
         response = await call_next(request)
@@ -359,7 +371,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         """Editor actions: localhost only, or a matching ASOF_EDITOR_TOKEN (constant-time compare)."""
         token = settings.asof_editor_token.get_secret_value() if settings.asof_editor_token else None
         if token:
-            if not token_header or not hmac.compare_digest(token_header, token):
+            if not token_matches(token_header, token):
                 raise HTTPException(403, "policy changes need a valid X-AsOf-Editor-Token")
         elif (request.client.host if request.client else "") not in LOCAL_CLIENTS:
             raise HTTPException(403, "policy changes are only accepted from localhost unless ASOF_EDITOR_TOKEN is set")
