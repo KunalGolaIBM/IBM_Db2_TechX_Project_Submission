@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Custodian: the Db2 control plane for AI agents",
+    "slug": "custodian",
+    "short_description": "A gateway that makes IBM Db2 itself the guardrail for AI agents: SQL runs as the human (RCAC masks and row permissions), writes are blast-radius measured against a policy table, risky writes wait for human approval (LangGraph interrupt), and temporal tables let any agent transaction be rewound and any AI answer be replayed as of the moment it was given.",
+    "category": "AI Agents / Governance / Security",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/KunalGolaIBM/IBM_Db2_TechX_Project_Submission/tree/main/submissions/custodian"
+  },
+  "team": {
+    "name": "Custodian",
+    "members": [
+      {
+        "name": "Ayush Gade",
+        "github": "ayushgade06",
+        "email": "ayushgade23@gmail.com",
+        "role": "Design, Db2 integration, gateway, agent, UI, tests"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1.5.0 (Docker, icr.io/db2_community/db2:12.1.5.0)",
+    "connector": "ibm_db (ibm_db_dbi) + langchain-db2 DB2VS + IBM db2-sqlglot-plugin",
+    "features_used": [
+      "Row and Column Access Control (CREATE PERMISSION / CREATE MASK)",
+      "Per-user authorization IDs and roles (GRANT ... TO ROLE)",
+      "System-period temporal tables (FOR SYSTEM_TIME, CURRENT TEMPORAL SYSTEM_TIME)",
+      "EXPLAIN PLAN tables (cost preflight)",
+      "Data-change table references (FINAL TABLE / OLD TABLE)",
+      "VECTOR(384, FLOAT32) + VECTOR_DISTANCE (COSINE)",
+      "Relational control-plane tables (policy, approvals, ledger)",
+      "RUNSTATS via ADMIN_CMD"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "SQL"],
+    "frameworks": ["LangGraph", "LangChain (langchain-db2)", "Streamlit", "sqlglot", "pytest"],
+    "ai_models": ["Groq openai/gpt-oss-120b", "Ollama qwen2.5:7b (fallback)", "ibm-granite/granite-embedding-30m-english"]
+  }
+}
