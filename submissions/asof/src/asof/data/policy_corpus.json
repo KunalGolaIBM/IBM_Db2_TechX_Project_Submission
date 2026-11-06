@@ -1,0 +1,297 @@
+{
+  "notice": "Aurelia Air and every policy below are fictional, written for the AsOf demo. They are modelled on the kind of policy at issue in Moffatt v. Air Canada, 2024 BCCRT 149, and do not describe any real airline.",
+  "documents": [
+    {
+      "doc_id": "AURELIA-CSP",
+      "title": "Aurelia Air Customer Service Plan",
+      "owner_team": "Customer Experience Policy",
+      "source_note": "Fictional policy document for the AsOf demo."
+    }
+  ],
+  "clauses": [
+    {
+      "clause_id": "BRV-001", "doc_id": "AURELIA-CSP", "area": "bereavement", "title": "Bereavement fare eligibility",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Bereavement fares are available to customers travelling because of the death or imminent death of an immediate family member. Immediate family means a spouse or common-law partner, parent, step-parent, child, step-child, sibling, grandparent, grandchild, or legal guardian. The bereavement fare is 40% off the lowest available Economy fare on the same flight.",
+         "rule": {"discount_pct": 40, "eligible_relations": ["spouse", "common-law partner", "parent", "step-parent", "child", "step-child", "sibling", "grandparent", "grandchild", "legal guardian"]}}
+      ]
+    },
+    {
+      "clause_id": "BRV-002", "doc_id": "AURELIA-CSP", "area": "bereavement", "title": "Bereavement fare requests and timing",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "2026-05-01",
+         "clause_text": "Bereavement fares must be requested before travel begins. A bereavement fare cannot be applied retroactively once any part of the journey has been flown, and no refund of the fare difference is available after travel.",
+         "rule": {"retroactive_allowed": false, "request_window_days": 0, "request_before_travel_required": true}},
+        {"version_label": "v2", "bus_start": "2026-05-01", "bus_end": "9999-12-31",
+         "clause_text": "Bereavement fares may be requested before travel or retroactively. A retroactive request must be submitted within 90 days of the date the original ticket was issued, together with the documentation listed in clause BRV-003. Approved retroactive requests are refunded the fare difference to the original form of payment.",
+         "rule": {"retroactive_allowed": true, "request_window_days": 90, "request_before_travel_required": false}}
+      ]
+    },
+    {
+      "clause_id": "BRV-003", "doc_id": "AURELIA-CSP", "area": "bereavement", "title": "Bereavement documentation",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "To qualify for a bereavement fare, the customer must provide the name of the deceased or ill family member, their relationship to the customer, and either a death certificate or a letter from the attending physician or funeral home.",
+         "rule": {"documentation_required": true, "accepted_documents": ["death certificate", "physician letter", "funeral home letter"]}}
+      ]
+    },
+    {
+      "clause_id": "BRV-004", "doc_id": "AURELIA-CSP", "area": "bereavement", "title": "How to request a bereavement fare",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Bereavement fares can be requested by phone through the Aurelia Air Contact Centre or online through the bereavement request form. They cannot be booked at airport ticket counters or through travel agencies.",
+         "rule": {"channels": ["contact centre", "online form"], "airport_booking_allowed": false, "travel_agency_allowed": false}}
+      ]
+    },
+    {
+      "clause_id": "BRV-005", "doc_id": "AURELIA-CSP", "area": "bereavement", "title": "Bereavement fare limits",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "A bereavement fare covers up to 4 passengers on the same booking and is available in Economy and Premium Economy only. Business class is not eligible.",
+         "rule": {"max_passengers": 4, "eligible_cabins": ["Economy", "Premium Economy"], "business_class_allowed": false}}
+      ]
+    },
+    {
+      "clause_id": "CXL-001", "doc_id": "AURELIA-CSP", "area": "cancellation", "title": "24-hour free cancellation",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "2026-07-01",
+         "clause_text": "Any booking can be cancelled free of charge within 24 hours of purchase, provided the booking was made at least 7 days before the scheduled departure.",
+         "rule": {"free_cancel_window_hours": 24, "min_days_before_departure": 7}},
+        {"version_label": "v2", "bus_start": "2026-07-01", "bus_end": "9999-12-31",
+         "clause_text": "Any booking can be cancelled free of charge within 24 hours of purchase, regardless of how close the booking is to the scheduled departure.",
+         "rule": {"free_cancel_window_hours": 24, "min_days_before_departure": 0}}
+      ]
+    },
+    {
+      "clause_id": "CXL-002", "doc_id": "AURELIA-CSP", "area": "cancellation", "title": "Refund of 24-hour cancellations",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "When a booking is cancelled within the 24-hour free cancellation period, the full amount is refunded to the original form of payment within 7 business days.",
+         "rule": {"refund_business_days": 7, "full_refund": true}}
+      ]
+    },
+    {
+      "clause_id": "CXL-003", "doc_id": "AURELIA-CSP", "area": "cancellation", "title": "Cancelling non-refundable fares after 24 hours",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "After the 24-hour period, a non-refundable fare can be cancelled before departure for a cancellation fee of $100 per passenger. The remaining value is issued as a travel credit, not as a refund.",
+         "rule": {"cancellation_fee_usd": 100, "refund_allowed": false, "credit_issued": true}}
+      ]
+    },
+    {
+      "clause_id": "CHG-001", "doc_id": "AURELIA-CSP", "area": "change_fee", "title": "Basic Economy changes",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Basic Economy tickets cannot be changed or upgraded after the 24-hour free cancellation period.",
+         "rule": {"changes_allowed": false}}
+      ]
+    },
+    {
+      "clause_id": "CHG-002", "doc_id": "AURELIA-CSP", "area": "change_fee", "title": "Standard Economy change fee",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "2026-09-01",
+         "clause_text": "Standard Economy tickets can be changed before departure for a change fee of $75 per passenger, plus any difference in fare.",
+         "rule": {"change_fee_usd": 75, "fare_difference_applies": true}},
+        {"version_label": "v2", "bus_start": "2026-09-01", "bus_end": "9999-12-31",
+         "clause_text": "Standard Economy tickets can be changed before departure with no change fee. Any difference in fare still applies.",
+         "rule": {"change_fee_usd": 0, "fare_difference_applies": true}}
+      ]
+    },
+    {
+      "clause_id": "CHG-003", "doc_id": "AURELIA-CSP", "area": "change_fee", "title": "Same-day changes",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "On the day of departure, customers can move to an earlier or later flight on the same route for a same-day change fee of $50 per passenger, subject to seat availability.",
+         "rule": {"same_day_change_fee_usd": 50}}
+      ]
+    },
+    {
+      "clause_id": "CHG-004", "doc_id": "AURELIA-CSP", "area": "change_fee", "title": "Name changes and corrections",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Tickets cannot be transferred to another person. Spelling corrections of up to 3 characters in a passenger name are made free of charge.",
+         "rule": {"name_change_allowed": false, "free_name_correction_chars": 3}}
+      ]
+    },
+    {
+      "clause_id": "BAG-001", "doc_id": "AURELIA-CSP", "area": "baggage", "title": "First checked bag fee",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "2026-06-01",
+         "clause_text": "The first checked bag costs $35 each way on Economy fares.",
+         "rule": {"first_bag_fee_usd": 35}},
+        {"version_label": "v2", "bus_start": "2026-06-01", "bus_end": "9999-12-31",
+         "clause_text": "The first checked bag costs $40 each way on Economy fares.",
+         "rule": {"first_bag_fee_usd": 40}}
+      ]
+    },
+    {
+      "clause_id": "BAG-002", "doc_id": "AURELIA-CSP", "area": "baggage", "title": "Second checked bag fee",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "The second checked bag costs $50 each way on Economy fares.",
+         "rule": {"second_bag_fee_usd": 50}}
+      ]
+    },
+    {
+      "clause_id": "BAG-003", "doc_id": "AURELIA-CSP", "area": "baggage", "title": "Checked bag weight",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Each checked bag may weigh up to 23 kg. Bags between 23 kg and 32 kg are accepted for an overweight fee of $100 each way. Bags over 32 kg are not accepted.",
+         "rule": {"max_free_weight_kg": 23, "overweight_fee_usd": 100, "max_weight_kg": 32}}
+      ]
+    },
+    {
+      "clause_id": "BAG-004", "doc_id": "AURELIA-CSP", "area": "baggage", "title": "Carry-on allowance",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Every passenger may bring one carry-on bag of up to 10 kg and one personal item into the cabin free of charge.",
+         "rule": {"carry_on_fee_usd": 0, "carry_on_max_kg": 10, "personal_items": 1}}
+      ]
+    },
+    {
+      "clause_id": "BAG-005", "doc_id": "AURELIA-CSP", "area": "baggage", "title": "Delayed baggage expenses",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "If a checked bag is delayed, Aurelia Air reimburses reasonable essential purchases of up to $50 per day for a maximum of 5 days. Receipts are required.",
+         "rule": {"delayed_bag_daily_usd": 50, "delayed_bag_max_days": 5, "receipts_required": true}}
+      ]
+    },
+    {
+      "clause_id": "RFD-001", "doc_id": "AURELIA-CSP", "area": "refund", "title": "Refund processing time",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Approved refunds are issued to the original form of payment. Credit card refunds are processed within 7 business days. Refunds to other payment methods are processed within 20 days.",
+         "rule": {"card_refund_business_days": 7, "other_refund_days": 20}}
+      ]
+    },
+    {
+      "clause_id": "RFD-002", "doc_id": "AURELIA-CSP", "area": "refund", "title": "Refundable fares",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Refundable fares can be cancelled for a full refund at any time before departure. If the passenger does not show up for the flight, only taxes and airport fees are refunded.",
+         "rule": {"refund_allowed": true, "no_show_full_refund": false}}
+      ]
+    },
+    {
+      "clause_id": "RFD-003", "doc_id": "AURELIA-CSP", "area": "refund", "title": "Non-refundable fares",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Non-refundable fares are not eligible for a refund of the base fare. Government taxes and airport fees on an unused ticket are refunded on request within 1 year of the ticket issue date.",
+         "rule": {"refund_allowed": false, "tax_refund_window_days": 365}}
+      ]
+    },
+    {
+      "clause_id": "RFD-004", "doc_id": "AURELIA-CSP", "area": "refund", "title": "Flights cancelled by Aurelia Air",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "If Aurelia Air cancels a flight, the customer may choose rebooking at no cost or a full refund of the unused portion of the ticket, whatever the fare type.",
+         "rule": {"airline_cancellation_full_refund": true}}
+      ]
+    },
+    {
+      "clause_id": "DLY-001", "doc_id": "AURELIA-CSP", "area": "delay", "title": "Delay compensation: 3 to 6 hours",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "For a delay within Aurelia Air's control that makes the passenger arrive 3 hours or more, but less than 6 hours, late, the passenger is entitled to $125 in compensation.",
+         "rule": {"delay_from_hours": 3, "delay_to_hours": 6, "compensation_usd": 125}}
+      ]
+    },
+    {
+      "clause_id": "DLY-002", "doc_id": "AURELIA-CSP", "area": "delay", "title": "Delay compensation: 6 to 9 hours",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "For a delay within Aurelia Air's control that makes the passenger arrive 6 hours or more, but less than 9 hours, late, the passenger is entitled to $250 in compensation.",
+         "rule": {"delay_from_hours": 6, "delay_to_hours": 9, "compensation_usd": 250}}
+      ]
+    },
+    {
+      "clause_id": "DLY-003", "doc_id": "AURELIA-CSP", "area": "delay", "title": "Delay compensation: 9 hours or more",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "For a delay within Aurelia Air's control that makes the passenger arrive 9 hours or more late, the passenger is entitled to $400 in compensation.",
+         "rule": {"delay_from_hours": 9, "compensation_usd": 400}}
+      ]
+    },
+    {
+      "clause_id": "DLY-004", "doc_id": "AURELIA-CSP", "area": "delay", "title": "Delays outside Aurelia Air's control",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Delays caused by weather, air traffic control restrictions or security events are outside Aurelia Air's control and are not eligible for compensation. Meal vouchers are still provided for delays of 3 hours or more.",
+         "rule": {"compensation_allowed": false, "meal_voucher_from_hours": 3}}
+      ]
+    },
+    {
+      "clause_id": "DLY-005", "doc_id": "AURELIA-CSP", "area": "delay", "title": "Claiming delay compensation",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Delay compensation must be claimed within 1 year of the flight date through the online claims form.",
+         "rule": {"claim_window_days": 365}}
+      ]
+    },
+    {
+      "clause_id": "CRD-001", "doc_id": "AURELIA-CSP", "area": "travel_credit", "title": "Travel credit validity",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Travel credits are valid for 12 months from the date they are issued. The booking must be made before the credit expires, but the flight itself may take place after the expiry date.",
+         "rule": {"credit_validity_months": 12}}
+      ]
+    },
+    {
+      "clause_id": "CRD-002", "doc_id": "AURELIA-CSP", "area": "travel_credit", "title": "Who can use a travel credit",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Travel credits are issued in the name of the original passenger and cannot be transferred to another person.",
+         "rule": {"transfer_allowed": false}}
+      ]
+    },
+    {
+      "clause_id": "CRD-003", "doc_id": "AURELIA-CSP", "area": "travel_credit", "title": "Combining travel credits",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Up to 3 travel credits can be combined on a single booking.",
+         "rule": {"max_credits_per_booking": 3}}
+      ]
+    },
+    {
+      "clause_id": "CRD-004", "doc_id": "AURELIA-CSP", "area": "travel_credit", "title": "Cash value of travel credits",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Travel credits have no cash value and cannot be exchanged for a refund.",
+         "rule": {"cash_out_allowed": false}}
+      ]
+    },
+    {
+      "clause_id": "PET-001", "doc_id": "AURELIA-CSP", "area": "pets", "title": "Pets in the cabin",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Small cats and dogs may travel in the cabin if the pet and its carrier together weigh no more than 8 kg. The pet fee is $100 each way.",
+         "rule": {"max_pet_weight_kg": 8, "pet_fee_usd": 100}}
+      ]
+    },
+    {
+      "clause_id": "PET-002", "doc_id": "AURELIA-CSP", "area": "pets", "title": "Pet limits",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Each passenger may bring 1 pet in the cabin, and no more than 4 pets are accepted in the cabin per flight.",
+         "rule": {"max_pets_per_passenger": 1, "max_pets_per_flight": 4}}
+      ]
+    },
+    {
+      "clause_id": "PET-003", "doc_id": "AURELIA-CSP", "area": "pets", "title": "Service dogs",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Trained service dogs travel in the cabin free of charge. Documentation must be submitted at least 48 hours before departure.",
+         "rule": {"service_dog_fee_usd": 0, "documentation_notice_hours": 48}}
+      ]
+    },
+    {
+      "clause_id": "PET-004", "doc_id": "AURELIA-CSP", "area": "pets", "title": "Pets on long flights",
+      "versions": [
+        {"version_label": "v1", "bus_start": "2026-01-01", "bus_end": "9999-12-31",
+         "clause_text": "Pets are not accepted in the cabin on flights scheduled for more than 8 hours.",
+         "rule": {"max_flight_hours": 8}}
+      ]
+    }
+  ]
+}
