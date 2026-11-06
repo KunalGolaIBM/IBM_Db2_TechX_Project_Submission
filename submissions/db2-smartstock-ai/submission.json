@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "SmartStock AI: Food Waste & Inventory Optimizer with IBM Db2",
+    "slug": "db2-smartstock-ai",
+    "short_description": "An enterprise-grade food waste reduction and inventory optimization platform powered by IBM Db2, Machine Learning, and autonomous Multi-Agent AI.",
+    "category": "AI / RAG / Data Engineering / Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": ""
+  },
+  "team": {
+    "name": "Clover",
+    "members": [
+      {
+        "name": "Ashfin Prem",
+        "github": "www.github.com/ashfinashfi",
+        "email": "ashfin96a@gmail.com",
+        "role": "Developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker)",
+    "connector": "ibm_db / Python Docker integration / SQLAlchemy",
+    "features_used": [
+      "Relational Tables & Constraints (12 core relational tables)",
+      "FEFO (First-Expired, First-Out) Batch Tracking & Sorting",
+      "Transactional Stock Movements & Immutable Audit Logging",
+      "Dynamic SQL Analytics & Rollup Aggregations",
+      "Text-to-SQL Natural Language Query Engine with Read-Only Guards"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "Streamlit",
+      "LightGBM",
+      "Scikit-Learn",
+      "CrewAI",
+      "LangChain",
+      "Pandas"
+    ],
+    "ai_models": [
+      "LightGBM Spoilage Classifier & Regressor",
+      "Gradient Boosting / Random Forest Demand Forecaster",
+      "liquid/lfm2.5-1.2b (LM Studio / watsonx.ai compatible)"
+    ]
+  }
+}

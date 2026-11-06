@@ -1,0 +1,47 @@
+{
+  "features": [
+    "discount",
+    "holiday_flag",
+    "activity_flag",
+    "avg_temperature",
+    "avg_humidity",
+    "avg_wind_level",
+    "precpt"
+  ],
+  "best_model": "LightGBM Regressor",
+  "comparison": {
+    "Linear Regression (Baseline)": {
+      "mae": 0.919,
+      "rmse": 1.6663,
+      "r2": 0.2504,
+      "wape": 0.7763
+    },
+    "Random Forest Regressor": {
+      "mae": 0.7129,
+      "rmse": 1.197,
+      "r2": 0.6132,
+      "wape": 0.6022
+    },
+    "Gradient Boosting Regressor": {
+      "mae": 0.7006,
+      "rmse": 1.1977,
+      "r2": 0.6128,
+      "wape": 0.5918
+    },
+    "LightGBM Regressor": {
+      "mae": 0.6938,
+      "rmse": 1.1712,
+      "r2": 0.6297,
+      "wape": 0.5861
+    }
+  },
+  "feature_importance": {
+    "discount": 1152.0,
+    "avg_humidity": 516.0,
+    "precpt": 398.0,
+    "avg_temperature": 388.0,
+    "avg_wind_level": 318.0,
+    "holiday_flag": 102.0,
+    "activity_flag": 66.0
+  }
+}
