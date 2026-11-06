@@ -1,0 +1,140 @@
+"""API: validation, limits and headers (no Db2), then the Moffatt flow end to end on Db2."""
+
+from __future__ import annotations
+
+from datetime import date
+
+import pytest
+from fastapi.testclient import TestClient
+
+from asof.api import create_app
+from asof.assistant import AssistantAnswer
+from asof.config import Settings
+from asof.gate import HOLDING_REPLY, Gate, GateResult
+from asof.schemas import RewriteResult
+from fakes import ScriptedLLM, claims, judge, verdict
+
+OK = {"question": "Can I get the bereavement fare after I fly?", "draft_answer": "Yes, within 90 days.",
+      "as_of_date": "2026-03-10"}
+
+
+class FakeGate:
+    def __init__(self, released=True):
+        self.released, self.seen = released, []
+
+    def check(self, req):
+        self.seen.append(req)
+        return GateResult("rid", "PASS" if self.released else "ESCALATED", "NO_POLICY_CLAIMS",
+                          req.draft_answer if self.released else HOLDING_REPLY, [], [], None, 3, "fake:model",
+                          ledger_id=1 if self.released else None, released=self.released)
+
+
+class FakeAssistant:
+    def answer(self, question):
+        return AssistantAnswer("Yes, retroactively within 90 days.", ["FAQ-01"], 5)
+
+
+def client(gate=None, rate_limit=30) -> TestClient:
+    app = create_app(Settings(_env_file=None), gate=gate or FakeGate(), assistant=FakeAssistant(), rate_limit=rate_limit)
+    return TestClient(app)
+
+
+def test_valid_request_reaches_the_gate():
+    gate = FakeGate()
+    r = client(gate).post("/api/gate", json=OK)
+    assert r.status_code == 200 and r.json()["decision"] == "PASS"
+    assert gate.seen[0].as_of == date(2026, 3, 10) and gate.seen[0].doc_id == "AURELIA-CSP"
+
+
+@pytest.mark.parametrize("change", [
+    {"as_of_date": None},
+    {"as_of_date": "2019-12-31"},
+    {"as_of_date": "next tuesday"},
+    {"doc_id": "OTHER-AIRLINE"},
+    {"channel": "sms"},
+    {"draft_answer": ""},
+    {"draft_answer": "é" * 2001},          # 2001 characters but 4002 bytes
+    {"question": "hi\x00there"},
+    {"unexpected": "field"},
+])
+def test_invalid_input_is_rejected(change):
+    body = {k: v for k, v in {**OK, **change}.items() if v is not None}
+    assert client().post("/api/gate", json=body).status_code == 422
+
+
+def test_oversized_body_is_rejected():
+    r = client().post("/api/gate", content=b"{" + b" " * 70_000 + b"}", headers={"content-type": "application/json"})
+    assert r.status_code == 413
+
+
+def test_rate_limit_applies_to_llm_endpoints():
+    c = client(rate_limit=2)
+    codes = [c.post("/api/gate", json=OK).status_code for _ in range(3)]
+    assert codes == [200, 200, 429]
+
+
+def test_unrecorded_decision_is_not_released():
+    r = client(FakeGate(released=False)).post("/api/gate", json=OK)
+    assert r.status_code == 503 and r.json()["final_answer"] == HOLDING_REPLY and r.json()["released"] is False
+
+
+def test_security_headers():
+    h = client().post("/api/gate", json=OK).headers
+    assert h["x-content-type-options"] == "nosniff" and h["x-frame-options"] == "DENY"
+    assert "frame-ancestors 'none'" in h["content-security-policy"] and h["cache-control"] == "no-store"
+
+
+def test_assistant_endpoint_checks_the_draft():
+    gate = FakeGate()
+    r = client(gate).post("/api/assistant/ask", json={"question": "Bereavement after travel?", "as_of_date": "2026-03-10"})
+    assert r.status_code == 200 and r.json()["assistant"]["faq_ids"] == ["FAQ-01"]
+    assert gate.seen[0].draft_answer == "Yes, retroactively within 90 days."
+
+
+@pytest.mark.parametrize("path", ["/api/ledger/0", "/api/ledger/-1", "/api/ledger/abc", "/api/ledger?limit=500"])
+def test_ledger_paths_are_validated(path):
+    assert client().get(path).status_code == 422
+
+
+# ---- end to end on Db2 (scripted LLM, real retrieval, real ledger) -------------------------
+
+V1_QUOTE = "A bereavement fare cannot be applied retroactively once any part of the journey has been flown"
+RETRO = "You can apply for the bereavement discount retroactively within 90 days of ticket issue."
+
+
+@pytest.mark.db2
+def test_moffatt_flow_through_the_api(settings, embeddings, test_schema, app_conn):
+    from asof import db
+
+    rewrite = "Bereavement fares must be requested before travel begins and cannot be applied after you have flown."
+    llm = ScriptedLLM(
+        extract=[claims((RETRO, "bereavement", "deadline")),
+                 claims(("Bereavement fares must be requested before travel begins.", "bereavement", "procedure"))],
+        judge=[judge(verdict(1, "CONTRADICTED", "BRV-002", V1_QUOTE)),
+               judge(verdict(1, "SUPPORTED", "BRV-002", "Bereavement fares must be requested before travel begins"))],
+        rewrite=[RewriteResult(answer=rewrite)],
+    )
+    gate = Gate(llm, embeddings, lambda: db.connect(settings, "app"), test_schema)
+    app = create_app(settings, gate=gate, assistant=FakeAssistant(), schema=test_schema)
+    with TestClient(app) as c:
+        r = c.post("/api/assistant/ask", json={"question": "Can I get the bereavement fare after I fly?",
+                                               "as_of_date": "2026-03-10"})
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["decision"] == "CORRECTED" and body["final_answer"].startswith(rewrite)
+        first = body["claims"][0]
+        assert (first["clause_id"], first["clause_version"], first["verdict"]) == ("BRV-002", "v1", "CONTRADICTED")
+
+        entry = c.get(f"/api/ledger/{body['ledger_id']}").json()
+        assert entry["decision"] == "CORRECTED" and entry["as_of_date"] == "2026-03-10"
+        assert [(x["pass_no"], x["verdict"]) for x in entry["citations"]] == [(1, "CONTRADICTED"), (2, "SUPPORTED")]
+
+        assert c.get("/api/chain/verify").json()["status"] == "OK"
+        replay = c.get(f"/api/ledger/{body['ledger_id']}/replay").json()
+        assert replay["clauses"][0]["used"]["version_label"] == "v1"
+        assert c.get("/healthz").json()["db2"] == "ok"
+
+    with pytest.raises(db.DatabaseError) as err:  # and the app user still cannot touch the row
+        db.execute(app_conn, f"UPDATE {test_schema}.ANSWER_LEDGER SET DECISION = 'PASS' WHERE LEDGER_ID = ?",
+                   (body["ledger_id"],))
+    assert err.value.sqlstate == "42501"

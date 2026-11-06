@@ -11,6 +11,18 @@ from asof.embeddings import get_embeddings
 TEST_SCHEMA = "ASOF_TEST"
 
 
+def pytest_collection_modifyitems(config, items):
+    """Tests that call a real LLM run only when asked: ASOF_RUN_LLM_TESTS=1 pytest -m llm"""
+    import os
+
+    if os.environ.get("ASOF_RUN_LLM_TESTS") == "1":
+        return
+    skip = pytest.mark.skip(reason="calls a real LLM; set ASOF_RUN_LLM_TESTS=1 to run")
+    for item in items:
+        if "llm" in item.keywords:
+            item.add_marker(skip)
+
+
 @pytest.fixture(scope="session")
 def settings() -> Settings:
     return Settings()
