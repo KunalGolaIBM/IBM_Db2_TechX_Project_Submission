@@ -57,5 +57,6 @@ def test_summary_metrics():
     recs = [_rec("a", True, "PASS"), _rec("a", True, "CORRECTED"), _rec("b", False, "PASS", cited=False),
             _rec("b", False, "CORRECTED", overrides=1), _rec("b", False, "ESCALATED", cited=None)]
     o = summarize(recs)["overall"]
-    assert o["false_allow_rate"] == round(1 / 3, 4) and o["false_block_rate"] == 0.5
+    assert o["false_allow_rate"] == round(1 / 3, 6) and o["false_block_rate"] == 0.5
+    assert (o["false_allows"], o["wrong_drafts"], o["false_blocks"], o["correct_drafts"]) == (1, 3, 1, 2)
     assert o["safe_rate"] == 0.6 and o["citation_accuracy"] == 0.75 and o["rule_overrides"] == 1

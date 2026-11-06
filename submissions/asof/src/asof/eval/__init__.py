@@ -113,7 +113,7 @@ def score(case: Case, result) -> dict[str, Any]:
 
 
 def _rate(num: int, den: int) -> float | None:
-    return None if den == 0 else round(num / den, 4)
+    return None if den == 0 else round(num / den, 6)
 
 
 def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
@@ -124,6 +124,8 @@ def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
         lat = sorted(r["latency_ms"] for r in rs) or [0]
         return {
             "n": len(rs),
+            "wrong_drafts": len(bad), "false_allows": sum(r["false_allow"] for r in bad),
+            "correct_drafts": len(good), "false_blocks": sum(r["false_block"] for r in good),
             "false_allow_rate": _rate(sum(r["false_allow"] for r in bad), len(bad)),
             "false_block_rate": _rate(sum(r["false_block"] for r in good), len(good)),
             "safe_rate": _rate(sum(r["safe"] for r in rs), len(rs)),
