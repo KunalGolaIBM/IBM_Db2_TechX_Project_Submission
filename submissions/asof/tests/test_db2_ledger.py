@@ -48,7 +48,8 @@ def test_app_user_appends_and_reads_back(app_conn, test_schema):
     a = ledger.append(app_conn, entry(), test_schema)
     got = ledger.get_entry(app_conn, a.ledger_id, test_schema)
     assert got["row_hash"] == a.row_hash and got["decision"] == "ESCALATED"
-    assert [(c["pass_no"], c["claim_no"], c["verdict"]) for c in got["citations"]] == [(1, 1, "CONTRADICTED"), (1, 2, "NOT_COVERED")]
+    got_citations = [(c["pass_no"], c["claim_no"], c["verdict"]) for c in got["citations"]]
+    assert got_citations == [(1, 1, "CONTRADICTED"), (1, 2, "NOT_COVERED")]
     assert got["citations"][0]["clause_bus_start"] == date(2026, 1, 1)
     assert ledger.verify_chain(app_conn, test_schema).status == "OK"
 

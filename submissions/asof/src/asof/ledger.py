@@ -176,7 +176,8 @@ def replay(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCHEMA)
         used = one(db.query(conn, SQL_CLAUSE_USED, (cid, c["clause_bus_start"], c["clause_sys_start"])))
         then = one(db.query(conn, SQL_CLAUSE_THEN, (entry["created_at"], entry["as_of_date"], cid)))
         now = one(db.query(conn, SQL_CLAUSE_NOW, (entry["as_of_date"], cid)))
-        changed = now is None or used is None or (now["version_label"], now["clause_text"]) != (used["version_label"], used["clause_text"])
+        changed = (now is None or used is None
+                   or (now["version_label"], now["clause_text"]) != (used["version_label"], used["clause_text"]))
         clauses.append({"clause_id": cid, "used": used, "held_at_decision": then, "in_force_now": now,
                         "status": "CHANGED_SINCE_DECISION" if changed else "UNCHANGED"})
     return {"ledger_id": ledger_id, "created_at": entry["created_at"], "as_of_date": entry["as_of_date"],

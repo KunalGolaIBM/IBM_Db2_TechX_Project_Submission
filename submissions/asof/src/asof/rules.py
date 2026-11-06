@@ -35,17 +35,22 @@ _LIMIT_BEFORE = re.compile(
 )
 # After the cue only a negated verb counts ("requests after travel aren't accepted");
 # "without"/"no" there usually qualify something else ("after travel, without a fee").
-_VERB_NEGATION = re.compile(r"\b(?:is|are|was|were|will|can|could|do|does)\s+not\b|\b(?:isn't|aren't|wasn't|weren't|won't|can't|cannot|doesn't|don't)\b", re.I)
+_VERB_NEGATION = re.compile(r"\b(?:is|are|was|were|will|can|could|do|does)\s+not\b"
+                            r"|\b(?:isn't|aren't|wasn't|weren't|won't|can't|cannot|doesn't|don't)\b", re.I)
 _NEGATION = re.compile(r"\b(not|cannot|can ?not|no|never|none|without|unable|ineligible|nor)\b|n't\b", re.I)
-_FREE = re.compile(r"\b(free(?: of charge)?|no (?:change )?(?:fee|charge|cost)|at no (?:extra )?cost|without charge|no extra cost)\b", re.I)
+_FREE = re.compile(r"\b(free(?: of charge)?|no (?:change )?(?:fee|charge|cost)|at no (?:extra )?cost"
+                   r"|without charge|no extra cost)\b", re.I)
 
 _PATTERNS: list[tuple[str, re.Pattern]] = [
     ("usd", re.compile(r"\$\s?(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)", re.I)),
     ("usd", re.compile(rf"\b{_NUM_STRICT}\s?(?:dollars|usd)\b", re.I)),
     ("pct", re.compile(r"\b(\d+(?:\.\d+)?)\s?(?:%|percent\b)", re.I)),
-    ("duration", re.compile(rf"\b{_NUM}[\s-]*(business[\s-]days?|working[\s-]days?|days?|hours?|hrs?|weeks?|months?|years?)\b", re.I)),
+    ("duration", re.compile(rf"\b{_NUM}[\s-]*(business[\s-]days?|working[\s-]days?|days?|hours?|hrs?|weeks?|months?"
+                            r"|years?)\b", re.I)),
     ("kg", re.compile(rf"\b{_NUM_STRICT}\s?(?:kg|kgs|kilograms?|kilos?)\b", re.I)),
-    ("count", re.compile(rf"\b{_NUM_STRICT}\s+((?:[a-z-]+\s+){{0,2}}?)(passengers?|people|persons?|travell?ers?|credits?|pets?|animals?|items?|characters?|letters?)\b", re.I)),
+    ("count", re.compile(rf"\b{_NUM_STRICT}\s+((?:[a-z-]+\s+){{0,2}}?)"
+                         r"(passengers?|people|persons?|travell?ers?|credits?|pets?|animals?|items?|characters?|letters?)\b",
+                         re.I)),
 ]
 _RELATIVE = re.compile(r"\b(additional|other|more|extra|further|accompanying)\b", re.I)
 _NOUNS = {"passenger": "passenger", "people": "passenger", "person": "passenger", "traveler": "passenger",
@@ -60,13 +65,15 @@ _SITUATION_UNITS = {"delay_hours": "hours"}
 # How claims typically express each permission. A cue in a negated phrase means False.
 _FLAG_CUES: dict[str, re.Pattern] = {
     "retroactive_allowed": re.compile(
-        r"retroactiv|after (?:you(?:'ve| have)? )?(?:travel|fl(?:y|ew|own)|complet)|after (?:your|the) (?:trip|flight|journey|travel)"
+        r"retroactiv|after (?:you(?:'ve| have)? )?(?:travel|fl(?:y|ew|own)|complet)"
+        r"|after (?:your|the) (?:trip|flight|journey|travel)"
         r"|once (?:you(?:'ve| have) )?(?:travel|flown|flew)|already (?:travel|flown|flew)", re.I),
     "request_before_travel_required": re.compile(
         r"(?:must|have to|need to|only)\b.{0,30}\bbefore (?:you )?(?:travel|fly|departure|the (?:trip|flight|journey))", re.I),
     "name_change_allowed": re.compile(r"transfer|name change|change the name|to (?:another|someone else|a friend)", re.I),
     "transfer_allowed": re.compile(r"transfer|to (?:another (?:person|passenger)|someone else|a friend)", re.I),
-    "cash_out_allowed": re.compile(r"cash(?: it| them)? out|cash value|exchang\w*(?: it| them)? for (?:cash|money|a refund)|in cash|as cash", re.I),
+    "cash_out_allowed": re.compile(r"cash(?: it| them)? out|cash value|exchang\w*(?: it| them)? for (?:cash|money|a refund)"
+                                   r"|in cash|as cash", re.I),
     "changes_allowed": re.compile(r"\b(?:chang|upgrad|modif)", re.I),
     "compensation_allowed": re.compile(r"compensat|qualif|entitled|eligible for (?:a )?(?:payment|compensation)", re.I),
     "airport_booking_allowed": re.compile(r"\bairport", re.I),

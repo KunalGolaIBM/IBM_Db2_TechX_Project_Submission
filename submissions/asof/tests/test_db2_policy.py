@@ -74,7 +74,8 @@ def test_rule_json_must_be_valid(admin_conn, test_schema):
         db.execute(admin_conn, "INSERT INTO POLICY_CLAUSE (CLAUSE_ID, DOC_ID, AREA, TITLE, VERSION_LABEL, "
                                "CLAUSE_TEXT, RULE_JSON, EMBEDDING, BUS_START, BUS_END) VALUES "
                                "(?, ?, ?, ?, ?, ?, ?, VECTOR(?, 384, FLOAT32), ?, ?)",
-                   ("TST-001", DOC, "pets", "t", "v1", "x", "{not json", db.vector_literal([0.0] * DIM), "2026-01-01", "2026-02-01"))
+                   ("TST-001", DOC, "pets", "t", "v1", "x", "{not json", db.vector_literal([0.0] * DIM),
+                    "2026-01-01", "2026-02-01"))
     admin_conn.rollback()
     assert err.value.sqlstate == "23513"
 
@@ -86,7 +87,8 @@ def test_overlapping_versions_are_rejected_by_db2(admin_conn, test_schema):
         db.execute(admin_conn, "INSERT INTO POLICY_CLAUSE (CLAUSE_ID, DOC_ID, AREA, TITLE, VERSION_LABEL, "
                                "CLAUSE_TEXT, RULE_JSON, EMBEDDING, BUS_START, BUS_END) VALUES "
                                "(?, ?, ?, ?, ?, ?, ?, VECTOR(?, 384, FLOAT32), ?, ?)",
-                   ("BRV-002", DOC, "bereavement", "t", "v9", "x", "{}", db.vector_literal([0.0] * DIM), "2026-04-01", "2026-06-01"))
+                   ("BRV-002", DOC, "bereavement", "t", "v9", "x", "{}", db.vector_literal([0.0] * DIM),
+                    "2026-04-01", "2026-06-01"))
     admin_conn.rollback()
     assert err.value.sqlstate == "23505"
 

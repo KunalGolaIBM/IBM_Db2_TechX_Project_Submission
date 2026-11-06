@@ -12,7 +12,7 @@ def test_benchmark_data_is_deterministic_unit_length_and_half_in_force():
     rows, queries = vectorbench.make_data(200, 5)
     again, _ = vectorbench.make_data(200, 5)
     assert rows == again and len(rows) == 200 and len(queries) == 5
-    for _, start, end, vec in rows[:20]:
+    for _, _start, _end, vec in rows[:20]:
         v = json.loads(vec)
         assert len(v) == 384 and abs(math.sqrt(sum(x * x for x in v)) - 1) < 1e-3
     in_force = [r for r in rows if r[1] <= vectorbench.ON < r[2]]

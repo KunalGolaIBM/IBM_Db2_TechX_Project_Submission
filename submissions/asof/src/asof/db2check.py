@@ -152,8 +152,10 @@ def check_history(c: Ctx) -> str:
 
 def check_insert_vectors(c: Ctx) -> str:
     rows = [
-        ("BRV-002", V1_TEXT, json.dumps({"retroactive_allowed": False, "request_window_days": 0}), _vec(1), "2026-01-01", "9999-12-31"),
-        ("BAG-001", "The first checked bag costs $35.", json.dumps({"first_bag_fee_usd": 35}), _vec(2), "2026-01-01", "9999-12-31"),
+        ("BRV-002", V1_TEXT, json.dumps({"retroactive_allowed": False, "request_window_days": 0}), _vec(1),
+         "2026-01-01", "9999-12-31"),
+        ("BAG-001", "The first checked bag costs $35.", json.dumps({"first_bag_fee_usd": 35}), _vec(2),
+         "2026-01-01", "9999-12-31"),
     ]
     for r in rows:
         c.x("INSERT INTO CLAUSE (CLAUSE_ID, CLAUSE_TEXT, RULE_JSON, EMBEDDING, BUS_START, BUS_END) "
@@ -175,7 +177,8 @@ def check_portion_update(c: Ctx) -> str:
     time.sleep(1.1)
     c.x("UPDATE CLAUSE FOR PORTION OF BUSINESS_TIME FROM ? TO ? "
         "SET CLAUSE_TEXT = ?, RULE_JSON = ?, EMBEDDING = VECTOR(?, 384, FLOAT32) WHERE CLAUSE_ID = ?",
-        ("2026-05-01", "9999-12-31", V2_TEXT, json.dumps({"retroactive_allowed": True, "request_window_days": 90}), _vec(3), "BRV-002"))
+        ("2026-05-01", "9999-12-31", V2_TEXT, json.dumps({"retroactive_allowed": True, "request_window_days": 90}),
+         _vec(3), "BRV-002"))
     c.conn.commit()
     rows = c.q("SELECT BUS_START, BUS_END, CLAUSE_TEXT FROM CLAUSE WHERE CLAUSE_ID = ? ORDER BY BUS_START", ("BRV-002",))
     assert [(r[0], r[1]) for r in rows] == [(date(2026, 1, 1), date(2026, 5, 1)), (date(2026, 5, 1), date(9999, 12, 31))], rows
@@ -233,7 +236,8 @@ def check_json_value(c: Ctx) -> str:
 
 
 def check_json_table(c: Ctx) -> str:
-    rows = c.q("SELECT j.DAYS FROM CLAUSE c, JSON_TABLE(c.RULE_JSON, 'strict $' COLUMNS (DAYS INTEGER PATH '$.request_window_days') "
+    rows = c.q("SELECT j.DAYS FROM CLAUSE c, "
+               "JSON_TABLE(c.RULE_JSON, 'strict $' COLUMNS (DAYS INTEGER PATH '$.request_window_days') "
                "ERROR ON ERROR) AS j WHERE c.CLAUSE_ID = ? ORDER BY j.DAYS", ("BRV-002",))
     assert rows == [(0,), (90,)], rows
     return "rule parameters as relational columns"

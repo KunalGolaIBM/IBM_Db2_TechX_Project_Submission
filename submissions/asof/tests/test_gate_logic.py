@@ -5,13 +5,13 @@ from __future__ import annotations
 from datetime import date, datetime
 
 import pytest
+from fakes import ScriptedLLM, ZeroEmbeddings, claims, clause, judge, verdict
 
 from asof import gate as gate_mod
 from asof.gate import HOLDING_REPLY, Gate, GateRequest, quote_is_verbatim
 from asof.ledger import Appended
 from asof.llm import LLMError
 from asof.schemas import RewriteResult
-from fakes import ScriptedLLM, ZeroEmbeddings, claims, clause, judge, verdict
 
 MARCH, JUNE, JULY = date(2026, 3, 10), date(2026, 6, 2), date(2026, 7, 15)
 RETRO = "You can apply for the bereavement discount retroactively within 90 days of ticket issue."
@@ -125,7 +125,8 @@ def test_contradiction_with_an_uncovered_detail_is_rewritten(world):
 
 
 def test_missing_verdict_escalates(world):
-    llm = ScriptedLLM(extract=[claims((RETRO, "bereavement", "deadline"), ("Send a death certificate.", "bereavement", "procedure"))],
+    llm = ScriptedLLM(extract=[claims((RETRO, "bereavement", "deadline"),
+                                      ("Send a death certificate.", "bereavement", "procedure"))],
                       judge=[judge(verdict(1, "SUPPORTED", "BRV-002", V2_QUOTE))])
     r = make_gate(llm).check(req(on=JUNE))
     assert r.claims[1].verdict == "NOT_COVERED" and r.decision == "ESCALATED"

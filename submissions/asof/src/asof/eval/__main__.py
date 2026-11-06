@@ -18,8 +18,7 @@ import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 
 from .. import db, schema, seed
 from ..config import PROJECT_ROOT, get_settings
@@ -147,7 +146,7 @@ def main(argv: list[str] | None = None) -> int:
               f"{rec['latency_ms'] / 1000:5.1f}s" + ("  FALSE ALLOW" if rec["false_allow"] else ""), flush=True)
         return rec
 
-    started = datetime.now(timezone.utc)
+    started = datetime.now(UTC)
     t0 = time.monotonic()
     with ThreadPoolExecutor(max_workers=workers) as pool:
         records = list(pool.map(one, cases))
@@ -165,7 +164,8 @@ def main(argv: list[str] | None = None) -> int:
         print("(--limit run: results not written)")
         return 0
 
-    result = {"split": args.split, "provider": provider, "model": llm.model_name, "started_at": started.isoformat(timespec="seconds"),
+    result = {"split": args.split, "provider": provider, "model": llm.model_name,
+              "started_at": started.isoformat(timespec="seconds"),
               "git_commit": _git_commit(), "prompt_version": PROMPT_VERSION, "cases_sha256": split_sha256(args.split),
               "workers": workers, "wall_time_s": wall, "ledger_chain": chain.status, "summary": summary, "records": records}
     OUT_DIR.mkdir(parents=True, exist_ok=True)

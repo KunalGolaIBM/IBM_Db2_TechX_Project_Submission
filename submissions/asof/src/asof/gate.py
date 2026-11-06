@@ -34,10 +34,11 @@ from langchain_core.embeddings import Embeddings
 
 from . import db, ledger
 from .llm import LLMClient, LLMError
-from .prompts import PROMPT_VERSION, judge_messages, rewrite_messages, extract_messages
+from .prompts import PROMPT_VERSION, extract_messages, judge_messages, rewrite_messages
 from .redact import redact
 from .retriever import RetrievedClause, clauses_as_of
-from .rules import RuleClause, check as rule_check
+from .rules import RuleClause
+from .rules import check as rule_check
 from .schemas import MAX_CLAIMS, ExtractionResult, JudgeResult, RewriteResult
 
 log = logging.getLogger(__name__)

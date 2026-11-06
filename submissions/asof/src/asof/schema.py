@@ -130,8 +130,10 @@ def _drop_code_objects(conn: ibm_db_dbi.Connection, schema: str) -> None:
     validate_schema(schema)
     q = lambda sql: [r[0].strip() for r in db.query(conn, sql, (schema,))]  # noqa: E731
     pending = (
-        [f"DROP VIEW {db.ident(schema)}.{db.ident(n)}" for n in q("SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'V'")]
-        + [f"DROP TRIGGER {db.ident(schema)}.{db.ident(n)}" for n in q("SELECT TRIGNAME FROM SYSCAT.TRIGGERS WHERE TRIGSCHEMA = ?")]
+        [f"DROP VIEW {db.ident(schema)}.{db.ident(n)}"
+         for n in q("SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'V'")]
+        + [f"DROP TRIGGER {db.ident(schema)}.{db.ident(n)}"
+           for n in q("SELECT TRIGNAME FROM SYSCAT.TRIGGERS WHERE TRIGSCHEMA = ?")]
         + [f"DROP SPECIFIC PROCEDURE {db.ident(schema)}.{db.ident(n)}" for n in q(
             "SELECT SPECIFICNAME FROM SYSCAT.ROUTINES WHERE ROUTINESCHEMA = ? AND ROUTINETYPE = 'P'")]
         + [f"DROP SPECIFIC FUNCTION {db.ident(schema)}.{db.ident(n)}" for n in q(

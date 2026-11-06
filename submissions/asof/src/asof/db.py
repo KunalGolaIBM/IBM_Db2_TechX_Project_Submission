@@ -101,7 +101,7 @@ def connection(settings: Settings, role: Role = "app", autocommit: bool = False)
     finally:
         try:
             conn.close()
-        except Exception:  # noqa: BLE001 - closing a broken connection must not mask the real error
+        except Exception:  # noqa: BLE001, S110 - closing a broken connection must not mask the real error
             pass
 
 
@@ -176,7 +176,7 @@ def string_literal(value: str) -> str:
     return "'" + value + "'"
 
 
-_bound_schema: "weakref.WeakKeyDictionary[ibm_db_dbi.Connection, str]" = weakref.WeakKeyDictionary()
+_bound_schema: weakref.WeakKeyDictionary[ibm_db_dbi.Connection, str] = weakref.WeakKeyDictionary()
 
 
 def use_schema(conn: ibm_db_dbi.Connection, schema: str = SCHEMA) -> None:

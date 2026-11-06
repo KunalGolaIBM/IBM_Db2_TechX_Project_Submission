@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
+from fakes import ScriptedLLM, claims, judge, verdict
 from fastapi.testclient import TestClient
 
 from asof.api import create_app
@@ -12,7 +13,6 @@ from asof.assistant import AssistantAnswer
 from asof.config import Settings
 from asof.gate import HOLDING_REPLY, Gate, GateResult
 from asof.schemas import RewriteResult
-from fakes import ScriptedLLM, claims, judge, verdict
 
 OK = {"question": "Can I get the bereavement fare after I fly?", "draft_answer": "Yes, within 90 days.",
       "as_of_date": "2026-03-10"}

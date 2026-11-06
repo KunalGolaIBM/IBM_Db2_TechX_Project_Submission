@@ -30,7 +30,7 @@ def main() -> int:
     if not (NAME.match(container) and NAME.match(database)):
         print("DB2_CONTAINER or DB2_DATABASE is not a plain name", file=sys.stderr)
         return 1
-    tmp = "/tmp/asof_db2look.ddl"
+    tmp = "/tmp/asof_db2look.ddl"  # noqa: S108 - a path inside the Db2 container, not on this machine
     cmd = ["docker", "exec", "-u", "db2inst1", container, "bash", "-lc",
            f"db2look -d {database} -z ASOF -e -o {tmp} > /dev/null"]
     subprocess.run(cmd, check=True, timeout=300)

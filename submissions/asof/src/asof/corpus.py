@@ -51,7 +51,7 @@ class Clause(_Strict):
     @model_validator(mode="after")
     def _no_overlap(self) -> Clause:
         ordered = sorted(self.versions, key=lambda v: v.bus_start)
-        for prev, nxt in zip(ordered, ordered[1:]):
+        for prev, nxt in zip(ordered, ordered[1:], strict=False):
             if nxt.bus_start < prev.bus_end:
                 raise ValueError(f"{self.clause_id}: versions {prev.version_label} and {nxt.version_label} overlap")
         if len({v.version_label for v in self.versions}) != len(self.versions):

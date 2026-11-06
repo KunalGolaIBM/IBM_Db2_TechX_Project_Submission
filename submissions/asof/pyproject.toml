@@ -40,3 +40,21 @@ markers = [
   "llm: calls the configured LLM provider (skipped unless ASOF_RUN_LLM_TESTS=1)",
   "network: Db2 calls the remote embedding endpoint (skipped unless ASOF_RUN_NETWORK_TESTS=1)",
 ]
+
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, isort, bugbear, pyupgrade and bandit (security) rules. S608 (SQL built
+# from strings) stays on; it agrees with tests/test_sql_safety.py.
+select = ["E", "F", "W", "I", "B", "UP", "S"]
+ignore = [
+  "S101",  # assert is how pytest checks
+  "S311",  # random is used for synthetic benchmark data, never for secrets
+  "S603", "S607",  # subprocess with argument lists to docker and db2 tooling, no shell
+  "B008",  # FastAPI dependency defaults
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106"]  # dummy credentials in test fixtures

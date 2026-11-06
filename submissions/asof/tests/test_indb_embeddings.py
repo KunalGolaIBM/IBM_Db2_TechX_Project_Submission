@@ -12,7 +12,6 @@ import pytest
 from asof import db, indb, policy, schema, seed
 from asof.config import Settings
 
-
 # --- no database needed -------------------------------------------------------------------
 
 @pytest.mark.parametrize("url, documented", [
@@ -66,7 +65,7 @@ def indb_world(admin_conn, embeddings, settings):
 
 
 def _cos(a, b):
-    return sum(x * y for x, y in zip(a, b)) / math.sqrt(sum(x * x for x in a) * sum(y * y for y in b))
+    return sum(x * y for x, y in zip(a, b, strict=True)) / math.sqrt(sum(x * x for x in a) * sum(y * y for y in b))
 
 
 @pytest.mark.db2

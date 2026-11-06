@@ -25,8 +25,8 @@ import sys
 import tempfile
 import time
 from datetime import date
-from urllib.parse import urlparse
 from pathlib import Path
+from urllib.parse import urlparse
 
 from . import db, indb, schema, seed
 from .config import DEFAULT_ENV_FILE, ConfigError, Settings, get_settings
@@ -275,12 +275,14 @@ def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False
         n_pub = seed.seed_published_answers(conn, target)
         n_faq = seed.seed_faq(conn, embeddings, target)
         say(f"  inserted {n_clauses} clause versions, {n_pub} help-centre answers, {n_faq} FAQ entries"
-            + (", chain head" if n_head else "") + (" (nothing new: already seeded)" if not any((n_clauses, n_pub, n_faq, n_head)) else ""))
+            + (", chain head" if n_head else "")
+            + (" (nothing new: already seeded)" if not any((n_clauses, n_pub, n_faq, n_head)) else ""))
 
         say("7/9 Least-privilege grants")
         g = schema.apply_grants(conn, settings.asof_app_user, settings.asof_editor_user, target)
         say(f"  {g['applied']} grants and revokes applied"
-            + (f"; PUBLIC already lacked {g['already_revoked']} of the 4 default database privileges" if g["already_revoked"] else ""))
+            + (f"; PUBLIC already lacked {g['already_revoked']} of the 4 default database privileges"
+               if g["already_revoked"] else ""))
 
     say("8/9 Optimizer statistics (RUNSTATS)")
     say("  " + collect_statistics(settings, target))

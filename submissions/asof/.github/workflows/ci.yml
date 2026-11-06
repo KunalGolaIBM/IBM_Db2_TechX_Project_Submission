@@ -1,0 +1,106 @@
+# AsOf CI. Lives in submissions/asof/.github so it runs in the standalone repository
+# (github.com/JustJay7/asof), where this folder is the root. It does nothing in the hackathon
+# submission repository, whose own workflow validates every submission folder.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+  HF_HUB_DISABLE_TELEMETRY: "1"
+
+jobs:
+  quality:
+    name: Lint, unit tests, secret check, dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - name: Install (CPU-only torch, everything else pinned by requirements.lock)
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt -c requirements.lock
+          pip install -e . --no-deps
+          pip install -r requirements-dev.txt
+      - name: Lint (ruff, including its SQL-injection rule)
+        run: ruff check src tests scripts
+      - name: Secret check over every tracked file
+        run: python scripts/check_secrets.py --all
+      - name: Dependency audit (pip-audit over all locked packages)
+        run: python scripts/audit_deps.py
+      - name: Unit tests (no database)
+        run: pytest -q -m "not db2"
+
+  db2:
+    name: Db2 integration on x86 Linux (IBM's stock image, README path B)
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - name: Cache the embedding model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-all-MiniLM-L6-v2
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt -c requirements.lock
+          pip install -e . --no-deps
+      - name: Configure (.env from .env.example, random owner password)
+        run: |
+          cp .env.example .env
+          PW="$(python -c 'import secrets; print(secrets.token_hex(12))')"
+          echo "::add-mask::$PW"
+          sed -i "s/^DB2_PASSWORD=.*/DB2_PASSWORD=$PW/" .env
+          sed -i "s/^OPENROUTER_API_KEY=.*/OPENROUTER_API_KEY=/" .env
+      - name: Start Db2 exactly as README path B does
+        run: |
+          docker run -itd --name db2server --privileged=true -p 127.0.0.1:50000:50000 \
+            -e LICENSE=accept -e DBNAME=testdb \
+            -e DB2INST1_PASSWORD="$(sed -n 's/^DB2_PASSWORD=//p' .env)" \
+            -v db2data:/database icr.io/db2_community/db2:12.1.5.0
+      - name: Wait until testdb accepts connections (up to 30 minutes)
+        run: |
+          for i in $(seq 1 120); do
+            if docker exec db2server su - db2inst1 -c "db2 connect to testdb > /dev/null && db2 terminate > /dev/null"; then
+              echo "Db2 ready after $((i * 15)) s"; exit 0
+            fi
+            sleep 15
+          done
+          docker logs db2server | tail -80
+          exit 1
+      - name: Db2 feature check
+        run: python -m asof.db2check
+      - name: Setup (schema, users in the container, seed, grants, self-check)
+        run: python -m asof.setup
+      - name: All tests, including Db2 integration
+        run: pytest -q
+      - name: Access plans for the hot queries
+        run: python -m asof.explain
+      - name: Db2 log on failure
+        if: failure()
+        run: docker logs db2server 2>&1 | tail -150
