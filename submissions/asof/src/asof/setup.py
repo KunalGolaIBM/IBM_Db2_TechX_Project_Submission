@@ -1,0 +1,224 @@
+"""One-command setup: users, schema, seed data, grants, and a check that it all works.
+
+    python -m asof.setup            # safe to re-run; creates only what is missing
+    python -m asof.setup --reset    # drop the ASOF schema first (asks for confirmation)
+
+Steps:
+ 1. Generate passwords for the two least-privilege users if .env has none (never printed).
+ 2. Wait until Db2 accepts connections as the owner.
+ 3. Create the OS users inside the Db2 container (Db2 authenticates against the OS).
+ 4. Create tables, history table, indexes, triggers and procedures in schema ASOF.
+ 5. Seed the fictional Aurelia Air policy, help-centre answers and FAQ knowledge base.
+ 6. Revoke Db2's PUBLIC defaults and grant each user only what it needs.
+ 7. Verify as the runtime user: the as-of query works and a ledger UPDATE is refused.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import secrets
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+from datetime import date
+from pathlib import Path
+
+from . import db, schema, seed
+from .config import DEFAULT_ENV_FILE, ConfigError, Settings, get_settings
+from .embeddings import get_embeddings
+from .retriever import clauses_as_of
+
+GENERATED_KEYS = ("ASOF_APP_PASSWORD", "ASOF_EDITOR_PASSWORD")
+DOCKER_TIMEOUT_S = 60
+
+
+class SetupError(RuntimeError):
+    pass
+
+
+def say(msg: str) -> None:
+    print(msg, flush=True)
+
+
+def ensure_generated_passwords(env_path: Path = DEFAULT_ENV_FILE) -> list[str]:
+    """Fill empty ASOF_*_PASSWORD keys in .env with strong random values. Returns the keys filled."""
+    if not env_path.is_file():
+        raise SetupError(f"{env_path} not found. Run: cp .env.example .env  (then set DB2_ADMIN_PASSWORD)")
+    lines = env_path.read_text(encoding="utf-8").splitlines()
+    filled: list[str] = []
+    seen: set[str] = set()
+    out: list[str] = []
+    for line in lines:
+        key = line.split("=", 1)[0].strip() if "=" in line and not line.lstrip().startswith("#") else None
+        if key in GENERATED_KEYS:
+            seen.add(key)
+            if not line.split("=", 1)[1].strip():
+                line = f"{key}={secrets.token_urlsafe(24)}"
+                filled.append(key)
+        out.append(line)
+    for key in GENERATED_KEYS:
+        if key not in seen:
+            out.append(f"{key}={secrets.token_urlsafe(24)}")
+            filled.append(key)
+    if filled:
+        fd, tmp = tempfile.mkstemp(dir=env_path.parent, prefix=".env.")
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(out) + "\n")
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, env_path)
+    return filled
+
+
+def wait_for_db2(settings: Settings, timeout_s: int = 300) -> None:
+    deadline = time.monotonic() + timeout_s
+    delay = 2.0
+    while True:
+        try:
+            with db.connection(settings, "admin") as conn:
+                say(f"  Db2 is up: {db.server_version(conn)}")
+                return
+        except db.DatabaseError as exc:
+            if exc.sqlstate == "08001" and "SQL30082N" in str(exc):
+                raise SetupError(f"{exc}\n  DB2_ADMIN_PASSWORD in .env does not match the Db2 instance.") from None
+            if time.monotonic() > deadline:
+                raise SetupError(f"Db2 not reachable after {timeout_s}s: {exc}") from None
+            say(f"  waiting for Db2 ({exc.sqlstate or 'no answer'}), retrying in {delay:.0f}s")
+            time.sleep(delay)
+            delay = min(delay * 1.5, 15)
+
+
+def _docker(args: list[str], stdin: str | None = None) -> subprocess.CompletedProcess:
+    return subprocess.run(["docker", *args], input=stdin, capture_output=True, text=True, timeout=DOCKER_TIMEOUT_S)
+
+
+def ensure_os_users(settings: Settings) -> bool:
+    """Create the two users inside the Db2 container and set their passwords from .env.
+
+    Passwords go to chpasswd on stdin, so they never show up in a process list.
+    Returns False (with instructions) when the container cannot be reached.
+    """
+    container = settings.db2_container
+    if shutil.which("docker") is None:
+        say("  WARNING: docker not found, so the Db2 users were not created automatically.")
+        return _manual_user_help(settings)
+    state = _docker(["inspect", "-f", "{{.State.Running}}", container])
+    if state.returncode != 0 or state.stdout.strip() != "true":
+        say(f"  WARNING: Db2 container '{container}' is not running here (set DB2_CONTAINER in .env).")
+        return _manual_user_help(settings)
+    for user, secret in ((settings.asof_app_user, settings.asof_app_password),
+                         (settings.asof_editor_user, settings.asof_editor_password)):
+        if _docker(["exec", container, "id", "-u", user]).returncode != 0:
+            made = _docker(["exec", container, "useradd", "--no-create-home", "--shell", "/sbin/nologin", user])
+            if made.returncode != 0:
+                raise SetupError(f"useradd {user} failed in {container}: {made.stderr.strip()}")
+            say(f"  created OS user {user} in {container}")
+        pw = _docker(["exec", "-i", container, "chpasswd"], stdin=f"{user}:{secret.get_secret_value()}\n")  # type: ignore[union-attr]
+        if pw.returncode != 0:
+            raise SetupError(f"setting the password for {user} failed: {pw.stderr.strip()}")
+    say(f"  OS users {settings.asof_app_user} and {settings.asof_editor_user} ready (passwords from .env)")
+    return True
+
+
+def _manual_user_help(settings: Settings) -> bool:
+    say("  Db2 authenticates against operating-system users on the Db2 server. Create them there:")
+    for user, key in ((settings.asof_app_user, "ASOF_APP_PASSWORD"), (settings.asof_editor_user, "ASOF_EDITOR_PASSWORD")):
+        say(f"    useradd --no-create-home --shell /sbin/nologin {user} && passwd {user}   # password = {key} in .env")
+    say("  Setup continues; the grants work without the OS users, but the app cannot log in until they exist.")
+    return False
+
+
+def verify_least_privilege(settings: Settings, target: str) -> None:
+    """Prove the runtime user can read policy as of a date and cannot write anything."""
+    embeddings = get_embeddings(settings.embedding_model)
+    # The same claim, checked for two travel dates, must reach different versions of BRV-002.
+    vec = embeddings.embed_query("You can apply for the bereavement fare retroactively after you travel.")
+    refused: list[str] = []
+    with db.connection(settings, "app") as conn:
+        for day, want in ((date(2026, 3, 10), "v1"), (date(2026, 6, 2), "v2")):
+            found = {c.clause_id: c.version_label for c in clauses_as_of(conn, vec, day, "AURELIA-CSP", k=3, schema=target)}
+            if found.get("BRV-002") != want:
+                raise SetupError(f"as-of retrieval for {day} returned {found}, expected BRV-002 {want}")
+        say(f"  as {settings.asof_app_user}: 2026-03-10 -> BRV-002 v1, 2026-06-02 -> BRV-002 v2")
+        for sql in (f"UPDATE {target}.POLICY_CLAUSE SET CLAUSE_TEXT = 'x'",
+                    f"DELETE FROM {target}.ANSWER_LEDGER",
+                    f"CREATE TABLE {target}.SHOULD_NOT_EXIST (X INT)"):
+            try:
+                db.execute(conn, sql)
+                conn.rollback()
+                raise SetupError(f"{settings.asof_app_user} was allowed to run: {sql}")
+            except db.DatabaseError as exc:
+                conn.rollback()
+                if exc.sqlstate not in ("42501", "42502"):
+                    raise SetupError(f"unexpected error for {sql}: {exc}") from None
+                refused.append(f"{sql.split()[0]} {sql.split()[1] if sql.startswith('CREATE') else ''}".strip() + f" ({exc.sqlstate})")
+        say(f"  as {settings.asof_app_user}: refused " + ", ".join(refused))
+
+
+def run(reset: bool = False, target: str = db.SCHEMA) -> None:
+    schema.validate_schema(target)
+    say("1/7 Passwords for the least-privilege users")
+    filled = ensure_generated_passwords()
+    say(f"  generated {', '.join(filled)} and saved to .env (not shown)" if filled else "  already set in .env")
+    get_settings.cache_clear()
+    settings = get_settings()
+    settings.require("db2_admin_password", "asof_app_password", "asof_editor_password")
+
+    say("2/7 Db2 connection")
+    wait_for_db2(settings)
+
+    say("3/7 Operating-system users in the Db2 container")
+    users_ok = ensure_os_users(settings)
+
+    with db.connection(settings, "admin") as conn:
+        if reset:
+            say(f"  --reset: dropping schema {target}")
+            schema.drop(conn, target)
+        say(f"4/7 Schema {target}")
+        counts = schema.install(conn, target)
+        say(f"  {counts['created']} objects created, {counts['skipped']} already present")
+
+        say("5/7 Seed data (fictional Aurelia Air)")
+        embeddings = get_embeddings(settings.embedding_model)
+        n_clauses = seed.seed_policy(conn, embeddings, target)
+        n_head = seed.seed_chain_head(conn, target)
+        n_pub = seed.seed_published_answers(conn, target)
+        n_faq = seed.seed_faq(conn, embeddings, target)
+        say(f"  inserted {n_clauses} clause versions, {n_pub} help-centre answers, {n_faq} FAQ entries"
+            + (", chain head" if n_head else "") + (" (nothing new: already seeded)" if not any((n_clauses, n_pub, n_faq, n_head)) else ""))
+
+        say("6/7 Least-privilege grants")
+        g = schema.apply_grants(conn, settings.asof_app_user, settings.asof_editor_user, target)
+        say(f"  {g['applied']} grants and revokes applied"
+            + (f"; PUBLIC already lacked {g['already_revoked']} of the 4 default database privileges" if g["already_revoked"] else ""))
+
+    say("7/7 Verify as the runtime user")
+    if users_ok:
+        verify_least_privilege(settings, target)
+    else:
+        say("  skipped: create the OS users first (see above), then re-run setup")
+    say("\nSetup complete.")
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="python -m asof.setup", description=__doc__.split("\n\n")[0])
+    parser.add_argument("--reset", action="store_true", help="drop the ASOF schema and rebuild it (deletes the ledger)")
+    parser.add_argument("--yes", action="store_true", help="do not ask before --reset")
+    args = parser.parse_args(argv)
+    if args.reset and not args.yes:
+        answer = input("This deletes every ledger entry and policy change in schema ASOF. Type 'reset' to continue: ")
+        if answer.strip() != "reset":
+            say("Cancelled.")
+            return 1
+    try:
+        run(reset=args.reset)
+    except (SetupError, ConfigError, db.DatabaseError) as exc:
+        say(f"\nSETUP FAILED: {exc}")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
