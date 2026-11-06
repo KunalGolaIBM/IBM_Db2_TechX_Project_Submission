@@ -19,7 +19,7 @@ class ScriptedLLM:
         self.queues = {ExtractionResult: list(extract), JudgeResult: list(judge), RewriteResult: list(rewrite)}
         self.calls: list[tuple[type, list]] = []
 
-    def structured(self, schema, messages):
+    def structured(self, schema, messages, choices=None):
         self.calls.append((schema, messages))
         if not self.queues[schema]:
             raise LLMError(f"no scripted reply left for {schema.__name__}")

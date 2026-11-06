@@ -88,14 +88,40 @@ def test_deadline_is_hard_and_not_retried():
     assert runnable.calls == 1  # a timeout is final
 
 
-def test_strict_json_schema_for_hosted_providers_only():
+def test_strict_json_schema_for_hosted_providers():
     llm, _, chat = client([ok()], provider="openrouter")
     llm.structured(ExtractionResult, [("human", "x")])
     assert chat.structured_kwargs == {"method": "json_schema", "include_raw": True, "strict": True}
 
-    llm, _, chat = client([ok()], provider="ollama")
-    llm.structured(ExtractionResult, [("human", "x")])
-    assert "strict" not in chat.structured_kwargs
+
+def test_ollama_gets_a_length_bounded_grammar():
+    """A local model looped inside quoted_span until the output cap; maxLength stops that."""
+    from asof.llm import bounded_schema
+
+    schema = bounded_schema(JudgeResult)
+    verdict = schema["$defs"]["ClaimVerdict"]["properties"]
+    assert {"type": "string", "maxLength": 400} in verdict["quoted_span"]["anyOf"]
+    assert verdict["reason"]["maxLength"] == 400
+    assert "maxLength" not in verdict["verdict"]  # enums stay as they are
+
+
+def test_ollama_reply_is_parsed_and_validated():
+    from types import SimpleNamespace
+
+    class StubOllama:
+        def __init__(self, content):
+            self.content, self.formats = content, []
+
+        def bind(self, **kwargs):
+            self.formats.append(kwargs["format"])
+            return SimpleNamespace(invoke=lambda messages: SimpleNamespace(content=self.content, usage_metadata={}))
+
+    good = StubOllama('{"claims": []}')
+    result = LLMClient(good, "ollama", "stub", attempts=2, deadline_s=5).structured(ExtractionResult, [("human", "x")])
+    assert result.value.claims == [] and good.formats
+    bad = StubOllama('{"claims": [{"text": "unterminated')
+    with pytest.raises(LLMError, match="no valid ExtractionResult"):
+        LLMClient(bad, "ollama", "stub", attempts=2, deadline_s=5).structured(ExtractionResult, [("human", "x")])
 
 
 def test_openrouter_requires_key():
@@ -128,3 +154,19 @@ def test_ollama_requests_are_not_streamed():
     params = local.chat_model._chat_params([HumanMessage("hi")])
     assert params["stream"] is False
     assert params["options"]["num_predict"] == Settings(_env_file=None).llm_max_output_tokens
+
+
+def test_choices_restrict_fields_in_the_ollama_grammar():
+    from asof.llm import bounded_schema
+
+    schema = bounded_schema(JudgeResult, choices={"clause_id": ["BRV-002"], "quoted_span": ["A sentence.", "Another one."]})
+    props = schema["$defs"]["ClaimVerdict"]["properties"]
+    assert props["clause_id"]["anyOf"] == [{"type": "string", "enum": ["BRV-002"]}, {"type": "null"}]
+    assert props["quoted_span"]["anyOf"][0]["enum"] == ["A sentence.", "Another one."]
+    assert props["reason"]["maxLength"] == 400
+
+
+def test_hosted_providers_ignore_choices():
+    llm, _, chat = client([ok()], provider="openrouter")
+    llm.structured(ExtractionResult, [("human", "x")], choices={"text": ["x"]})
+    assert chat.structured_kwargs == {"method": "json_schema", "include_raw": True, "strict": True}

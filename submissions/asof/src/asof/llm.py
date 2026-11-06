@@ -94,18 +94,24 @@ class LLMClient:
         except Exception as exc:  # noqa: BLE001
             raise LLMError(f"{self.info} call failed: {type(exc).__name__}") from exc
 
-    def structured(self, schema: type[T], messages: list[tuple[str, str]]) -> LLMResult[T]:
+    def structured(self, schema: type[T], messages: list[tuple[str, str]],
+                   choices: dict[str, list[str]] | None = None) -> LLMResult[T]:
         """Call the model and parse its reply into `schema`, or raise LLMError.
+
+        `choices` maps a field name to the only values it may take. For a local model the
+        decoding grammar enforces them (see bounded_schema); hosted models are steered by the
+        prompt and checked by the gate afterwards, as before.
 
         Each attempt runs under a hard wall-clock deadline, because client read timeouts do
         not fire while a model keeps streaming (a local model stuck in a generation loop
         does exactly that). A timeout is final; only malformed output or a transport error
         gets one more attempt.
         """
-        kwargs: dict = {"method": "json_schema", "include_raw": True}
-        if self.provider != "ollama":
-            kwargs["strict"] = True
-        runnable = self.chat_model.with_structured_output(schema, **kwargs)
+        if self.provider == "ollama":
+            runnable = _bounded_ollama_runnable(self.chat_model, schema, choices)
+        else:
+            runnable = self.chat_model.with_structured_output(
+                schema, method="json_schema", include_raw=True, strict=True)
 
         last_error: Exception | None = None
         started = time.monotonic()
@@ -131,6 +137,65 @@ class LLMClient:
             last_error = error or ValueError("model returned no parseable output")
             log.warning("LLM output rejected (attempt %d, %s): %s", attempt, self.info, last_error)
         raise LLMError(f"{self.info} gave no valid {schema.__name__}: {last_error}") from last_error
+
+
+MAX_STRING_CHARS = 400  # every string any schema needs is far shorter
+
+
+def bounded_schema(schema: type[BaseModel], max_chars: int = MAX_STRING_CHARS,
+                   choices: dict[str, list[str]] | None = None) -> dict:
+    """The model's JSON schema with maxLength on every free-text string.
+
+    Ollama turns the schema into a decoding grammar. Without a length bound, a local model
+    can keep appending to a string forever: qwen2.5:7b once filled `quoted_span` with
+    "[2026-06-02 is the date of the claim.]" until the output cap. With maxLength the
+    grammar forces the string, and so the JSON, to close.
+
+    `choices` restricts named string fields to fixed values. The judge uses it so a local
+    model can only quote a real sentence of a retrieved clause and cite a retrieved clause
+    ID: qwen2.5:7b judged correctly but paraphrased its quotes, which the verbatim-quote
+    rule (rightly) rejects.
+    """
+    def restrict(prop: dict, values: list[str]) -> None:
+        options = [{"type": "string", "enum": values}]
+        if any(o.get("type") == "null" for o in prop.get("anyOf", [])):
+            options.append({"type": "null"})
+        for key in ("anyOf", "type", "maxLength"):
+            prop.pop(key, None)
+        prop["anyOf"] = options
+
+    def walk(node):
+        if isinstance(node, dict):
+            for name, prop in (node.get("properties") or {}).items():
+                if choices and name in choices and choices[name]:
+                    restrict(prop, choices[name])
+        if isinstance(node, dict):
+            if node.get("type") == "string" and "enum" not in node and "maxLength" not in node:
+                node["maxLength"] = max_chars
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+        return node
+
+    return walk(schema.model_json_schema())
+
+
+def _bounded_ollama_runnable(chat_model: BaseChatModel, schema: type[T], choices: dict[str, list[str]] | None = None):
+    """Same contract as with_structured_output(include_raw=True), with a bounded grammar."""
+    bound = chat_model.bind(format=bounded_schema(schema, choices=choices))
+
+    class _Runnable:
+        @staticmethod
+        def invoke(messages):
+            raw = bound.invoke(messages)
+            try:
+                return {"raw": raw, "parsed": schema.model_validate_json(raw.content), "parsing_error": None}
+            except Exception as exc:  # noqa: BLE001 - reported as a parsing error, then retried once
+                return {"raw": raw, "parsed": None, "parsing_error": exc}
+
+    return _Runnable()
 
 
 def _non_streaming_ollama():

@@ -125,6 +125,16 @@ def quote_is_verbatim(span: str | None, clause_text: str) -> bool:
     return len(s) >= MIN_QUOTE_CHARS and s in normalise(clause_text)
 
 
+def clause_sentences(clauses) -> list[str]:
+    """Every sentence of the given clauses, the only quotes a grammar-constrained judge may give."""
+    out: list[str] = []
+    for c in clauses:
+        for sentence in re.split(r"(?<=[.!?])\s+", c.clause_text.strip()):
+            if len(sentence) >= MIN_QUOTE_CHARS and sentence not in out:
+                out.append(sentence)
+    return out
+
+
 def references(claims: list[ClaimOutcome]) -> str:
     seen: dict[str, RetrievedClause] = {}
     for c in claims:
@@ -169,7 +179,8 @@ class Gate:
                     for i, c in enumerate(extracted, start=1)]
 
         judged = self.llm.structured(JudgeResult, judge_messages(as_of, [c.text for c in extracted],
-                                                                 [c.view() for c in pool.values()])).value
+                                                                 [c.view() for c in pool.values()]),
+                                     choices={"clause_id": list(pool), "quoted_span": clause_sentences(pool.values())}).value
         by_no = {v.claim_no: v for v in judged.verdicts}
         outcomes = []
         for i, (claim, found) in enumerate(zip(extracted, per_claim, strict=True), start=1):
