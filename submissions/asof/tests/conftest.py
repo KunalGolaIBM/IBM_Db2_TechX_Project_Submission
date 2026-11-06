@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import os
+
+# FastAPI's TestClient sends Host: testserver; the app answers only to listed hosts.
+os.environ.setdefault("ASOF_ALLOWED_HOSTS", "127.0.0.1,localhost,::1,testserver")
+
 import pytest
 
 from asof import db, schema, seed

@@ -25,6 +25,7 @@ from fastapi import FastAPI, Header, HTTPException, Path, Query, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import __version__, db, impactagent, ledger, policy
 from .askledger import LedgerAsker
@@ -51,6 +52,33 @@ def _text(max_bytes: int) -> Callable[[str], str]:
             raise ValueError(f"must be at most {max_bytes} bytes in UTF-8")
         return value
     return check
+
+
+class BodyLimit:
+    """Refuse request bodies over MAX_BODY_BYTES, counted as they stream in.
+
+    The Content-Length check in the guard middleware rejects declared sizes early; this catches a
+    chunked body, which has no Content-Length, before the application reads more than the limit.
+    """
+
+    def __init__(self, app, limit: int = MAX_BODY_BYTES):
+        self.app, self.limit = app, limit
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        seen = 0
+
+        async def limited():
+            nonlocal seen
+            message = await receive()
+            if message["type"] == "http.request":
+                seen += len(message.get("body", b""))
+                if seen > self.limit:
+                    raise HTTPException(413, "request body too large")
+            return message
+
+        return await self.app(scope, limited, send)
 
 
 def token_matches(given: str | None, expected: str) -> bool:
@@ -121,6 +149,8 @@ class GateOut(BaseModel):
     latency_ms: int
     model: str
     claims: list[ClaimOut]
+    unchecked: list[str] = Field(default_factory=list, description="Details in the draft that no extracted claim "
+                                 "stated; any makes the draft escalate.")
 
 
 def _claims(result: GateResult) -> list[ClaimOut]:
@@ -141,7 +171,8 @@ def _claims(result: GateResult) -> list[ClaimOut]:
 def gate_out(result: GateResult) -> GateOut:
     return GateOut(request_id=result.request_id, ledger_id=result.ledger_id, decision=result.decision,
                    reason_code=result.reason_code, released=result.released, final_answer=result.final_answer,
-                   rewrite=result.rewrite, latency_ms=result.latency_ms, model=result.model_info, claims=_claims(result))
+                   rewrite=result.rewrite, latency_ms=result.latency_ms, model=result.model_info, claims=_claims(result),
+                   unchecked=result.unchecked)
 
 
 class RateLimiter:
@@ -206,6 +237,9 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
 
     app = FastAPI(title="AsOf", version=__version__, lifespan=lifespan,
                   description="Checks AI assistant answers against the policy in force on a date. Built on IBM Db2.")
+    app.add_middleware(BodyLimit)
+    app.add_middleware(TrustedHostMiddleware,
+                       allowed_hosts=[h.strip() for h in settings.asof_allowed_hosts.split(",") if h.strip()])
 
     @app.middleware("http")
     async def guard(request: Request, call_next):

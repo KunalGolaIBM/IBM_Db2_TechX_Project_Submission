@@ -26,6 +26,7 @@ It uses the following third-party software. No third-party code is copied into t
 | langchain-openai | 1.7.4 | MIT |
 | langchain-ollama | 1.1.0 | MIT |
 | langchain-huggingface | 1.2.3 | MIT |
+| langgraph | 1.2.20 | MIT |
 | sentence-transformers | 6.2.0 | Apache-2.0 |
 | torch | 2.15.0 | Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND ISC AND MIT AND Zlib |
 | fastapi | 0.162.0 | MIT |

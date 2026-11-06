@@ -22,7 +22,7 @@ import html
 import logging
 import re
 import unicodedata
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Literal
@@ -36,7 +36,8 @@ from .llm import LLMClient, LLMError
 from .prompts import extract_messages, judge_messages, rewrite_messages
 from .redact import redact
 from .retriever import RetrievedClause, clauses_as_of
-from .rules import RuleClause
+from .rules import RuleClause, extract_quantities
+from .rules import _close as same_amount
 from .rules import check as rule_check
 from .schemas import MAX_CLAIMS, JudgeResult, RewriteResult
 
@@ -109,6 +110,20 @@ class GateResult:
     released: bool = True
     error: str | None = None
     investigation: list[dict[str, Any]] = field(default_factory=list)  # the agent's tool calls, if any
+    unchecked: list[str] = field(default_factory=list)  # details in the draft that no extracted claim stated
+
+
+def unchecked_details(text: str, claim_texts: Sequence[str], context: str = "") -> list[str]:
+    """Amounts, percentages, durations and counts in `text` that no extracted claim states.
+
+    Extraction is a model call, so it can skip a detail (or be talked into skipping one). This is
+    the deterministic backstop: every number the draft states must reach the claim check, unless it
+    only repeats the customer's own question (`context`), such as "your flight was 4 hours late".
+    """
+    stated = [f for c in claim_texts for q in extract_quantities(c) for f in q.forms]
+    stated += [f for q in extract_quantities(context) for f in q.forms]
+    return [q.text for q in extract_quantities(text)
+            if not any(u == su and same_amount(v, sv, u) for u, v in q.forms for su, sv in stated)]
 
 
 def normalise(text: str) -> str:
@@ -204,7 +219,7 @@ class Gate:
                 for i, (n, claim, found) in enumerate(zip(numbers, claims, per_claim, strict=True), start=1)]
 
     def evaluate(self, question: str, answer: str, as_of: date, doc_id: str) -> list[ClaimOutcome]:
-        """One pass without the agent: extract, retrieve, judge, verify."""
+        """One pass without the agent: extract, retrieve, judge, then the quote and rule checks."""
         domain = self.domain(doc_id)
         extracted = self.extract(question, answer, domain)
         if not extracted:
@@ -246,15 +261,18 @@ class Gate:
 
         return run_check(self, req)
 
-    def _decide(self, claims: list[ClaimOutcome], draft: str) -> tuple[str, str, str]:
+    def _decide(self, claims: list[ClaimOutcome], draft: str, unchecked: Sequence[str] = ()) -> tuple[str, str, str]:
         """A contradiction means the clauses hold the right answer, so try a rewrite from them
         (it may only use clause facts, which also drops unsupported details) and release it
-        only if it passes a full re-check. Claims no clause covers, with nothing contradicted,
-        mean the policy does not answer the question: a person has to."""
-        if not claims:
-            return "PASS", "NO_POLICY_CLAIMS", draft
+        only if it passes a full re-check. A number in the draft that no claim stated was never
+        checked, so the draft cannot go out as written. Claims no clause covers, with nothing
+        contradicted, mean the policy does not answer the question: a person has to."""
         if any(c.verdict == "CONTRADICTED" for c in claims):
             return "REWRITE", "", ""
+        if unchecked:
+            return "ESCALATED", "UNCHECKED_DETAILS", HOLDING_REPLY
+        if not claims:
+            return "PASS", "NO_POLICY_CLAIMS", draft
         if any(c.verdict == "NOT_COVERED" for c in claims):
             return "ESCALATED", "NOT_COVERED", HOLDING_REPLY
         return "PASS", "ALL_SUPPORTED", draft + references(claims)
@@ -285,6 +303,7 @@ class Gate:
             "rewrite": result.rewrite[:MAX_REWRITE_CHARS] if result.rewrite else None,
             "redactions": {"question": q_counts, "draft": d_counts},
             "investigation": result.investigation[:6],
+            "unchecked": result.unchecked[:20],
             "error": result.error,
         }
         entry = ledger.LedgerEntry(

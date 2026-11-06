@@ -1,6 +1,6 @@
 """The check as a LangGraph state graph, with one agentic step.
 
-    extract -> retrieve (Db2) -> judge + verify -> [investigate: agent with Db2 tools] -> decide
+    extract -> retrieve (Db2) -> judge + checks -> [investigate: agent with Db2 tools] -> decide
        ^                                                                                  |
        +------------------------- rewrite (once, then a full re-check) <-------------------+
                                                                                           v
@@ -42,6 +42,7 @@ from .gate import (
     TooManyClaims,
     pool_of,
     references,
+    unchecked_details,
 )
 from .llm import LLMError
 from .prompts import investigate_messages
@@ -73,6 +74,7 @@ class CheckState(TypedDict, total=False):
     error: str | None
     investigation: list
     tool_calls_left: int
+    unchecked: list  # details in the text that no extracted claim stated
 
 
 class _Tools:
@@ -199,13 +201,15 @@ def build(gate: Gate, req: GateRequest):
 
     def decide(state: CheckState) -> dict[str, Any]:
         outcomes = state.get("outcomes", [])
+        unchecked = unchecked_details(state["text"], [c.text for c in outcomes], state["question"])
         if state["pass_no"] == 1:
-            decision, reason, final = gate._decide(outcomes, req.draft_answer)
-            return {"first": outcomes, "decision": decision, "reason": reason, "final": final}
-        if outcomes and all(c.verdict == "SUPPORTED" for c in outcomes):
+            decision, reason, final = gate._decide(outcomes, req.draft_answer, unchecked)
+            return {"first": outcomes, "decision": decision, "reason": reason, "final": final, "unchecked": unchecked}
+        if outcomes and all(c.verdict == "SUPPORTED" for c in outcomes) and not unchecked:
             return {"second": outcomes, "decision": "CORRECTED", "reason": "CORRECTED_FROM_CLAUSES",
                     "final": state["rewrite"] + references(outcomes)}
-        return {"second": outcomes, "decision": "ESCALATED", "reason": "CORRECTION_FAILED", "final": HOLDING_REPLY}
+        return {"second": outcomes, "decision": "ESCALATED", "reason": "CORRECTION_FAILED", "final": HOLDING_REPLY,
+                "unchecked": unchecked}
 
     def rewrite(state: CheckState) -> dict[str, Any]:
         text = gate._rewrite(state["question"], state["text"], req.as_of, state["first"], domain)
@@ -262,6 +266,6 @@ def run_check(gate: Gate, req: GateRequest) -> GateResult:
     result = GateResult(str(uuid.uuid4()), state["decision"], state["reason"], state["final"],
                         state.get("first", []), state.get("second", []), state.get("rewrite"),
                         int((time.monotonic() - started) * 1000), gate.llm.info, error=state.get("error"),
-                        investigation=state.get("investigation", []))
+                        investigation=state.get("investigation", []), unchecked=state.get("unchecked", []))
     gate._record(req, q.text, d.text, result, q.counts, d.counts)
     return result

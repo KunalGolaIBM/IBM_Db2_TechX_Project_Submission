@@ -266,3 +266,18 @@ def test_tokens_with_unusual_characters_are_refused_not_crashed():
     for bad in ("short", "has a space in it ok", "t\u00f6ken-with-umlaut-1234"):
         with pytest.raises(ValueError):
             Settings(_env_file=None, asof_api_token=bad)
+
+
+def test_a_foreign_host_header_is_refused_so_dns_rebinding_cannot_reach_the_api():
+    c = client()
+    assert c.get("/healthz", headers={"host": "attacker.example"}).status_code == 400
+    assert c.get("/healthz", headers={"host": "127.0.0.1:8000"}).status_code == 200
+
+
+def test_a_chunked_body_over_the_cap_is_refused_without_a_content_length():
+    def chunks():
+        for _ in range(80):
+            yield b"x" * 1024  # 80 KB, streamed: no Content-Length header at all
+
+    r = client().post("/api/gate", content=chunks(), headers={"content-type": "application/json"})
+    assert r.status_code == 413

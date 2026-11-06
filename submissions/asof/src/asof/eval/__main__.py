@@ -32,7 +32,7 @@ from . import EVAL_SCHEMA, FROZEN, SPLIT_DOC, SPLITS, CountingLLM, load_cases, s
 OUT_DIR = PROJECT_ROOT / "docs" / "eval"
 REPORT = PROJECT_ROOT / "docs" / "eval_results.md"
 CATEGORY_ORDER = ["supported", "contradicted_numbers", "contradicted_eligibility", "date_boundary", "not_covered",
-                  "counts", "multi_claim", "prompt_injection"]
+                  "counts", "multi_claim", "prompt_injection", "extractor_injection", "control"]
 
 
 def prepare(settings, embeddings) -> None:
@@ -79,7 +79,7 @@ def render_report(results: list[dict]) -> str:
              "refuses to run it if its SHA-256 changes. The dev split (20 cases) holds the scenarios used while building. "
              "The bank splits (Fernhollow Bank, the second fictional domain) work the same way: `bank-test` (26 cases) "
              "was committed and pinned before its first run, and `bank-dev` (12 cases) is for iterating.", ""]
-    order = {"test": 0, "bank-test": 1, "dev": 2, "bank-dev": 3}
+    order = {"test": 0, "bank-test": 1, "extractor-test": 2, "dev": 3, "bank-dev": 4}
     providers = {"openrouter": 0, "openai_compatible": 1, "ollama": 2}  # the default provider first
     newest_first = sorted(results, key=lambda r: r["started_at"], reverse=True)
     for r in sorted(newest_first, key=lambda r: (order.get(r["split"], 9), providers.get(r["provider"], 9), r["model"])):
@@ -143,7 +143,7 @@ def main(argv: list[str] | None = None) -> int:
     def one(case):
         counting = CountingLLM(llm)
         gate = Gate(counting, embeddings, lambda: db.connect(settings, "app"), EVAL_SCHEMA)
-        result = gate.check(GateRequest(case.question, case.draft, case.as_of, domain.doc_id, "eval"))
+        result = gate.check(GateRequest(case.question, case.draft, case.as_of, case.doc_id or domain.doc_id, "eval"))
         rec = score(case, result) | {"llm_calls": counting.calls}
         flag = "ok  " if rec["safe"] else "MISS"
         print(f"  {flag} {case.id} {case.category:<24} expected {case.expected:<9} got {rec['decision']:<9} "
@@ -168,9 +168,10 @@ def main(argv: list[str] | None = None) -> int:
         print("(--limit run: results not written)")
         return 0
 
+    prompt_versions = " + ".join(sorted({domain_for(c.doc_id or domain.doc_id).prompt_version for c in cases}))
     result = {"split": args.split, "provider": provider, "model": llm.model_name,
               "started_at": started.isoformat(timespec="seconds"),
-              "git_commit": _git_commit(), "prompt_version": domain.prompt_version, "cases_sha256": split_sha256(args.split),
+              "git_commit": _git_commit(), "prompt_version": prompt_versions, "cases_sha256": split_sha256(args.split),
               "workers": workers, "wall_time_s": wall, "ledger_chain": chain.status, "summary": summary, "records": records}
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     slug = re.sub(r"[^A-Za-z0-9.]+", "-", llm.model_name).strip("-")

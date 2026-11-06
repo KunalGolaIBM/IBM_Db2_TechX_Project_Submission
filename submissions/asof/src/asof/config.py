@@ -62,6 +62,9 @@ class Settings(BaseSettings):
     # Optional API token. When set, every /api/ request needs "Authorization: Bearer <token>"
     # (constant-time compare); /healthz and the static UI stay open. Unset: localhost binding only.
     asof_api_token: SecretStr | None = None
+    # Host headers the API answers to (comma-separated). A browser page on another site cannot reach
+    # the localhost API through DNS rebinding, because its Host header is not on this list.
+    asof_allowed_hosts: str = "127.0.0.1,localhost,::1"
 
     # LLM provider
     llm_provider: LLMProvider = "openrouter"
@@ -145,10 +148,15 @@ class Settings(BaseSettings):
 ENV_NAMES = {"db2_admin_user": "DB2_USER", "db2_admin_password": "DB2_PASSWORD"}
 
 
+# Values copied from .env.example without being filled in count as missing, so a judge without a
+# key gets a clear message instead of every check silently failing on a 401.
+PLACEHOLDER = re.compile(r"your-key-here|^change-me", re.I)
+
+
 def _is_set(value: object) -> bool:
     if isinstance(value, SecretStr):
-        return bool(value.get_secret_value())
-    return value not in (None, "")
+        value = value.get_secret_value()
+    return value not in (None, "") and not (isinstance(value, str) and PLACEHOLDER.search(value))
 
 
 @lru_cache(maxsize=1)

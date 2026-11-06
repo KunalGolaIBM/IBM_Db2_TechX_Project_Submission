@@ -158,6 +158,7 @@ function explain(r, asOf) {
     case "NO_POLICY_CLAIMS": return "The answer makes no policy claims, so there is nothing to check.";
     case "CORRECTED_FROM_CLAUSES": return `${contradicted} claim${contradicted === 1 ? "" : "s"} contradicted the policy in force on ${date}. The answer was rewritten from the clause text and passed a full re-check.`;
     case "NOT_COVERED": return `No clause in force on ${date} covers at least one claim, so a person has to answer.`;
+    case "UNCHECKED_DETAILS": return `The draft states ${(r.unchecked || []).join(", ") || "details"} that the claim check never covered, so it was held rather than sent unchecked.`;
     case "CORRECTION_FAILED": return "The answer contradicted the policy, and the rewrite did not pass the re-check, so it was held back.";
     case "TOO_MANY_CLAIMS": return "The answer makes more than 8 policy claims; long answers go to a person.";
     case "ERROR_FAIL_CLOSED": return "A check could not complete, so the answer was held (fail closed).";
@@ -328,8 +329,11 @@ function keyParam(v) {
   if ("discount_pct" in p) return `${Number(p.discount_pct)}% off`;
   if ("credit_validity_months" in p) return `${p.credit_validity_months} months`;
   if ("max_passengers" in p) return `up to ${p.max_passengers}`;
-  // Anything else (the bank's fee schedule): the first amount or percentage in RULE_JSON.
-  for (const [k, val] of Object.entries(v.rule || {})) {
+  // The bank's fee schedule, read straight from RULE_JSON.
+  const r = v.rule || {};
+  if ("courtesy_refunds_per_year" in r) return `${r.courtesy_refunds_per_year} refund${r.courtesy_refunds_per_year === 1 ? "" : "s"}, ${r.request_window_days} days`;
+  if ("min_daily_balance_usd" in r) return `waived at $${Number(r.min_daily_balance_usd).toLocaleString("en-US")}`;
+  for (const [k, val] of Object.entries(r)) {
     if (k.endsWith("_usd") && typeof val === "number") return val === 0 ? "free" : `$${val.toLocaleString("en-US")}`;
     if (k.endsWith("_pct") && typeof val === "number") return `${val}%`;
   }
@@ -708,7 +712,7 @@ function impactView(rows, applied) {
     <section id="imp-sugg"></section>`;
 }
 
-// Drafted corrections: the change-impact agent drafts, the check verifies, the editor decides.
+// Drafted corrections: the change-impact agent drafts, the check runs on each, the editor decides.
 const sug = { list: [] };
 async function loadSuggestions() {
   const el = $("#imp-sugg");

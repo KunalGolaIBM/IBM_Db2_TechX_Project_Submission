@@ -88,3 +88,14 @@ def test_require_names_missing_keys():
 def test_identifiers_and_urls_are_validated(field, value):
     with pytest.raises(ValidationError):
         Settings(_env_file=None, **{field: value})
+
+
+def test_values_left_as_in_env_example_count_as_missing():
+    from asof.config import ConfigError, Settings
+
+    s = Settings(_env_file=None, openrouter_api_key="sk-or-v1-your-key-here", db2_admin_password="change-me-db2-admin")
+    assert s.embedding_key is not None and not s.indb_embeddings_wanted  # no in-database embeddings with a fake key
+    for name in ("openrouter_api_key", "db2_admin_password"):
+        with pytest.raises(ConfigError):
+            s.require(name)
+    assert Settings(_env_file=None, openrouter_api_key="sk-or-v1-0123456789abcdef").indb_embeddings_wanted

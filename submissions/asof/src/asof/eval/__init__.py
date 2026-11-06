@@ -28,13 +28,17 @@ from typing import Any
 from pydantic import BaseModel
 
 SPLITS = {"dev": "cases_dev.jsonl", "test": "cases_test.jsonl",
-          "bank-dev": "bank_cases_dev.jsonl", "bank-test": "bank_cases_test.jsonl"}
-SPLIT_DOC = {"dev": "AURELIA-CSP", "test": "AURELIA-CSP", "bank-dev": "FERNHOLLOW-FEES", "bank-test": "FERNHOLLOW-FEES"}
+          "bank-dev": "bank_cases_dev.jsonl", "bank-test": "bank_cases_test.jsonl",
+          "extractor-test": "extractor_cases_test.jsonl"}
+SPLIT_DOC = {"dev": "AURELIA-CSP", "test": "AURELIA-CSP", "bank-dev": "FERNHOLLOW-FEES", "bank-test": "FERNHOLLOW-FEES",
+             "extractor-test": "AURELIA-CSP"}
 # Pinned when the test split was committed (81b5b69), before any run.
 FROZEN_TEST_SHA256 = "bfb24f0ac4722bd6925e4e12a4820bc1e498f15958f9701c447161e78cffd5b2"
 # Each frozen split, pinned in the commit that added it and before its first run.
 FROZEN = {"test": FROZEN_TEST_SHA256,
-          "bank-test": "ad6907ec5ffdc572a6232f1599c7eddfc65fdb8d5e39ef4837e14e2c3593a3f9"}
+          "bank-test": "ad6907ec5ffdc572a6232f1599c7eddfc65fdb8d5e39ef4837e14e2c3593a3f9",
+          # Drafts that try to talk the extractor out of a wrong claim (both domains), pinned before its first run.
+          "extractor-test": "163e48a9e708f19c4697f422a0d615225a41e4223cf1f7b84ec2060239f1454b"}
 EVAL_SCHEMA = "ASOF_EVAL"
 DECISIONS = ("PASS", "CORRECTED", "ESCALATED")
 
@@ -52,6 +56,7 @@ class Case:
     key_clause: str | None
     key_version: str | None
     note: str
+    doc_id: str | None = None  # a split's cases may span documents; None means the split's own
 
 
 def _path(split: str):
@@ -70,7 +75,7 @@ def load_cases(split: str) -> list[Case]:
         d = json.loads(line)
         cases.append(Case(d["id"], d["category"], d["question"], d["draft"], date.fromisoformat(d["as_of"]),
                           bool(d["draft_ok"]), d["expected"], tuple(d["acceptable"]), d["key_clause"],
-                          d["key_version"], d["note"]))
+                          d["key_version"], d["note"], d.get("doc_id")))
     return cases
 
 
@@ -122,6 +127,9 @@ def score(case: Case, result) -> dict[str, Any]:
                    f"{c.clause.clause_id + ' ' + c.clause.version_label if c.clause else '-'}: {c.text[:90]}"
                    for p, c in claims],
         "final_answer": result.final_answer[:400],
+        "unchecked": list(getattr(result, "unchecked", []))[:10],
+        "agent_tool_calls": len(getattr(result, "investigation", []) or []),
+        "agent_new_clauses": sorted({c for step in (getattr(result, "investigation", []) or []) for c in step.get("new", [])}),
     }
 
 

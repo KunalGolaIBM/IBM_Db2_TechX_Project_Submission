@@ -51,8 +51,10 @@ def test_the_agent_drafts_checks_and_stores_a_fix_that_only_the_editor_can_publi
     llm = ScriptedLLM(
         rewrite=[RewriteResult(answer="Yes. Small cats and dogs can travel in the cabin if the pet and its carrier together "
                                       "weigh no more than 8 kg. The pet fee is $125 each way.")],
-        extract=[claims(("The pet fee is $125 each way.", "pets", "amount"))],
-        judge=[judge(verdict(1, "SUPPORTED", "PET-001", "The pet fee is $125 each way"))])
+        extract=[claims(("The pet and its carrier together weigh no more than 8 kg.", "pets", "eligibility"),
+                        ("The pet fee is $125 each way.", "pets", "amount"))],
+        judge=[judge(verdict(1, "SUPPORTED", "PET-001", "the pet and its carrier together weigh no more than 8 kg"),
+                     verdict(2, "SUPPORTED", "PET-001", "The pet fee is $125 each way"))])
     gate = Gate(llm, embeddings, _connect(settings, "app"), changed)
 
     drafted = impactagent.draft_fixes(gate, "PET-001")

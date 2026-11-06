@@ -41,7 +41,12 @@ def as_runnable(*, as_of: date, doc_id: str = "AURELIA-CSP", question: str = "",
             draft, q = value["draft"], value.get("question", question)
         else:
             raise TypeError("as_runnable expects the draft as a string or {'draft': ..., 'question': ...}")
-        result = checker.check(GateRequest(q or "(question not provided)", draft, as_of, doc_id, channel))
+        from .api import GateIn  # the API's own input model: byte limits, date range, allowed doc_id and channel
+
+        checked = GateIn(question=q or "(question not provided)", draft_answer=draft, as_of_date=as_of,
+                         doc_id=doc_id, channel=channel)
+        result = checker.check(GateRequest(checked.question, checked.draft_answer, checked.as_of_date, checked.doc_id,
+                                           checked.channel))
         return result if output == "result" else result.final_answer
 
     return RunnableLambda(run, name="AsOfCheck")

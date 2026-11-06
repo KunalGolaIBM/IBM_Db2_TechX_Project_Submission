@@ -21,7 +21,7 @@ def test_every_frozen_split_is_unchanged(split):
 
 def test_split_sizes_and_unique_ids():
     sizes = {s: len(load_cases(s)) for s in SPLITS}
-    assert sizes == {"dev": 20, "test": 40, "bank-dev": 12, "bank-test": 26}
+    assert sizes == {"dev": 20, "test": 40, "bank-dev": 12, "bank-test": 26, "extractor-test": 10}
     ids = [c.id for s in SPLITS for c in load_cases(s)]
     assert len(ids) == len(set(ids))
 
