@@ -162,6 +162,14 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--b
   color: var(--hold); background: var(--hold-bg); border-color: var(--hold-line); }
 .pill.not_covered, .pill.not_applicable, .pill.neutral, .pill.live { color: var(--grey); background: var(--grey-bg); border-color: var(--grey-line); }
 .pill.plain::before { display: none; }
+.pill.approved { color: var(--pass); background: var(--pass-bg); border-color: var(--pass-line); }
+.pill.pending { color: var(--fix); background: var(--fix-bg); border-color: var(--fix-line); }
+.pill.rejected { color: var(--grey); background: var(--grey-bg); border-color: var(--grey-line); }
+.sugg { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 12px; background: var(--surface); }
+.sugg-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.sugg-head .when { color: var(--muted); font-size: 13px; }
+.sugg-text { margin: 10px 0; line-height: 1.5; white-space: pre-line; }
+.sugg .row { margin-top: 10px; }
 .tag { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--grey-bg); color: var(--grey); white-space: nowrap; }
 .tag.brand { background: var(--brand-soft); color: var(--brand); }
 .tag.warn { background: var(--fix-bg); color: var(--fix); }

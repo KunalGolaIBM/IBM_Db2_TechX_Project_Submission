@@ -110,6 +110,41 @@ class _Tools:
         return [StructuredTool.from_function(self.search_policy), StructuredTool.from_function(self.clause_versions)]
 
 
+def tool_loop(gate: Gate, messages: list, tools: _Tools, left: int, pass_no: int,
+              known: set[str]) -> tuple[list[dict[str, Any]], int]:
+    """Let the model call the Db2 tools: at most `left` calls over at most MAX_ROUNDS rounds.
+
+    Returns the trace (one entry per call, or one error entry) and the calls left. Clauses the
+    searches surface accumulate in `tools.found`; `known` marks the ones already retrieved.
+    """
+    trace: list[dict[str, Any]] = []
+    by_name = {t.name: t for t in tools.as_langchain()}
+    try:
+        for _ in range(MAX_ROUNDS):
+            if left <= 0:
+                break
+            msg: AIMessage = gate.llm.tool_round(messages, list(by_name.values()))
+            calls = [c for c in (msg.tool_calls or []) if c.get("name") in by_name][:left]
+            if not calls:
+                break
+            messages.append(AIMessage(content=msg.content or "", tool_calls=calls))
+            for call in calls:
+                before = set(tools.found)
+                output = by_name[call["name"]].invoke(call.get("args") or {})
+                returned = sorted(set(tools.found) - before)
+                trace.append({"pass": pass_no, "tool": call["name"],
+                              "args": {k: str(v)[:120] for k, v in (call.get("args") or {}).items()},
+                              "returned": returned,  # clauses this call surfaced
+                              "new": [c for c in returned if c not in known]})  # not retrieved before
+                messages.append(ToolMessage(content=str(output)[:4000], tool_call_id=call.get("id") or call["name"]))
+            left -= len(calls)
+    except (LLMError, db.DatabaseError, ValueError) as exc:
+        # The agent is an extra look, never a gate: if it fails, the caller carries on without it.
+        log.warning("agent tool loop stopped: %s", exc)
+        trace.append({"pass": pass_no, "tool": None, "error": str(exc)[:200]})
+    return trace, left
+
+
 def build(gate: Gate, req: GateRequest):
     """Compile the graph for one request (nodes close over the gate and the request)."""
 
@@ -142,35 +177,11 @@ def build(gate: Gate, req: GateRequest):
         outcomes: list[ClaimOutcome] = list(state["outcomes"])
         open_idx = [i for i, o in enumerate(outcomes) if o.verdict == "NOT_COVERED"]
         tools = _Tools(gate, req.as_of, req.doc_id)
-        trace: list[dict[str, Any]] = list(state.get("investigation", []))
-        left = state.get("tool_calls_left", MAX_TOOL_CALLS)
         (_, system), (_, human) = investigate_messages(req.as_of, [outcomes[i].text for i in open_idx],
                                                       [c.view() for c in state["pool"].values()])
-        messages: list = [SystemMessage(system), HumanMessage(human)]
-        by_name = {t.name: t for t in tools.as_langchain()}
-        try:
-            for _ in range(MAX_ROUNDS):
-                if left <= 0:
-                    break
-                msg: AIMessage = gate.llm.tool_round(messages, list(by_name.values()))
-                calls = [c for c in (msg.tool_calls or []) if c.get("name") in by_name][:left]
-                if not calls:
-                    break
-                messages.append(AIMessage(content=msg.content or "", tool_calls=calls))
-                for call in calls:
-                    before = set(tools.found)
-                    output = by_name[call["name"]].invoke(call.get("args") or {})
-                    returned = sorted(set(tools.found) - before)
-                    trace.append({"pass": state["pass_no"], "tool": call["name"],
-                                  "args": {k: str(v)[:120] for k, v in (call.get("args") or {}).items()},
-                                  "returned": returned,  # clauses this call surfaced
-                                  "new": [c for c in returned if c not in state["pool"]]})  # not retrieved before
-                    messages.append(ToolMessage(content=str(output)[:4000], tool_call_id=call.get("id") or call["name"]))
-                left -= len(calls)
-        except (LLMError, db.DatabaseError, ValueError) as exc:
-            # The agent is an extra look, never a gate: if it fails, the claims stay NOT_COVERED.
-            log.warning("investigation stopped: %s", exc)
-            trace.append({"pass": state["pass_no"], "tool": None, "error": str(exc)[:200]})
+        steps, left = tool_loop(gate, [SystemMessage(system), HumanMessage(human)], tools,
+                                state.get("tool_calls_left", MAX_TOOL_CALLS), state["pass_no"], set(state["pool"]))
+        trace = list(state.get("investigation", [])) + steps
         new = {cid: c for cid, c in tools.found.items() if cid not in state["pool"]}
         if not new:
             return {"investigation": trace, "tool_calls_left": left}

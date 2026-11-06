@@ -256,8 +256,12 @@ class Gate:
             if c.clause:
                 clauses.setdefault(c.clause.clause_id, c.clause)
         problems = [(c.text, c.verdict, c.reason) for c in claims if c.verdict != "SUPPORTED"]
-        text = self.llm.structured(RewriteResult, rewrite_messages(as_of, question, draft,
-                                                                   [c.view() for c in clauses.values()],
+        return self._rewrite_from(question, draft, as_of, list(clauses.values()), problems)
+
+    def _rewrite_from(self, question: str, draft: str, as_of: date, clauses: list[RetrievedClause],
+                      problems: list[tuple[str, str, str]]) -> str:
+        """Rewrite strictly from the given clause texts (also used by the change-impact agent)."""
+        text = self.llm.structured(RewriteResult, rewrite_messages(as_of, question, draft, [c.view() for c in clauses],
                                                                    problems)).value.answer.strip()
         if not text or len(text) > MAX_REWRITE_CHARS:
             raise LLMError("rewrite was empty or too long")

@@ -342,6 +342,8 @@ python -m asof.setup --reset-ledger      # asks you to type "reset"; add --yes t
 | `GET /api/chain/verify` | Run `VERIFY_CHAIN` over the whole ledger |
 | `POST /api/policy/change` | Apply a new clause version through `APPLY_POLICY_CHANGE` as the editor user. Accepted only from localhost, unless `ASOF_EDITOR_TOKEN` is set, in which case the `X-AsOf-Editor-Token` header must match. |
 | `GET /api/impact/{clause_id}` | `CHANGE_IMPACT`: stale and historically valid answers, help-centre answers to review |
+| `POST /api/impact/{clause_id}/suggestions` | Run the change-impact agent: draft a correction for each help-centre answer that needs review, run the full check on it for the date it must hold from, store it as pending (editor action: localhost or token) |
+| `GET /api/suggestions`, `POST /api/suggestions/{id}/decision` | List drafted corrections; approve (publish) or reject one as `asofedit` (`DECIDE_SUGGESTION`) |
 | `GET /api/policy/timeline`, `GET /api/policy/clauses/{id}/history` | Business-time versions with rule parameters; every system-time row for a clause |
 | `GET /api/analytics` | Decision, area and override statistics from the Db2 views |
 | `GET /healthz` | Db2 connectivity and the configured model |
@@ -441,7 +443,7 @@ On the dev split, OpenRouter scored 0% false allow, 0% false block and 95% ideal
 | **Playground** | Ask the naive demo assistant (or paste a draft) for a customer date. See the decision, the draft next to what the customer receives, and every claim with its verdict, the judge's and the rule check's view, and the clause version (with its effective dates) whose quoted text is highlighted. |
 | **Policy timeline** | Every clause version on its business-time period, with its key rule parameter read out of `RULE_JSON` by a Db2 view (`$35` then `$40`, "before travel only" then "retroactive, 90 days"). Move the as-of date; click a version for its text, rule JSON and its system-time history: every row Db2 has held, when, and which user changed it. |
 | **Ledger and replay** | Every decision, a one-click `VERIFY_CHAIN`, and per entry the replay: the clause row the decision used, what Db2 held at that moment (`FOR SYSTEM_TIME AS OF`), and what applies today for that customer date (`FOR BUSINESS_TIME AS OF`), with the SQL. |
-| **Change impact** | Apply a new clause version as `asofedit` (presets included), then see which released answers are now stale, which are still right for their date, and which help-centre answers need review and from when. |
+| **Change impact** | Apply a new clause version as `asofedit` (presets included), then see which released answers are now stale, which are still right for their date, and which help-centre answers need review and from when. **Draft corrections with the agent** writes a fix for each help-centre answer that needs review, after looking up related clauses in Db2, and runs it through the full check; **Approve and publish** splits the answer in time, so the old text keeps the dates before the change. |
 | **Analytics** | Decisions, claims by area and rule-check overrides, from Db2 views. |
 
 | | |

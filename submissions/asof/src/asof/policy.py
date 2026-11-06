@@ -121,6 +121,73 @@ def apply_change(conn: ibm_db_dbi.Connection, change: PolicyChange, embeddings: 
     return {"rows_changed": int(out[8]), "published_flagged": int(out[9]), "embedded_in": embedded_in}
 
 
+SQL_PUBLISHED = ("SELECT ANSWER_ID, DOC_ID, QUESTION, ANSWER_TEXT, CITED_CLAUSE_ID, CITED_VERSION, APPLIES_FROM, "
+                 "APPLIES_TO, STATUS FROM PUBLISHED_ANSWER WHERE ANSWER_ID = ?")
+SQL_SUGGESTIONS = ("SELECT SUGGESTION_ID, ANSWER_ID, CLAUSE_ID, STALE_FROM, BASED_ON_VERSION, SUGGESTED_TEXT, "
+                   "CHECK_DECISION, CHECK_LEDGER_ID, AGENT_TRACE, STATUS, CREATED_AT, CREATED_BY, DECIDED_AT, DECIDED_BY "
+                   "FROM ANSWER_SUGGESTION WHERE (CAST(? AS VARCHAR(32)) IS NULL OR CLAUSE_ID = CAST(? AS VARCHAR(32))) "
+                   "ORDER BY SUGGESTION_ID DESC FETCH FIRST 100 ROWS ONLY")
+_SUGGESTION_KEYS = ("suggestion_id", "answer_id", "clause_id", "stale_from", "based_on_version", "text", "check_decision",
+                    "check_ledger_id", "agent_trace", "status", "created_at", "created_by", "decided_at", "decided_by")
+_PUBLISHED_KEYS = ("answer_id", "doc_id", "question", "answer_text", "cited_clause_id", "cited_version",
+                   "applies_from", "applies_to", "status")
+
+
+def published_answer(conn: ibm_db_dbi.Connection, answer_id: str, schema: str = db.SCHEMA) -> dict[str, Any] | None:
+    db.use_schema(conn, schema)
+    rows = db.query(conn, SQL_PUBLISHED, (answer_id,))
+    if not rows:
+        return None
+    return {k: (v.strip() if isinstance(v, str) and k in ("status", "answer_id") else v)
+            for k, v in zip(_PUBLISHED_KEYS, rows[0], strict=True)}
+
+
+def add_suggestion(conn: ibm_db_dbi.Connection, answer_id: str, clause_id: str, stale_from: date, version: str,
+                   text: str, decision: str, ledger_id: int | None, trace: list[dict[str, Any]],
+                   schema: str = db.SCHEMA) -> int:
+    """Store a drafted correction through ADD_SUGGESTION (the runtime user holds EXECUTE only). Commits."""
+    db.use_schema(conn, schema)
+    trace_json = json.dumps(trace[:12], default=str)[:8000]
+    cur = conn.cursor()
+    try:
+        out = cur.callproc("ADD_SUGGESTION", (answer_id, clause_id, stale_from, version, text[:4000], decision,
+                                               int(ledger_id or 0), trace_json, 0))  # ibm_db binds None badly here
+        conn.commit()
+    except Exception as exc:  # noqa: BLE001
+        conn.rollback()
+        raise db.wrap_error(exc, "ADD_SUGGESTION failed") from None
+    finally:
+        cur.close()
+    return int(out[8])
+
+
+def suggestions(conn: ibm_db_dbi.Connection, clause_id: str | None = None, schema: str = db.SCHEMA) -> list[dict[str, Any]]:
+    db.use_schema(conn, schema)
+    out = []
+    for r in db.query(conn, SQL_SUGGESTIONS, (clause_id, clause_id)):
+        d = dict(zip(_SUGGESTION_KEYS, r, strict=True))
+        d["agent_trace"] = json.loads(d["agent_trace"])
+        for k in ("status", "check_decision", "created_by", "decided_by"):
+            d[k] = d[k].strip() if isinstance(d[k], str) else d[k]
+        out.append(d)
+    return out
+
+
+def decide_suggestion(conn: ibm_db_dbi.Connection, suggestion_id: int, approve: bool, schema: str = db.SCHEMA) -> str:
+    """Approve (publish) or reject a suggestion, as the editor. Returns the published answer ID ('' on reject)."""
+    db.use_schema(conn, schema)
+    cur = conn.cursor()
+    try:
+        out = cur.callproc("DECIDE_SUGGESTION", (int(suggestion_id), 1 if approve else 0, " " * 32))
+        conn.commit()
+    except Exception as exc:  # noqa: BLE001
+        conn.rollback()
+        raise db.wrap_error(exc, "DECIDE_SUGGESTION failed") from None
+    finally:
+        cur.close()
+    return str(out[2]).strip()
+
+
 _IMPACT_KEYS = ("kind", "ref_id", "for_from", "for_to", "state", "created_at", "cited_version", "current_version",
                 "status", "stale_from")
 

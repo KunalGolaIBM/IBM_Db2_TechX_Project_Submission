@@ -530,6 +530,7 @@ async function Impact() {
       <section id="imp-result">${imp.result ? impactView(imp.result, imp.applied) : html`<div class="empty"><h3>Nothing applied yet</h3>
         <p>Record a couple of answers about pets in the <a href="#/playground">Playground</a> (the December pet-fee scenario, and the same question for a November date), then apply the pet fee preset.</p></div>`}</section>
     </div>`);
+  if (imp.result) loadSuggestions();
   const form = $("#imp-form");
   const sync = () => Object.assign(imp.form, { from: $("#imp-from").value, to: $("#imp-to").value, version: $("#imp-ver").value.trim(),
     text: $("#imp-text").value, rule: $("#imp-rule").value, note: $("#imp-note").value });
@@ -547,6 +548,7 @@ async function Impact() {
     sync();
     imp.result = (await api(`/api/impact/${imp.clause}`)).body; imp.applied = null;
     mount($("#imp-result"), impactView(imp.result, null));
+    loadSuggestions();
   });
   form.addEventListener("submit", async (e) => {
     e.preventDefault(); sync();
@@ -560,6 +562,7 @@ async function Impact() {
       tl.data = null; tl.sel = null;
       tl.data = (await api("/api/policy/timeline")).body;
       mount($("#imp-result"), impactView(imp.result, imp.applied));
+      loadSuggestions();
     } catch (err) {
       mount($("#imp-result"), html`<div class="error-box">${err.message}</div>`);
     } finally { btn.disabled = false; }
@@ -585,8 +588,69 @@ function impactView(rows, applied) {
       ${pubs.length ? html`<table><thead><tr><th>Answer</th><th>Covers</th><th>Cited</th><th>Versions in that range now</th><th>Status</th></tr></thead><tbody>
         ${pubs.map((r) => html`<tr><td><code>${r.ref_id}</code></td><td>${period(r.for_from, r.for_to)}</td><td>${r.cited_version}</td><td>${r.current_version}</td>
           <td>${pill(r.status)}${r.stale_from ? html`<div class="small muted">wrong from ${fmtDate(r.stale_from)}</div>` : ""}</td></tr>`)}
-      </tbody></table>` : html`<p class="muted">No help-centre answer cites ${imp.clause}.</p>`}</div>`;
+      </tbody></table>` : html`<p class="muted">No help-centre answer cites ${imp.clause}.</p>`}</div>
+    <section id="imp-sugg"></section>`;
 }
+
+// Drafted corrections: the change-impact agent drafts, the check verifies, the editor decides.
+const sug = { list: [] };
+async function loadSuggestions() {
+  const el = $("#imp-sugg");
+  if (!el) return;
+  sug.list = (await api(`/api/suggestions?clause_id=${imp.clause}`)).body || [];
+  mount(el, suggestionsView());
+}
+function suggestionsView() {
+  const pending = new Set(sug.list.filter((s) => s.status === "PENDING").map((s) => s.answer_id));
+  const needs = (imp.result || []).some((r) => r.kind === "PUBLISHED" && r.status === "NEEDS_REVIEW" && !pending.has(r.ref_id));
+  return html`<div class="card"><div class="card-head"><h2>Drafted corrections</h2><span class="sub">change-impact agent · nothing is published until the editor approves</span></div>
+    ${needs ? html`<p class="muted">For each help-centre answer that needs review, the agent looks up what else it relies on with Db2 tools, drafts a correction from the clause text in force from the date it went wrong, and runs the full check on that date. Only a draft the check released can be approved; approval keeps the old answer for the dates before the change.</p>
+      <button class="btn" id="sugg-run" type="button">Draft corrections with the agent</button>` : ""}
+    ${sug.list.length ? sug.list.map(suggestionCard) : needs ? "" : html`<p class="muted">No help-centre answer citing ${imp.clause} needs a correction.</p>`}
+    ${!needs && pending.size ? html`<p class="small muted">Every answer that needs review has a draft waiting for a decision.</p>` : ""}
+  </div>`;
+}
+function suggestionCard(s) {
+  const released = s.check_decision === "PASS" || s.check_decision === "CORRECTED";
+  const looked = (s.agent_trace || []).filter((t) => t.tool).map((t) => `${t.tool}(${Object.values(t.args || {}).join(", ")})`);
+  return html`<div class="sugg">
+    <div class="sugg-head"><code>${s.answer_id}</code><span class="when">for dates from ${fmtDate(s.stale_from)}, written from ${s.clause_id} ${s.based_on_version}</span>
+      ${pill(s.check_decision)}${pill(s.status)}${s.check_ledger_id ? html`<a class="small" href="#/ledger/${s.check_ledger_id}">check #${s.check_ledger_id} →</a>` : ""}</div>
+    <p class="sugg-text">${s.text}</p>
+    ${looked.length ? html`<div class="small muted">Agent looked up: ${looked.join(" · ")}</div>` : html`<div class="small muted">Agent looked up nothing beyond the changed clause.</div>`}
+    ${s.status === "PENDING" ? html`<div class="row"><button class="btn" type="button" data-approve="${s.suggestion_id}" ${released ? "" : raw("disabled")}>Approve and publish</button>
+      <button class="btn ghost" type="button" data-reject="${s.suggestion_id}">Reject</button>${released ? "" : html`<span class="small muted">The check did not release this draft, so it cannot be published.</span>`}</div>`
+      : html`<div class="small muted">${lower(s.status)} by ${s.decided_by} at ${fmtTs(s.decided_at)}</div>`}
+  </div>`;
+}
+async function refreshImpact(message) {
+  imp.result = (await api(`/api/impact/${imp.clause}`)).body;
+  mount($("#imp-result"), html`${message ? html`<div class="banner ok"><span>${message}</span></div>` : ""}${impactView(imp.result, null)}`);
+  await loadSuggestions();
+}
+document.addEventListener("click", async (e) => {
+  const run = e.target.closest("#sugg-run");
+  const approve = e.target.closest("[data-approve]");
+  const reject = e.target.closest("[data-reject]");
+  if (!run && !approve && !reject) return;
+  const btn = run || approve || reject;
+  btn.disabled = true;
+  try {
+    if (run) {
+      btn.textContent = "Drafting and checking...";
+      const { body } = await post(`/api/impact/${imp.clause}/suggestions`, {});
+      const n = body.drafted.length;
+      await refreshImpact(`The agent drafted ${n} correction${n === 1 ? "" : "s"}; each one went through the full check on the date it must hold from.`);
+    } else {
+      const id = (approve || reject).dataset.approve || (approve || reject).dataset.reject;
+      const { body } = await post(`/api/suggestions/${id}/decision`, { approve: Boolean(approve) });
+      await refreshImpact(approve ? `Published as ${body.published_answer_id}; the old answer keeps the dates before the change.` : "Suggestion rejected.");
+    }
+  } catch (err) {
+    const el = $("#imp-sugg");
+    if (el) mount(el, html`<div class="error-box">${err.message}</div>${suggestionsView()}`);
+  }
+});
 
 // ---------- Analytics ----------
 async function Analytics() {

@@ -26,7 +26,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
-from . import __version__, db, ledger, policy
+from . import __version__, db, impactagent, ledger, policy
 from .assistant import DemoAssistant
 from .config import ConfigError, Settings, get_settings
 from .embeddings import get_embeddings
@@ -157,6 +157,11 @@ class RateLimiter:
                 return False
             q.append(now)
             return True
+
+
+class SuggestionDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    approve: bool
 
 
 def create_app(settings: Settings | None = None, *, gate: Gate | None = None, assistant: DemoAssistant | None = None,
@@ -331,15 +336,58 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         finally:
             conn.close()
 
-    @app.post("/api/policy/change")
-    def change_policy(body: policy.PolicyChange, request: Request,
-                      x_asof_editor_token: Annotated[str | None, Header()] = None):
+    def require_editor(request: Request, token_header: str | None) -> None:
+        """Editor actions: localhost only, or a matching ASOF_EDITOR_TOKEN (constant-time compare)."""
         token = settings.asof_editor_token.get_secret_value() if settings.asof_editor_token else None
         if token:
-            if not x_asof_editor_token or not hmac.compare_digest(x_asof_editor_token, token):
+            if not token_header or not hmac.compare_digest(token_header, token):
                 raise HTTPException(403, "policy changes need a valid X-AsOf-Editor-Token")
         elif (request.client.host if request.client else "") not in LOCAL_CLIENTS:
             raise HTTPException(403, "policy changes are only accepted from localhost unless ASOF_EDITOR_TOKEN is set")
+
+    @app.post("/api/impact/{clause_id}/suggestions")
+    def draft_suggestions(clause_id: Annotated[str, Path(pattern=r"^[A-Z]{3}-[0-9]{3}$")], request: Request,
+                          x_asof_editor_token: Annotated[str | None, Header()] = None):
+        """Run the change-impact agent: draft and check corrections for stale help-centre answers."""
+        require_editor(request, x_asof_editor_token)
+        drafted = impactagent.draft_fixes(components()[0], clause_id)
+        conn = app_conn()
+        try:
+            return {"drafted": drafted, "suggestions": policy.suggestions(conn, clause_id, schema)}
+        finally:
+            conn.close()
+
+    @app.get("/api/suggestions")
+    def list_suggestions(clause_id: Annotated[str | None, Query(pattern=r"^[A-Z]{3}-[0-9]{3}$")] = None):
+        conn = app_conn()
+        try:
+            return policy.suggestions(conn, clause_id, schema)
+        finally:
+            conn.close()
+
+    @app.post("/api/suggestions/{suggestion_id}/decision")
+    def decide(suggestion_id: Annotated[int, Path(ge=1, le=10**12)], body: SuggestionDecision, request: Request,
+               x_asof_editor_token: Annotated[str | None, Header()] = None):
+        """The policy editor approves (publishes) or rejects a drafted correction."""
+        require_editor(request, x_asof_editor_token)
+        editor = db.connect(settings, "editor")
+        try:
+            try:
+                published = policy.decide_suggestion(editor, suggestion_id, body.approve, schema)
+            except db.DatabaseError as exc:
+                if exc.sqlstate in ("75022",):
+                    raise HTTPException(404, "no such suggestion") from None
+                if exc.sqlstate in ("75023", "75024"):
+                    raise HTTPException(409, str(exc).split(": ", 1)[-1]) from None
+                raise
+        finally:
+            editor.close()
+        return {"suggestion_id": suggestion_id, "approved": body.approve, "published_answer_id": published or None}
+
+    @app.post("/api/policy/change")
+    def change_policy(body: policy.PolicyChange, request: Request,
+                      x_asof_editor_token: Annotated[str | None, Header()] = None):
+        require_editor(request, x_asof_editor_token)
         editor = db.connect(settings, "editor")
         try:
             try:

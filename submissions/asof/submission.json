@@ -43,7 +43,8 @@
       "FETCH EXACT / FETCH APPROX vector search control",
       "Adaptive row compression on the append-only ledger tables",
       "RUNSTATS and EXPLAIN (db2exfmt) access plans for the hot queries",
-      "In-database embeddings: CREATE EXTERNAL MODEL over HTTPS and TO_EMBEDDING in seeding and inside the APPLY_POLICY_CHANGE procedure (Db2 12.1.5)"
+      "In-database embeddings: CREATE EXTERNAL MODEL over HTTPS and TO_EMBEDDING in seeding and inside the APPLY_POLICY_CHANGE procedure (Db2 12.1.5)",
+      "SQL PL procedures ADD_SUGGESTION and DECIDE_SUGGESTION: an agent-drafted help-centre correction is stored by the runtime user and published only by the editor, split in time at the change date"
     ]
   },
   "tech_stack": {
@@ -52,8 +53,9 @@
       "SQL"
     ],
     "frameworks": [
-      "LangChain",
       "FastAPI",
+      "LangChain",
+      "LangGraph",
       "Pydantic"
     ],
     "ai_models": [
