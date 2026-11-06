@@ -1,64 +1,282 @@
 # System Architecture
 
 ## Overview
-High-level architectural summary describing how frontend, backend services, AI agents/LLMs, and IBM Db2 interact.
+
+AsOf sits between any AI assistant and its customers. The calling system sends the assistant's draft answer, the customer's question and the date that decides which policy applies (booking or travel date). AsOf extracts the policy claims in the draft, looks up the clause versions in force on that date in IBM Db2, checks each claim with one batched LLM judge call plus deterministic rules, and then releases the draft (PASS), releases a rewrite that passed a full re-check (CORRECTED), or holds it for a person (ESCALATED). Every decision is appended to a hash-chained ledger in Db2, which can later be replayed against what the database held at that moment, and re-assessed when policy changes.
+
+Db2 is the system of record for everything that matters in a dispute: the dated policy versions (bitemporal table with native vectors and JSON rule parameters), the decisions and their evidence (append-only, hash-chained, written only by a stored procedure), and the help-centre answers that depend on them. The application holds no state of its own.
+
+All data in this repository is fictional (Aurelia Air).
 
 ---
 
 ## Architecture Diagram
 
 ```mermaid
-graph TD
-    Client[Web / Mobile / CLI Client] -->|HTTP / WebSocket| API[Application Backend / API Server]
-    API -->|Prompt & Context| AI[AI / LLM Framework / watsonx.ai]
-    API -->|ibm_db / SQLAlchemy| Db2[(IBM Db2 Database)]
-    Db2 -->|Query Results & Embeddings| API
-    AI -->|Generated Insights & Answers| API
-    API -->|Formatted Response| Client
+flowchart LR
+    subgraph Callers
+        BOT["Demo assistant<br/>LangChain chain over DB2VS FAQ store"]
+        APP["Any assistant<br/>POST /api/gate or as_runnable()"]
+        UI["Web UI<br/>playground, timeline, replay, impact"]
+        EDITOR["Policy editor<br/>(UI or API, localhost or token)"]
+    end
+
+    subgraph AsOf["AsOf (Python, FastAPI)"]
+        API["API: validation, rate limit,<br/>security headers"]
+        GATE["Gate pipeline<br/>redact, extract, retrieve, judge,<br/>quote rule, rule check, decide, rewrite"]
+        LLM["LLM layer<br/>strict schemas, deadlines, output caps"]
+        EMB["Embeddings<br/>all-MiniLM-L6-v2 on CPU"]
+    end
+
+    PROVIDER["OpenRouter (default)<br/>or local Ollama"]
+
+    subgraph DB2["IBM Db2 12.1.5, schema ASOF"]
+        PC[("POLICY_CLAUSE<br/>BUSINESS_TIME + SYSTEM_TIME<br/>VECTOR(384), RULE_JSON")]
+        HIST[("POLICY_CLAUSE_HIST")]
+        LED[("ANSWER_LEDGER, CLAIM_CITATION,<br/>CHAIN_HEAD (append-only)")]
+        PUB[("PUBLISHED_ANSWER")]
+        FAQ[("FAQ_KB (DB2VS)")]
+        PROCS["SQL PL: APPEND_LEDGER, VERIFY_CHAIN,<br/>APPLY_POLICY_CHANGE, CHANGE_IMPACT"]
+        VIEWS["Views: V_POLICY_TIMELINE (JSON_TABLE),<br/>V_DECISION_STATS, ..."]
+    end
+
+    BOT --> API
+    APP --> API
+    UI --> API
+    EDITOR --> API
+    API --> GATE
+    GATE --> LLM --> PROVIDER
+    GATE --> EMB
+    GATE -- "as-of + vector query (asofapp)" --> PC
+    GATE -- "CALL APPEND_LEDGER (asofapp)" --> PROCS
+    API -- "CALL APPLY_POLICY_CHANGE (asofedit)" --> PROCS
+    API -- "CHANGE_IMPACT, VERIFY_CHAIN, replay" --> PROCS
+    PROCS --> LED
+    PROCS --> PC
+    PROCS --> PUB
+    PC -. "system versioning" .-> HIST
+    BOT -- "similarity search" --> FAQ
+    API --> VIEWS
 ```
 
 ---
 
 ## Component Breakdown
 
-1. **User Interface / Client Layer**:
-   - Description of UI components or CLI interactions.
-2. **Application Backend Layer**:
-   - Core API endpoints, routing, authentication, business logic.
-3. **Database Layer (IBM Db2)**:
-   - Data persistence, relational tables, indexing, transactions, or vector search structures.
-4. **AI / Model Orchestration Layer** *(if applicable)*:
-   - Agent loops, retrieval chains, prompt templates, and context assembly.
+1. **User interface** ([src/asof/ui/](src/asof/ui/)): plain HTML, CSS and ES modules served by FastAPI, with no framework or build step. Five screens: Playground, Policy timeline, Ledger and replay, Change impact, Analytics. A strict Content Security Policy is in force (no inline script or style), and every string from the API or the LLM is escaped before rendering.
+2. **API** ([src/asof/api.py](src/asof/api.py)): FastAPI. Pydantic input models with UTF-8 byte limits, date bounds, an allow-listed `doc_id` and no control characters. Per-client rate limit on LLM endpoints, 64 KB body cap, security headers, and error handlers that return SQLSTATEs but never stack traces or SQL. Binds to localhost by default.
+3. **Gate pipeline** ([src/asof/gate.py](src/asof/gate.py)): orchestrates one check and owns the decision.
+   - [redact.py](src/asof/redact.py) masks personal data before anything leaves the process.
+   - [prompts.py](src/asof/prompts.py) and [schemas.py](src/asof/schemas.py) hold the versioned prompts and the strict output schemas.
+   - [retriever.py](src/asof/retriever.py) is the as-of plus vector query, exposed as a LangChain `BaseRetriever`.
+   - [rules.py](src/asof/rules.py) is the deterministic check of amounts, durations, limits, tiers and permissions against `RULE_JSON`.
+   - [ledger.py](src/asof/ledger.py) appends, verifies, reads and replays the ledger.
+4. **LLM layer** ([src/asof/llm.py](src/asof/llm.py)): one interface over OpenRouter, any OpenAI-compatible endpoint, or Ollama. Every call returns a validated Pydantic object or raises `LLMError`, under a hard wall-clock deadline and an output-token cap.
+5. **Database layer (IBM Db2)** ([src/asof/sql/](src/asof/sql/)): tables, history table, indexes, triggers, SQL functions, SQL PL procedures, views and grants, installed by [schema.py](src/asof/schema.py) into a validated schema name (`ASOF`, or `ASOF_TEST` and `ASOF_EVAL` for tests and evaluation).
+6. **Policy module** ([src/asof/policy.py](src/asof/policy.py)): validated policy changes through `APPLY_POLICY_CHANGE` on the editor connection, change impact, timeline, system-time history and analytics.
+7. **Integration** ([src/asof/integration.py](src/asof/integration.py)): `as_runnable()` drops the check into an existing LangChain chain. [assistant.py](src/asof/assistant.py) is the deliberately naive demo assistant over the official `DB2VS` store.
+8. **Tooling**:
+   - [setup.py](src/asof/setup.py): users, schema, seed, grants, self-check, and the demo-only `--reset-ledger`.
+   - [db2check.py](src/asof/db2check.py): the 26 Db2 feature checks.
+   - [eval/](src/asof/eval/): the frozen evaluation.
+   - [demo.py](src/asof/demo.py): records sample history.
+   - [scripts/check_secrets.py](scripts/check_secrets.py): pre-commit secret check.
 
 ---
 
 ## Data Flow
 
-1. **Input Ingestion**: User submits query or data via client interface.
-2. **Context Retrieval**: Backend queries IBM Db2 for relevant transactional records, metrics, or embedded documents.
-3. **Augmentation & Inference**: Context is formatted and injected into LLM prompt templates.
-4. **State Persistence**: Generated outputs, audit logs, or new transactions are written back to IBM Db2.
-5. **Response Delivery**: Result is streamed or returned to the user.
+### Checking an answer
+
+```mermaid
+sequenceDiagram
+    participant C as Caller
+    participant G as Gate
+    participant L as LLM
+    participant D as Db2
+    C->>G: question, draft, as_of_date
+    G->>G: redact personal data
+    G->>L: extract atomic policy claims (strict schema, max 8)
+    loop each claim
+        G->>D: clauses FOR BUSINESS_TIME AS OF date, ranked by VECTOR_DISTANCE (asofapp)
+    end
+    G->>L: judge all claims in one call (verdict, clause_id, verbatim quote)
+    G->>G: verbatim-quote rule, clause must be retrieved, rule check vs RULE_JSON
+    alt any claim CONTRADICTED
+        G->>L: rewrite from cited clause text, told which claims were wrong
+        G->>L: extract and judge the rewrite (full re-check)
+    end
+    G->>D: CALL APPEND_LEDGER (hash chain, citations from JSON_TABLE)
+    G-->>C: PASS / CORRECTED / ESCALATED, final answer, per-claim evidence
+```
+
+1. **Input.** The caller supplies the question, the draft and the customer's date. The date is never inferred by a model.
+2. **Redaction.** Emails, phone numbers, card numbers and booking references are masked. Only redacted text reaches the LLM provider and the ledger.
+3. **Extraction.** One LLM call returns at most 8 atomic claims with area and type. More than 8 escalates.
+4. **Retrieval.** Each claim is embedded locally and sent to Db2 as one parameterised query: clause versions in force on the date, ranked by cosine distance, top 4.
+5. **Judgement.** One LLM call judges every claim against the deduplicated clauses and must quote the deciding clause text verbatim.
+6. **Checks in code.** A verdict whose clause was not retrieved, or whose quote is not in the clause, becomes NOT_COVERED. The rule check then compares numbers, limits, delay tiers and permissions with `RULE_JSON`. A mismatch forces CONTRADICTED, and can move the citation to the delay tier that actually applies.
+7. **Decision.**
+   - All claims supported (or no policy claims): PASS, with policy references appended.
+   - Any claim contradicted: rewrite from the cited clauses, then a full re-check. Released as CORRECTED only if every claim in the rewrite is supported, otherwise ESCALATED.
+   - Uncovered claims with nothing contradicted: ESCALATED.
+   - Any error: ESCALATED.
+8. **Record.** `APPEND_LEDGER` writes the decision and both checks' citations in one transaction. If it fails, the answer is withheld (HTTP 503).
+
+### Changing policy and finding what it affects
+
+The editor submits a new clause version for a period. `APPLY_POLICY_CHANGE` validates the period and label, then runs `UPDATE ... FOR PORTION OF BUSINESS_TIME`: Db2 splits the existing version at the period boundaries, and system versioning moves the replaced row to `POLICY_CLAUSE_HIST`. The same transaction flags help-centre answers whose dates overlap the change. `CHANGE_IMPACT` then returns every released answer that cited the clause, marked STALE (its customer date now falls under a different version) or HISTORICALLY_VALID, plus every help-centre answer, marked NEEDS_REVIEW (with the date it went wrong) or STILL_VALID.
+
+### Replaying a decision
+
+For each clause a decision cited, three queries:
+
+- the exact row it used, matched by `CLAUSE_ID`, `BUS_START` and `SYS_START` across current and history rows
+- what Db2 held for that customer date when the answer was given (`FOR SYSTEM_TIME AS OF created_at FOR BUSINESS_TIME AS OF as_of_date`)
+- what applies today for that date (`FOR BUSINESS_TIME AS OF as_of_date`)
 
 ---
 
 ## IBM Db2 Schema & Storage Design
 
+Db2 Community Edition 12.1.5.0, database `TESTDB`, schema `ASOF`. Full DDL: [01_tables.sql](src/asof/sql/01_tables.sql), [02_ledger_rules.sql](src/asof/sql/02_ledger_rules.sql), [03_procedures.sql](src/asof/sql/03_procedures.sql), [04_views.sql](src/asof/sql/04_views.sql), [90_grants.sql](src/asof/sql/90_grants.sql).
+
+### Tables
+
 ```sql
--- Example Schema DDL
-CREATE TABLE projects (
-    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    description CLOB,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Bitemporal policy clauses. BUSINESS_TIME: when a version applies to customers.
+-- SYSTEM_TIME: when this database held the row (replay). Old rows go to POLICY_CLAUSE_HIST.
+CREATE TABLE ASOF.POLICY_CLAUSE (
+  CLAUSE_ID     VARCHAR(32)   NOT NULL,
+  DOC_ID        VARCHAR(32)   NOT NULL,
+  AREA          VARCHAR(40)   NOT NULL,
+  TITLE         VARCHAR(200)  NOT NULL,
+  VERSION_LABEL VARCHAR(20)   NOT NULL,
+  CLAUSE_TEXT   VARCHAR(4000) NOT NULL,
+  RULE_JSON     VARCHAR(2000) NOT NULL,
+  EMBEDDING     VECTOR(384, FLOAT32) NOT NULL,
+  CHANGE_NOTE   VARCHAR(400),
+  CHANGED_BY    VARCHAR(128)  NOT NULL DEFAULT SESSION_USER,
+  BUS_START     DATE          NOT NULL,
+  BUS_END       DATE          NOT NULL,
+  SYS_START     TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN,
+  SYS_END       TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW END,
+  TRANS_ID      TIMESTAMP(12) GENERATED ALWAYS AS TRANSACTION START ID,
+  PERIOD BUSINESS_TIME (BUS_START, BUS_END),
+  PERIOD SYSTEM_TIME (SYS_START, SYS_END),
+  CONSTRAINT PK_POLICY_CLAUSE PRIMARY KEY (CLAUSE_ID, BUSINESS_TIME WITHOUT OVERLAPS),
+  CONSTRAINT FK_CLAUSE_DOC FOREIGN KEY (DOC_ID) REFERENCES ASOF.POLICY_DOC (DOC_ID),
+  CONSTRAINT CK_CLAUSE_RULE_JSON CHECK (JSON_EXISTS(RULE_JSON, '$')),
+  CONSTRAINT CK_CLAUSE_AREA CHECK (AREA IN ('bereavement', 'cancellation', 'change_fee', 'baggage',
+                                            'refund', 'delay', 'travel_credit', 'pets', 'other')),
+  CONSTRAINT CK_CLAUSE_VERSION CHECK (VERSION_LABEL LIKE 'v%')
 );
+CREATE TABLE ASOF.POLICY_CLAUSE_HIST LIKE ASOF.POLICY_CLAUSE;
+ALTER TABLE ASOF.POLICY_CLAUSE ADD VERSIONING USE HISTORY TABLE ASOF.POLICY_CLAUSE_HIST;
 ```
+
+| Table | Purpose | Key constraints |
+|---|---|---|
+| `POLICY_DOC` | Policy documents | PK `DOC_ID` |
+| `POLICY_CLAUSE` (+ `_HIST`) | Dated clause versions with embedding and rule parameters | `WITHOUT OVERLAPS` PK, FK to `POLICY_DOC`, JSON check, area enum |
+| `ANSWER_LEDGER` | One row per decision: redacted question and draft, final answer, decision, reason, model, prompt version, latency, verdict JSON, `PREV_HASH`, `ROW_HASH` | gapless `LEDGER_ID >= 1`, unique `REQUEST_ID` and `ROW_HASH`, decision and channel enums, JSON check |
+| `CLAIM_CITATION` | One row per claim per check (`PASS_NO` 1 = draft, 2 = rewrite): verdict, judge verdict, rule check, clause ID, version, `BUS_START`, `SYS_START`, distance, quote | PK `(LEDGER_ID, PASS_NO, CLAIM_NO)`, FK to ledger, verdict enums, clause/date pairing check |
+| `CHAIN_HEAD` | Single row: last ledger ID and hash; locked by every append | `HEAD_ID = 1` check |
+| `PUBLISHED_ANSWER` | Help-centre answers with cited clause, version, `BUS_START` and the dates they cover | FK to `POLICY_DOC`, status enum, range check |
+| `FAQ_KB` | Demo assistant's knowledge base, created and searched by `langchain-db2` `DB2VS` | created by `DB2VS` |
+
+Indexes: `POLICY_CLAUSE (DOC_ID, AREA)`, `POLICY_CLAUSE_HIST (CLAUSE_ID, SYS_END)`, `ANSWER_LEDGER (CREATED_AT)`, `ANSWER_LEDGER (DECISION, CREATED_AT)`, `CLAIM_CITATION (CLAUSE_ID, CLAUSE_BUS_START)`, `PUBLISHED_ANSWER (CITED_CLAUSE_ID, CITED_BUS_START)`.
+
+### Routines, triggers and views
+
+All routines are `LANGUAGE SQL`. They run inside the engine and execute with the owner's authority, so the runtime user needs only `EXECUTE`.
+
+| Object | Kind | What it does |
+|---|---|---|
+| `APPEND_LEDGER` | SQL PL procedure | Locks `CHAIN_HEAD`, assigns the next gapless ID, computes the row hash in Db2, inserts the ledger row, shreds citations from the verdict JSON, moves the chain head. Rejects a ninth claim per check (SQLSTATE 75003). |
+| `VERIFY_CHAIN` | SQL PL procedure | Recomputes every hash in order. Checks consecutive IDs, each link, each row's content, the chain head, and that citations match the hashed JSON. Returns OK or the first broken entry. |
+| `APPLY_POLICY_CHANGE` | SQL PL procedure | Validates, then `UPDATE ... FOR PORTION OF BUSINESS_TIME`, stamps `CHANGED_BY = SESSION_USER`, flags overlapping help-centre answers. |
+| `CHANGE_IMPACT` | SQL PL procedure, dynamic result set | Stale and historically valid answers, help-centre answers to review. |
+| `LEDGER_ROW_HASH`, `SHA256_HEX` | SQL scalar functions | SHA-256 of the previous hash followed by the SHA-256 of every field (`HASH(..., 2)`). |
+| `CLAIMS_FROM_JSON` | SQL table function | Up to 16 claims out of the verdict JSON with `JSON_TABLE`. |
+| `*_NO_UPDATE`, `*_NO_DELETE` | Triggers | Reject every UPDATE or DELETE on `ANSWER_LEDGER` and `CLAIM_CITATION`, and DELETE on `CHAIN_HEAD`, with SQLSTATE 75001. |
+| `V_POLICY_TIMELINE` | View | Every version with key `RULE_JSON` parameters as columns, through `JSON_TABLE`. |
+| `V_DECISION_STATS`, `V_CLAIM_OUTCOMES_BY_AREA`, `V_RULE_OVERRIDES` | Views | Analytics. |
+
+### Key queries
+
+```sql
+-- Clauses in force on the customer's date, ranked by meaning (retriever.py). Every value is a parameter.
+SELECT c.CLAUSE_ID, c.AREA, c.TITLE, c.VERSION_LABEL, c.CLAUSE_TEXT, c.RULE_JSON, c.BUS_START, c.BUS_END, c.SYS_START,
+       VECTOR_DISTANCE(c.EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE) AS DIST
+FROM ASOF.POLICY_CLAUSE FOR BUSINESS_TIME AS OF ? AS c
+WHERE c.DOC_ID = ?
+ORDER BY DIST FETCH FIRST ? ROWS ONLY;
+
+-- Replay: the same question against what the database held at an earlier moment.
+SELECT ... FROM ASOF.POLICY_CLAUSE FOR SYSTEM_TIME AS OF ? FOR BUSINESS_TIME AS OF ? AS c WHERE ...;
+
+-- Policy change (inside APPLY_POLICY_CHANGE): Db2 splits the row, history keeps the old one.
+UPDATE ASOF.POLICY_CLAUSE FOR PORTION OF BUSINESS_TIME FROM P_FROM TO P_TO
+   SET VERSION_LABEL = P_VERSION_LABEL, CLAUSE_TEXT = P_TEXT, RULE_JSON = P_RULE_JSON,
+       EMBEDDING = VECTOR(P_EMBEDDING, 384, FLOAT32), CHANGE_NOTE = P_NOTE, CHANGED_BY = SESSION_USER
+ WHERE CLAUSE_ID = P_CLAUSE_ID;
+```
+
+### Users and privileges
+
+| Db2 user | Used by | Holds |
+|---|---|---|
+| `db2inst1` (owner) | `python -m asof.setup` and `python -m asof.db2check` only | Everything |
+| `asofapp` (runtime) | API, gate, UI, eval | `CONNECT`; `SELECT` on policy, ledger, help-centre and FAQ tables and the views; `EXECUTE` on `APPEND_LEDGER`, `VERIFY_CHAIN`, `CHANGE_IMPACT`. No `INSERT`, `UPDATE`, `DELETE` or DDL. |
+| `asofedit` (policy editor) | `POST /api/policy/change` | `CONNECT`; `SELECT` on policy tables; `EXECUTE` on `APPLY_POLICY_CHANGE` and `CHANGE_IMPACT`. No direct `UPDATE`. |
+| `PUBLIC` | | `CONNECT`, `CREATETAB`, `BINDADD`, `IMPLICIT_SCHEMA` revoked |
+
+---
+
+## AI / LLM Design
+
+- **Framework:** LangChain.
+  - Structured output via `with_structured_output(method="json_schema", strict=True)`.
+  - A custom `BaseRetriever` (`AsOfClauseRetriever`) over the as-of query.
+  - `langchain-db2`'s `DB2VS` for the demo assistant's FAQ store.
+  - `as_runnable()` for drop-in use in existing chains.
+- **Models:** `google/gemini-3.1-flash-lite` through OpenRouter by default (chosen by a 10-model probe, see Design decisions); `qwen2.5:7b-instruct` through Ollama as the no-key path; any OpenAI-compatible endpoint by configuration. Embeddings are local (`all-MiniLM-L6-v2`, 384 dimensions, CPU).
+- **Prompts** ([prompts.py](src/asof/prompts.py), versioned): extraction, judge and rewrite. Instructions live only in the system message. Questions, drafts, claims and clauses are passed as data blocks with angle brackets escaped, so text cannot close its block or pose as a clause. The rewrite is given the list of claims found wrong, so it does not repeat them.
+- **Calls per answer:** two for a PASS (extract, judge); five for a CORRECTED answer (extract, judge, rewrite, extract, judge).
+- **What the model is not trusted with:**
+  - the customer's date (supplied by the caller)
+  - which clauses exist (Db2 retrieves them)
+  - quotes (must match the clause verbatim)
+  - numbers, limits, tiers and key permissions (checked by code against `RULE_JSON`)
+  - the final release (decided by code)
+  - anything executable: model output is never run or used to build SQL, and is escaped in the UI
+- **Failure handling:** hard wall-clock deadline and output cap on every call; one retry for malformed output; a timeout is final. Ollama requests are non-streaming, so a stuck generation is cancelled. Every failure becomes ESCALATED and is still recorded.
 
 ---
 
 ## Security & Secrets Management
-- All database credentials and external API tokens are read at runtime from environment variables.
-- Sensitive production connection strings are never checked into version control.
+
+Each line of the judging rubric's Security criterion, and where it is met.
+
+| Rubric point | How AsOf meets it | Evidence |
+|---|---|---|
+| No secrets in code; credentials via `.env`; `.env` in `.gitignore` | All credentials are environment variables read by pydantic-settings into `SecretStr` (never printed or logged). `.env` and `.env.*` are gitignored; `.env.example` has dummy values. Setup generates the two service passwords into `.env` without printing them and sets them with `chpasswd` on stdin, never in a process argument. `scripts/check_secrets.py` blocks a commit that contains any value from the local `.env`, a private key, a provider key or a forbidden file. | [config.py](src/asof/config.py), [.gitignore](.gitignore), [scripts/check_secrets.py](scripts/check_secrets.py), [setup.py](src/asof/setup.py); `tests/test_corpus_and_config.py::test_secrets_never_appear_in_repr` |
+| Parameterised SQL, no string-built queries | Every value goes through a `?` marker, including vectors (`VECTOR(?, 384, FLOAT32)`), dates, timestamps and `FETCH FIRST ? ROWS`. The only identifier that varies is the schema name, which must match `^[A-Z][A-Z0-9_]{0,29}$` and comes from code, never from input. Db2 credentials are passed to the driver as arguments, not spliced into the DSN. | [db.py](src/asof/db.py), [retriever.py](src/asof/retriever.py), [schema.py](src/asof/schema.py); `test_unknown_doc_or_injection_string_returns_nothing`, `test_injection_strings_are_stored_as_plain_text`, db2check "SQL injection stored as text" |
+| Input validation | API models: UTF-8 byte limits matching the Db2 column sizes, dates 2020 to 2035, allow-listed `doc_id`, enum channels, no control characters, unknown fields rejected, 64 KB body cap. Policy changes: ID and label patterns, flat rule JSON within 2000 bytes. The seed corpus is validated (IDs, ordered non-overlapping periods) before it reaches Db2, and Db2 enforces it again (`WITHOUT OVERLAPS`, check constraints). | [api.py](src/asof/api.py), [policy.py](src/asof/policy.py), [corpus.py](src/asof/corpus.py); `tests/test_api.py::test_invalid_input_is_rejected` and others |
+| Least-privilege Db2 users | Runtime user `asofapp` can read and call three procedures, nothing else; editor `asofedit` can only call `APPLY_POLICY_CHANGE`. Ledger writes happen only inside `APPEND_LEDGER`. `PUBLIC` defaults revoked. Setup proves it on every run by trying writes as `asofapp`. | [90_grants.sql](src/asof/sql/90_grants.sql); `test_app_user_is_read_only`, `test_app_user_cannot_write_ledger_tables`, `test_only_the_editor_can_change_policy` |
+| Safe handling of user data | Emails, phone numbers, card numbers (Luhn-checked) and other 13 to 19 digit numbers, and booking references are masked before text goes to the LLM provider or the ledger, including the stored final answer. The UI escapes every string. | [redact.py](src/asof/redact.py); `tests/test_redact.py`, `test_personal_data_is_redacted_before_the_llm_and_the_ledger` |
+| Prompts and LLM output, no prompt-injection shortcuts | Untrusted text is escaped inside delimited blocks; instructions only in the system message; strict output schemas; a verdict counts only with a verbatim quote from a retrieved clause; deterministic rule checks override the judge; the gate fails closed; LLM output is never executed or used in SQL. A manipulated judge that says SUPPORTED with a real quote is still overridden. | [prompts.py](src/asof/prompts.py), [gate.py](src/asof/gate.py), [rules.py](src/asof/rules.py); `test_manipulated_judge_cannot_pass_a_contradiction`, `test_fake_clause_inside_a_claim_stays_data`, the live test `test_injected_instruction_does_not_get_a_contradiction_through`, and the 3 prompt-injection cases in the frozen test split (none released as PASS: 2 corrected from the clauses, 1 escalated) |
+| Tamper evidence (beyond the rubric) | Triggers reject UPDATE and DELETE even for the owner. The hash chain is computed inside Db2, and `VERIFY_CHAIN` catches an owner who drops a trigger and edits a row, edits a citation, or deletes the last row. | [02_ledger_rules.sql](src/asof/sql/02_ledger_rules.sql), [03_procedures.sql](src/asof/sql/03_procedures.sql); `tests/test_db2_ledger.py` |
+| Web and API hardening | CSP with no inline script or style; `X-Frame-Options: DENY`; `nosniff`; `no-store` on API responses; per-client rate limit on LLM endpoints; server binds to localhost; policy edits localhost-only unless a token is configured. | [api.py](src/asof/api.py); `test_security_headers`, `test_rate_limit_applies_to_llm_endpoints`, `test_policy_change_is_refused_from_a_remote_client` |
+
+Retention: the ledger is append-only by design. A deployment should set a retention period for redacted questions and drafts, as its own data policy requires. AsOf never stores the unredacted text.
+
+---
+
+## Evaluation
+
+[docs/eval_results.md](docs/eval_results.md) holds every recorded run. The 40-case test split was committed before the first run and is frozen by a pinned SHA-256. On it, `gemini-3.1-flash-lite` released none of the 26 drafts that were wrong for their date (0.0% false allow), held back 1 of 14 correct drafts (7.1% false block), and cited the right clause version in every case. The README has both providers side by side.
 
 ---
 
