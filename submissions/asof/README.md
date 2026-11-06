@@ -57,8 +57,8 @@ Given an AI-generated answer and the date that matters (booking or travel date, 
 |---|---|
 | Db2 schema, least-privilege users, seed data, as-of + vector retrieval, replay query | Done, tested |
 | LLM layer: provider switch, strict schemas, batched judge, hard deadlines | Done, tested |
-| Claim pipeline, deterministic rule checks, ledger procedure, API | In progress |
-| Change impact, web UI, evaluation results | Next |
+| Claim pipeline, deterministic rule checks, redaction, hash-chained ledger, API, LangChain runnable | Done, tested (incl. live LLM) |
+| Change impact, web UI, analytics views, evaluation results | Next |
 
 ---
 
@@ -68,7 +68,7 @@ Given an AI-generated answer and the date that matters (booking or travel date, 
 - **Connector / Driver Used:** `ibm_db` / `ibm_db_dbi` for every query (parameter markers only), and the official LangChain integration `langchain-db2` (`DB2VS`) for the demo assistant's FAQ store.
 - **Database Schema / Data Models:** schema `ASOF`, defined in [src/asof/sql/](src/asof/sql/).
   - `POLICY_CLAUSE`: bitemporal. `BUSINESS_TIME` is when a clause version applies to customers, `SYSTEM_TIME` is when the database held it. `PRIMARY KEY (CLAUSE_ID, BUSINESS_TIME WITHOUT OVERLAPS)` makes overlapping versions impossible. Each row has a `VECTOR(384, FLOAT32)` embedding and `RULE_JSON` parameters guarded by a `JSON_EXISTS` check constraint. Old rows move to `POLICY_CLAUSE_HIST` automatically.
-  - `ANSWER_LEDGER`, `CLAIM_CITATION`, `CHAIN_HEAD`: one row per decision and per claim, each ledger row hashing the previous one.
+  - `ANSWER_LEDGER`, `CLAIM_CITATION`, `CHAIN_HEAD`: one row per decision and one per claim per check. Written only by the SQL PL procedure `APPEND_LEDGER`, which locks `CHAIN_HEAD`, assigns the next gapless `LEDGER_ID`, computes the row's SHA-256 in Db2 (`HASH(..., 2)`) over the previous row's hash and every field, and shreds the claim citations out of the hashed verdict JSON with `JSON_TABLE`, all in one atomic call. `BEFORE UPDATE` / `BEFORE DELETE` triggers reject any change with SQLSTATE 75001, even for the owner, and `VERIFY_CHAIN` recomputes the whole chain to catch anyone who drops the triggers first.
   - `PUBLISHED_ANSWER`: help-centre answers pinned to the clause version they were written from.
   - `FAQ_KB`: the naive demo assistant's knowledge base, created and searched by `DB2VS`.
 - **Key Queries & Operations:** the core query, from [src/asof/retriever.py](src/asof/retriever.py):
@@ -81,7 +81,8 @@ Given an AI-generated answer and the date that matters (booking or travel date, 
   ORDER BY DIST FETCH FIRST ? ROWS ONLY
   ```
 
-  For replay, `FOR SYSTEM_TIME AS OF ?` goes in front of `FOR BUSINESS_TIME AS OF ?`: the same question, answered from what the database held at an earlier moment.
+  For replay, `FOR SYSTEM_TIME AS OF ?` goes in front of `FOR BUSINESS_TIME AS OF ?`: the same question, answered from what the database held at an earlier moment. Each citation also records the clause row's `SYS_START`, so replay can show the exact row a decision used, what the database held for that customer date at decision time, and what applies today.
+- **Least privilege:** the runtime user `asofapp` holds `SELECT` on the tables it reads and `EXECUTE` on `APPEND_LEDGER` and `VERIFY_CHAIN`, nothing else: no `INSERT`, `UPDATE`, `DELETE` or DDL anywhere. The procedures run with the owner's authority. Setup revokes Db2's default `PUBLIC` database privileges.
 
 ### Check that your Db2 supports all of it: one command
 
@@ -113,7 +114,16 @@ PASS  Trigger blocks UPDATE: UPDATE rejected with SQLSTATE 75001
   - Default: **OpenRouter** with `google/gemini-3.1-flash-lite`, chosen by a probe of 10 models on AsOf's own prompts (format validity, verdict and clause accuracy, verbatim quoting, prompt injection, latency). Results and reasoning are in [architecture.md](architecture.md#design-decisions).
   - No-key path: **Ollama** with `qwen2.5:7b-instruct`, running locally.
   - Any other OpenAI-compatible endpoint via `LLM_PROVIDER=openai_compatible`.
-- **RAG / Tool Calling Workflow:** for each claim the retriever pulls the clause versions in force on the customer's date from Db2. All claims and their clauses go to the model in one judge call, as delimited, escaped data blocks that cannot close their tag or pose as instructions. The model must quote the deciding clause text verbatim. Every LLM call has a hard deadline and an output-token cap, and returns a validated object or raises, so the gate can fail closed.
+- **RAG / Tool Calling Workflow** ([src/asof/gate.py](src/asof/gate.py)):
+  1. **Redact** emails, phone numbers, card numbers and booking references from the question and draft.
+  2. **Extract** atomic policy claims (one LLM call, strict schema, at most 8).
+  3. **Retrieve**, per claim, the clause versions in force on the customer's date (Db2 query above).
+  4. **Judge** all claims in one LLM call. Claims and clauses go in as delimited, escaped data blocks that cannot close their tag or pose as instructions. The model must cite a clause that was retrieved and quote its deciding text **verbatim**, or the verdict drops to NOT_COVERED.
+  5. **Rule check** ([src/asof/rules.py](src/asof/rules.py)): code compares amounts, percentages, durations, weights, counts and key permissions (for example `retroactive_allowed`) with the clause's `RULE_JSON`, and routes delay claims to the tier that applies. A mismatch forces CONTRADICTED even when the model said SUPPORTED; it can never turn a contradiction into a pass.
+  6. **Decide.** All supported: PASS with policy references. Any contradiction: rewrite strictly from the cited clauses, re-check the rewrite from step 2, and release it only if every claim is supported. Claims no clause covers, timeouts, invalid output or any error: ESCALATED with a holding reply.
+  7. **Record** the decision with `APPEND_LEDGER`. If the ledger cannot record it, the answer is withheld (HTTP 503).
+
+  Every LLM call has a hard deadline and an output-token cap and returns a validated object or raises.
 
 ---
 
@@ -197,17 +207,57 @@ All settings are environment variables, read from `.env` ([.env.example](.env.ex
 ```bash
 python -m asof.db2check      # verify the Db2 features AsOf needs (owner account)
 python -m asof.setup         # schema, users, seed data, grants, self-check
+python -m asof.api           # API on http://127.0.0.1:8000 (interactive docs at /docs)
 ```
 
-The claim-checking pipeline, API and web UI are in progress (see [Build status](#build-status)).
+**The Moffatt scenario, end to end.** Ask the naive demo assistant (which answers from a stale FAQ) and let AsOf check its draft, once for a March booking and once for a June booking:
+
+```bash
+curl -s -X POST localhost:8000/api/assistant/ask -H 'content-type: application/json' \
+  -d '{"question": "My grandmother just died. Can I get the bereavement fare after I travel?", "as_of_date": "2026-03-10"}'
+```
+
+A real run with `gemini-3.1-flash-lite` (abridged):
+
+| | March booking (`2026-03-10`) | June booking (`2026-06-02`) |
+|---|---|---|
+| Assistant draft | "You can request a bereavement discount retroactively ... within 90 days of your ticket issuance." | same promise |
+| Retroactive claim | CONTRADICTED by **BRV-002 v1** (judge and rule check agree) | SUPPORTED by **BRV-002 v2** |
+| Decision | **CORRECTED**: "Bereavement fares must be requested before travel begins. A bereavement fare cannot be applied retroactively once any part of the journey has been flown, and no refund of the fare difference is available after travel. Policy references: BRV-002 v1 (in effect from 2026-01-01)." | **PASS** with **BRV-002 v2** references when the draft is accurate, **CORRECTED** when it overstates the refund |
+| In 5 consecutive live runs | CORRECTED 2 of 2 | PASS 2 of 3, CORRECTED 1 of 3 |
+
+Other stale FAQ entries are caught the same way: a July question about the first bag fee is corrected from $35 to $40 (BAG-001 v2), and "you can transfer your ticket for a $50 name change fee" is corrected from CHG-004.
+
+**API**
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/gate` | Check a draft: `question`, `draft_answer`, `as_of_date`, optional `channel`. Returns the decision, final answer, and per-claim verdicts with clause versions and quotes. |
+| `POST /api/assistant/ask` | Ask the naive demo assistant, then check its draft |
+| `GET /api/ledger`, `GET /api/ledger/{id}` | Recorded decisions and their claim citations |
+| `GET /api/ledger/{id}/replay` | The clause rows a decision used, what Db2 held at that moment, and what applies today |
+| `GET /api/chain/verify` | Run `VERIFY_CHAIN` over the whole ledger |
+| `GET /healthz` | Db2 connectivity and the configured model |
+
+**Drop it into an existing LangChain app**
+
+```python
+from asof import as_runnable
+
+chain = assistant_prompt | llm | StrOutputParser() | as_runnable(as_of=booking_date)
+answer = chain.invoke({"question": "Can I get a bereavement fare after I travel?"})
+```
+
+The runnable takes the assistant's draft and returns the checked answer, and every decision lands in the Db2 ledger.
 
 ---
 
 ## Testing & Verification
 
 ```bash
-pytest -q                    # 49 tests: unit tests plus Db2 integration tests
-pytest -q -m "not db2"       # unit tests only, no database needed
+pytest -q                                 # 182 tests: unit tests plus Db2 integration tests
+pytest -q -m "not db2"                    # unit tests only, no database needed
+ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 4 live tests against the configured LLM (spends API calls)
 ```
 
 Integration tests install everything into a throwaway `ASOF_TEST` schema, connect as the real least-privilege user, and drop the schema afterwards. They skip automatically when Db2 is unreachable. They cover:
@@ -215,8 +265,12 @@ Integration tests install everything into a throwaway `ASOF_TEST` schema, connec
 - the same claim reaching `BRV-002` v1 for 2026-03-10 and v2 for 2026-06-02, and both sides of the 2026-04-30 / 2026-05-01 boundary
 - replay with `FOR SYSTEM_TIME AS OF` after a policy change
 - Db2 rejecting overlapping clause versions and malformed rule JSON
-- the runtime user being refused `UPDATE`, `DELETE`, `INSERT`, `CREATE TABLE` and `DROP`
-- SQL injection strings returning nothing instead of executing
+- the runtime user being refused `UPDATE`, `DELETE`, `INSERT`, `CREATE TABLE` and `DROP`, on policy and ledger tables alike
+- SQL injection strings returning nothing instead of executing, and stored as plain text in the ledger
+- the ledger: gapless IDs and linked hashes under three concurrent writers; triggers stopping even the owner; `VERIFY_CHAIN` catching an owner who drops a trigger and edits a row, edits a citation, or deletes the last row
+- every gate decision path with a scripted LLM, including a manipulated judge that says SUPPORTED with a real quote (the rule check still overrides it), an invented quote, a clause not in force, timeouts and a ledger outage
+- 61 rule-checker tests, mostly realistic claims against the real corpus rules, in both directions (real contradictions caught, situational numbers left alone)
+- API validation (byte limits, dates, allow-listed `doc_id`, control characters, unknown fields), body cap, rate limit and security headers
 
 > **Note on the submission validator:** `scripts/validate_submission.py` flags any `.env` or `*.pem` file under the folder, including your local `.env` and certificate files inside `.venv`. Neither is committed. Run the validator from a clean checkout to see what a reviewer sees.
 
