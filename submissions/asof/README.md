@@ -228,7 +228,7 @@ cp .env.example .env     # set DB2_PASSWORD, and OPENROUTER_API_KEY (or LLM_PROV
 - **B. Plain Docker with IBM's image** (Intel or Linux). Same container and database the organizers' setup guide uses:
 
   ```bash
-  docker run -itd --name db2server --privileged=true -p 50000:50000 \
+  docker run -itd --name db2server --privileged=true -p 127.0.0.1:50000:50000 \
     -e LICENSE=accept -e DBNAME=testdb \
     -e DB2INST1_PASSWORD="$(sed -n 's/^DB2_PASSWORD=//p' .env)" \
     -v db2data:/database icr.io/db2_community/db2:12.1.5.0

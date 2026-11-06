@@ -5,8 +5,9 @@
     python scripts/check_secrets.py --all      # checks every tracked file in this folder
 
 Two kinds of checks:
-1. The real values in your local .env. If any of them (8+ characters) appears in what you
-   are about to commit, that is a leak, whatever it looks like.
+1. The real values in your local .env. If any of them appears in what you are about to commit,
+   that is a leak, whatever it looks like (values of 8+ characters anywhere; shorter ones, down to
+   4 characters, when they stand as a word of their own).
 2. Generic patterns: private keys, provider API keys, and forbidden files (.env, *.pem, ...).
 
 It prints file and line for each finding, never the secret. Exit code 1 means do not commit.
@@ -45,9 +46,20 @@ def local_secret_values() -> list[str]:
             continue
         key, value = line.split("=", 1)
         value = value.strip().strip("'\"")
-        if SECRET_KEYS.search(key.strip().upper()) and len(value) >= 8:
+        if SECRET_KEYS.search(key.strip().upper()) and len(value) >= MIN_SECRET_CHARS:
             values.append(value)
     return values
+
+
+MIN_SECRET_CHARS = 4  # shorter values are too common to search for
+LONG_SECRET_CHARS = 8  # from here a plain substring match; below it, a whole-word match
+
+
+def leaks(value: str, line: str) -> bool:
+    """A long secret anywhere in the line, or a short one standing as a word of its own."""
+    if len(value) >= LONG_SECRET_CHARS:
+        return value in line
+    return re.search(r"(?<![A-Za-z0-9_])" + re.escape(value) + r"(?![A-Za-z0-9_])", line) is not None
 
 
 def git(*args: str) -> str:
@@ -87,7 +99,7 @@ def main(argv: list[str]) -> int:
                 if pattern.search(line):
                     findings.append(f"{path}:{lineno}: looks like a {label}")
             for value in secrets:
-                if value in line:
+                if leaks(value, line):
                     findings.append(f"{path}:{lineno}: contains a value from your local .env")
 
     scope = "tracked files" if scan_all else "staged files"
