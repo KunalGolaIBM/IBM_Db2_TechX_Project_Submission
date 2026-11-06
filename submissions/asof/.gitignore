@@ -17,7 +17,7 @@ htmlcov/
 
 # Model and tool caches
 .cache/
-models/
+/models/
 *.safetensors
 *.bin
 

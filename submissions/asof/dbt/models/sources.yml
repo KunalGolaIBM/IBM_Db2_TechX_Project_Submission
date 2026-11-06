@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: asof
+    schema: "{{ env_var('ASOF_SCHEMA', 'ASOF') }}"
+    quoting: {database: false, schema: false, identifier: false}
+    tables:
+      - name: ANSWER_LEDGER
+        description: One row per check, written only by APPEND_LEDGER. Text columns carry column masks.
+      - name: CLAIM_CITATION
+        description: One row per claim per check, with the exact clause version it was checked against.
+      - name: POLICY_CLAUSE
+        description: Bitemporal clause versions (current rows).
+      - name: POLICY_CLAUSE_HIST
+        description: Rows replaced by policy changes (system-time history).
