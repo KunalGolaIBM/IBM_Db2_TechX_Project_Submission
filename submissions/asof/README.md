@@ -155,7 +155,7 @@ cd submissions/asof
 
 # 1. Python environment
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt && pip install -e . --no-deps
+pip install -r requirements.txt -c requirements.lock && pip install -e . --no-deps
 
 # 2. Configuration: set DB2_ADMIN_PASSWORD, and OPENROUTER_API_KEY (or LLM_PROVIDER=ollama)
 cp .env.example .env
@@ -328,7 +328,12 @@ On the dev split, OpenRouter scored 0% false allow, 0% false block and 95% ideal
 pytest -q                                 # 215 tests: unit tests plus Db2 integration tests
 pytest -q -m "not db2"                    # unit tests only, no database needed
 ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 4 live tests against the configured LLM (spends API calls)
+
+pip install -r requirements-dev.txt
+python scripts/audit_deps.py             # pip-audit over all 105 pinned packages; exit 1 on any known vulnerability
 ```
+
+`requirements.txt` lists the 18 direct dependencies; `requirements.lock` pins all 105 packages, transitive ones included, at the versions tested. It is used as a pip constraints file, so Linux and Windows still get their platform-only packages. `python scripts/lock_deps.py` regenerates it, and a test fails if the two files disagree. Last audit (6 Nov 2026): no known vulnerabilities.
 
 Checked from a fresh clone on Fri 6 Nov 2026, following only this README, on a Mac that already had the pip cache and the Db2 image layers: install 68 s, Db2 healthy in 167 s, setup 30 s, 215 passed, 26/26 Db2 checks, and the Moffatt example above returned CORRECTED (BRV-002 v1) for March and PASS (BRV-002 v2) for June.
 

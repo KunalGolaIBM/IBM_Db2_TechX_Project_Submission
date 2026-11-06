@@ -1,0 +1,4 @@
+# Development and CI tools, on top of requirements.txt. Not needed to run AsOf.
+#   pip install -r requirements-dev.txt
+pip-audit==2.10.1
+ruff==0.17.4
