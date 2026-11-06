@@ -23,8 +23,9 @@ flowchart LR
 
     subgraph AsOf["AsOf (Python, FastAPI)"]
         API["API: validation, rate limit,<br/>security headers"]
-        GATE["Gate pipeline<br/>redact, extract, retrieve, judge,<br/>quote rule, rule check, decide, rewrite"]
-        LLM["LLM layer<br/>strict schemas, deadlines, output caps"]
+        GATE["Check graph (LangGraph)<br/>extract, retrieve, judge + verify,<br/>investigate (agent), decide, rewrite"]
+        AGENT["Investigate agent<br/>tools: search_policy, clause_versions<br/>(max 3 calls)"]
+        LLM["LLM layer<br/>strict schemas, deadlines, output caps,<br/>fallback to Ollama"]
         EMB["Embeddings<br/>all-MiniLM-L6-v2 on CPU"]
     end
 
@@ -37,6 +38,8 @@ flowchart LR
         PUB[("PUBLISHED_ANSWER")]
         FAQ[("FAQ_KB (DB2VS)")]
         PROCS["SQL PL: APPEND_LEDGER, VERIFY_CHAIN,<br/>APPLY_POLICY_CHANGE, CHANGE_IMPACT"]
+        MODEL["EMBEDDER (CREATE EXTERNAL MODEL)<br/>TO_EMBEDDING over HTTPS"]
+        VIDX["IX_CLAUSE_EMBEDDING<br/>native vector index (VANN), ASOF_TS32K"]
         VIEWS["Views: V_POLICY_TIMELINE (JSON_TABLE),<br/>V_DECISION_STATS, ..."]
     end
 
@@ -47,6 +50,9 @@ flowchart LR
     API --> GATE
     GATE --> LLM --> PROVIDER
     GATE --> EMB
+    GATE -- "only for unmatched claims" --> AGENT
+    AGENT -- "as-of search, clause versions (asofapp)" --> PC
+    AGENT --> LLM
     GATE -- "as-of + vector query (asofapp)" --> PC
     GATE -- "CALL APPEND_LEDGER (asofapp)" --> PROCS
     API -- "CALL APPLY_POLICY_CHANGE (asofedit)" --> PROCS
@@ -55,8 +61,30 @@ flowchart LR
     PROCS --> PC
     PROCS --> PUB
     PC -. "system versioning" .-> HIST
+    PROCS -- "new clause version" --> MODEL
+    MODEL -. "embeddings endpoint" .-> PROVIDER
+    PC --- VIDX
     BOT -- "similarity search" --> FAQ
     API --> VIEWS
+```
+
+
+The check itself, as the LangGraph state graph in [checkgraph.py](src/asof/checkgraph.py). Solid edges are fixed; the conditions are read from deterministic state (verdicts, pass number, errors), never decided by a model:
+
+```mermaid
+flowchart TD
+    START((start)) --> EX[extract claims]
+    EX -- "claims" --> RE[retrieve as of date<br/>Db2 temporal + vector]
+    EX -- "no claims" --> DE[decide]
+    RE --> JU[judge + verbatim quote + rule check]
+    JU -- "a claim matched no clause" --> IN[investigate: agent with Db2 tools<br/>search_policy, clause_versions, max 3 calls]
+    JU -- "otherwise" --> DE
+    IN -- "new evidence goes back through the judge, quote and rule checks" --> DE
+    DE -- "contradiction on the first pass" --> RW[rewrite from clause text]
+    RW -- "full re-check" --> EX
+    DE -- "PASS, CORRECTED or ESCALATED" --> REC[record: APPEND_LEDGER]
+    EX & RE & JU & RW -- "any error" --> FC[fail closed: ESCALATED]
+    FC --> REC
 ```
 
 ---
@@ -65,7 +93,8 @@ flowchart LR
 
 1. **User interface** ([src/asof/ui/](src/asof/ui/)): plain HTML, CSS and ES modules served by FastAPI, with no framework or build step. Five screens: Playground, Policy timeline, Ledger and replay, Change impact, Analytics. A strict Content Security Policy is in force (no inline script or style), and every string from the API or the LLM is escaped before rendering.
 2. **API** ([src/asof/api.py](src/asof/api.py)): FastAPI. Pydantic input models with UTF-8 byte limits, date bounds, an allow-listed `doc_id` and no control characters. Per-client rate limit on LLM endpoints, 64 KB body cap, security headers, and error handlers that return SQLSTATEs but never stack traces or SQL. Binds to localhost by default.
-3. **Gate pipeline** ([src/asof/gate.py](src/asof/gate.py)): orchestrates one check and owns the decision.
+3. **Check graph and gate** ([src/asof/checkgraph.py](src/asof/checkgraph.py), [src/asof/gate.py](src/asof/gate.py)): the LangGraph state graph orchestrates one check (diagram above); the gate owns the steps it calls (extract, retrieve, judge and verify, decide, rewrite, record) and the decision rules.
+   - The `investigate` node is a tool-calling agent with two read-only Db2 tools, `search_policy` (as-of search on the customer's date) and `clause_versions` (a clause's dated versions), capped at 3 calls; its trace is stored with the decision in `VERDICTS_JSON`.
    - [redact.py](src/asof/redact.py) masks personal data before anything leaves the process.
    - [prompts.py](src/asof/prompts.py) and [schemas.py](src/asof/schemas.py) hold the versioned prompts and the strict output schemas.
    - [retriever.py](src/asof/retriever.py) is the as-of plus vector query, exposed as a LangChain `BaseRetriever`.
@@ -442,3 +471,5 @@ Retention: the ledger is append-only by design. A deployment should set a retent
 - **`TEXT_GENERATION` evaluated, not used.** It works here too (verified against a test endpoint), but the check needs structured output against a schema, per-call deadlines, capped retries and a fallback provider, which the LangChain layer provides and a SQL scalar function does not. Moving generation into SQL would weaken fail-closed handling for no gain.
 - **Provider fallback per call, recorded in the ledger.** A hosted model that times out, errors or returns no valid structured output after its retries hands that same call to local Ollama once, under Ollama's longer deadline. A valid answer from the primary is never second-guessed, so the fallback changes nothing when the hosted model works. `MODEL_INFO` in the ledger records it (`openrouter:... (fallback ollama:... on 1 of 4 calls)`), so a replayed decision shows which model judged it. Eval runs disable it so each run measures one provider.
 - **Hybrid keyword plus vector retrieval with Db2 Text Search: evaluated and rejected (6 Nov 2026).** Measured first: with vector search alone, the clause version that a dev case's key claim must be checked against is retrieved for 18 of 18 dev cases at k = 4 (the check retrieves 4 clauses per claim and the judge sees all of them), 16 of 18 at k = 2 and 13 of 18 at k = 1; citation accuracy on the frozen test split is already 100% with the hosted model. Hybrid search could only reorder results the judge already sees. Then tried: IBM's container option `TEXT_SEARCH=true` failed in `db2iupdt -j TEXT_SEARCH` with DBI20187E (the instance's `fencedid` file not owned by `root:db2iadm1`) and left the instance unable to start again; the Db2 for i documentation also forbids `CONTAINS` on a table with a period, which would mean a side table keyed by `(CLAUSE_ID, BUS_START)` and asynchronous `UPDATE INDEX` runs after every policy change, plus a Java text-search server for judges to run. No measurable gain for a large setup cost, so AsOf does not use it. It would become worth revisiting with a much larger policy library, where keyword matching of clause numbers and defined terms could rescue claims that embeddings rank poorly.
+- **The check is a LangGraph graph with fixed edges and one agentic node.** Rubric B and Unstop ask for agentic AI, and the risk with agents in a safety check is a model deciding to skip a step. So the graph's edges are chosen from deterministic state only, every error routes to `fail_closed`, and the agent (`investigate`) runs only for claims that matched no clause, with two read-only Db2 tools and at most 3 calls. What it finds is evidence, not a verdict: the claims go back through the judge, the verbatim-quote rule and the rule check, and an agent failure leaves them NOT_COVERED. Tests assert the graph's shape (no edge from the agent to a release) and that an injected instruction reaches it only as escaped data.
+- **The agent stays on although it did not improve the eval.** Two runs of the frozen split with the agent kept 0 of 26 false allows and 1 of 14 false blocks, with ideal decisions at 90.0% in both against 92.5% before, within the hosted model's run-to-run variance, for about 0.7 more model calls per check. Retrieval already finds the right clause version for every dev case on this corpus, so there is little for it to add here; it pays off when a policy library is large enough for the first retrieval to miss. The results are reported as they are.

@@ -3,6 +3,8 @@
 > **What did the policy say on that date, and what did your AI tell the customer?**
 > AsOf checks each policy claim in an AI assistant's answer against the policy version in force on the customer's date, stops answers that contradict it, and keeps a tamper-evident Db2 record of what was said and why.
 
+[![CI](https://github.com/JustJay7/asof/actions/workflows/ci.yml/badge.svg)](https://github.com/JustJay7/asof/actions/workflows/ci.yml)
+
 **Built on IBM Db2 12.1 for Db2Hack 2026.** Source: [github.com/JustJay7/asof](https://github.com/JustJay7/asof) (standalone mirror of `submissions/asof`). Bitemporal tables, native `VECTOR` search, SQL/JSON, in-database SHA-256, triggers, SQL PL and least-privilege users, with LangChain and the official `langchain-db2` connector.
 
 > **Fictional data.** "Aurelia Air" and every policy, FAQ and help-centre answer in this repository are invented for the demo. They are modelled on the kind of policy at issue in *Moffatt v. Air Canada* and describe no real airline.
@@ -175,21 +177,23 @@ PASS  Trigger blocks UPDATE: UPDATE rejected with SQLSTATE 75001
 
 ## AI / LLM Architecture (if applicable)
 
-- **Framework:** LangChain. Structured output into strict Pydantic schemas, a custom `BaseRetriever` over the as-of query, and `langchain-db2`'s `DB2VS` vector store.
+- **Frameworks:** **LangGraph** runs the check as a state graph with one tool-calling agent step ([src/asof/checkgraph.py](src/asof/checkgraph.py)); **LangChain** provides structured output into strict Pydantic schemas, a custom `BaseRetriever` over the as-of query, and `langchain-db2`'s `DB2VS` vector store.
 - **Model Provider & Model:**
   - Default: **OpenRouter** with `google/gemini-3.1-flash-lite`, chosen by a probe of 10 models on AsOf's own prompts (format validity, verdict and clause accuracy, verbatim quoting, prompt injection, latency). Results and reasoning are in [architecture.md](architecture.md#design-decisions).
   - No-key path: **Ollama** with `qwen2.5:7b-instruct`, running locally.
   - Any other OpenAI-compatible endpoint via `LLM_PROVIDER=openai_compatible`.
+- **The check graph** ([src/asof/checkgraph.py](src/asof/checkgraph.py)): `extract -> retrieve -> judge -> [investigate] -> decide -> (rewrite -> back to extract, once) -> record`, with every error routed to `fail_closed`. The edges are fixed and chosen from deterministic state; no model decides whether a check, the re-check or the ledger write happens.
 - **RAG / Tool Calling Workflow** ([src/asof/gate.py](src/asof/gate.py)):
   1. **Redact** emails, phone numbers, card numbers and booking references from the question and draft.
   2. **Extract** atomic policy claims (one LLM call, strict schema, at most 8).
   3. **Retrieve**, per claim, the clause versions in force on the customer's date (Db2 query above).
   4. **Judge** all claims in one LLM call. Claims and clauses go in as delimited, escaped data blocks that cannot close their tag or pose as instructions. The model must cite a clause that was retrieved and quote its deciding text **verbatim**, or the verdict drops to NOT_COVERED.
   5. **Rule check** ([src/asof/rules.py](src/asof/rules.py)): code compares amounts, percentages, durations, weights, counts and key permissions (for example `retroactive_allowed`) with the clause's `RULE_JSON`, and routes delay claims to the tier that applies. A mismatch forces CONTRADICTED even when the model said SUPPORTED; it can never turn a contradiction into a pass.
-  6. **Decide.** All supported: PASS with policy references. Any contradiction: rewrite strictly from the cited clauses, re-check the rewrite from step 2, and release it only if every claim is supported. Claims no clause covers, timeouts, invalid output or any error: ESCALATED with a holding reply.
-  7. **Record** the decision with `APPEND_LEDGER`. If the ledger cannot record it, the answer is withheld (HTTP 503).
+  6. **Investigate (the agent step).** Only when a claim matched no clause: a tool-calling model searches Db2 again with its own queries (`search_policy`, an as-of search on the customer's date, and `clause_versions`, a clause's dated versions), at most 3 tool calls over 2 rounds. What it finds is only new evidence: those claims go back through the same judge, the verbatim-quote rule and the rule check. If it fails, the claims stay NOT_COVERED. Its tool calls are recorded in the ledger with the decision.
+  7. **Decide.** All supported: PASS with policy references. Any contradiction: rewrite strictly from the cited clauses, re-check the rewrite from step 2, and release it only if every claim is supported. Claims no clause covers, timeouts, invalid output or any error: ESCALATED with a holding reply.
+  8. **Record** the decision with `APPEND_LEDGER`. If the ledger cannot record it, the answer is withheld (HTTP 503).
 
-  Every LLM call has a hard deadline and an output-token cap and returns a validated object or raises.
+  Every LLM call has a hard deadline and an output-token cap and returns a validated object or raises. If the hosted model fails or times out, the same call goes once to local Ollama, and the ledger records it.
 
 ---
 
@@ -250,7 +254,7 @@ python -m asof.setup
 
 `python -m asof.setup` is safe to re-run. It generates passwords for the two least-privilege users into `.env` (never printed), creates them as OS users inside the Db2 container (Db2 authenticates against the operating system), installs the schema, seeds the fictional data, applies grants, and finishes by proving, as the runtime user, that the as-of query works and that writes are refused. If it cannot reach any Db2 container (for example a remote Db2), it prints the exact `useradd` commands to run on the Db2 host.
 
-Which paths were run end to end: C on Apple Silicon (dev machine and a fresh clone). A creates the same `db2server` container and `testdb` database as B; B is the documented path for Intel and Linux.
+Which paths were run end to end: C on Apple Silicon (dev machine and a fresh clone), and B in CI on every push: x86-64 Linux, IBM's unmodified `icr.io/db2_community/db2:12.1.5.0`, the `docker run` command above, then setup, the 28 Db2 checks, the full test suite and the access plans (first green run: Db2 ready in 75 s, 287 tests passed). A creates the same `db2server` container and `testdb` database as B.
 
 ### Why AsOf builds its own Db2 image
 
@@ -390,19 +394,21 @@ Integration tests install everything into a throwaway `ASOF_TEST` schema, connec
 
 `python -m asof.eval --split test` runs the gate on 40 labelled cases and writes [docs/eval_results.md](docs/eval_results.md), with every per-case decision recorded in [docs/eval/](docs/eval/). The 40 test cases are new scenarios, none used while building or choosing the model. They were committed (`81b5b69`) before the first run and are frozen: a unit test pins their SHA-256 and the runner refuses to run them if it changes. The 20-case dev split holds the scenarios used while debugging. Each case is labelled with the decision it should get and the clause version its key claim must be checked against.
 
-**Frozen test split, both providers** (40 cases: 14 correct drafts, 26 wrong for their date). Same prompts, same cases, same gate:
+**Frozen test split** (40 cases: 14 correct drafts, 26 wrong for their date). Same cases and prompts in every run; every run's per-case results are in [docs/eval/](docs/eval/):
 
-| Metric | OpenRouter `google/gemini-3.1-flash-lite` | Ollama `qwen2.5:7b-instruct` (local, no key) |
-|---|---|---|
-| **False-allow rate** (wrong drafts released as PASS) | **0.0%** (0 of 26) | **3.8%** (1 of 26) |
-| False-block rate (correct drafts rewritten or escalated) | 7.1% (1 of 14) | 21.4% (3 of 14) |
-| Safe decisions | 97.5% | 90.0% |
-| Ideal decisions | 92.5% | 82.5% |
-| Citation accuracy (key claim checked against the right version) | 100% | 91.4% |
-| Errors (failed closed) | 0 | 0 |
-| Latency per answer, p50 / p90 | 5.9 s / 8.1 s | 37.9 s / 71.5 s |
-| LLM calls per answer | 3.6 | 3.65 |
-| Whole split | 66 s (4 workers) | 32 min (1 worker) |
+| Metric | OpenRouter `gemini-3.1-flash-lite`, before the agent (`eefc50c`) | OpenRouter, LangGraph check with the agent, run 1 (`1ccd7a1`) | OpenRouter, agent, run 2 (`861a650`) | Ollama `qwen2.5:7b-instruct`, local, no key, before the agent (`a4207d8`) |
+|---|---|---|---|---|
+| **False-allow rate** (wrong drafts released as PASS) | **0.0%** (0 of 26) | **0.0%** (0 of 26) | **0.0%** (0 of 26) | **3.8%** (1 of 26) |
+| False-block rate (correct drafts rewritten or escalated) | 7.1% (1 of 14) | 7.1% (1 of 14) | 7.1% (1 of 14) | 21.4% (3 of 14) |
+| Safe decisions | 97.5% | 97.5% | 97.5% | 90.0% |
+| Ideal decisions | 92.5% | 90.0% | 90.0% | 82.5% |
+| Citation accuracy (key claim checked against the right version) | 100% | 94.3% | 97.1% | 91.4% |
+| Errors (failed closed) | 0 | 0 | 0 | 0 |
+| Latency per answer, p50 | 5.9 s | 6.7 s | 6.4 s | 37.9 s |
+| LLM calls per answer | 3.6 | 4.3 | 4.3 | 3.65 |
+| Whole split | 66 s (4 workers) | 75 s | 73 s | 32 min (1 worker) |
+
+**What the agent did, honestly.** On this split the LangGraph agent step left the safety numbers unchanged and did not improve the others: ideal decisions were 90.0% in both agent runs against 92.5% before, and each check costs about 0.7 more model calls. The two agent runs, with identical logic, missed different cases (run 1: T11, T12, T23, T33; run 2: T11, T20, T23, T33), which is the model's run-to-run variance at work: the hosted model is called without a fixed temperature, and misses such as a judge paraphrasing instead of quoting (T12, T23) come and go between runs. In run 2 the agent ran in 12 checks and surfaced clauses the first retrieval had not found in 6; in the four out-of-scope questions (lounge access, meals, sports equipment, seat selection) nothing it found survived the quote and rule checks, so they escalated, as labelled. On this corpus the first retrieval already finds the right clause version for every dev case (see the text-search decision in architecture.md), so there is little left for the agent to find; it is built for policy libraries large enough for retrieval to miss.
 
 Categories: supported 8, contradicted numbers 6, contradicted eligibility 6, date boundaries (day before and day of a version change) 5, not covered 5, relative and implied counts against limits 4, multi-claim 3, prompt injection 3. Per-category numbers and every miss are in the [report](docs/eval_results.md).
 
@@ -410,8 +416,8 @@ Ollama ran on the MacBook Air (M-series, 16 GB) while Db2 ran under Rosetta on t
 
 What went wrong, from the recorded runs (left unfixed so the numbers stay honest):
 
-- **OpenRouter T33 (false block):** the extractor turned the customer's own situation ("the delay was within our control") into a policy claim. No clause covers it, so a correct answer was escalated.
-- **OpenRouter T31 and T36 (escalated instead of corrected):** the rewrite was right, but in the re-check the judge paraphrased its quote, the verbatim-quote rule downgraded that claim to NOT_COVERED, and the correction was held back.
+- **OpenRouter T33 (false block, all three runs):** the extractor turned the customer's own situation ("the delay was within our control") into a policy claim. No clause covers it, so a correct answer was escalated.
+- **OpenRouter T31 and T36 (escalated instead of corrected, first run):** the rewrite was right, but in the re-check the judge paraphrased its quote, the verbatim-quote rule downgraded that claim to NOT_COVERED, and the correction was held back.
 - **Ollama T20 (the false allow):** the draft says a mother-in-law counts as immediate family; the policy's list does not include in-laws. The local judge quoted the real list sentence ("Immediate family means a spouse or common-law partner, parent, ...") and reasoned that "parent" includes a mother-in-law. The quote was genuine, so the verbatim rule could not catch it, and no rule parameter covers family membership. This is the limit of a 7B judge on a semantic question, and the reason the default is a hosted model.
 - **Ollama T33, T38, T40 (false blocks):** the judge marked correct claims (a 1-year claim window, a family of four on one bereavement booking, one pet per passenger) as contradicted or not covered, so good answers were rewritten or escalated.
 - **Ollama T18, T31, T39 (escalated instead of corrected):** the rewrite's re-check did not come back clean, so the answer went to a specialist instead. Safe, but slower for the customer.
