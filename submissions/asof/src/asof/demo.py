@@ -5,7 +5,8 @@
 Asks the naive demo assistant each question below for the given customer date, checks its
 draft with the gate (real LLM, real Db2), and records the decision in the ASOF ledger. The
 two pet questions (November and December trips) are what the change-impact screen uses
-after the "pet fee to $125 from 1 Dec 2026" preset.
+after the "pet fee to $125 from 1 Dec 2026" preset. The bank drafts below are checked as written
+(the demo assistant only knows the airline), against Fernhollow Bank's fee schedule.
 """
 
 from __future__ import annotations
@@ -31,6 +32,13 @@ SCENARIOS = [
     (PETS, date(2026, 12, 15)),
     ("Can my 12-year-old fly alone?", date(2026, 8, 1)),
 ]
+REFUND = "I was charged an overdraft fee yesterday. Will you refund it?"
+BANK_DRAFTS = [  # (question, a bank assistant's draft, customer date)
+    (REFUND, "Yes, don't worry: overdraft fees are refunded automatically within a few days.", date(2026, 3, 15)),
+    (REFUND, "Overdraft fees are not refunded automatically, but you can ask us for a courtesy refund of up to two "
+             "overdraft fees in any 12-month period, within 60 days of the date the fee was charged.", date(2026, 9, 10)),
+    ("How much is the overdraft fee?", "The overdraft fee is $35 for each item we pay.", date(2026, 8, 3)),
+]
 
 
 def main() -> int:
@@ -44,6 +52,9 @@ def main() -> int:
             draft = assistant.answer(question)
             r = gate.check(GateRequest(question, draft.text, as_of, "AURELIA-CSP", "demo"))
             print(f"#{r.ledger_id}  {as_of}  {r.decision:<9} {r.reason_code:<24} {question}")
+        for question, draft_text, as_of in BANK_DRAFTS:
+            r = gate.check(GateRequest(question, draft_text, as_of, "FERNHOLLOW-FEES", "demo"))
+            print(f"#{r.ledger_id}  {as_of}  {r.decision:<9} {r.reason_code:<24} {question} (bank)")
     except (ConfigError, LLMError, db.DatabaseError) as exc:
         print(f"Demo failed: {exc}")
         return 1

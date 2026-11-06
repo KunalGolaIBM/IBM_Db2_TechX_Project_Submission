@@ -104,6 +104,9 @@ async function status() {
 
 // ---------- Playground ----------
 const QUESTION_MOFFATT = "My grandmother just died. Can I get the bereavement fare after I travel?";
+const AIRLINE = "AURELIA-CSP";
+const BANK = "FERNHOLLOW-FEES";
+const DOC_NAME = { [AIRLINE]: "Aurelia Air", [BANK]: "Fernhollow Bank" };
 const SCENARIOS = [
   { label: "Moffatt: March booking", mode: "ask", question: QUESTION_MOFFATT, as_of: "2026-03-10" },
   { label: "Same question: June booking", mode: "ask", question: QUESTION_MOFFATT, as_of: "2026-06-02" },
@@ -112,8 +115,12 @@ const SCENARIOS = [
   { label: "Pet fee, December trip", mode: "ask", question: "Can my cat fly in the cabin with me, and what does it cost?", as_of: "2026-12-15" },
   { label: "Paste a draft", mode: "draft", question: "Can my dog fly in the cabin with me?",
     draft: "Yes, dogs up to 12 kg including the carrier can fly in the cabin for $100 each way.", as_of: "2026-05-05" },
+  { label: "Bank: \"refunded automatically\"", mode: "draft", doc: BANK, question: "I was charged an overdraft fee yesterday. Will you refund it?",
+    draft: "Yes, don't worry: overdraft fees are refunded automatically within a few days.", as_of: "2026-03-15" },
+  { label: "Bank: overdraft fee in August", mode: "draft", doc: BANK, question: "How much is the overdraft fee?",
+    draft: "The overdraft fee is $35 for each item we pay.", as_of: "2026-08-03" },
 ];
-const play = { mode: "ask", question: QUESTION_MOFFATT, draft: "", as_of: "2026-03-10", scenario: 0, result: null };
+const play = { mode: "ask", doc: AIRLINE, question: QUESTION_MOFFATT, draft: "", as_of: "2026-03-10", scenario: 0, result: null };
 
 const HEADLINE = {
   PASS: "Released as written",
@@ -145,7 +152,7 @@ function renderPlayground() {
     <div class="page-head">
       <div>
         <h1>Check an answer against the policy in force on a date</h1>
-        <p>The naive demo assistant answers from a stale FAQ with no idea which policy applied when. AsOf checks every claim in its draft against the Aurelia Air clause version in force on the customer's date, in Db2.</p>
+        <p>The naive demo assistant answers from a stale FAQ with no idea which policy applied when. AsOf checks every claim in its draft against the clause version in force on the customer's date, in Db2. Two fictional policy documents: Aurelia Air's customer service plan and Fernhollow Bank's fee schedule.</p>
       </div>
     </div>
     <div class="grid-2">
@@ -157,13 +164,17 @@ function renderPlayground() {
         <div class="sep"></div>
         <div class="field">
           <div class="seg" role="tablist">
-            <button type="button" data-mode="ask" class="${s.mode === "ask" ? "on" : ""}">Ask the demo assistant</button>
+            <button type="button" data-mode="ask" class="${s.mode === "ask" ? "on" : ""}">Ask the demo assistant (airline)</button>
             <button type="button" data-mode="draft" class="${s.mode === "draft" ? "on" : ""}">Check my own draft</button>
           </div>
         </div>
         <div class="field">
           <label for="q">Customer question</label>
           <textarea id="q" name="question" rows="3" maxlength="2000" required>${s.question}</textarea>
+        </div>
+        <div class="field" ${s.mode === "ask" ? raw("hidden") : ""}>
+          <label for="doc">Policy document</label>
+          <select id="doc">${[AIRLINE, BANK].map((d) => html`<option value="${d}" ${d === s.doc ? raw("selected") : ""}>${DOC_NAME[d]} (${d})</option>`)}</select>
         </div>
         <div class="field" ${s.mode === "ask" ? raw("hidden") : ""}>
           <label for="d">Assistant draft to check</label>
@@ -185,11 +196,12 @@ function renderPlayground() {
     const sc = e.target.closest("[data-scenario]");
     if (sc) {
       const x = SCENARIOS[Number(sc.dataset.scenario)];
-      Object.assign(play, { scenario: Number(sc.dataset.scenario), mode: x.mode, question: x.question, draft: x.draft || "", as_of: x.as_of });
+      Object.assign(play, { scenario: Number(sc.dataset.scenario), mode: x.mode, doc: x.doc || AIRLINE, question: x.question,
+        draft: x.draft || "", as_of: x.as_of });
       renderPlayground();
     }
     const m = e.target.closest("[data-mode]");
-    if (m) { syncPlay(); play.mode = m.dataset.mode; renderPlayground(); }
+    if (m) { syncPlay(); play.mode = m.dataset.mode; if (play.mode === "ask") play.doc = AIRLINE; renderPlayground(); }
   });
   form.addEventListener("submit", (e) => { e.preventDefault(); runCheck(); });
 }
@@ -197,6 +209,7 @@ function syncPlay() {
   play.question = $("#q").value;
   play.draft = $("#d") ? $("#d").value : play.draft;
   play.as_of = $("#asof").value;
+  play.doc = play.mode === "ask" ? AIRLINE : ($("#doc") ? $("#doc").value : play.doc);
 }
 async function runCheck() {
   syncPlay();
@@ -210,7 +223,7 @@ async function runCheck() {
   try {
     const { body } = play.mode === "ask"
       ? await post("/api/assistant/ask", { question: play.question, as_of_date: play.as_of })
-      : await post("/api/gate", { question: play.question, draft_answer: play.draft, as_of_date: play.as_of });
+      : await post("/api/gate", { question: play.question, draft_answer: play.draft, as_of_date: play.as_of, doc_id: play.doc });
     body._as_of = play.as_of;
     body._draft = play.mode === "ask" ? body.assistant?.draft : play.draft;
     play.result = body;
@@ -266,10 +279,15 @@ function resultView(r, asOf) {
 }
 
 // ---------- Policy timeline ----------
-const AREAS = ["bereavement", "cancellation", "change_fee", "baggage", "refund", "delay", "travel_credit", "pets"];
+const AREAS = {
+  [AIRLINE]: ["bereavement", "cancellation", "change_fee", "baggage", "refund", "delay", "travel_credit", "pets"],
+  [BANK]: ["overdraft", "fee_refund", "monthly_fee", "foreign_transaction", "wire_transfer", "atm", "dispute", "account_closure", "checks"],
+};
 const AREA_LABEL = { bereavement: "Bereavement", cancellation: "Cancellation", change_fee: "Changes", baggage: "Baggage",
-  refund: "Refunds", delay: "Delays", travel_credit: "Travel credits", pets: "Pets", other: "Other" };
-const tl = { data: null, asOf: today(), filter: "changed", sel: null };
+  refund: "Refunds", delay: "Delays", travel_credit: "Travel credits", pets: "Pets", other: "Other",
+  overdraft: "Overdraft", fee_refund: "Fee refunds", monthly_fee: "Monthly fees", foreign_transaction: "Foreign transactions",
+  wire_transfer: "Wire transfers", atm: "ATMs", dispute: "Disputes", account_closure: "Closing an account", checks: "Checks" };
+const tl = { data: null, doc: AIRLINE, asOf: today(), filter: "changed", sel: null };
 const DAY = 86400000;
 const toMs = (d) => Date.parse(String(d).slice(0, 10) + "T00:00:00Z");
 
@@ -287,6 +305,11 @@ function keyParam(v) {
   if ("discount_pct" in p) return `${Number(p.discount_pct)}% off`;
   if ("credit_validity_months" in p) return `${p.credit_validity_months} months`;
   if ("max_passengers" in p) return `up to ${p.max_passengers}`;
+  // Anything else (the bank's fee schedule): the first amount or percentage in RULE_JSON.
+  for (const [k, val] of Object.entries(v.rule || {})) {
+    if (k.endsWith("_usd") && typeof val === "number") return val === 0 ? "free" : `$${val.toLocaleString("en-US")}`;
+    if (k.endsWith("_pct") && typeof val === "number") return `${val}%`;
+  }
   return "";
 }
 
@@ -298,7 +321,7 @@ async function Timeline() {
   renderTimeline();
 }
 function renderTimeline() {
-  const data = tl.data;
+  const data = tl.data.filter((c) => c.doc_id === tl.doc);
   const changed = data.filter((c) => c.versions.length > 1);
   const shown = tl.filter === "changed" ? changed : data;
   const start = toMs("2026-01-01");
@@ -312,16 +335,17 @@ function renderTimeline() {
   const asOfMs = toMs(tl.asOf);
   const inForce = (v) => toMs(v.from) <= asOfMs && asOfMs < toMs(v.to);
   if (!tl.sel) {
-    const c = changed.find((x) => x.clause_id === "BRV-002") || shown[0];
+    const c = changed.find((x) => x.clause_id === (tl.doc === BANK ? "FRV-001" : "BRV-002")) || shown[0];
     tl.sel = { id: c.clause_id, version: (c.versions.find(inForce) || c.versions[0]).version };
   }
-  const groups = AREAS.concat(["other"]).map((a) => ({ area: a, items: shown.filter((c) => c.area === a) })).filter((g) => g.items.length);
+  const groups = AREAS[tl.doc].concat(["other"]).map((a) => ({ area: a, items: shown.filter((c) => c.area === a) })).filter((g) => g.items.length);
   const markerLeft = pos(asOfMs).toFixed(3);
   mount(view, html`<div id="tl-root">
     <div class="page-head">
       <div><h1>Policy timeline</h1>
         <p>Every clause version on its business-time period, straight from the bitemporal <code>POLICY_CLAUSE</code> table. Key numbers come out of <code>RULE_JSON</code> through the Db2 view <code>V_POLICY_TIMELINE</code> (<code>JSON_TABLE</code>). Click a version for its text and its system-time history.</p></div>
       <div class="tl-controls">
+        <div class="seg">${[AIRLINE, BANK].map((d) => html`<button type="button" data-doc="${d}" class="${tl.doc === d ? "on" : ""}">${DOC_NAME[d]}</button>`)}</div>
         <div class="seg">
           <button type="button" data-filter="changed" class="${tl.filter === "changed" ? "on" : ""}">Changed clauses (${changed.length})</button>
           <button type="button" data-filter="all" class="${tl.filter === "all" ? "on" : ""}">All clauses (${data.length})</button>
@@ -362,6 +386,8 @@ function renderTimeline() {
 function onTimelineClick(e) {
   const seg = e.target.closest(".tl-seg");
   const f = e.target.closest("[data-filter]");
+  const d = e.target.closest("[data-doc]");
+  if (d) { tl.doc = d.dataset.doc; tl.sel = null; renderTimeline(); return; }
   if (seg) { tl.sel = { id: seg.dataset.clause, version: seg.dataset.version }; renderTimeline(); return; }
   if (f) { tl.filter = f.dataset.filter; tl.sel = null; renderTimeline(); }
 }
@@ -562,6 +588,9 @@ const PRESETS = [
     rule: { retroactive_allowed: true, request_window_days: 60, request_before_travel_required: false }, note: "Retroactive window shortened to 60 days." },
   { label: "First bag to $45 from 1 Jan 2027", clause: "BAG-001", from: "2027-01-01",
     text: "The first checked bag costs $45 each way on Economy fares.", rule: { first_bag_fee_usd: 45 }, note: "First bag fee rises to $45." },
+  { label: "Bank: overdraft fee to $20 from 1 Jan 2027", clause: "OVD-001", from: "2027-01-01",
+    text: "An overdraft fee of $20 is charged for each item we pay when the account does not have enough available funds.",
+    rule: { overdraft_fee_usd: 20 }, note: "Overdraft fee falls to $20 from 1 January 2027." },
 ];
 const imp = { clause: "PET-001", form: null, result: null, applied: null };
 function nextVersion(c) { return `v${Math.max(...c.versions.map((v) => Number(v.version.slice(1)))) + 1}`; }

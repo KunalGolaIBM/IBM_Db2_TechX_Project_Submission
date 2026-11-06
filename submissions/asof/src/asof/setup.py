@@ -9,7 +9,7 @@ Steps:
  2. Wait until Db2 accepts connections as the owner.
  3. Create the OS users inside the Db2 container (Db2 authenticates against the OS).
  4. Create tables, history table, indexes, triggers and procedures in schema ASOF.
- 5. Seed the fictional Aurelia Air policy, help-centre answers and FAQ knowledge base.
+ 5. Seed the fictional Aurelia Air and Fernhollow Bank policies, help-centre answers and FAQ knowledge base.
  6. Revoke Db2's PUBLIC defaults and grant each user only what it needs.
  7. Verify as the runtime user: the as-of query works and a ledger UPDATE is refused.
 """
@@ -272,7 +272,7 @@ def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False
         say("5/9 In-database embeddings (CREATE EXTERNAL MODEL, TO_EMBEDDING)")
         in_db = register_embedder(conn, settings, embeddings, target)
 
-        say("6/9 Seed data (fictional Aurelia Air)")
+        say("6/9 Seed data (fictional Aurelia Air and Fernhollow Bank)")
         n_clauses = seed.seed_policy(conn, embeddings, target, in_db=in_db)
         n_head = seed.seed_chain_head(conn, target)
         n_pub = seed.seed_published_answers(conn, target)

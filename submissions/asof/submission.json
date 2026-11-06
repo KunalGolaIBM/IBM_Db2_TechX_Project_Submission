@@ -47,7 +47,8 @@
       "SQL PL procedures ADD_SUGGESTION and DECIDE_SUGGESTION: an agent-drafted help-centre correction is stored by the runtime user and published only by the editor, split in time at the change date",
       "Row and column access control: column masks on the ledger's text (VERIFY_ROLE_FOR_USER, roles ASOF_TEXT_READER and ASOF_ANALYST), SECURED triggers, ACTIVATE COLUMN ACCESS CONTROL",
       "Read-only analyst user with SELECT on six audit views only, queried through SQLAlchemy (ibm_db_sa) and LangChain's SQLDatabase",
-      "LLM-generated SQL checked with SQLGlot and IBM's db2-sqlglot-dialect, then run with a Db2 statement timeout (SQL_ATTR_QUERY_TIMEOUT)"
+      "LLM-generated SQL checked with SQLGlot and IBM's db2-sqlglot-dialect, then run with a Db2 statement timeout (SQL_ATTR_QUERY_TIMEOUT)",
+      "Two fictional policy documents (an airline and a bank fee schedule) in the same bitemporal tables, separated by DOC_ID in every as-of query, with a CHECK constraint covering both domains' areas"
     ]
   },
   "tech_stack": {

@@ -7,7 +7,7 @@
 
 **Built on IBM Db2 12.1 for Db2Hack 2026.** Source: [github.com/JustJay7/asof](https://github.com/JustJay7/asof) (standalone mirror of `submissions/asof`). Bitemporal tables, native `VECTOR` search, SQL/JSON, in-database SHA-256, triggers, SQL PL and least-privilege users, with LangChain and the official `langchain-db2` connector.
 
-> **Fictional data.** "Aurelia Air" and every policy, FAQ and help-centre answer in this repository are invented for the demo. They are modelled on the kind of policy at issue in *Moffatt v. Air Canada* and describe no real airline.
+> **Fictional data.** "Aurelia Air", "Fernhollow Bank" and every policy, fee schedule, FAQ and help-centre answer in this repository are invented for the demo. The airline is modelled on the kind of policy at issue in *Moffatt v. Air Canada*; neither describes a real company.
 
 ![AsOf checking the Moffatt scenario for a March booking: the demo assistant promised a retroactive bereavement refund, AsOf found it contradicted by clause BRV-002 v1 and released a corrected, cited answer](docs/screenshots/01-playground-moffatt-march.png)
 
@@ -56,6 +56,8 @@ Given an AI-generated answer and the date that matters (booking or travel date, 
 3. **Decision.** PASS with citations, CORRECTED (rewritten from clause text and re-checked), or ESCALATED to a person. Any error, timeout or invalid model output fails closed.
 4. **Audit ledger.** Append-only, hash-chained Db2 rows, replayable with `FOR SYSTEM_TIME AS OF`.
 5. **Change impact.** After a policy change, find past answers and published help-centre answers whose cited version is no longer the one in force for their date.
+
+**Two domains, one check.** The demo data has two fictional policy documents: Aurelia Air's customer service plan (34 clauses, 38 versions) and Fernhollow Bank's personal account fee schedule (18 clauses, 26 versions: overdraft fees, courtesy refunds, monthly fees and waivers, foreign transaction fees, wires, ATMs, disputes, account closure). The bank has its own Moffatt-style case: a bot that says overdraft fees are "refunded automatically" when the fee schedule offers a courtesy refund on request. The Db2 schema, the as-of query, the rule checker, the ledger and the agents are shared; each document gets its own prompt wording and claim areas ([src/asof/domains.py](src/asof/domains.py)), and a test pins the airline prompts by hash so they did not change by a byte.
 
 ### Build status
 
@@ -268,7 +270,7 @@ cp .env.example .env     # set DB2_PASSWORD, and OPENROUTER_API_KEY (or LLM_PROV
 python -m asof.setup
 ```
 
-`python -m asof.setup` is safe to re-run. It generates passwords for the two least-privilege users into `.env` (never printed), creates them as OS users inside the Db2 container (Db2 authenticates against the operating system), installs the schema, seeds the fictional data, applies grants, and finishes by proving, as the runtime user, that the as-of query works and that writes are refused. If it cannot reach any Db2 container (for example a remote Db2), it prints the exact `useradd` commands to run on the Db2 host.
+`python -m asof.setup` is safe to re-run. It generates passwords for the three least-privilege users into `.env` (never printed), creates them as OS users inside the Db2 container (Db2 authenticates against the operating system), installs the schema, seeds the fictional data, applies grants, and finishes by proving, as the runtime user, that the as-of query works and that writes are refused. If it cannot reach any Db2 container (for example a remote Db2), it prints the exact `useradd` commands to run on the Db2 host.
 
 Which paths were run end to end: C on Apple Silicon (dev machine and a fresh clone), and B in CI on every push: x86-64 Linux, IBM's unmodified `icr.io/db2_community/db2:12.1.5.0`, the `docker run` command above, then setup, the Db2 feature checks, the full test suite and the access plans (first green run: Db2 ready in 75 s, 287 tests passed). A creates the same `db2server` container and `testdb` database as B.
 
@@ -351,16 +353,17 @@ python -m asof.setup --reset-ledger      # asks you to type "reset"; add --yes t
 
 | Endpoint | Purpose |
 |---|---|
-| `POST /api/gate` | Check a draft: `question`, `draft_answer`, `as_of_date`, optional `channel`. Returns the decision, final answer, and per-claim verdicts with clause versions and quotes. |
+| `POST /api/gate` | Check a draft: `question`, `draft_answer`, `as_of_date`, optional `doc_id` (`AURELIA-CSP`, the default, or `FERNHOLLOW-FEES`) and `channel`. Returns the decision, final answer, and per-claim verdicts with clause versions and quotes. |
 | `POST /api/assistant/ask` | Ask the naive demo assistant, then check its draft |
 | `GET /api/ledger`, `GET /api/ledger/{id}` | Recorded decisions and their claim citations |
 | `GET /api/ledger/{id}/replay` | The clause rows a decision used, what Db2 held at that moment, and what applies today |
+| `POST /api/ledger/ask` | "Ask the ledger": a plain-English question about the audit trail, answered as the read-only analyst `asofread`. Returns the answer, the checked SQL that ran and the rows. |
 | `GET /api/chain/verify` | Run `VERIFY_CHAIN` over the whole ledger |
 | `POST /api/policy/change` | Apply a new clause version through `APPLY_POLICY_CHANGE` as the editor user. Accepted only from localhost, unless `ASOF_EDITOR_TOKEN` is set, in which case the `X-AsOf-Editor-Token` header must match. |
 | `GET /api/impact/{clause_id}` | `CHANGE_IMPACT`: stale and historically valid answers, help-centre answers to review |
 | `POST /api/impact/{clause_id}/suggestions` | Run the change-impact agent: draft a correction for each help-centre answer that needs review, run the full check on it for the date it must hold from, store it as pending (editor action: localhost or token) |
 | `GET /api/suggestions`, `POST /api/suggestions/{id}/decision` | List drafted corrections; approve (publish) or reject one as `asofedit` (`DECIDE_SUGGESTION`) |
-| `GET /api/policy/timeline`, `GET /api/policy/clauses/{id}/history` | Business-time versions with rule parameters; every system-time row for a clause |
+| `GET /api/policy/timeline`, `GET /api/policy/clauses/{id}/history` | Business-time versions with rule parameters (optionally for one `doc_id`); every system-time row for a clause |
 | `GET /api/analytics` | Decision, area and override statistics from the Db2 views |
 | `GET /healthz` | Db2 connectivity and the configured model |
 
@@ -443,6 +446,25 @@ What went wrong, from the recorded runs (left unfixed so the numbers stay honest
 **About the Ollama numbers.** The first Ollama run of the test split was stopped after about 4 cases: the local model looped inside the quote field until the output cap, so every answer failed closed. Two fixes followed, diagnosed and checked on dev cases only: the decoding grammar now bounds every free-text field, and the judge may only quote a real sentence of a retrieved clause (details in [architecture.md](architecture.md#design-decisions)). The test cases and the prompts were not changed; the hosted path was not changed. The numbers above are the first complete Ollama run.
 
 On the dev split, OpenRouter scored 0% false allow, 0% false block and 95% ideal decisions.
+
+**After the rule-checker change for the bank (`ffdf2af`),** the frozen airline split was run again on OpenRouter: 0 of 26 false allows, 1 of 14 false blocks (T33 again), 97.5% safe, 95.0% ideal, citation accuracy 100%, p50 4.8 s, 4.4 model calls per answer. The change: an amount that matches a rule parameter in one unit (a "12-month period" matching 12 months) is no longer also counted as a wrong number of days.
+
+### Evaluation: the bank fee schedule (second domain)
+
+`python -m asof.eval --split bank-test` runs 26 new cases against Fernhollow Bank (10 correct drafts, 16 wrong for their date). They were committed and their SHA-256 pinned in `ffdf2af`, before the first run; the 12-case `bank-dev` split is the one used while building. Same model, check and settings as the airline.
+
+| Metric | OpenRouter `gemini-3.1-flash-lite`, first run of the frozen bank split (`ffdf2af`) |
+|---|---|
+| **False-allow rate** | **0.0%** (0 of 16) |
+| False-block rate | 0.0% (0 of 10) |
+| Safe decisions | 100% |
+| Ideal decisions | 92.3% |
+| Citation accuracy | 95.8% |
+| Rule overrides | 2 |
+| Latency per answer, p50 / p90 | 4.9 s / 5.6 s |
+| Whole split | 30 s (4 workers) |
+
+The two misses were both escalations instead of corrections. **BT10:** the judge called "a domestic wire costs $45" contradicted, but its citation did not survive the checks and the claim fell back to not covered. **BT26** is a finding about the data, not the model: clause MTF-003 says paper statements cost $2 and electronic statements are free, but its rule parameters only held the $2, so the rule check read "electronic statements are free" as $0 against $2 and overruled a correct judge (both of the run's rule overrides). The answer was held back, never released wrong. The parameter is now in the corpus with a test, and any later run of this split will be labelled as made after a fix that the frozen run found, not a blind one. On `bank-dev`, the same configuration scored 12 of 12 safe and 11 of 12 ideal.
 
 ---
 

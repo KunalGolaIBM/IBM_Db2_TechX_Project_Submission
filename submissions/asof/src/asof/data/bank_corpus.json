@@ -192,7 +192,8 @@
      "bus_end": "9999-12-31",
      "clause_text": "Paper statements cost $2 per statement. Electronic statements are free.",
      "rule": {
-      "paper_statement_fee_usd": 2
+      "paper_statement_fee_usd": 2,
+      "electronic_statement_fee_usd": 0
      }
     }
    ]

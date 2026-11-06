@@ -6,7 +6,7 @@ AsOf sits between any AI assistant and its customers. The calling system sends t
 
 Db2 is the system of record for everything that matters in a dispute: the dated policy versions (bitemporal table with native vectors and JSON rule parameters), the decisions and their evidence (append-only, hash-chained, written only by a stored procedure), and the help-centre answers that depend on them. The application holds no state of its own.
 
-All data in this repository is fictional (Aurelia Air).
+All data in this repository is fictional (Aurelia Air, an airline, and Fernhollow Bank, a bank fee schedule). Both are loaded into the same tables; the request's `doc_id` decides which document a check reads and which prompt wording it uses ([domains.py](src/asof/domains.py)).
 
 ---
 
@@ -139,6 +139,9 @@ flowchart TD
 
 Each line is a choice and the reason for it. Findings marked "spike" were verified on Db2 12.1.5.0 Community Edition before any project code was written.
 
+- **A second domain without touching the first.** Fernhollow Bank's fee schedule gets its own prompt wording and claim-area enum, chosen from the validated `doc_id`; the airline keeps its exact prompts, output schemas and prompt version, pinned by a hash in `tests/test_domains.py` that was taken before the bank existed. Everything below the prompts is shared: the as-of query filters by `DOC_ID`, the rule checker reads units from key suffixes, and the ledger, masks and agents need no change.
+- **Rule checker: a matched amount is settled.** Adding the bank exposed that "a 12-month period" (read as 12 months and as 365 days) could match `courtesy_period_months = 12` and still count as a wrong `request_window_days`. An amount that matches a parameter in any of its units is now settled. Because this touches airline checks too, the frozen airline split was re-run (0 of 26 false allows, 95.0% ideal).
+- **Every fact a clause states needs its rule parameter.** The first frozen bank run found MTF-003 ("paper statements cost $2; electronic statements are free") with only the $2 modelled, so the rule check turned "electronic statements are free" into a contradiction. The failure was safe (escalated), the data was fixed, and a test keeps it fixed. Rule parameters are part of the policy data and need the same review as its text.
 - **Column masks with an allow-list role, not a deny-list.** The masks show ledger text only to `ASOF_TEXT_READER` (the runtime user), so any user added later sees `[masked]` by default. Db2 does not let the owner grant itself a role (SQL0554N), so the owner is masked too; it holds SECADM and could drop the masks, but that is a recorded catalog change, not a silent read.
 - **`SECURED` ledger triggers.** Activating column access control failed with SQL20469N reason code 37 until the triggers on the table were secured (spike). Creating a secured trigger needs SECADM, which the database creator holds.
 - **`VERIFY_CHAIN` fetches rows into variables before hashing.** Passing a masked column straight to the hash functions is refused for a non-secured function (SQL20473N). Making the functions `SECURED` instead crashed the engine while compiling `VERIFY_CHAIN` (SIGSEGV in `sqlnq_compile_fgac`, Db2 12.1.5 under Rosetta; FODC trap captured, then deleted). Explicit cursors with `FETCH ... INTO` local variables avoid the problem entirely, and the functions stay non-secured.

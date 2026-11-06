@@ -120,3 +120,14 @@ def test_not_free_is_not_zero():
 ])
 def test_retroactive_flag(claim, value):
     assert asserted_flag(claim, "retroactive_allowed") is value
+
+
+def test_every_fact_a_clause_states_needs_its_parameter_or_the_rule_check_misfires():
+    """Found by the first bank-test run (BT26): MTF-003 says e-statements are free, but its RULE_JSON
+    held only the paper fee, so "electronic statements are free" read as $0 against $2."""
+    from asof.rules import check
+
+    clause = rc("MTF-003", date(2026, 5, 30))
+    assert check("Electronic statements are free.", clause).status == "MATCH"
+    assert check("Paper statements cost $5 each.", clause).status == "MISMATCH"
+    assert check("Paper statements cost $2 per statement.", clause).status == "MATCH"
