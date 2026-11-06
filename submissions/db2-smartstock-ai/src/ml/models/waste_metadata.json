@@ -1,0 +1,80 @@
+{
+  "feature_cols": [
+    "Food_Category",
+    "Purchase_Quantity",
+    "Daily_Demand",
+    "Remaining_Stock",
+    "Shelf_Life_Days",
+    "Storage_Temperature",
+    "Promotion",
+    "Weather"
+  ],
+  "categorical_encoders": {
+    "Food_Category": {
+      "Bakery": 0,
+      "Dairy": 1,
+      "Fruits": 2,
+      "Meat": 3,
+      "Prepared Food": 4,
+      "Vegetables": 5
+    },
+    "Promotion": {
+      "No": 0,
+      "Yes": 1
+    },
+    "Weather": {
+      "Cloudy": 0,
+      "Hot": 1,
+      "Rainy": 2,
+      "Sunny": 3
+    }
+  },
+  "class_names": [
+    "High",
+    "Low",
+    "Medium"
+  ],
+  "classification_comparison": {
+    "Random Forest": {
+      "accuracy": 0.8744,
+      "f1_score": 0.8734
+    },
+    "Gradient Boosting": {
+      "accuracy": 0.8894,
+      "f1_score": 0.8884
+    },
+    "LightGBM": {
+      "accuracy": 0.89,
+      "f1_score": 0.8892
+    }
+  },
+  "regression_comparison": {
+    "Random Forest": {
+      "mae": 6.9199,
+      "rmse": 17.8791,
+      "r2": -0.0461
+    },
+    "Gradient Boosting": {
+      "mae": 7.2048,
+      "rmse": 19.1518,
+      "r2": -0.2003
+    },
+    "LightGBM": {
+      "mae": 6.8932,
+      "rmse": 17.8916,
+      "r2": -0.0476
+    }
+  },
+  "best_classifier": "LightGBM",
+  "best_regressor": "Random Forest",
+  "feature_importance": {
+    "Daily_Demand": 1685.0,
+    "Remaining_Stock": 1641.0,
+    "Storage_Temperature": 1568.0,
+    "Purchase_Quantity": 1452.0,
+    "Shelf_Life_Days": 1008.0,
+    "Weather": 356.0,
+    "Food_Category": 316.0,
+    "Promotion": 51.0
+  }
+}
