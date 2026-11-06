@@ -22,7 +22,7 @@
   },
   "ibm_db2": {
     "edition": "IBM Db2 Community Edition 12.1.5.0 (Docker)",
-    "connector": "ibm_db / ibm_db_dbi, LangChain langchain-db2 (DB2VS)",
+    "connector": "ibm_db / ibm_db_dbi (parameter markers only), LangChain langchain-db2 (DB2VS)",
     "features_used": [
       "Bitemporal tables (BUSINESS_TIME and SYSTEM_TIME periods, history table)",
       "FOR BUSINESS_TIME AS OF and FOR SYSTEM_TIME AS OF queries (as-of lookup and replay)",
@@ -36,7 +36,9 @@
       "Views for the policy timeline and analytics",
       "Indexes, foreign keys and check constraints",
       "Least-privilege Db2 users: SELECT plus EXECUTE only, PUBLIC defaults revoked",
-      "LangChain DB2VS vector store (langchain-db2)"
+      "LangChain DB2VS vector store (langchain-db2)",
+      "Catalog views (SYSCAT) for idempotent, self-checking setup",
+      "CURRENT SCHEMA and CURRENT PATH special registers set through parameter markers, so runtime SQL is literal"
     ]
   },
   "tech_stack": {
