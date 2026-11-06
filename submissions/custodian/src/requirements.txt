@@ -1,0 +1,10 @@
+ibm_db==3.3.0
+langchain-db2==1.0.0
+langgraph
+sentence-transformers
+sqlglot>=30.8.0
+db2-sqlglot-dialect @ git+https://github.com/IBM/db2-sqlglot-plugin@98bbf24d99bb247ce0436c49c4808fe19e796c36
+httpx
+python-dotenv
+streamlit
+pytest
