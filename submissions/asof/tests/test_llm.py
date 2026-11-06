@@ -118,3 +118,13 @@ def test_schemas_forbid_extra_keys_and_unknown_verdicts():
     with pytest.raises(ValidationError):
         JudgeResult.model_validate({"verdicts": [{"claim_no": 1, "verdict": "PROBABLY", "clause_id": None,
                                                   "quoted_span": None, "reason": "x"}]})
+
+
+def test_ollama_requests_are_not_streamed():
+    """A streamed reply keeps the read timeout from firing while a model loops; one response does not."""
+    from langchain_core.messages import HumanMessage
+
+    local = build_llm(Settings(_env_file=None), provider="ollama")
+    params = local.chat_model._chat_params([HumanMessage("hi")])
+    assert params["stream"] is False
+    assert params["options"]["num_predict"] == Settings(_env_file=None).llm_max_output_tokens

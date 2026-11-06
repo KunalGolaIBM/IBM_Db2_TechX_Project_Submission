@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     # require_parameters routing an unsupported parameter means no endpoint at all.
     llm_temperature: float | None = Field(None, ge=0, le=2)
     # Every structured reply is far below this; the cap stops runaway generations.
-    llm_max_output_tokens: int = Field(1500, ge=256, le=8000)
+    llm_max_output_tokens: int = Field(1000, ge=256, le=8000)
 
     openrouter_api_key: SecretStr | None = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"

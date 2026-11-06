@@ -122,6 +122,23 @@ class LLMClient:
         raise LLMError(f"{self.info} gave no valid {schema.__name__}: {last_error}") from last_error
 
 
+def _non_streaming_ollama():
+    """ChatOllama that asks for one complete response instead of a token stream.
+
+    With streaming, a model stuck in a generation loop keeps sending tokens, so the HTTP
+    read timeout never fires and an abandoned request keeps the local server busy. Without
+    streaming, the timeout fires, the client disconnects and Ollama cancels the generation.
+    """
+    from langchain_ollama import ChatOllama
+
+    class NonStreamingChatOllama(ChatOllama):
+        def _chat_params(self, messages, stop=None, **kwargs):
+            kwargs.setdefault("stream", False)
+            return super()._chat_params(messages, stop, **kwargs)
+
+    return NonStreamingChatOllama
+
+
 def build_llm(settings: Settings, provider: str | None = None, model: str | None = None) -> LLMClient:
     """Create the configured LLM client. `provider` and `model` override settings (used by eval)."""
     provider = provider or settings.llm_provider
@@ -130,10 +147,8 @@ def build_llm(settings: Settings, provider: str | None = None, model: str | None
     max_out = settings.llm_max_output_tokens
 
     if provider == "ollama":
-        from langchain_ollama import ChatOllama
-
         name = model or settings.ollama_model
-        chat = ChatOllama(
+        chat = _non_streaming_ollama()(
             model=name,
             base_url=settings.ollama_base_url,
             temperature=0,
