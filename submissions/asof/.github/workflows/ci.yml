@@ -134,3 +134,28 @@ jobs:
         run: |
           docker logs db2server 2>&1 | tail -150
           docker exec db2server bash -c 'tail -120 /database/config/db2inst1/sqllib/db2dump/DIAG0000/db2diag.log' || true
+
+  quickstart:
+    name: One-command quick start on a bare runner (./quickstart.sh, Compose path)
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: ./quickstart.sh --no-serve (no .env, no Db2 yet)
+        run: ./quickstart.sh --no-serve
+      - name: The app answers from Db2
+        run: |
+          .venv/bin/python src/main.py --port 8000 > /tmp/app.log 2>&1 &
+          for i in $(seq 1 40); do curl -sf localhost:8000/healthz > /dev/null && break; sleep 3; done
+          curl -sf localhost:8000/healthz
+          test "$(curl -sf localhost:8000/api/policy/timeline | python -c 'import json,sys; print(len(json.load(sys.stdin)))')" = 52
+          curl -sf localhost:8000/api/chain/verify
+      - name: Logs on failure
+        if: failure()
+        run: |
+          tail -80 /tmp/app.log || true
+          docker logs asof-db2 2>&1 | tail -80 || true
+

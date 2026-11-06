@@ -249,6 +249,14 @@ PASS  Column mask (RCAC) with SECURED triggers: owner reads '[masked]'; predicat
 
 ## Setup & Installation
 
+**One command** (from `submissions/asof`, with Python 3.12 and Docker):
+
+```bash
+./quickstart.sh
+```
+
+It creates `.venv` with the locked dependencies, creates `.env`, uses the Db2 already listening on `localhost:50000` (paths A and B below; it asks for that owner password without echoing it) or starts AsOf's Compose service (path C) with a generated owner password, runs `python -m asof.setup`, and serves the app on http://127.0.0.1:8000. Add `OPENROUTER_API_KEY` to `.env` (or set `LLM_PROVIDER=ollama`); without a model every check fails closed, which the script says. CI runs `./quickstart.sh --no-serve` on a bare runner and then queries the app. The steps it automates:
+
 **1. Python and configuration** (from `submissions/asof`):
 
 ```bash
