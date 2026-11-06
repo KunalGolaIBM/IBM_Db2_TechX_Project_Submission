@@ -21,9 +21,7 @@ from __future__ import annotations
 import html
 import logging
 import re
-import time
 import unicodedata
-import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
@@ -109,6 +107,7 @@ class GateResult:
     row_hash: str | None = None
     released: bool = True
     error: str | None = None
+    investigation: list[dict[str, Any]] = field(default_factory=list)  # the agent's tool calls, if any
 
 
 def normalise(text: str) -> str:
@@ -136,6 +135,14 @@ def clause_sentences(clauses) -> list[str]:
     return out
 
 
+def pool_of(per_claim: list[list[RetrievedClause]]) -> dict[str, RetrievedClause]:
+    pool: dict[str, RetrievedClause] = {}
+    for found in per_claim:
+        for c in found:
+            pool.setdefault(c.clause_id, c)
+    return pool
+
+
 def references(claims: list[ClaimOutcome]) -> str:
     seen: dict[str, RetrievedClause] = {}
     for c in claims:
@@ -149,44 +156,52 @@ def references(claims: list[ClaimOutcome]) -> str:
 
 class Gate:
     def __init__(self, llm: LLMClient, embeddings: Embeddings, connect: Callable[[], ibm_db_dbi.Connection],
-                 schema: str = db.SCHEMA, k: int = 4):
+                 schema: str = db.SCHEMA, k: int = 4, investigate: bool = True):
         self.llm = llm
         self.embeddings = embeddings
         self.connect = connect
         self.schema = schema
         self.k = k
+        self.investigate = investigate  # let the agent look further when a claim matches no clause
 
-    # ---- one full check of a text -------------------------------------------------------
-    def evaluate(self, question: str, answer: str, as_of: date, doc_id: str) -> list[ClaimOutcome]:
-        extracted = self.llm.structured(ExtractionResult, extract_messages(question, answer)).value.claims
+    # ---- the steps of one pass (graph nodes call these) ------------------------------------
+    def extract(self, question: str, text: str):
+        extracted = self.llm.structured(ExtractionResult, extract_messages(question, text)).value.claims
         if len(extracted) > MAX_CLAIMS:
             raise TooManyClaims(f"{len(extracted)} claims")
-        if not extracted:
-            return []
-        vectors = self.embeddings.embed_documents([c.text for c in extracted])
+        return extracted
+
+    def retrieve(self, claims, as_of: date, doc_id: str) -> list[list[RetrievedClause]]:
+        """Db2 tool: the clauses in force on the date, nearest first, for each claim."""
+        vectors = self.embeddings.embed_documents([c.text for c in claims])
         conn = self.connect()
         try:
-            per_claim = [clauses_as_of(conn, v, as_of, doc_id, self.k, schema=self.schema) for v in vectors]
+            return [clauses_as_of(conn, v, as_of, doc_id, self.k, schema=self.schema) for v in vectors]
         finally:
             conn.close()
 
-        pool: dict[str, RetrievedClause] = {}
-        for found in per_claim:
-            for c in found:
-                pool.setdefault(c.clause_id, c)
+    def judge(self, claims, per_claim, pool: dict[str, RetrievedClause], as_of: date,
+              numbers: list[int] | None = None) -> list[ClaimOutcome]:
+        """One batched judge call over `claims`, then the verbatim-quote rule and the rule check."""
+        numbers = numbers or list(range(1, len(claims) + 1))
         if not pool:
-            return [ClaimOutcome(i, c.text, c.area, c.claim_type, "NOT_COVERED", None, "NOT_APPLICABLE", [], None,
-                                 None, f"no policy clause is in force on {as_of.isoformat()}")
-                    for i, c in enumerate(extracted, start=1)]
-
-        judged = self.llm.structured(JudgeResult, judge_messages(as_of, [c.text for c in extracted],
+            return [ClaimOutcome(n, c.text, c.area, c.claim_type, "NOT_COVERED", None, "NOT_APPLICABLE", [], None,
+                                 None, f"no policy clause is in force on {as_of.isoformat()}", list(found))
+                    for n, c, found in zip(numbers, claims, per_claim, strict=True)]
+        judged = self.llm.structured(JudgeResult, judge_messages(as_of, [c.text for c in claims],
                                                                  [c.view() for c in pool.values()]),
                                      choices={"clause_id": list(pool), "quoted_span": clause_sentences(pool.values())}).value
         by_no = {v.claim_no: v for v in judged.verdicts}
-        outcomes = []
-        for i, (claim, found) in enumerate(zip(extracted, per_claim, strict=True), start=1):
-            outcomes.append(self._settle(i, claim, found, pool, by_no.get(i)))
-        return outcomes
+        return [self._settle(n, claim, found, pool, by_no.get(i))
+                for i, (n, claim, found) in enumerate(zip(numbers, claims, per_claim, strict=True), start=1)]
+
+    def evaluate(self, question: str, answer: str, as_of: date, doc_id: str) -> list[ClaimOutcome]:
+        """One pass without the agent: extract, retrieve, judge, verify."""
+        extracted = self.extract(question, answer)
+        if not extracted:
+            return []
+        per_claim = self.retrieve(extracted, as_of, doc_id)
+        return self.judge(extracted, per_claim, pool_of(per_claim), as_of)
 
     def _settle(self, no, claim, found, pool, v) -> ClaimOutcome:
         base = dict(claim_no=no, text=claim.text, area=claim.area, claim_type=claim.claim_type, candidates=found)
@@ -217,38 +232,10 @@ class Gate:
 
     # ---- the decision ---------------------------------------------------------------------
     def check(self, req: GateRequest) -> GateResult:
-        started = time.monotonic()
-        getattr(self.llm, "begin_check", lambda: None)()  # per-check usage, e.g. provider fallback
-        request_id = str(uuid.uuid4())
-        q = redact(req.question)
-        d = redact(req.draft_answer)
-        first: list[ClaimOutcome] = []
-        second: list[ClaimOutcome] = []
-        rewrite: str | None = None
-        error: str | None = None
-        try:
-            first = self.evaluate(q.text, d.text, req.as_of, req.doc_id)
-            decision, reason, final = self._decide(first, req.draft_answer)
-            if decision == "REWRITE":
-                rewrite = self._rewrite(q.text, d.text, req.as_of, first)
-                second = self.evaluate(q.text, rewrite, req.as_of, req.doc_id)
-                if second and all(c.verdict == "SUPPORTED" for c in second):
-                    decision, reason, final = "CORRECTED", "CORRECTED_FROM_CLAUSES", rewrite + references(second)
-                else:
-                    decision, reason, final = "ESCALATED", "CORRECTION_FAILED", HOLDING_REPLY
-        except TooManyClaims as exc:
-            decision, reason, final, error = "ESCALATED", "TOO_MANY_CLAIMS", HOLDING_REPLY, str(exc)
-        except (LLMError, db.DatabaseError) as exc:
-            decision, reason, final, error = "ESCALATED", "ERROR_FAIL_CLOSED", HOLDING_REPLY, str(exc)[:300]
-            log.warning("gate failed closed (%s): %s", type(exc).__name__, error)
-        except Exception as exc:  # noqa: BLE001 - anything unexpected must still fail closed
-            decision, reason, final, error = "ESCALATED", "ERROR_FAIL_CLOSED", HOLDING_REPLY, type(exc).__name__
-            log.exception("gate failed closed on an unexpected error")
+        """Run the check graph (see checkgraph.py) for one draft and record the decision."""
+        from .checkgraph import run_check
 
-        result = GateResult(request_id, decision, reason, final, first, second, rewrite,
-                            int((time.monotonic() - started) * 1000), self.llm.info, error=error)
-        self._record(req, q.text, d.text, result, q.counts, d.counts)
-        return result
+        return run_check(self, req)
 
     def _decide(self, claims: list[ClaimOutcome], draft: str) -> tuple[str, str, str]:
         """A contradiction means the clauses hold the right answer, so try a rewrite from them
@@ -282,6 +269,7 @@ class Gate:
             "claims": [c.as_json(1) for c in result.claims] + [c.as_json(2) for c in result.rewrite_claims],
             "rewrite": result.rewrite[:MAX_REWRITE_CHARS] if result.rewrite else None,
             "redactions": {"question": q_counts, "draft": d_counts},
+            "investigation": result.investigation[:6],
             "error": result.error,
         }
         entry = ledger.LedgerEntry(

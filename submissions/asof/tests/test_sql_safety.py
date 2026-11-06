@@ -27,7 +27,7 @@ from asof import db
 
 SRC = Path(__file__).resolve().parents[1] / "src" / "asof"
 TESTS = Path(__file__).resolve().parent
-RUNTIME = {"api.py", "gate.py", "ledger.py", "policy.py", "retriever.py", "assistant.py", "integration.py"}
+RUNTIME = {"api.py", "gate.py", "checkgraph.py", "ledger.py", "policy.py", "retriever.py", "assistant.py", "integration.py"}
 # Statement shapes, matched on the literal text of a string with its placeholders removed,
 # so "SELECT * FROM {t} WHERE ..." is caught but an error message like "CALL {proc} failed" is not.
 SQL_TEXT = re.compile(

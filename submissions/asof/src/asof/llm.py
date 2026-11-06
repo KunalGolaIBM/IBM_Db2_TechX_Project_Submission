@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from typing import Generic, TypeVar
 
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage
 from pydantic import BaseModel
 
 from .config import ConfigError, Settings
@@ -137,6 +138,23 @@ class LLMClient:
             last_error = error or ValueError("model returned no parseable output")
             log.warning("LLM output rejected (attempt %d, %s): %s", attempt, self.info, last_error)
         raise LLMError(f"{self.info} gave no valid {schema.__name__}: {last_error}") from last_error
+
+    def tool_round(self, messages: list, tools: list) -> AIMessage:
+        """One agent step: the model sees the conversation and may request tool calls.
+
+        Same hard deadline as every other call. Returns the AIMessage (with `tool_calls`, possibly
+        empty); the caller executes the tools and decides whether to go round again.
+        """
+        bound = self.chat_model.bind_tools(tools)
+        try:
+            msg = _run_with_deadline(lambda: bound.invoke(messages), self._deadline_s)
+        except TimeoutError as exc:
+            raise LLMError(f"{self.info} did not answer within {self._deadline_s:.0f}s") from exc
+        except Exception as exc:  # noqa: BLE001
+            raise LLMError(f"{self.info} tool call failed: {type(exc).__name__}") from exc
+        if not isinstance(msg, AIMessage):
+            raise LLMError(f"{self.info} returned {type(msg).__name__}, not an AIMessage")
+        return msg
 
 
 MAX_STRING_CHARS = 400  # every string any schema needs is far shorter
@@ -273,6 +291,20 @@ class FallbackLLM:
             return result
         self._mark("primary")
         return result
+
+    def tool_round(self, messages: list, tools: list) -> AIMessage:
+        try:
+            msg = self.primary.tool_round(messages, tools)
+        except LLMError as first:
+            log.warning("%s failed (%s); trying the fallback %s", self.primary.info, first, self.fallback.info)
+            try:
+                msg = self.fallback.tool_round(messages, tools)
+            except LLMError as second:
+                raise LLMError(f"{first}; fallback {self.fallback.info} also failed: {second}") from second
+            self._mark("fallback")
+            return msg
+        self._mark("primary")
+        return msg
 
     def run(self, fn):
         return self.primary.run(fn)

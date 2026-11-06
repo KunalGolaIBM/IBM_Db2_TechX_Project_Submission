@@ -86,6 +86,10 @@ class CountingLLM:
         self.calls += 1
         return self.inner.structured(schema, messages, choices)
 
+    def tool_round(self, messages, tools):
+        self.calls += 1
+        return self.inner.tool_round(messages, tools)
+
     def run(self, fn):
         self.calls += 1
         return self.inner.run(fn)

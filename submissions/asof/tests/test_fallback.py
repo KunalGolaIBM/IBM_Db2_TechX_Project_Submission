@@ -65,7 +65,7 @@ def test_the_gate_records_the_fallback_in_the_ledger_entry(monkeypatch):
 
     on = date(2026, 6, 2)
     retro = "You can request the bereavement fare after travel."
-    quote = "Retroactive requests are accepted within 90 days of the ticket's issue date"
+    quote = "Bereavement fares may be requested before travel or retroactively"
     entries = []
     monkeypatch.setattr(gate_mod, "clauses_as_of", lambda *a, **k: [clause("BRV-002", on)])
     monkeypatch.setattr(gate_mod.ledger, "append",

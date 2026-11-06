@@ -15,9 +15,21 @@ class ScriptedLLM:
 
     info = "scripted:test"
 
-    def __init__(self, extract=(), judge=(), rewrite=()):
+    def __init__(self, extract=(), judge=(), rewrite=(), tools=()):
         self.queues = {ExtractionResult: list(extract), JudgeResult: list(judge), RewriteResult: list(rewrite)}
+        self.tool_replies = list(tools)  # AIMessages for the investigate agent; none queued means "no tool calls"
         self.calls: list[tuple[type, list]] = []
+
+    def tool_round(self, messages, tools):
+        from langchain_core.messages import AIMessage
+
+        self.calls.append(("tools", messages))
+        if not self.tool_replies:
+            return AIMessage(content="nothing to search")
+        reply = self.tool_replies.pop(0)
+        if isinstance(reply, BaseException):
+            raise reply
+        return reply
 
     def structured(self, schema, messages, choices=None):
         self.calls.append((schema, messages))

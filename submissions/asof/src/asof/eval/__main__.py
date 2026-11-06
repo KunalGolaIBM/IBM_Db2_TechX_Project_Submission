@@ -79,10 +79,11 @@ def render_report(results: list[dict]) -> str:
              "to run it if its SHA-256 changes. The dev split (20 cases) holds the scenarios used while building.", ""]
     order = {"test": 0, "dev": 1}
     providers = {"openrouter": 0, "openai_compatible": 1, "ollama": 2}  # the default provider first
-    for r in sorted(results, key=lambda r: (order.get(r["split"], 9), providers.get(r["provider"], 9), r["model"])):
+    newest_first = sorted(results, key=lambda r: r["started_at"], reverse=True)
+    for r in sorted(newest_first, key=lambda r: (order.get(r["split"], 9), providers.get(r["provider"], 9), r["model"])):
         summary = summarize(r["records"])  # recomputed from the per-case records, not the stored rounding
         o = summary["overall"]
-        lines += [f"## {r['split']} split: {r['provider']} `{r['model']}`", "",
+        lines += [f"## {r['split']} split: {r['provider']} `{r['model']}`, run {r['started_at'][:10]} at `{r['git_commit']}`", "",
                   f"Run {r['started_at']} at commit `{r['git_commit']}`, prompt version `{r['prompt_version']}`, "
                   f"{o['n']} cases, cases file sha256 `{r['cases_sha256'][:16]}...`, wall time {r['wall_time_s']} s.", "",
                   "| Metric | Value |", "|---|---|",
@@ -170,7 +171,8 @@ def main(argv: list[str] | None = None) -> int:
               "workers": workers, "wall_time_s": wall, "ledger_chain": chain.status, "summary": summary, "records": records}
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     slug = re.sub(r"[^A-Za-z0-9.]+", "-", llm.model_name).strip("-")
-    out = OUT_DIR / f"{args.split}__{provider}__{slug}.json"
+    # One file per run (commit in the name), so a new run sits next to the earlier ones.
+    out = OUT_DIR / f"{args.split}__{provider}__{slug}__{result['git_commit']}.json"
     out.write_text(json.dumps(result, indent=1, default=str) + "\n", encoding="utf-8")
     all_results = [json.loads(f.read_text(encoding="utf-8")) for f in sorted(OUT_DIR.glob("*.json"))]
     REPORT.write_text(render_report(all_results), encoding="utf-8")
