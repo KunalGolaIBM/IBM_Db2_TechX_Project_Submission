@@ -6,6 +6,7 @@ DELETE on any ledger table.
 
 from __future__ import annotations
 
+import hmac
 import json
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -93,6 +94,39 @@ def verify_chain(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> ChainS
         cur.close()
     status, checked, first_bad, detail = out
     return ChainStatus(str(status).strip(), int(checked or 0), int(first_bad) or None, str(detail).strip() or None)
+
+
+SQL_ROW_HASH = "SELECT ROW_HASH FROM ANSWER_LEDGER WHERE LEDGER_ID = ?"
+
+
+@dataclass(frozen=True)
+class ReceiptCheck:
+    ledger_id: int
+    found: bool
+    matches: bool
+    chain: ChainStatus
+
+    @property
+    def verdict(self) -> str:
+        if not self.found:
+            return "MISSING"
+        if not self.matches:
+            return "REWRITTEN"
+        return "INTACT" if self.chain.status == "OK" else "CHAIN_BROKEN"
+
+
+def check_receipt(conn: ibm_db_dbi.Connection, ledger_id: int, row_hash: str, schema: str = db.SCHEMA) -> ReceiptCheck:
+    """Compare a receipt (the row hash a caller kept from the check's response) with the ledger now.
+
+    VERIFY_CHAIN proves the rows agree with each other. It cannot tell that an owner who dropped the
+    triggers rebuilt the whole chain consistently, because every hash would agree again. A hash kept
+    outside Db2 can: the rebuilt row no longer matches it.
+    """
+    db.use_schema(conn, schema)
+    rows = db.query(conn, SQL_ROW_HASH, (ledger_id,))
+    stored = rows[0][0].strip() if rows else None
+    matches = stored is not None and hmac.compare_digest(stored.encode(), row_hash.strip().lower().encode())
+    return ReceiptCheck(ledger_id, stored is not None, matches, verify_chain(conn, schema))
 
 
 # Every statement below is a literal. Names are unqualified: use_schema() binds the schema.

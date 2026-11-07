@@ -281,3 +281,28 @@ def test_a_decision_must_name_a_known_policy_document(app_conn, test_schema):
         ledger.append(app_conn, entry(doc_id="NO-SUCH-DOC"), test_schema)
     assert err.value.sqlstate == "23503"
     assert ledger.verify_chain(app_conn, test_schema).status == "OK"  # the refused append left no trace
+
+
+def test_a_receipt_catches_a_ledger_rebuilt_consistently_which_verify_chain_cannot(admin_conn, settings, scratch, verifier):
+    """The residual risk VERIFY_CHAIN leaves: an owner who drops and rebuilds the ledger with a changed answer
+    gets a chain that verifies. The row hash the caller kept (the receipt) no longer matches."""
+    app = db.connect(settings, "app")
+    try:
+        issued = ledger.append(app, entry(final_answer="Bereavement fares must be requested before travel."), scratch)
+        assert ledger.check_receipt(app, issued.ledger_id, issued.row_hash, scratch).verdict == "INTACT"
+        assert ledger.check_receipt(app, issued.ledger_id + 1, issued.row_hash, scratch).verdict == "MISSING"
+    finally:
+        app.close()
+
+    schema.reset_ledger(admin_conn, scratch)  # the owner throws the ledger away ...
+    seed.seed_chain_head(admin_conn, scratch)
+    schema.apply_grants(admin_conn, settings.asof_app_user, settings.asof_editor_user, scratch)
+    app = db.connect(settings, "app")
+    try:  # ... and writes a different history through the proper procedure
+        forged = ledger.append(app, entry(final_answer="You can claim it after you travel."), scratch)
+        assert forged.ledger_id == issued.ledger_id and forged.row_hash != issued.row_hash
+        assert verifier().status == "OK"  # the rebuilt chain is internally consistent
+        check = ledger.check_receipt(app, issued.ledger_id, issued.row_hash.upper(), scratch)
+    finally:
+        app.close()
+    assert (check.found, check.matches, check.verdict) == (True, False, "REWRITTEN")

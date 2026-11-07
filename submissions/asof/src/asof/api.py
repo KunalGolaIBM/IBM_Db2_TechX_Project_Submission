@@ -155,6 +155,8 @@ class GateOut(BaseModel):
     claims: list[ClaimOut]
     unchecked: list[str] = Field(default_factory=list, description="Details in the draft that no extracted claim "
                                  "stated; any makes the draft escalate.")
+    row_hash: str | None = Field(None, description="Receipt: the decision's SHA-256 ledger row hash. Kept outside Db2, "
+                                 "it proves later (POST /api/ledger/receipt) that the record was not rewritten.")
 
 
 def _claims(result: GateResult) -> list[ClaimOut]:
@@ -176,7 +178,7 @@ def gate_out(result: GateResult) -> GateOut:
     return GateOut(request_id=result.request_id, ledger_id=result.ledger_id, decision=result.decision,
                    reason_code=result.reason_code, released=result.released, final_answer=result.final_answer,
                    rewrite=result.rewrite, latency_ms=result.latency_ms, model=result.model_info, claims=_claims(result),
-                   unchecked=result.unchecked)
+                   unchecked=result.unchecked, row_hash=result.row_hash)
 
 
 class RateLimiter:
@@ -201,6 +203,12 @@ class RateLimiter:
 
 class LedgerQuestionIn(_In):
     question: Annotated[str, Field(min_length=3, max_length=500), AfterValidator(_text(500))]
+
+
+class ReceiptIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    ledger_id: int = Field(ge=1, le=10**12)
+    row_hash: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
 
 
 class SuggestionDecision(BaseModel):
@@ -378,6 +386,17 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         if out is None:
             raise HTTPException(404, "no such ledger entry")
         return out
+
+    @app.post("/api/ledger/receipt")
+    def check_receipt(body: ReceiptIn):
+        """Does the ledger still hold the row a receipt was issued for? Runs VERIFY_CHAIN too."""
+        conn = app_conn()
+        try:
+            r = ledger.check_receipt(conn, body.ledger_id, body.row_hash, schema)
+        finally:
+            conn.close()
+        return {"ledger_id": r.ledger_id, "verdict": r.verdict, "found": r.found, "matches": r.matches,
+                "chain_status": r.chain.status, "first_bad_ledger_id": r.chain.first_bad}
 
     @app.get("/api/chain/verify")
     def chain_verify():

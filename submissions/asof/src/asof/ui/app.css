@@ -107,13 +107,17 @@ main { max-width: 1320px; margin: 0 auto; padding: 26px 28px 40px; outline: none
 
 label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: var(--ink-2); }
 .hint { font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 5px; }
-input[type=text], input[type=date], textarea, select {
+input[type=text], input[type=date], input[type=number], textarea, select {
   width: 100%; font: inherit; color: var(--ink); background: var(--surface);
   border: 1px solid var(--line-2); border-radius: var(--radius-sm); padding: 9px 11px;
   transition: border-color .15s, box-shadow .15s;
 }
 textarea { resize: vertical; min-height: 84px; line-height: 1.45; }
 textarea.code { font-family: var(--mono); font-size: 12.5px; min-height: 70px; }
+input.code { font-family: var(--mono); font-size: 12.5px; }
+.receipt .row { gap: 8px; align-items: center; }
+.receipt #rc-id { max-width: 130px; }
+#rc-out:not(:empty) { margin-top: 12px; }
 input:focus, textarea:focus, select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
 .field + .field { margin-top: 14px; }
 .row { display: flex; gap: 12px; align-items: center; }

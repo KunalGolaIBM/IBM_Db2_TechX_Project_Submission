@@ -336,3 +336,37 @@ def test_health_names_replay_mode_and_the_model_the_outputs_were_recorded_from()
     assert body["replay_model"].startswith("openrouter:")  # the UI banner names it
     assert TestClient(create_app(Settings(_env_file=None, llm_provider="ollama"), gate=FakeGate(),
                                  assistant=FakeAssistant())).get("/healthz").json()["replay"] is False
+
+
+def test_a_receipt_is_checked_against_the_ledger_and_validated(monkeypatch):
+    from asof import ledger
+
+    seen = {}
+
+    def fake_check(conn, ledger_id, row_hash, schema="ASOF"):
+        seen.update(ledger_id=ledger_id, row_hash=row_hash)
+        return ledger.ReceiptCheck(ledger_id, True, False, ledger.ChainStatus("OK", 9, None, "ok"))
+
+    monkeypatch.setattr(ledger, "check_receipt", fake_check)
+    monkeypatch.setattr("asof.db.connect", lambda settings, role="app", autocommit=False: type(
+        "C", (), {"rollback": lambda self: None, "close": lambda self: None})())
+    c = client()
+    good = {"ledger_id": 7, "row_hash": "ab" * 32}
+    body = c.post("/api/ledger/receipt", json=good).json()
+    assert body["verdict"] == "REWRITTEN" and body["chain_status"] == "OK" and seen == good
+    for bad in ({**good, "row_hash": "zz" * 32}, {**good, "row_hash": "ab"}, {**good, "ledger_id": 0},
+                {**good, "extra": 1}):
+        assert c.post("/api/ledger/receipt", json=bad).status_code == 422
+
+
+def test_every_check_response_carries_its_receipt():
+    assert "row_hash" in client().post("/api/gate", json=OK).json()
+
+
+@pytest.mark.parametrize(("found", "matches", "chain", "verdict"), [
+    (True, True, "OK", "INTACT"), (True, False, "OK", "REWRITTEN"), (False, False, "OK", "MISSING"),
+    (True, True, "BROKEN", "CHAIN_BROKEN")])
+def test_receipt_verdicts(found, matches, chain, verdict):
+    from asof import ledger
+
+    assert ledger.ReceiptCheck(1, found, matches, ledger.ChainStatus(chain, 1, None, None)).verdict == verdict

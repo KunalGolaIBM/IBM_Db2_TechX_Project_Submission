@@ -296,7 +296,7 @@ function resultView(r, asOf) {
       <div class="icon">${ICONS[r.decision]}</div>
       <div><div class="row">${pill(r.decision)}<h2>${HEADLINE[r.decision]}</h2></div><p>${explain(r, asOf)}</p></div>
       <div class="meta">${(r.latency_ms / 1000).toFixed(1)} s · ${r.model}<br>
-        ${r.ledger_id ? html`<a href="#/ledger/${r.ledger_id}">Ledger entry #${r.ledger_id} →</a>` : html`<span>Not recorded</span>`}</div>
+        ${r.ledger_id ? html`<a href="#/ledger/${r.ledger_id}">Ledger entry #${r.ledger_id} →</a><br><span class="hash" title="Receipt (ledger row hash): ${r.row_hash || ""}">receipt ${shortHash(r.row_hash)}…</span>` : html`<span>Not recorded</span>`}</div>
     </div>
     <div class="cols-2">
       <div class="card"><div class="eyebrow">${r.assistant ? "Demo assistant's draft" : "Draft"}</div><div class="sep"></div>
@@ -473,10 +473,28 @@ async function Ledger(id) {
       <button class="btn ghost" id="verify">Verify hash chain</button>
     </div>
     <div id="chain"></div>
+    <form class="card receipt" id="receipt-form" autocomplete="off"><div class="card-head"><h2>Check a receipt</h2>
+      <span class="sub">Every check returns its ledger row hash. Kept outside Db2, it proves the record was not rewritten, even by an owner who rebuilt the whole chain.</span></div>
+      <div class="row"><input id="rc-id" type="number" min="1" placeholder="Ledger #" required><input id="rc-hash" class="grow code" type="text" pattern="[0-9a-fA-F]{64}" placeholder="64-character row hash" required>
+      <button class="btn ghost" type="submit">Check</button></div><div id="rc-out"></div></form>
     <div class="card"><div class="card-head"><div class="chips" id="dec-filter">
       ${[null, "PASS", "CORRECTED", "ESCALATED"].map((d) => html`<button type="button" class="chip ${led.decision === d ? "on" : ""}" data-dec="${d || ""}">${d ? d.toLowerCase() : "all decisions"}</button>`)}
     </div></div><div id="ledger-table"><div class="loading"><div class="spinner"></div>Loading ledger...</div></div></div>`);
   $("#verify").addEventListener("click", verifyChain);
+  $("#receipt-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const out = $("#rc-out");
+    try {
+      const { body } = await post("/api/ledger/receipt", { ledger_id: Number($("#rc-id").value), row_hash: $("#rc-hash").value.trim() });
+      const says = {
+        INTACT: ["ok", "Intact.", `Entry #${body.ledger_id} is the record this receipt was issued for, and the chain verifies.`],
+        REWRITTEN: ["bad", "Rewritten.", `Entry #${body.ledger_id} exists but is not the record this receipt was issued for.`],
+        MISSING: ["bad", "Missing.", `The ledger has no entry #${body.ledger_id}.`],
+        CHAIN_BROKEN: ["bad", "Chain broken.", `The row matches, but VERIFY_CHAIN fails at entry #${body.first_bad_ledger_id}.`],
+      }[body.verdict];
+      mount(out, html`<div class="banner ${says[0]}"><strong>${says[1]}</strong><span>${says[2]}</span></div>`);
+    } catch (err) { mount(out, html`<div class="error-box">${err.message}</div>`); }
+  });
   $("#dec-filter").addEventListener("click", (e) => { const b = e.target.closest("[data-dec]"); if (b) { led.decision = b.dataset.dec || null; Ledger(); } });
   verifyChain();
   const q = led.decision ? `?limit=100&decision=${led.decision}` : "?limit=100";
