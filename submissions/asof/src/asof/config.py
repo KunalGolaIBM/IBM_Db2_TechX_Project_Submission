@@ -148,7 +148,8 @@ class Settings(BaseSettings):
         if self.llm_provider == "openrouter":
             return _is_set(self.openrouter_api_key)
         if self.llm_provider == "openai_compatible":
-            return _is_set(self.openai_compat_base_url) and _is_set(self.openai_compat_model)
+            return (_is_set(self.openai_compat_base_url) and _is_set(self.openai_compat_model)
+                    and _is_set(self.openai_compat_api_key))
         return True
 
     @property
@@ -165,7 +166,7 @@ ENV_NAMES = {"db2_admin_user": "DB2_USER", "db2_admin_password": "DB2_PASSWORD"}
 
 # Values copied from .env.example without being filled in count as missing, so a judge without a
 # key gets a clear message instead of every check silently failing on a 401.
-PLACEHOLDER = re.compile(r"your-key-here|^change-me", re.I)
+PLACEHOLDER = re.compile(r"your-(api-)?key-here|^change-me", re.I)
 
 
 def _is_set(value: object) -> bool:

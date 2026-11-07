@@ -99,3 +99,27 @@ def test_values_left_as_in_env_example_count_as_missing():
         with pytest.raises(ConfigError):
             s.require(name)
     assert Settings(_env_file=None, openrouter_api_key="sk-or-v1-0123456789abcdef").indb_embeddings_wanted
+
+
+def test_env_example_names_every_setting_and_ships_no_owner_password():
+    """README: .env.example lists every setting. An empty DB2_PASSWORD makes compose refuse to start
+    instead of creating Db2 with a placeholder that setup would then reject."""
+    import re
+    from pathlib import Path
+
+    from pydantic import AliasChoices
+
+    text = (Path(__file__).resolve().parents[1] / ".env.example").read_text(encoding="utf-8")
+    names = [f.validation_alias.choices[0] if isinstance(f.validation_alias, AliasChoices) else n.upper()
+             for n, f in Settings.model_fields.items()]
+    assert [n for n in names if not re.search(rf"(?m)^(# )?{n}=", text)] == []
+    assert re.search(r"(?m)^DB2_PASSWORD=$", text)
+    assert not re.search(r"(?m)^[A-Z_]*(KEY|PASSWORD|TOKEN)=\S", text), "no value for any secret"
+
+
+def test_an_openai_compatible_endpoint_needs_a_real_key_to_count_as_ready():
+    base = dict(_env_file=None, llm_provider="openai_compatible", openai_compat_base_url="https://api.example.com/v1",
+                openai_compat_model="m")
+    assert not Settings(**base).llm_ready
+    assert not Settings(**base, openai_compat_api_key="your-api-key-here").llm_ready  # copied from the example
+    assert Settings(**base, openai_compat_api_key="sk-test-0123456789").llm_ready
