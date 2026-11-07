@@ -111,7 +111,7 @@ class ReceiptCheck:
         if not self.found:
             return "MISSING"
         if not self.matches:
-            return "REWRITTEN"
+            return "MISMATCH"  # rewritten, reset, or a receipt from another ledger: Db2 cannot tell which
         return "INTACT" if self.chain.status == "OK" else "CHAIN_BROKEN"
 
 
@@ -120,7 +120,9 @@ def check_receipt(conn: ibm_db_dbi.Connection, ledger_id: int, row_hash: str, sc
 
     VERIFY_CHAIN proves the rows agree with each other. It cannot tell that an owner who dropped the
     triggers rebuilt the whole chain consistently, because every hash would agree again. A hash kept
-    outside Db2 can: the rebuilt row no longer matches it.
+    outside Db2 can: the rebuilt row no longer matches it. A MISMATCH says only that this ledger's row
+    with that ID is not the one the receipt was issued for: rewritten, lost to a demo ledger reset (IDs
+    restart), or the receipt came from another ledger or was mistyped. MISSING: no row with that ID.
     """
     db.use_schema(conn, schema)
     rows = db.query(conn, SQL_ROW_HASH, (ledger_id,))

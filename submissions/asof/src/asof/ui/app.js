@@ -490,7 +490,7 @@ async function Ledger(id) {
       const { body } = await post("/api/ledger/receipt", { ledger_id: Number($("#rc-id").value), row_hash: $("#rc-hash").value.trim() });
       const says = {
         INTACT: ["ok", "Intact.", `Entry #${body.ledger_id} is the record this receipt was issued for, and the chain verifies.`],
-        REWRITTEN: ["bad", "Rewritten.", `Entry #${body.ledger_id} exists but is not the record this receipt was issued for.`],
+        MISMATCH: ["bad", "Does not match.", `Entry #${body.ledger_id} is not the record this receipt was issued for: it was rewritten, the ledger was reset, or the receipt is from another ledger or mistyped.`],
         MISSING: ["bad", "Missing.", `The ledger has no entry #${body.ledger_id}.`],
         CHAIN_BROKEN: ["bad", "Chain broken.", `The row matches, but VERIFY_CHAIN fails at entry #${body.first_bad_ledger_id}.`],
       }[body.verdict];

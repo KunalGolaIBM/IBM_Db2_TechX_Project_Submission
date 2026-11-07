@@ -353,7 +353,7 @@ def test_a_receipt_is_checked_against_the_ledger_and_validated(monkeypatch):
     c = client()
     good = {"ledger_id": 7, "row_hash": "ab" * 32}
     body = c.post("/api/ledger/receipt", json=good).json()
-    assert body["verdict"] == "REWRITTEN" and body["chain_status"] == "OK" and seen == good
+    assert body["verdict"] == "MISMATCH" and body["chain_status"] == "OK" and seen == good
     for bad in ({**good, "row_hash": "zz" * 32}, {**good, "row_hash": "ab"}, {**good, "ledger_id": 0},
                 {**good, "extra": 1}):
         assert c.post("/api/ledger/receipt", json=bad).status_code == 422
@@ -364,7 +364,7 @@ def test_every_check_response_carries_its_receipt():
 
 
 @pytest.mark.parametrize(("found", "matches", "chain", "verdict"), [
-    (True, True, "OK", "INTACT"), (True, False, "OK", "REWRITTEN"), (False, False, "OK", "MISSING"),
+    (True, True, "OK", "INTACT"), (True, False, "OK", "MISMATCH"), (False, False, "OK", "MISSING"),
     (True, True, "BROKEN", "CHAIN_BROKEN")])
 def test_receipt_verdicts(found, matches, chain, verdict):
     from asof import ledger

@@ -305,7 +305,7 @@ def test_a_receipt_catches_a_ledger_rebuilt_consistently_which_verify_chain_cann
         check = ledger.check_receipt(app, issued.ledger_id, issued.row_hash.upper(), scratch)
     finally:
         app.close()
-    assert (check.found, check.matches, check.verdict) == (True, False, "REWRITTEN")
+    assert (check.found, check.matches, check.verdict) == (True, False, "MISMATCH")
 
 
 def test_an_evidence_pack_holds_the_decision_its_clauses_the_chain_and_the_receipt(app_conn, test_schema):
