@@ -1,4 +1,4 @@
-# Submissions Directory
+g# Submissions Directory
 
 This directory contains all submitted hackathon projects for the **IBM Db2 TechX Summit 2026**.
 
