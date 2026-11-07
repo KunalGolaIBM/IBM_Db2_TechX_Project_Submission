@@ -261,6 +261,9 @@ SQL_AREAS = ("SELECT AREA, SUPPORTED, CONTRADICTED, NOT_COVERED, CLAIMS FROM V_C
              "ORDER BY CLAIMS DESC")
 SQL_OVERRIDES = ("SELECT LEDGER_ID, AS_OF_DATE, CLAIM_TEXT, CLAUSE_ID, CLAUSE_VERSION FROM V_RULE_OVERRIDES "
                  "ORDER BY LEDGER_ID DESC FETCH FIRST 20 ROWS ONLY")
+# What the deterministic rule check said about every claim in a draft (pass 1), next to the judge's verdict.
+SQL_RULE_CHECKS = ("SELECT RULE_CHECK, COALESCE(LLM_VERDICT, 'NONE'), COUNT(*) FROM CLAIM_CITATION "
+                   "WHERE PASS_NO = 1 GROUP BY RULE_CHECK, COALESCE(LLM_VERDICT, 'NONE')")
 
 
 def timeline(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA, doc_id: str | None = None) -> list[dict[str, Any]]:
@@ -306,6 +309,13 @@ def analytics(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> dict[str,
     areas = db.query(conn, SQL_AREAS)
     overrides = db.query(conn, SQL_OVERRIDES)
     replayed = int(db.query(conn, SQL_REPLAYED)[0][0])
+    rule_checks = {"match": 0, "mismatch": 0, "mismatch_judge_agreed": 0, "not_applicable": 0}
+    for status, judged, n in db.query(conn, SQL_RULE_CHECKS):
+        key = status.strip().lower()
+        if key in rule_checks:
+            rule_checks[key] += int(n)
+        if key == "mismatch" and judged.strip() == "CONTRADICTED":
+            rule_checks["mismatch_judge_agreed"] += int(n)
     return {
         "replayed_decisions": replayed,
         "decisions": [{"decision": d.strip(), "count": int(n), "avg_latency_ms": int(lat or 0)} for d, n, lat in decisions],
@@ -314,4 +324,5 @@ def analytics(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> dict[str,
                   for a, s, c, nc, t in areas],
         "rule_overrides": [{"ledger_id": int(i), "as_of_date": d, "claim": t, "clause_id": c, "version": v}
                            for i, d, t, c, v in overrides],
+        "rule_checks": rule_checks,
     }

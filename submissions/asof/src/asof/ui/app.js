@@ -847,10 +847,16 @@ async function Analytics() {
           <div class="bar"><i class="supported" data-width="${pct(x.supported, maxArea)}"></i><i class="contradicted" data-width="${pct(x.contradicted, maxArea)}"></i><i class="not_covered" data-width="${pct(x.not_covered, maxArea)}"></i></div>
           <span class="num">${x.claims}</span></div>`)}</div></div>
     </div>
-    <div class="card"><div class="card-head"><h2>Rule check overruled the judge</h2><span class="sub">the LLM said SUPPORTED; numbers or permissions in RULE_JSON said otherwise</span></div>
+    <div class="card"><div class="card-head"><h2>Deterministic rule check</h2><span class="sub">numbers, limits, delay tiers and permissions in each claim, against the clause's RULE_JSON, whatever the judge said</span></div>
+      ${(() => { const rc = a.rule_checks || { match: 0, mismatch: 0, mismatch_judge_agreed: 0, not_applicable: 0 };
+        return html`<div class="bars"><div class="bar-row"><span>mismatch</span><div class="bar"><i class="contradicted" data-width="${pct(rc.mismatch, rc.match + rc.mismatch + rc.not_applicable)}"></i></div><span class="num">${rc.mismatch}</span></div>
+        <div class="bar-row"><span>match</span><div class="bar"><i class="supported" data-width="${pct(rc.match, rc.match + rc.mismatch + rc.not_applicable)}"></i></div><span class="num">${rc.match}</span></div>
+        <div class="bar-row"><span>nothing to compare</span><div class="bar"><i class="not_covered" data-width="${pct(rc.not_applicable, rc.match + rc.mismatch + rc.not_applicable)}"></i></div><span class="num">${rc.not_applicable}</span></div></div>
+        <p class="small muted">Claims in drafts. The judge also said contradicted in ${rc.mismatch_judge_agreed} of the ${rc.mismatch} mismatches; where it said supported, the rule check overruled it (below).</p>`; })()}
+      <div class="sep"></div><h3>Where the rule check overruled the judge</h3>
       ${a.rule_overrides.length ? html`<table><thead><tr><th>Entry</th><th>Customer date</th><th>Claim</th><th>Clause</th></tr></thead><tbody>
         ${a.rule_overrides.map((r) => html`<tr><td><a href="#/ledger/${r.ledger_id}">#${r.ledger_id}</a></td><td>${fmtDate(r.as_of_date)}</td><td>${r.claim}</td><td><code>${r.clause_id}</code> ${r.version}</td></tr>`)}
-      </tbody></table>` : html`<p class="muted">No overrides recorded yet.</p>`}</div>`);
+      </tbody></table>` : html`<p class="muted">None yet: in every mismatch so far, the judge had also found the claim contradicted.</p>`}</div>`);
 }
 
 async function loadScenarios() {

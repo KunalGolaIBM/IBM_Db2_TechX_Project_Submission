@@ -178,6 +178,10 @@ def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
             "correction_rate": _rate(sum(r["decision"] == "CORRECTED" for r in rs), len(rs)),
             "citation_accuracy": _rate(sum(bool(r["cited_key_clause"]) for r in keyed), len(keyed)),
             "rule_overrides": sum(r["rule_overrides"] for r in rs),
+            # Wrong drafts where the deterministic rule check found a RULE_JSON mismatch on the draft itself,
+            # whatever the judge said: the backstop working, not only overruling.
+            "rule_flagged": sum(1 for r in bad if any(c.startswith("p1#") and "rule MISMATCH" in c
+                                                      for c in r.get("claims", []))),
             "errors": sum(r["reason"] == "ERROR_FAIL_CLOSED" for r in rs),
             "latency_p50_ms": int(statistics.median(lat)),
             "latency_p90_ms": int(lat[min(len(lat) - 1, int(round(0.9 * (len(lat) - 1))))]),

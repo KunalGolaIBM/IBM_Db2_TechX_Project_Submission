@@ -20,7 +20,7 @@ import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from .. import db, schema, seed
 from ..config import PROJECT_ROOT, get_settings
@@ -74,6 +74,8 @@ def render_report(results: list[dict]) -> str:
              "- **Safe**: the decision was one of the case's acceptable outcomes (for a wrong draft, CORRECTED or "
              "ESCALATED; for a correct draft, PASS). **Ideal**: exactly the expected decision.",
              "- **Citation accuracy**: the key claim was checked against the right clause version for the date.",
+             "- **Rule check flagged**: wrong drafts in which the deterministic rule check found a mismatch with "
+             "`RULE_JSON` in the draft itself, whatever the judge said.",
              "- **Rule overrides**: claims the deterministic rule check turned from the judge's SUPPORTED to "
              "CONTRADICTED.",
              "", "The airline test split (40 cases) was committed in `81b5b69` before any run and is frozen: the runner "
@@ -108,6 +110,7 @@ def render_report(results: list[dict]) -> str:
                   f"| Ideal decisions | {_pct(o['ideal_rate'])} |",
                   f"| Escalated / corrected | {_pct(o['escalation_rate'])} / {_pct(o['correction_rate'])} |",
                   f"| Citation accuracy | {_pct(o['citation_accuracy'])} |",
+                  f"| Rule check flagged | {o['rule_flagged']} of {o['wrong_drafts']} wrong drafts |",
                   f"| Rule overrides | {o['rule_overrides']} |",
                   f"| Errors (failed closed) | {o['errors']} |",
                   f"| Latency p50 / p90 | {o['latency_p50_ms'] / 1000:.1f} s / {o['latency_p90_ms'] / 1000:.1f} s |",
@@ -131,6 +134,10 @@ def render_report(results: list[dict]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+# The ablation's "today": every case is checked against the policy in force on this date, the day it was run.
+ABLATION_DATE = date(2026, 11, 7)
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m asof.eval")
     p.add_argument("--split", choices=list(SPLITS), required=True)
@@ -138,6 +145,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--model")
     p.add_argument("--workers", type=int, help="parallel cases (default 4 hosted, 1 for ollama)")
     p.add_argument("--limit", type=int, help="run only the first N cases (smoke test; not written)")
+    p.add_argument("--ablation", choices=["current-policy"],
+                   help="current-policy: check every case against the policy in force on the run date instead of the "
+                        "case's own date, as a guardrail without dates would (scored against the same labels)")
     args = p.parse_args(argv)
 
     if args.split in FROZEN and split_sha256(args.split) != FROZEN[args.split]:
@@ -161,7 +171,8 @@ def main(argv: list[str] | None = None) -> int:
     def one(case):
         counting = CountingLLM(llm)
         gate = Gate(counting, embeddings, connections.connect, EVAL_SCHEMA)
-        result = gate.check(GateRequest(case.question, case.draft, case.as_of, case.doc_id or domain.doc_id, "eval"))
+        as_of = ABLATION_DATE if args.ablation == "current-policy" else case.as_of
+        result = gate.check(GateRequest(case.question, case.draft, as_of, case.doc_id or domain.doc_id, "eval"))
         rec = score(case, result) | {"llm_calls": counting.calls}
         flag = "ok  " if rec["safe"] else "MISS"
         print(f"  {flag} {case.id} {case.category:<24} expected {case.expected:<9} got {rec['decision']:<9} "
@@ -187,14 +198,16 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     prompt_versions = " + ".join(sorted({domain_for(c.doc_id or domain.doc_id).prompt_version for c in cases}))
-    result = {"split": args.split, "provider": provider, "model": llm.model_name,
+    split_label = f"{args.split} (ablation: {args.ablation})" if args.ablation else args.split
+    result = {"split": split_label, "provider": provider, "model": llm.model_name,
               "started_at": started.isoformat(timespec="seconds"),
               "git_commit": _git_commit(), "prompt_version": prompt_versions, "cases_sha256": split_sha256(args.split),
               "workers": workers, "wall_time_s": wall, "ledger_chain": chain.status, "summary": summary, "records": records}
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     slug = re.sub(r"[^A-Za-z0-9.]+", "-", llm.model_name).strip("-")
     # One file per run (commit in the name), so a new run sits next to the earlier ones.
-    out = OUT_DIR / f"{args.split}__{provider}__{slug}__{result['git_commit']}.json"
+    stem = f"{args.split}-ablation-{args.ablation}" if args.ablation else args.split
+    out = OUT_DIR / f"{stem}__{provider}__{slug}__{result['git_commit']}.json"
     out.write_text(json.dumps(result, indent=1, default=str) + "\n", encoding="utf-8")
     all_results = [json.loads(f.read_text(encoding="utf-8")) for f in sorted(OUT_DIR.glob("*.json"))]
     REPORT.write_text(render_report(all_results), encoding="utf-8")

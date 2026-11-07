@@ -98,3 +98,14 @@ def test_analytics_says_how_many_decisions_were_replayed(replayed, settings):
         total = db.query(conn, "SELECT COUNT(*) FROM ANSWER_LEDGER")[0][0]
     assert stats["replayed_decisions"] == total > 0  # every decision in this schema came from the recording
     assert sum(d["count"] for d in stats["decisions"]) == total
+
+
+def test_analytics_counts_what_the_rule_check_said_about_every_draft_claim(replayed, settings):
+    with db.connection(settings, "app") as conn:
+        rc = policy.analytics(conn, replayed.schema)["rule_checks"]
+        db.use_schema(conn, replayed.schema)
+        claims = db.query(conn, "SELECT COUNT(*) FROM CLAIM_CITATION WHERE PASS_NO = 1")[0][0]
+        mismatches = db.query(conn, "SELECT COUNT(*) FROM CLAIM_CITATION WHERE PASS_NO = 1 AND RULE_CHECK = 'MISMATCH'")[0][0]
+    assert rc["match"] + rc["mismatch"] + rc["not_applicable"] == claims > 0
+    assert rc["mismatch"] == mismatches > 0  # the replayed scenarios include wrong amounts the rules catch
+    assert rc["mismatch_judge_agreed"] <= rc["mismatch"]
