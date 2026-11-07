@@ -680,6 +680,10 @@ Both policy documents run through the same screens: the playground has two bank 
   - All data is synthetic, and the demo is single-node.
   - Under emulation on Apple Silicon, Db2 is slower, and local Ollama models are slow while Db2 is busy.
   - On Apple Silicon under Rosetta, Db2 *fenced* routines crash, so AsOf deliberately uses only built-in SQL, triggers and SQL PL, which run inside the engine.
+  - **Latency.** A check takes about 4 to 5 seconds at the median on the hosted model, with about 4 model calls (latest runs). That suits a check before an email, help-centre or chat answer is sent, not token-by-token streaming.
+  - **One date per check.** The caller supplies one as-of date. A policy that depends on two dates (when the ticket was booked and when the trip happens) needs the caller to send the one the clause depends on.
+  - **The evaluation is the author's.** The cases were written by the author against a fictional corpus. Splits whose failures motivated a change are no longer blind; two splits (21 wrong drafts) were never used to choose one.
+  - **Platforms.** The Python side needs Python 3.12 and does not install on Intel Macs (no PyTorch 2.15 wheel); on Windows, use WSL 2.
 - **Done since the Round 1 proposal** (each behind tests): person names are redacted before the LLM and the ledger; the chain head is anchored outside Db2 after every append, so a rebuilt ledger is caught without receipts; optional TLS to a remote Db2; per-user API tokens and roles kept in Db2; fewer needless holds, measured on new frozen splits, plus a check of the premises a draft states about the customer.
 - **Next Steps** (the residual risks in [architecture.md](architecture.md#threat-model), in the order they matter):
   - Test TLS against Db2 on Cloud itself (tested so far against the local container and in CI).
