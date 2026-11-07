@@ -47,14 +47,17 @@ function askToken() {
   document.body.prepend(form);
 }
 async function api(path, options = {}) {
+  const { held, ...init } = options;
   const headers = { "content-type": "application/json" };
   const token = savedToken();
   if (token) headers.authorization = `Bearer ${token}`;
-  const res = await fetch(path, { ...options, headers });
+  const res = await fetch(path, { ...init, headers });
   if (res.status === 401) { askToken(); throw new Error("This AsOf server needs an API token: enter it at the top of the page."); }
   let body = null;
   try { body = await res.json(); } catch { /* empty body */ }
-  if (!res.ok && res.status !== 503) throw new Error(errorText(body, res.status));
+  // A check that held its answer is a 503 that carries the full result. Any other non-2xx, including a 503
+  // without a decision (no model, Db2 down, a replay miss), is an error for the caller to show.
+  if (!res.ok && !(held && res.status === 503 && body && body.decision)) throw new Error(errorText(body, res.status));
   return { status: res.status, body };
 }
 function errorText(body, status) {
@@ -64,7 +67,7 @@ function errorText(body, status) {
   if (Array.isArray(body.detail)) return body.detail.map((d) => `${(d.loc || []).slice(1).join(".")}: ${d.msg}`).join("; ");
   return `Request failed (${status})`;
 }
-const post = (path, data) => api(path, { method: "POST", body: JSON.stringify(data) });
+const post = (path, data, extra = {}) => api(path, { method: "POST", body: JSON.stringify(data), ...extra });
 
 // ---------- formatting ----------
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -170,9 +173,8 @@ function explain(r, asOf) {
     case "UNCHECKED_DETAILS": return `The draft states ${(r.unchecked || []).join(", ") || "details"} that the claim check never covered, so it was held rather than sent unchecked.`;
     case "CORRECTION_FAILED": return "The answer contradicted the policy, and the rewrite did not pass the re-check, so it was held back.";
     case "TOO_MANY_CLAIMS": return "The answer makes more than 8 policy claims; long answers go to a person.";
-    case "ERROR_FAIL_CLOSED": return health.replay
-      ? "Replay mode has recorded model outputs only for the built-in scenarios, so this answer could not be checked and was held (fail closed)."
-      : "A check could not complete, so the answer was held (fail closed).";
+    case "ERROR_FAIL_CLOSED": return "A check could not complete, so the answer was held (fail closed)."
+      + (health.replay ? " In replay mode this is what happens to any input without a recorded model output." : "");
     case "LEDGER_UNAVAILABLE": return "The decision could not be recorded in the ledger, so nothing was released.";
     default: return r.reason_code;
   }
@@ -257,8 +259,8 @@ async function runCheck() {
   </div></div></div>`);
   try {
     const { body } = play.mode === "ask"
-      ? await post("/api/assistant/ask", { question: play.question, as_of_date: play.as_of })
-      : await post("/api/gate", { question: play.question, draft_answer: play.draft, as_of_date: play.as_of, doc_id: play.doc });
+      ? await post("/api/assistant/ask", { question: play.question, as_of_date: play.as_of }, { held: true })
+      : await post("/api/gate", { question: play.question, draft_answer: play.draft, as_of_date: play.as_of, doc_id: play.doc }, { held: true });
     body._as_of = play.as_of;
     body._draft = play.mode === "ask" ? body.assistant?.draft : play.draft;
     play.result = body;

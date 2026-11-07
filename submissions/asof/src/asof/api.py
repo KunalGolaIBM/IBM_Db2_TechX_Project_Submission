@@ -35,6 +35,7 @@ from .config import ConfigError, Settings, get_settings
 from .embeddings import get_embeddings
 from .gate import Gate, GateRequest, GateResult
 from .llm import LLMError, build_llm
+from .replay import ReplayMiss
 
 log = logging.getLogger("asof.api")
 
@@ -304,6 +305,10 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     @app.exception_handler(LLMError)
     async def _llm_error(_: Request, exc: LLMError):
         log.error("LLM error: %s", exc)
+        if isinstance(exc, ReplayMiss):  # replay mode on an input it has no recording for: say so, plainly
+            return JSONResponse({"error": "Replay mode has recorded model outputs only for the built-in scenarios. "
+                                          "To ask anything else, add OPENROUTER_API_KEY and set LLM_PROVIDER=openrouter "
+                                          "in .env (or use Ollama), then restart."}, status_code=503)
         return JSONResponse({"error": "the language model is unavailable"}, status_code=503)
 
     def replay_model() -> str | None:

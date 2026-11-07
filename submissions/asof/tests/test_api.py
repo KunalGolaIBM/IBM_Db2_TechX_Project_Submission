@@ -385,3 +385,17 @@ def test_the_evidence_pack_downloads_as_a_file_and_shares_the_rate_limit(monkeyp
     assert r.headers["content-disposition"] == 'attachment; filename="asof-evidence-7.json"'
     assert c.get("/api/ledger/404/evidence").status_code == 404
     assert c.get("/api/ledger/7/evidence").status_code == 429
+
+
+def test_a_replay_miss_is_explained_not_reported_as_a_broken_model():
+    from asof.replay import MISS, ReplayMiss
+
+    class MissingAssistant:
+        def answer(self, question):
+            raise ReplayMiss(MISS)
+
+    app = create_app(Settings(_env_file=None), gate=FakeGate(), assistant=MissingAssistant())
+    r = TestClient(app).post("/api/assistant/ask", json={"question": "Can I bring my bike?", "as_of_date": "2026-05-05"})
+    assert r.status_code == 503 and "decision" not in r.json()  # the UI shows this as an error, not as a result
+    assert r.json()["error"].startswith("Replay mode has recorded model outputs only for the built-in scenarios")
+
