@@ -52,7 +52,7 @@ markers = [
 
 [tool.ruff]
 line-length = 130
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 # pycodestyle, pyflakes, isort, bugbear, pyupgrade and bandit (security) rules. S608 (SQL built
@@ -63,6 +63,7 @@ ignore = [
   "S311",  # random is used for synthetic benchmark data, never for secrets
   "S603", "S607",  # subprocess with argument lists to docker and db2 tooling, no shell
   "B008",  # FastAPI dependency defaults
+  "UP046", "UP047",  # TypeVar generics kept: one module-level T shared by the LLM client's methods
 ]
 
 [tool.ruff.lint.per-file-ignores]

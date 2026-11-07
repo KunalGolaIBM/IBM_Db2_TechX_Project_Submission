@@ -45,7 +45,7 @@ jobs:
           /tmp/lf-venv/bin/pip install -q -r langflow/requirements-langflow.txt
           /tmp/lf-venv/bin/python -m pytest -q langflow/tests -p no:cacheprovider
       - name: Lint (ruff, including its SQL-injection rule)
-        run: ruff check src tests scripts airflow langflow
+        run: ruff check .
       - name: Secret check over every tracked file
         run: python scripts/check_secrets.py --all
       - name: Dependency audit (pip-audit over all locked packages)
