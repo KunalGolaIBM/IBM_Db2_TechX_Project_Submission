@@ -145,6 +145,7 @@ A refused or failed query gets one retry with the reason. The answer is written 
 - **Dedicated storage.** Every AsOf table lives in its own 32K-page tablespace with its own bufferpool ([00_storage.sql](src/asof/sql/00_storage.sql)). The page size is required, not a preference: a vector index key on `VECTOR(384, FLOAT32)` is 1,536 bytes, and Db2 rejects it in a 4K tablespace (SQL0614N). A ledger row with up to 30 KB of verdict JSON also fits in one page.
 - **Native vector index.** `CREATE VECTOR INDEX IX_CLAUSE_EMBEDDING ON POLICY_CLAUSE (EMBEDDING) WITH DISTANCE COSINE` (catalog type `VANN`, new in Db2 12.1.5). It coexists with system versioning and `FOR PORTION OF BUSINESS_TIME` updates (tested).
 - **Compression.** The append-only ledger tables use adaptive row compression (`COMPRESS YES ADAPTIVE`).
+- **Pooled runtime connections.** On the dev machine an `ibm_db` connection takes about 0.2 s to open and 0.9 s to close, against 0.5 ms for a query on an open one, and a check used three. The API, demo and eval now share a small pool ([db.py](src/asof/db.py) `ConnectionPool`: exclusive checkout, rollback on return, a ping before reuse, so a connection broken by a Db2 restart is replaced, not handed out). `python -m asof.connbench` replays the fixed-draft scenarios both ways in a scratch schema: **3,290 ms per check with a fresh connection per use, 57 ms with the pool** (median of 12, same decisions). Latencies in the evaluation tables were measured before the pool and include that overhead.
 - **Statistics.** Setup runs `RUNSTATS` on the five tables the hot queries read, so plans are costed from real counts.
 - **Access plans.** `python -m asof.explain` explains the exact statements the app runs, with bound values, under `SET CURRENT EXPLAIN MODE = EXPLAIN`, and writes IBM `db2exfmt` plans to [docs/explain/](docs/explain/README.md). Each plan file keeps Db2's Plan Details, so the predicates and start and stop keys are visible. The as-of query reads `IX_CLAUSE_DOC_ASOF (DOC_ID, BUS_START, BUS_END)`, an index added for it after an audit found the first plan scanning the whole primary-key index: `DOC_ID = ?` is the start and stop key, the `BUS_START <= ?` that Db2 derives from `FOR BUSINESS_TIME AS OF` is a stop key, and `? < BUS_END` is applied inside the index scan. Then it fetches the rows in force and sorts them by distance (estimated cost 7.07 timerons, from 17.36). The filtered ledger page has its own index, `IX_LEDGER_DECISION (DECISION, LEDGER_ID)`, but with a handful of rows the optimizer still prefers to read the primary key newest first and filter, which is the cheaper plan at that size.
 
@@ -445,7 +446,7 @@ The runnable takes the assistant's draft and returns the checked answer, and eve
 ## Testing & Verification
 
 ```bash
-pytest -q                                 # 454 tests: 447 run, 7 need an opt-in flag (live LLM, remote endpoint)
+pytest -q                                 # 458 tests: 451 run, 7 need an opt-in flag (live LLM, remote endpoint)
 pytest -q -m "not db2"                    # unit tests only, no database needed
 ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 4 live tests against the configured LLM (spends API calls)
 

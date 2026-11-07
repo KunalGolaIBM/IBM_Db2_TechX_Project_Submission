@@ -18,6 +18,7 @@ Rules this module enforces:
 from __future__ import annotations
 
 import re
+import threading
 import weakref
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
@@ -40,6 +41,7 @@ _SQLMSG = re.compile(r"(SQL[0-9]{4,5}[NWC][^\n]*?)(?:\s+SQLSTATE=|$)")
 
 
 SQL_LOCK_TIMEOUT = "SET CURRENT LOCK TIMEOUT = ?"
+SQL_PING = "SELECT 1 FROM SYSIBM.SYSDUMMY1"
 
 
 class DatabaseError(RuntimeError):
@@ -116,6 +118,81 @@ def connection(settings: Settings, role: Role = "app", autocommit: bool = False)
             conn.close()
         except Exception:  # noqa: BLE001, S110 - closing a broken connection must not mask the real error
             pass
+
+
+def _close_quietly(conn) -> None:
+    try:
+        conn.close()
+    except Exception:  # noqa: BLE001, S110 - a broken connection is being thrown away anyway
+        pass
+
+
+class PooledConnection:
+    """A checked-out pooled connection. Use it like the ibm_db_dbi connection it wraps;
+    close() hands it back to the pool instead of closing it."""
+
+    def __init__(self, pool: ConnectionPool, raw: ibm_db_dbi.Connection):
+        self._pool, self.raw = pool, raw
+
+    def __getattr__(self, name: str):
+        if self.raw is None:
+            raise DatabaseError("this pooled connection was already returned")
+        return getattr(self.raw, name)
+
+    def close(self) -> None:
+        if self.raw is not None:
+            raw, self.raw = self.raw, None
+            self._pool._release(raw)
+
+
+class ConnectionPool:
+    """A few open connections for one role, reused across requests.
+
+    Opening a Db2 connection costs about 180 ms on the dev machine (authentication plus the session
+    setup in connect()), a query on an open one about 0.5 ms, and one check opens two to six. A
+    checked-out connection belongs to one caller until it is closed. A returned one is rolled back,
+    and an idle one is pinged before it is handed out again, so a connection broken by a Db2 restart
+    is dropped and replaced instead of failing a check. At most `size` idle connections are kept.
+    """
+
+    def __init__(self, settings: Settings, role: Role = "app", size: int = 8):
+        self._settings, self._role, self._size = settings, role, size
+        self._idle: list[ibm_db_dbi.Connection] = []
+        self._lock = threading.Lock()
+        self.opened = 0  # connections opened over the pool's life (tests and the benchmark read it)
+
+    def connect(self) -> PooledConnection:
+        while True:
+            with self._lock:
+                raw = self._idle.pop() if self._idle else None
+            if raw is None:
+                conn = connect(self._settings, self._role)
+                with self._lock:
+                    self.opened += 1
+                return PooledConnection(self, conn)
+            try:
+                query(raw, SQL_PING)
+                return PooledConnection(self, raw)
+            except Exception:  # noqa: BLE001 - however it failed, it is not handed out
+                _close_quietly(raw)
+
+    def _release(self, raw: ibm_db_dbi.Connection) -> None:
+        try:
+            raw.rollback()  # nothing a caller left uncommitted carries over to the next one
+        except Exception:  # noqa: BLE001
+            _close_quietly(raw)
+            return
+        with self._lock:
+            if len(self._idle) < self._size:
+                self._idle.append(raw)
+                return
+        _close_quietly(raw)
+
+    def close(self) -> None:
+        with self._lock:
+            idle, self._idle = self._idle, []
+        for raw in idle:
+            _close_quietly(raw)
 
 
 def query(conn: ibm_db_dbi.Connection, sql: str, params: Sequence[Any] = ()) -> list[tuple]:
@@ -199,14 +276,15 @@ def use_schema(conn: ibm_db_dbi.Connection, schema: str = SCHEMA) -> None:
     ROLLBACK, so this is done once per connection and schema, and repeated only on a change.
     """
     validate_schema(schema)
+    key = getattr(conn, "raw", None) or conn  # a pooled connection keeps its registers between checkouts
     try:
-        if _bound_schema.get(conn) == schema:
+        if _bound_schema.get(key) == schema:
             return
     except TypeError:  # a connection type that cannot be weakly referenced: always set
         pass
     execute(conn, "SET CURRENT SCHEMA = ?", (schema,))
     execute(conn, "SET CURRENT PATH = SYSTEM PATH, ?", (schema,))
     try:
-        _bound_schema[conn] = schema
+        _bound_schema[key] = schema
     except TypeError:
         pass

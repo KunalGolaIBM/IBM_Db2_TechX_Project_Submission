@@ -147,9 +147,11 @@ def main(argv: list[str] | None = None) -> int:
     prepare(settings, embeddings)
     print(f"Running {len(cases)} {args.split} cases with {llm.info}, {workers} worker(s), schema {EVAL_SCHEMA}", flush=True)
 
+    connections = db.ConnectionPool(settings, "app")  # as the API runs; the workers share it
+
     def one(case):
         counting = CountingLLM(llm)
-        gate = Gate(counting, embeddings, lambda: db.connect(settings, "app"), EVAL_SCHEMA)
+        gate = Gate(counting, embeddings, connections.connect, EVAL_SCHEMA)
         result = gate.check(GateRequest(case.question, case.draft, case.as_of, case.doc_id or domain.doc_id, "eval"))
         rec = score(case, result) | {"llm_calls": counting.calls}
         flag = "ok  " if rec["safe"] else "MISS"

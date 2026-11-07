@@ -46,7 +46,7 @@ def main() -> int:
     try:
         llm = build_llm(settings)
         emb = get_embeddings(settings.embedding_model)
-        connect = lambda: db.connect(settings, "app")  # noqa: E731
+        connect = db.ConnectionPool(settings, "app").connect
         assistant, gate = DemoAssistant(llm, emb, connect), Gate(llm, emb, connect)
         for question, as_of in SCENARIOS:
             draft = assistant.answer(question)

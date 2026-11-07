@@ -213,8 +213,12 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     api_token = settings.asof_api_token.get_secret_value() if settings.asof_api_token else None
     limiter = RateLimiter(rate_limit)
 
+    # Runtime connections are pooled: on the dev machine opening one costs about 0.2 s and closing it
+    # about 0.9 s, and a check uses three (see db.ConnectionPool).
+    pool = db.ConnectionPool(settings, "app")
+
     def app_conn():
-        return db.connect(settings, "app")
+        return pool.connect()
 
     def components() -> tuple[Gate, DemoAssistant]:
         if state["gate"] is None or state["assistant"] is None:
@@ -241,6 +245,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
             except ConfigError as exc:
                 log.error("AsOf is not configured: %s", exc)
         yield
+        pool.close()
 
     app = FastAPI(title="AsOf", version=__version__, lifespan=lifespan,
                   description="Checks AI assistant answers against the policy in force on a date. Built on IBM Db2.")

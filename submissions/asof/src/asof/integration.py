@@ -27,7 +27,7 @@ def build_gate(settings: Settings | None = None, schema: str = db.SCHEMA) -> Gat
     settings = settings or get_settings()
     settings.require("asof_app_password")
     return Gate(build_llm(settings), get_embeddings(settings.embedding_model),
-                connect=lambda: db.connect(settings, "app"), schema=schema)
+                connect=db.ConnectionPool(settings, "app").connect, schema=schema)
 
 
 def as_runnable(*, as_of: date, doc_id: str = "AURELIA-CSP", question: str = "", channel: str = "api",

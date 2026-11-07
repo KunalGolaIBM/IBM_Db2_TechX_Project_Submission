@@ -309,7 +309,7 @@ def record(settings) -> int:
                             analyst_user=settings.asof_analyst_user)
     time.sleep(1.1)  # the policy changes below must get a later system time than the seed rows
 
-    app = lambda: db.connect(settings, "app")  # noqa: E731
+    app = db.ConnectionPool(settings, "app").connect
     gate, bot = Gate(rec, emb, app, REPLAY_SCHEMA), DemoAssistant(rec, emb, app, REPLAY_SCHEMA)
     checks, failed = [], 0
     for sc in check_scenarios():
