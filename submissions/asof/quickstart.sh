@@ -93,6 +93,13 @@ PY
   echo "  scenarios replay recorded model outputs, while Db2, the rule checks and the ledger run live. Any other"
   echo "  input is held for a specialist. To check your own answers, add OPENROUTER_API_KEY and set"
   echo "  LLM_PROVIDER=openrouter in .env (or LLM_PROVIDER=ollama with a local Ollama), then restart."
+  # A local Ollama with the configured model already pulled can check any draft, with no key: say so.
+  ollama_url="$(sed -n 's/^OLLAMA_BASE_URL=//p' .env | head -1)"
+  ollama_model="$(sed -n 's/^OLLAMA_MODEL=//p' .env | head -1)"
+  if curl -s --max-time 2 "${ollama_url:-http://127.0.0.1:11434}/api/tags" 2>/dev/null | grep -q "\"${ollama_model:-qwen2.5:7b-instruct}\""; then
+    echo "  Ollama is running with ${ollama_model:-qwen2.5:7b-instruct}: to check your own drafts with it and no key, set"
+    echo "  LLM_PROVIDER=ollama and LLM_TIMEOUT_S=180 in .env, then restart (expect tens of seconds per check on a laptop)."
+  fi
 fi
 unset key
 
