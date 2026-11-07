@@ -1,0 +1,54 @@
+{
+  "suite": "AEGIS controlled real-paper challenge set",
+  "description": "40 claims over Attention Is All You Need, BERT, and LoRA. Expected labels are for scoring only and are never passed to retrieval or verification.",
+  "papers": [
+    {"key": "transformer", "title": "Attention Is All You Need (Vaswani et al., 2017)", "url": "https://arxiv.org/pdf/1706.03762"},
+    {"key": "bert", "title": "BERT: Pre-training of Deep Bidirectional Transformers (Devlin et al., 2019)", "url": "https://arxiv.org/pdf/1810.04805"},
+    {"key": "lora", "title": "LoRA: Low-Rank Adaptation of Large Language Models (Hu et al., 2021)", "url": "https://arxiv.org/pdf/2106.09685"}
+  ],
+  "claims": [
+    {"claim_id": "S01", "category": "supported", "claim": "The Transformer dispenses with recurrence and convolutions entirely.", "expected": "SUPPORTED", "source": "transformer p1 abstract"},
+    {"claim_id": "S02", "category": "supported", "claim": "The Transformer architecture is based solely on attention mechanisms.", "expected": "SUPPORTED", "source": "transformer p1 abstract"},
+    {"claim_id": "S03", "category": "supported", "claim": "BERT is designed to pre-train deep bidirectional representations from unlabeled text.", "expected": "SUPPORTED", "source": "bert p1 abstract"},
+    {"claim_id": "S04", "category": "supported", "claim": "BERT uses masked language modeling and next sentence prediction during pre-training.", "expected": "SUPPORTED", "source": "bert p2"},
+    {"claim_id": "S05", "category": "supported", "claim": "BERT's model architecture is a multi-layer bidirectional Transformer encoder.", "expected": "SUPPORTED", "source": "bert p3"},
+    {"claim_id": "S06", "category": "supported", "claim": "LoRA freezes the pre-trained model weights and injects trainable rank decomposition matrices.", "expected": "SUPPORTED", "source": "lora p1-p4"},
+    {"claim_id": "S07", "category": "supported", "claim": "LoRA represents weight updates with a low-rank decomposition instead of updating the full weight matrix.", "expected": "SUPPORTED", "source": "lora p4"},
+    {"claim_id": "S08", "category": "supported", "claim": "LoRA introduces no additional inference latency compared with full fine-tuning.", "expected": "SUPPORTED", "source": "lora p1 abstract"},
+    {"claim_id": "S09", "category": "supported", "claim": "LoRA was evaluated on RoBERTa, DeBERTa, GPT-2, and GPT-3.", "expected": "SUPPORTED", "source": "lora p1-p5"},
+    {"claim_id": "S10", "category": "supported", "claim": "BERT obtains new state-of-the-art results on eleven natural language processing tasks.", "expected": "SUPPORTED", "source": "bert p1 abstract"},
+
+    {"claim_id": "C01", "category": "contradicted", "claim": "The Transformer architecture uses recurrent layers.", "expected": "CONTRADICTED", "source": "transformer p1 abstract: dispensing with recurrence entirely"},
+    {"claim_id": "C02", "category": "contradicted", "claim": "The Transformer relies primarily on convolutional layers.", "expected": "CONTRADICTED", "source": "transformer p1 abstract: based solely on attention mechanisms, dispensing with convolutions"},
+    {"claim_id": "C03", "category": "contradicted", "claim": "BERT is pre-trained as a unidirectional language model.", "expected": "CONTRADICTED", "source": "bert p1-p2: deep bidirectional representations"},
+    {"claim_id": "C04", "category": "contradicted", "claim": "BERT uses next sentence prediction as its only pre-training objective.", "expected": "CONTRADICTED", "source": "bert p2: MLM plus NSP"},
+    {"claim_id": "C05", "category": "contradicted", "claim": "LoRA trains all model parameters during adaptation.", "expected": "CONTRADICTED", "source": "lora p1/p4: freezes pre-trained weights"},
+    {"claim_id": "C06", "category": "contradicted", "claim": "LoRA increases inference latency compared with the original model.", "expected": "CONTRADICTED", "source": "lora p1: no additional inference latency"},
+    {"claim_id": "C07", "category": "contradicted", "claim": "LoRA was evaluated only on GPT-2.", "expected": "CONTRADICTED", "source": "lora p1/p5: RoBERTa, DeBERTa, GPT-2, GPT-3"},
+    {"claim_id": "C08", "category": "contradicted", "claim": "BERT must be trained from scratch for every downstream task.", "expected": "CONTRADICTED", "source": "bert p1: fine-tuned with one additional output layer"},
+    {"claim_id": "C09", "category": "contradicted", "claim": "LoRA stores a complete fine-tuned model copy for every task.", "expected": "CONTRADICTED", "source": "lora p5: swaps LoRA weights; checkpoints reduce from 350GB to 35MB"},
+    {"claim_id": "C10", "category": "contradicted", "claim": "BERT's architecture is a convolutional neural network.", "expected": "CONTRADICTED", "source": "bert p3: multi-layer bidirectional Transformer encoder"},
+
+    {"claim_id": "I01", "category": "insufficient", "claim": "The Transformer eliminates hallucinations in all scientific applications.", "expected": "INSUFFICIENT_EVIDENCE", "source": "not addressed in the supplied papers"},
+    {"claim_id": "I02", "category": "insufficient", "claim": "BERT is the best model for medical diagnosis.", "expected": "INSUFFICIENT_EVIDENCE", "source": "not addressed in the supplied papers"},
+    {"claim_id": "I03", "category": "insufficient", "claim": "LoRA is compatible with every deep learning framework.", "expected": "INSUFFICIENT_EVIDENCE", "source": "paper discusses PyTorch integration, not every framework"},
+    {"claim_id": "I04", "category": "insufficient", "claim": "The Transformer reduces data-center energy consumption by 90%.", "expected": "INSUFFICIENT_EVIDENCE", "source": "not addressed in the supplied papers"},
+    {"claim_id": "I05", "category": "insufficient", "claim": "BERT performs well on non-English languages.", "expected": "INSUFFICIENT_EVIDENCE", "source": "paper reports English benchmarks; no non-English evaluation"},
+    {"claim_id": "I06", "category": "insufficient", "claim": "LoRA improves the safety alignment of large language models.", "expected": "INSUFFICIENT_EVIDENCE", "source": "not addressed in the supplied papers"},
+    {"claim_id": "I07", "category": "insufficient", "claim": "The Transformer architecture was evaluated on protein folding.", "expected": "INSUFFICIENT_EVIDENCE", "source": "paper evaluates translation and constituency parsing, not protein folding"},
+    {"claim_id": "I08", "category": "insufficient", "claim": "BERT can run on mobile devices with 10 ms latency.", "expected": "INSUFFICIENT_EVIDENCE", "source": "not addressed in the supplied papers"},
+    {"claim_id": "I09", "category": "insufficient", "claim": "LoRA reduces carbon emissions by half.", "expected": "INSUFFICIENT_EVIDENCE", "source": "not addressed in the supplied papers"},
+    {"claim_id": "I10", "category": "insufficient", "claim": "BERT is trained with reinforcement learning from human feedback.", "expected": "INSUFFICIENT_EVIDENCE", "source": "not addressed in the supplied papers"},
+
+    {"claim_id": "N01", "category": "numerical", "claim": "The Transformer achieves 28.4 BLEU on WMT 2014 English-to-German translation.", "expected": "SUPPORTED", "source": "transformer p1/p8"},
+    {"claim_id": "N02", "category": "numerical", "claim": "The Transformer big model was trained for 3.5 days on eight GPUs.", "expected": "SUPPORTED", "source": "transformer p1/p8"},
+    {"claim_id": "N03", "category": "numerical", "claim": "BERT-base contains 110 million parameters.", "expected": "SUPPORTED", "source": "bert p3"},
+    {"claim_id": "N04", "category": "numerical", "claim": "BERT-large contains 340 million parameters.", "expected": "SUPPORTED", "source": "bert p3"},
+    {"claim_id": "N05", "category": "numerical", "claim": "LoRA reduces the number of trainable parameters by 10,000 times compared with GPT-3 175B fine-tuning.", "expected": "SUPPORTED", "source": "lora p1"},
+    {"claim_id": "N06", "category": "numerical", "claim": "The Transformer encoder consists of eight identical layers.", "expected": "CONTRADICTED", "source": "transformer p3: N = 6 identical layers"},
+    {"claim_id": "N07", "category": "numerical", "claim": "BERT-base contains 340 million parameters.", "expected": "CONTRADICTED", "source": "bert p3: BERT-base 110M, BERT-large 340M"},
+    {"claim_id": "N08", "category": "numerical", "claim": "The Transformer base model achieves 41.8 BLEU on WMT 2014 English-to-French translation.", "expected": "CONTRADICTED", "source": "transformer p8: base 38.1; big 41.8"},
+    {"claim_id": "N09", "category": "numerical", "claim": "LoRA reduces GPU memory requirements by 10 times compared with GPT-3 175B fine-tuning.", "expected": "CONTRADICTED", "source": "lora p1: 3 times"},
+    {"claim_id": "N10", "category": "numerical", "claim": "With r = 4, LoRA reduces the checkpoint size from 350GB to 35GB.", "expected": "CONTRADICTED", "source": "lora p5: from 350GB to 35MB"}
+  ]
+}

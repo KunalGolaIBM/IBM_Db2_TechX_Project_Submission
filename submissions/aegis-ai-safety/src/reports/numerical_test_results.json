@@ -1,0 +1,210 @@
+{
+  "n": 14,
+  "supported_cases": 4,
+  "supported_passed": 4,
+  "unsupported_or_limited": 10,
+  "rows": [
+    {
+      "id": "layers_6_vs_8",
+      "capability": "supported",
+      "claim": "The encoder consists of 8 identical layers.",
+      "evidence": "The encoder is a stack of 6 identical layers.",
+      "expected": "conflict",
+      "actual": "conflict",
+      "summary": "Deterministic numeric check: Claim states '8 identical layers'; cited evidence gives 6 identical layers (passage 1).",
+      "discrepancies": [
+        "Claim states '8 identical layers'; cited evidence gives 6 identical layers (passage 1)."
+      ],
+      "matches": [],
+      "override_eligible": true,
+      "behavior_matches_limited_claim": true
+    },
+    {
+      "id": "bleu_28.4_vs_29.4",
+      "capability": "supported",
+      "claim": "The model reaches 28.4 BLEU.",
+      "evidence": "The model reaches 29.4 BLEU.",
+      "expected": "conflict",
+      "actual": "conflict",
+      "summary": "Deterministic numeric check: Claim states '28.4 BLEU'; cited evidence gives 29.4 BLEU (passage 1).",
+      "discrepancies": [
+        "Claim states '28.4 BLEU'; cited evidence gives 29.4 BLEU (passage 1)."
+      ],
+      "matches": [],
+      "override_eligible": true,
+      "behavior_matches_limited_claim": true
+    },
+    {
+      "id": "bert_base_params",
+      "capability": "supported",
+      "claim": "BERT-base contains 340 million parameters.",
+      "evidence": "BERTBASE has 110M parameters; BERTLARGE has 340M parameters.",
+      "expected": "conflict",
+      "actual": "conflict",
+      "summary": "Deterministic numeric check: Claim states '340 million parameters'; cited evidence gives 110M parameters (passage 1) for BASE.",
+      "discrepancies": [
+        "Claim states '340 million parameters'; cited evidence gives 110M parameters (passage 1) for BASE."
+      ],
+      "matches": [],
+      "override_eligible": true,
+      "behavior_matches_limited_claim": true
+    },
+    {
+      "id": "percent_conflict_not_override",
+      "capability": "supported-annotation",
+      "claim": "The method improves accuracy by 5%.",
+      "evidence": "95% of participants completed the survey.",
+      "expected": "percent-annotated-not-override",
+      "actual": "percent-annotated-not-override",
+      "summary": "Deterministic numeric check: Claim states '5%'; cited evidence gives 95% (passage 1).",
+      "discrepancies": [
+        "Claim states '5%'; cited evidence gives 95% (passage 1)."
+      ],
+      "matches": [],
+      "override_eligible": false,
+      "behavior_matches_limited_claim": true
+    },
+    {
+      "id": "percentage_points_arithmetic",
+      "capability": "unsupported",
+      "claim": "80% to 84% is a four-percentage-point improvement.",
+      "evidence": "Accuracy increased from 80% to 84%.",
+      "expected": "arithmetic",
+      "actual": "match",
+      "summary": "Deterministic numeric check: Claim states '80%'; a matching value appears in the cited evidence (80% (passage 1), 84% (passage 1)). This is a consistency check, not proof of support. Claim states '84%'; a matching value appears in the cited evidence (80% (passage 1), 84% (passage 1)). This is a consistency check, not proof of support.",
+      "discrepancies": [],
+      "matches": [
+        "Claim states '80%'; a matching value appears in the cited evidence (80% (passage 1), 84% (passage 1)). This is a consistency check, not proof of support.",
+        "Claim states '84%'; a matching value appears in the cited evidence (80% (passage 1), 84% (passage 1)). This is a consistency check, not proof of support."
+      ],
+      "override_eligible": false,
+      "behavior_matches_limited_claim": false
+    },
+    {
+      "id": "relative_percentage",
+      "capability": "unsupported",
+      "claim": "80% to 84% is a five percent relative increase.",
+      "evidence": "Accuracy increased from 80% to 84%.",
+      "expected": "arithmetic",
+      "actual": "match",
+      "summary": "Deterministic numeric check: Claim states '80%'; a matching value appears in the cited evidence (80% (passage 1), 84% (passage 1)). This is a consistency check, not proof of support. Claim states '84%'; a matching value appears in the cited evidence (80% (passage 1), 84% (passage 1)). This is a consistency check, not proof of support.",
+      "discrepancies": [],
+      "matches": [
+        "Claim states '80%'; a matching value appears in the cited evidence (80% (passage 1), 84% (passage 1)). This is a consistency check, not proof of support.",
+        "Claim states '84%'; a matching value appears in the cited evidence (80% (passage 1), 84% (passage 1)). This is a consistency check, not proof of support."
+      ],
+      "override_eligible": false,
+      "behavior_matches_limited_claim": false
+    },
+    {
+      "id": "decimal_vs_percent",
+      "capability": "unsupported",
+      "claim": "The score is 0.92.",
+      "evidence": "The score is 92%.",
+      "expected": "normalization",
+      "actual": "match",
+      "summary": null,
+      "discrepancies": [],
+      "matches": [],
+      "override_eligible": false,
+      "behavior_matches_limited_claim": false
+    },
+    {
+      "id": "sample_sizes",
+      "capability": "unsupported",
+      "claim": "The sample size is 1,200 participants.",
+      "evidence": "The sample size is 12,000 participants.",
+      "expected": "count-context",
+      "actual": "match",
+      "summary": null,
+      "discrepancies": [],
+      "matches": [],
+      "override_eligible": false,
+      "behavior_matches_limited_claim": false
+    },
+    {
+      "id": "negative_value",
+      "capability": "unsupported",
+      "claim": "Performance changed by -5%.",
+      "evidence": "Performance changed by +5%.",
+      "expected": "signed-number",
+      "actual": "match",
+      "summary": "Deterministic numeric check: Claim states '5%'; a matching value appears in the cited evidence (5% (passage 1)). This is a consistency check, not proof of support.",
+      "discrepancies": [],
+      "matches": [
+        "Claim states '5%'; a matching value appears in the cited evidence (5% (passage 1)). This is a consistency check, not proof of support."
+      ],
+      "override_eligible": false,
+      "behavior_matches_limited_claim": false
+    },
+    {
+      "id": "rounding",
+      "capability": "unsupported",
+      "claim": "The coefficient is 0.333.",
+      "evidence": "The coefficient is 0.33.",
+      "expected": "rounding-tolerance",
+      "actual": "match",
+      "summary": null,
+      "discrepancies": [],
+      "matches": [],
+      "override_eligible": false,
+      "behavior_matches_limited_claim": false
+    },
+    {
+      "id": "encoder_vs_decoder_context",
+      "capability": "unsupported",
+      "claim": "The encoder has six layers.",
+      "evidence": "The decoder has six layers.",
+      "expected": "entity-context",
+      "actual": "match",
+      "summary": null,
+      "discrepancies": [],
+      "matches": [],
+      "override_eligible": false,
+      "behavior_matches_limited_claim": false
+    },
+    {
+      "id": "unrelated_percent_context",
+      "capability": "unsupported",
+      "claim": "Accuracy improved by 5%.",
+      "evidence": "5% of participants withdrew from the study.",
+      "expected": "metric-context",
+      "actual": "match",
+      "summary": "Deterministic numeric check: Claim states '5%'; a matching value appears in the cited evidence (5% (passage 1)). This is a consistency check, not proof of support.",
+      "discrepancies": [],
+      "matches": [
+        "Claim states '5%'; a matching value appears in the cited evidence (5% (passage 1)). This is a consistency check, not proof of support."
+      ],
+      "override_eligible": false,
+      "behavior_matches_limited_claim": false
+    },
+    {
+      "id": "unit_conversion",
+      "capability": "unsupported",
+      "claim": "The distance is 1 km.",
+      "evidence": "The distance is 1000 m.",
+      "expected": "unit-conversion",
+      "actual": "match",
+      "summary": null,
+      "discrepancies": [],
+      "matches": [],
+      "override_eligible": false,
+      "behavior_matches_limited_claim": false
+    },
+    {
+      "id": "multiple_metrics",
+      "capability": "partial",
+      "claim": "Accuracy is 80% and F1 is 0.75.",
+      "evidence": "Accuracy is 85% and F1 is 0.75.",
+      "expected": "metric-binding",
+      "actual": "percent-annotated-not-override",
+      "summary": "Deterministic numeric check: Claim states '80%'; cited evidence gives 85% (passage 1).",
+      "discrepancies": [
+        "Claim states '80%'; cited evidence gives 85% (passage 1)."
+      ],
+      "matches": [],
+      "override_eligible": false,
+      "behavior_matches_limited_claim": false
+    }
+  ]
+}

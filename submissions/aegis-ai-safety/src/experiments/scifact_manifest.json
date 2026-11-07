@@ -1,0 +1,33 @@
+{
+  "dataset": "SciFact",
+  "source": "https://scifact.s3-us-west-2.amazonaws.com/release/latest/data.tar.gz",
+  "project_page": "https://github.com/allenai/scifact",
+  "huggingface": "https://huggingface.co/datasets/allenai/scifact",
+  "version": "SciFact release archive 'latest', downloaded 2026-11-06",
+  "archive_sha256": "11c621288d41ac144d29b13b0f8503b3820b7d6e8b1f6ff24dff335c196d76be",
+  "license": "CC BY-NC 2.0",
+  "license_url": "https://creativecommons.org/licenses/by-nc/2.0/",
+  "splits": {
+    "train": 1261,
+    "dev": 300,
+    "test": 300,
+    "corpus_documents": 5183
+  },
+  "task": "Scientific claim verification: SUPPORT, CONTRADICT, or not enough information (NEI).",
+  "label_mapping": {
+    "SUPPORT": "SUPPORTED",
+    "CONTRADICT": "CONTRADICTED",
+    "NEI": "INSUFFICIENT_EVIDENCE"
+  },
+  "evaluation_split": "dev (held out from AEGIS; the official test split has no public evidence labels)",
+  "intended_metrics": [
+    "macro F1 over SUPPORTED / CONTRADICTED / INSUFFICIENT_EVIDENCE",
+    "per-class precision and recall",
+    "confusion matrix",
+    "false-positive analysis (definitive predictions on NEI claims)",
+    "retrieval Recall@1, Recall@5, Recall@10",
+    "mean / median / p95 verification latency"
+  ],
+  "citation": "Wadden et al. (2020), Fact or Fiction: Verifying Scientific Claims, EMNLP 2020.",
+  "usage_note": "The dataset is not redistributed in this repository. Download it separately and record the revision used."
+}

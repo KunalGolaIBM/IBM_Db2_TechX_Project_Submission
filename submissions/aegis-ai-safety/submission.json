@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "AEGIS \u2014 AI Evidence Grounding & Integrity System",
+    "slug": "aegis-ai-safety",
+    "short_description": "Evidence-grounded research claim verification with page-level IBM Db2 provenance, LangChain verification, and explicit abstention for conflicting or absent evidence.",
+    "category": "AI Safety / Trustworthy AI / Research Infrastructure",
+    "demo_url": "https://aegis-research-verification.vercel.app",
+    "video_url": "",
+    "repo_url": "https://github.com/sakethdonepudi/aegis-ai-safety"
+  },
+  "team": {
+    "name": "Team AEGIS",
+    "members": [
+      {
+        "name": "Saketh Donepudi",
+        "github": "sakethdonepudi",
+        "email": "sakethdonepudi08@gmail.com",
+        "role": "Full-stack, AI/LangChain, IBM Db2 integration, evaluation"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1.5 (local Podman container)",
+    "connector": "IBM ibm_db driver with prepared statements; SQLAlchemy is not used for runtime queries",
+    "features_used": [
+      "Relational tables and joins",
+      "Foreign keys, unique constraints, and check constraints",
+      "Indexes",
+      "Identity columns",
+      "CLOB and VARCHAR text storage",
+      "Parameterized SQL",
+      "Multi-statement transactions with rollback"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "TypeScript",
+      "JavaScript"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "Next.js",
+      "React",
+      "LangChain"
+    ],
+    "ai_models": [
+      "qwen2.5:7b-instruct via local Ollama",
+      "OpenAI-compatible providers (configurable)"
+    ]
+  }
+}

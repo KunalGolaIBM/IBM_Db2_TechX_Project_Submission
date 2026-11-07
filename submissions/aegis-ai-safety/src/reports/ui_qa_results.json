@@ -1,0 +1,37 @@
+{
+  "desktop": {
+    "file_picker_upload": true,
+    "upload_notice": "already in the evidence library",
+    "claim_cards": 4,
+    "badges": 5,
+    "export_buttons": 2,
+    "page_references": true,
+    "evaluation_actual": true
+  },
+  "mobile": {
+    "no_horizontal_overflow": true,
+    "dimensions": {
+      "scrollWidth": 390,
+      "innerWidth": 390
+    },
+    "heading_visible": true
+  },
+  "keyboard": {
+    "focus_trail": [
+      "A:AEGIS home",
+      "A:Workspace",
+      "A:Results",
+      "A:History",
+      "A:Method",
+      "A:Evaluation",
+      "BUTTON:Switch to light mode",
+      "BUTTON:Paper demo"
+    ],
+    "has_focusable_controls": true
+  },
+  "downloads": {
+    "json": "aegis-session-501.json",
+    "markdown": "aegis-session-501.md"
+  },
+  "console": []
+}

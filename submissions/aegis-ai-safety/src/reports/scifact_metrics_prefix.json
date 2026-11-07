@@ -1,0 +1,163 @@
+{
+  "dataset": {
+    "name": "SciFact",
+    "split": "dev",
+    "license": "CC BY-NC 2.0",
+    "claims_file": "data/scifact/claims_dev.jsonl",
+    "corpus_file": "data/scifact/corpus.jsonl",
+    "corpus_documents": 5183,
+    "evaluated_claims": 100,
+    "scored_claims": 100,
+    "errors": 0,
+    "coverage": 1.0,
+    "gold_label_distribution": {
+      "SUPPORTED": 34,
+      "CONTRADICTED": 33,
+      "INSUFFICIENT_EVIDENCE": 33
+    },
+    "note": "SciFact test split has no public evidence labels; dev is used as the held-out labelled set.",
+    "archive": "https://scifact.s3-us-west-2.amazonaws.com/release/latest/data.tar.gz",
+    "archive_sha256": "11c621288d41ac144d29b13b0f8503b3820b7d6e8b1f6ff24dff335c196d76be",
+    "subset": "balanced 100 of 300 labelled dev claims"
+  },
+  "settings": {
+    "model": "qwen2.5:7b-instruct",
+    "temperature": 0.0,
+    "retrieval": "db2_full_corpus_bm25",
+    "retrieval_k": 10,
+    "classification_k": 4,
+    "max_tokens": 450,
+    "repair_explanations": false,
+    "prompt_version": "aegis-claim-verification-v1",
+    "subset": "balanced 100 of 300 labelled dev claims"
+  },
+  "classification": {
+    "n": 100,
+    "invalid_records": 0,
+    "accuracy": 0.63,
+    "macro_f1": 0.615181,
+    "per_class": {
+      "SUPPORTED": {
+        "precision": 0.727273,
+        "recall": 0.705882,
+        "f1": 0.716418,
+        "support": 34
+      },
+      "CONTRADICTED": {
+        "precision": 0.666667,
+        "recall": 0.363636,
+        "f1": 0.470588,
+        "support": 33
+      },
+      "INSUFFICIENT_EVIDENCE": {
+        "precision": 0.55102,
+        "recall": 0.818182,
+        "f1": 0.658537,
+        "support": 33
+      }
+    },
+    "confusion_matrix": {
+      "SUPPORTED": {
+        "SUPPORTED": 24,
+        "CONTRADICTED": 3,
+        "INSUFFICIENT_EVIDENCE": 7
+      },
+      "CONTRADICTED": {
+        "SUPPORTED": 6,
+        "CONTRADICTED": 12,
+        "INSUFFICIENT_EVIDENCE": 15
+      },
+      "INSUFFICIENT_EVIDENCE": {
+        "SUPPORTED": 3,
+        "CONTRADICTED": 3,
+        "INSUFFICIENT_EVIDENCE": 27
+      }
+    },
+    "false_positive_analysis": {
+      "total": 6,
+      "supported_when_nei": 3,
+      "contradicted_when_nei": 3
+    },
+    "macro_precision": 0.64832,
+    "macro_recall": 0.629233
+  },
+  "retrieval": {
+    "recall_at_1": {
+      "k": 1,
+      "n": 100,
+      "recall": 0.57,
+      "hits": 57
+    },
+    "recall_at_5": {
+      "k": 5,
+      "n": 100,
+      "recall": 0.77,
+      "hits": 77
+    },
+    "recall_at_10": {
+      "k": 10,
+      "n": 100,
+      "recall": 0.8,
+      "hits": 80
+    },
+    "claims_with_gold_docs": 100,
+    "recall_at_3": {
+      "k": 3,
+      "n": 100,
+      "recall": 0.71,
+      "hits": 71
+    }
+  },
+  "latency": {
+    "n": 100,
+    "mean_ms": 24933.393,
+    "median_ms": 22362.67,
+    "p95_ms": 43613.23
+  },
+  "false_positive_examples": [
+    {
+      "claim_id": "13",
+      "gold": "INSUFFICIENT_EVIDENCE",
+      "predicted": "CONTRADICTED"
+    },
+    {
+      "claim_id": "300",
+      "gold": "INSUFFICIENT_EVIDENCE",
+      "predicted": "SUPPORTED"
+    },
+    {
+      "claim_id": "303",
+      "gold": "INSUFFICIENT_EVIDENCE",
+      "predicted": "SUPPORTED"
+    },
+    {
+      "claim_id": "354",
+      "gold": "INSUFFICIENT_EVIDENCE",
+      "predicted": "CONTRADICTED"
+    },
+    {
+      "claim_id": "384",
+      "gold": "INSUFFICIENT_EVIDENCE",
+      "predicted": "SUPPORTED"
+    },
+    {
+      "claim_id": "437",
+      "gold": "INSUFFICIENT_EVIDENCE",
+      "predicted": "CONTRADICTED"
+    }
+  ],
+  "predictions_file": "experiments/predictions/scifact_dev_predictions.jsonl",
+  "document_id_map_file": "experiments/results/scifact_doc_map.json",
+  "import": {
+    "imported": 5183,
+    "skipped": 0,
+    "passages": 9242,
+    "corpus_documents": 5183,
+    "elapsed_seconds": 15.45,
+    "note": "Measured on the first import; subsequent resume runs skipped the existing corpus."
+  },
+  "generated_at": "2026-11-05T22:29:38.538016+00:00",
+  "total_claim_processing_seconds": 2493.34,
+  "total_evaluation_seconds": 2499.89,
+  "evaluation_duration_note": "Sum of measured per-claim latency plus full-corpus index load; excludes import time (15.45s) and process restarts."
+}

@@ -1,0 +1,44 @@
+{
+  "suite": "AEGIS controlled real-paper challenge set",
+  "generated_at": "2026-11-06T04:18:31.793874+00:00",
+  "model": "ollama/qwen2.5:7b-instruct",
+  "n": 40,
+  "correct": 40,
+  "accuracy": 1.0,
+  "by_category": {
+    "contradicted": {
+      "n": 10,
+      "correct": 10,
+      "accuracy": 1.0
+    },
+    "insufficient": {
+      "n": 10,
+      "correct": 10,
+      "accuracy": 1.0
+    },
+    "numerical": {
+      "n": 10,
+      "correct": 10,
+      "accuracy": 1.0
+    },
+    "supported": {
+      "n": 10,
+      "correct": 10,
+      "accuracy": 1.0
+    }
+  },
+  "errors": 0,
+  "total_seconds": 1017.49,
+  "mean_latency_ms": 25435.69,
+  "confusion": {
+    "SUPPORTED": {
+      "SUPPORTED": 15
+    },
+    "CONTRADICTED": {
+      "CONTRADICTED": 15
+    },
+    "INSUFFICIENT_EVIDENCE": {
+      "INSUFFICIENT_EVIDENCE": 10
+    }
+  }
+}
