@@ -92,12 +92,15 @@ def render_report(results: list[dict]) -> str:
              "documents) holds drafts whose premise about the customer contradicts or restates what the customer said; it "
              "was written after the change that shows the judge the question, and pinned before its first run. That run released "
              "3 of 7 drafts whose premise contradicted the customer, which led to the situation_conflict check; "
-             "`situation-test2` (12 new cases) was then pinned before its first run as the blind measure. Runs marked "
+             "`situation-test2` (12 new cases) was then pinned before its first run as the blind measure. When a later run of "
+             "it released a draft whose premise the extractor had turned into a general rule, `situation-test3` (20 new "
+             "cases) was pinned before any change meant to fix that. Runs marked "
              "\"(ablation: current-policy)\" check every case against the policy in force on 7 Nov 2026 instead of the case's "
              "own date: AsOf's own check standing in for one that only knows the current policy, scored "
              "against the same labels.", ""]
-    order = {"test": 0, "escalation-test": 1, "situation-test2": 2, "situation-test": 3, "bank-test2": 4, "bank-test": 5,
-             "extractor-test": 6, "dev": 7, "bank-dev": 8, "escalation-dev": 9, "situation-dev": 10}
+    order = {"test": 0, "escalation-test": 1, "situation-test3": 2, "situation-test2": 3, "situation-test": 4,
+             "bank-test2": 5, "bank-test": 6, "extractor-test": 7, "dev": 8, "bank-dev": 9, "escalation-dev": 10,
+             "situation-dev": 11}
     providers = {"openrouter": 0, "openai_compatible": 1, "ollama": 2}  # the default provider first
     newest_first = sorted(results, key=lambda r: r["started_at"], reverse=True)
     for r in sorted(newest_first, key=lambda r: (order.get(r["split"], 9), providers.get(r["provider"], 9), r["model"])):

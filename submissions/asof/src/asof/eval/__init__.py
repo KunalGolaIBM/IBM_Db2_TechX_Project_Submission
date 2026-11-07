@@ -9,6 +9,8 @@ target the known causes of escalating a draft that could have been corrected or 
 `situation-test` (12, both domains, frozen before its first run) holds drafts whose premise about the
 customer ("the delay was within our control") contradicts or restates what the customer said; its
 first run found a gap that was then fixed, so `situation-test2` (12 new cases) is the blind one.
+`situation-test3` (20, both domains) was written after a later run of situation-test2 released a draft whose
+premise the claim extractor had turned into a general rule, and pinned before any change meant to fix that.
 
 Metrics:
 - false-allow rate: drafts that are wrong for their date but were released as PASS,
@@ -37,12 +39,13 @@ SPLITS = {"dev": "cases_dev.jsonl", "test": "cases_test.jsonl",
           "extractor-test": "extractor_cases_test.jsonl", "bank-test2": "bank_cases_test2.jsonl",
           "escalation-dev": "escalation_cases_dev.jsonl", "escalation-test": "escalation_cases_test.jsonl",
           "situation-dev": "situation_cases_dev.jsonl", "situation-test": "situation_cases_test.jsonl",
-          "situation-test2": "situation_cases_test2.jsonl"}
+          "situation-test2": "situation_cases_test2.jsonl", "situation-test3": "situation_cases_test3.jsonl"}
 SPLIT_DOC = {"dev": "AURELIA-CSP", "test": "AURELIA-CSP", "bank-dev": "FERNHOLLOW-FEES", "bank-test": "FERNHOLLOW-FEES",
              "extractor-test": "AURELIA-CSP", "bank-test2": "FERNHOLLOW-FEES",
              # both documents; every case names its own doc_id
              "escalation-dev": "AURELIA-CSP", "escalation-test": "AURELIA-CSP",
-             "situation-dev": "AURELIA-CSP", "situation-test": "AURELIA-CSP", "situation-test2": "AURELIA-CSP"}
+             "situation-dev": "AURELIA-CSP", "situation-test": "AURELIA-CSP", "situation-test2": "AURELIA-CSP",
+             "situation-test3": "AURELIA-CSP"}
 # Pinned when the test split was committed (81b5b69), before any run.
 FROZEN_TEST_SHA256 = "bfb24f0ac4722bd6925e4e12a4820bc1e498f15958f9701c447161e78cffd5b2"
 # Each frozen split, pinned in the commit that added it and before its first run.
@@ -61,7 +64,11 @@ FROZEN = {"test": FROZEN_TEST_SHA256,
           "situation-test": "d0e0ec60d809c7678bf1bcb0a8b93e0a974e3d02f32682ea45fdccf2264a3393",
           # New cases written after the situation_conflict change (12e8d93), which situation-test motivated, and
           # pinned before its first run: the blind measure of that change.
-          "situation-test2": "fb6bc52aef058a581585ecfcbdd2c07f8c149518b6cb402e7e7ca761cb46a13d"}
+          "situation-test2": "fb6bc52aef058a581585ecfcbdd2c07f8c149518b6cb402e7e7ca761cb46a13d",
+          # Premise drafts (both domains) written after the 5861368 run of situation-test2 released SU01, whose
+          # premise the extractor had turned into a general rule. Pinned before its first run and before any change
+          # meant to fix that, so it gives a baseline on the unchanged check and then the measure of the change.
+          "situation-test3": "cfb8c55b6beb7dbae7ad4fef5be8482cd7f8c4a9c9aea5c701f85bef65e273a9"}
 EVAL_SCHEMA = "ASOF_EVAL"
 DECISIONS = ("PASS", "CORRECTED", "ESCALATED")
 

@@ -24,7 +24,7 @@ def test_split_sizes_and_unique_ids():
     assert sizes == {"dev": 20, "test": 40, "bank-dev": 12, "bank-test": 26, "extractor-test": 10, "bank-test2": 22,
                      "escalation-dev": 14, "escalation-test": 33,
                      "situation-dev": 9, "situation-test": 12,
-                     "situation-test2": 12}
+                     "situation-test2": 12, "situation-test3": 20}
     ids = [c.id for s in SPLITS for c in load_cases(s)]
     assert len(ids) == len(set(ids))
 
