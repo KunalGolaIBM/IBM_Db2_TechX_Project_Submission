@@ -137,6 +137,16 @@ class Settings(BaseSettings):
         return self.asof_indb_embeddings == "on" or _is_set(self.embedding_key)
 
     @property
+    def llm_ready(self) -> bool:
+        """Whether the configured provider has what it needs to answer (a key, or an endpoint and model).
+        Ollama needs no key; whether its server runs is only known on the first call."""
+        if self.llm_provider == "openrouter":
+            return _is_set(self.openrouter_api_key)
+        if self.llm_provider == "openai_compatible":
+            return _is_set(self.openai_compat_base_url) and _is_set(self.openai_compat_model)
+        return True
+
+    @property
     def llm_model_name(self) -> str:
         return {
             "openrouter": self.openrouter_model,

@@ -268,7 +268,7 @@ PASS  Column mask (RCAC) with SECURED triggers: owner reads '[masked]'; predicat
 ./quickstart.sh
 ```
 
-It creates `.venv` with the locked dependencies, creates `.env`, uses the Db2 already listening on `localhost:50000` (paths A and B below; it asks for that owner password without echoing it) or starts AsOf's Compose service (path C) with a generated owner password, runs `python -m asof.setup`, and serves the app on http://127.0.0.1:8000. Add `OPENROUTER_API_KEY` to `.env` (or set `LLM_PROVIDER=ollama`); without a model every check fails closed, which the script says. CI runs `./quickstart.sh --no-serve` on a bare runner and then queries the app. The steps it automates:
+It creates `.venv` with the locked dependencies, creates `.env`, uses the Db2 already listening on `localhost:50000` (paths A and B below; it asks for that owner password without echoing it) or starts AsOf's Compose service (path C) with a generated owner password, runs `python -m asof.setup`, and serves the app on http://127.0.0.1:8000. Add `OPENROUTER_API_KEY` to `.env` (or set `LLM_PROVIDER=ollama`); without a model the app runs but cannot check answers, and both the script and the app say so. CI runs `./quickstart.sh --no-serve` on a bare runner and then queries the app. The steps it automates:
 
 **1. Python and configuration** (from `submissions/asof`):
 
@@ -419,7 +419,7 @@ The runnable takes the assistant's draft and returns the checked answer, and eve
 ## Testing & Verification
 
 ```bash
-pytest -q                                 # 419 tests: 412 run, 7 need an opt-in flag (live LLM, remote endpoint)
+pytest -q                                 # 421 tests: 414 run, 7 need an opt-in flag (live LLM, remote endpoint)
 pytest -q -m "not db2"                    # unit tests only, no database needed
 ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 4 live tests against the configured LLM (spends API calls)
 

@@ -77,8 +77,8 @@ key="$(sed -n 's/^OPENROUTER_API_KEY=//p' .env | head -1)"
 provider="$(sed -n 's/^LLM_PROVIDER=//p' .env | head -1)"
 if [[ -z "$key" && "$provider" != "ollama" && "$provider" != "openai_compatible" ]]; then
   echo
-  echo "  NOTE: no OPENROUTER_API_KEY in .env. Every check will fail closed (held for a specialist) until you add"
-  echo "  one, or set LLM_PROVIDER=ollama with a local Ollama. The ledger, replay, timeline and change impact work regardless."
+  echo "  NOTE: no OPENROUTER_API_KEY in .env, so answers cannot be checked until you add one, or set"
+  echo "  LLM_PROVIDER=ollama with a local Ollama. The ledger, replay, timeline and change impact work regardless."
 fi
 unset key
 

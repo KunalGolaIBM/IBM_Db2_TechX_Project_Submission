@@ -41,6 +41,8 @@ MIN_DATE, MAX_DATE = date(2020, 1, 1), date(2035, 12, 31)
 MAX_BODY_BYTES = 64 * 1024
 UI_DIR = __import__("pathlib").Path(__file__).with_name("ui")
 LOCAL_CLIENTS = {"127.0.0.1", "::1"}
+NO_MODEL = ("No language model is configured: add OPENROUTER_API_KEY to .env, or set LLM_PROVIDER=ollama with Ollama "
+            "running, then restart AsOf.")
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 
@@ -216,6 +218,8 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
 
     def components() -> tuple[Gate, DemoAssistant]:
         if state["gate"] is None or state["assistant"] is None:
+            if not settings.llm_ready:  # a plain answer for the person setting it up, without server paths
+                raise HTTPException(503, NO_MODEL)
             llm = build_llm(settings)
             emb = get_embeddings(settings.embedding_model)
             state["gate"] = state["gate"] or Gate(llm, emb, app_conn, schema)
@@ -293,8 +297,9 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
             db_state = "error: not configured"
         except db.DatabaseError as exc:
             db_state = f"error: SQLSTATE {exc.sqlstate or 'unknown'}"  # no host, user or message details
-        return {"status": "ok" if db_state == "ok" else "degraded", "db2": db_state,
-                "llm": f"{settings.llm_provider}:{settings.llm_model_name}", "version": __version__}
+        return {"status": "ok" if db_state == "ok" and settings.llm_ready else "degraded", "db2": db_state,
+                "llm": f"{settings.llm_provider}:{settings.llm_model_name}", "llm_ready": settings.llm_ready,
+                "version": __version__}
 
     def respond(result: GateResult) -> JSONResponse:
         body = gate_out(result).model_dump(mode="json")

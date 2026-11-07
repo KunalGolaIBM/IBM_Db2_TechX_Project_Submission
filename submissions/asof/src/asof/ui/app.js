@@ -121,7 +121,16 @@ async function status() {
     const { body } = await api("/healthz");
     mount($("#status"), html`
       <span class="tag ${body.db2 === "ok" ? "" : "warn"}" title="IBM Db2 connection as the least-privilege user">Db2 ${body.db2 === "ok" ? "connected" : "unavailable"}</span>
-      <span class="tag brand" title="LLM provider and model">${body.llm}</span>`);
+      <span class="tag ${body.llm_ready ? "brand" : "warn"}" title="LLM provider and model">${body.llm_ready ? body.llm : "no model configured"}</span>`);
+    if (!body.llm_ready && !$("#no-model")) {
+      const bar = document.createElement("div");
+      bar.id = "no-model";
+      bar.className = "token-bar";
+      bar.textContent = "No language model is configured, so answers cannot be checked yet. "
+        + "Add OPENROUTER_API_KEY to .env, or set LLM_PROVIDER=ollama with Ollama running, then restart. "
+        + "The policy timeline, ledger, replay and change impact work without a model.";
+      document.body.prepend(bar);
+    }
   } catch { mount($("#status"), html`<span class="tag warn">API unavailable</span>`); }
 }
 

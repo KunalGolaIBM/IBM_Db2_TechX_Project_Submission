@@ -281,3 +281,18 @@ def test_a_chunked_body_over_the_cap_is_refused_without_a_content_length():
 
     r = client().post("/api/gate", content=chunks(), headers={"content-type": "application/json"})
     assert r.status_code == 413
+
+
+def test_health_says_plainly_when_no_model_is_configured():
+    no_key = TestClient(create_app(Settings(_env_file=None, llm_provider="openrouter", openrouter_api_key=""),
+                                   gate=FakeGate(), assistant=FakeAssistant())).get("/healthz").json()
+    assert no_key["llm_ready"] is False and no_key["status"] == "degraded"
+    placeholder = Settings(_env_file=None, llm_provider="openrouter", openrouter_api_key="sk-or-v1-your-key-here")
+    assert placeholder.llm_ready is False
+    assert Settings(_env_file=None, llm_provider="ollama").llm_ready is True
+
+
+def test_a_check_without_a_model_gets_a_plain_503_not_a_server_error():
+    app = create_app(Settings(_env_file=None, llm_provider="openrouter", openrouter_api_key=""))
+    r = TestClient(app).post("/api/gate", json=OK)
+    assert r.status_code == 503 and "OPENROUTER_API_KEY" in r.json()["detail"] and "/" not in r.json()["detail"].split(".env")[0]
