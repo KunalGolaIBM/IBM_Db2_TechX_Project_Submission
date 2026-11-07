@@ -374,7 +374,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         return ledger_asker().ask(body.question).as_dict()
 
     @app.get("/api/ledger/{ledger_id}")
-    def ledger_entry(ledger_id: Annotated[int, Path(ge=1)]):
+    def ledger_entry(ledger_id: Annotated[int, Path(ge=1, le=10**12)]):
         conn = app_conn()
         try:
             entry = ledger.get_entry(conn, ledger_id, schema)
@@ -385,7 +385,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         return entry
 
     @app.get("/api/ledger/{ledger_id}/replay")
-    def ledger_replay(ledger_id: Annotated[int, Path(ge=1)]):
+    def ledger_replay(ledger_id: Annotated[int, Path(ge=1, le=10**12)]):
         conn = app_conn()
         try:
             out = ledger.replay(conn, ledger_id, schema)
@@ -396,7 +396,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         return out
 
     @app.get("/api/ledger/{ledger_id}/evidence")
-    def ledger_evidence(ledger_id: Annotated[int, Path(ge=1)]):
+    def ledger_evidence(ledger_id: Annotated[int, Path(ge=1, le=10**12)]):
         """An evidence pack for one decision, as a JSON download (runs VERIFY_CHAIN, so rate-limited)."""
         conn = app_conn()
         try:

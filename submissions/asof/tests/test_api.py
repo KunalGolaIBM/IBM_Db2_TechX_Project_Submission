@@ -399,3 +399,8 @@ def test_a_replay_miss_is_explained_not_reported_as_a_broken_model():
     assert r.status_code == 503 and "decision" not in r.json()  # the UI shows this as an error, not as a result
     assert r.json()["error"].startswith("Replay mode has recorded model outputs only for the built-in scenarios")
 
+
+@pytest.mark.parametrize("path", ["/api/ledger/{}", "/api/ledger/{}/replay", "/api/ledger/{}/evidence"])
+def test_ledger_ids_out_of_range_are_rejected_before_db2(path):
+    assert client().get(path.format(10**13)).status_code == 422
+    assert client().get(path.format(0)).status_code == 422
