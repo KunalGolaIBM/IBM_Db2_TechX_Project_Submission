@@ -187,3 +187,14 @@ def test_idioms_with_free_are_not_prices_but_a_free_bag_still_is():
     chit_chat = "We have no details on that. Please feel free to call our toll-free number."
     assert unchecked_details(chit_chat, []) == []
     assert unchecked_details("Your first checked bag is free.", []) == ["free"]
+    assert unchecked_details("Enjoy worry-free, hands-free booking.", []) == []
+
+
+@pytest.mark.parametrize("draft", ["Domestic wires are fee-free.", "Changes are penalty-free.", "Transfers are charge-free.",
+                                   "Trades are commission-free.", "Pay it off interest-free."])
+def test_a_price_claim_spelled_word_free_still_reaches_the_claim_check(draft):
+    from asof.gate import unchecked_details
+
+    assert unchecked_details(draft, []) == ["free"]
+    assert unchecked_details(draft, ["The fee is $0."]) == []  # stated by a claim: nothing unchecked
+

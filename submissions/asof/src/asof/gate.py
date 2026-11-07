@@ -114,8 +114,9 @@ class GateResult:
 
 
 # "Feel free to call" and "toll-free" are not prices. Found when the demo assistant's "feel free to reach
-# out" was held as an unchecked $0; the rule checker still reads "the bag is free" as $0.
-NOT_A_PRICE = re.compile(r"\bfeel free\b|\b[A-Za-z]+-free\b", re.I)
+# out" was held as an unchecked $0; the rule checker still reads "the bag is free" as $0. An allow-list,
+# not every "<word>-free": "fee-free", "charge-free" and "penalty-free" are price claims and must be checked.
+NOT_A_PRICE = re.compile(r"\bfeel free\b|\b(?:toll|hands|worry|hassle|care|stress|trouble)-free\b", re.I)
 
 
 def unchecked_details(text: str, claim_texts: Sequence[str], context: str = "") -> list[str]:
