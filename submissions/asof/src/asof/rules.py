@@ -6,7 +6,8 @@ only force a claim to CONTRADICTED (MISMATCH) or confirm the numbers line up (MA
 never turns a contradiction into a pass, and when it cannot tell, it says NOT_APPLICABLE.
 
 How RULE_JSON keys are read:
-- the unit comes from the suffix: _usd, _pct, _hours, _days, _business_days, _months, _kg, _chars
+- the unit comes from the suffix (_usd, _pct, _hours, _days, _business_days, _months, _kg), or from the
+  same word inside the key when nothing follows it as a unit (min_days_before_departure)
 - keys starting with max_/min_ or containing _max_/_min_ are limits; the rest are values
 - a few count keys (max_passengers, ...) are values counted in a noun (passenger, pet, ...)
 - booleans are permissions, matched against a small lexicon of how claims express them
@@ -182,6 +183,8 @@ def rule_params(rule: dict[str, Any]) -> list[Param]:
             params.append(Param(key, f"count:{_COUNT_KEYS[key]}", float(value), limit=False))
             continue
         unit = next((u for suffix, u in _SUFFIXES if key.endswith(suffix)), None)
+        if unit is None:  # a unit word inside the key: min_days_before_departure
+            unit = next((u for suffix, u in _SUFFIXES if f"{suffix}_" in f"{key}_"), None)
         if unit:
             params.append(Param(key, unit, float(value), is_limit))
     return params
@@ -206,6 +209,44 @@ def _situation(rule: dict[str, Any]) -> dict[str, tuple[float, float | None]]:
         if key in _SITUATION_UNITS and isinstance(bounds, list) and len(bounds) == 2:
             out[key] = (float(bounds[0]), None if bounds[1] is None else float(bounds[1]))
     return out
+
+
+# How a text states this customer's situation for a tiered key: "arrived 7 hours late", "a 7-hour delay",
+# "delayed by 7 hours". A threshold ("9 hours or more", "at least 9 hours") is a rule, not the situation.
+_SITUATION_TEXT = {
+    "delay_hours": re.compile(
+        rf"\b(?:delayed\s+(?:by\s+)?)?{_NUM_STRICT}[\s-]*(?:hours?|hrs?)"
+        r"(?=\s+(?:late|behind)\b|[\s-]+delay(?:ed)?\b)(?![\s-]+(?:or|and)\s+(?:more|longer|over|less))"
+        rf"|\bdelayed\s+(?:by\s+)?{_NUM_STRICT}[\s-]*(?:hours?|hrs?)\b", re.I),
+}
+
+
+def situation_values(text: str, key: str) -> list[float]:
+    out = []
+    for m in _SITUATION_TEXT[key].finditer(text):
+        start = m.start()
+        if _LIMIT_BEFORE.search(text[max(0, start - 25):start]):
+            continue
+        out.append(_number(next(g for g in m.groups() if g)))
+    return out
+
+
+def situation_conflicts(claim: str, question: str) -> tuple[str, ...]:
+    """The claim states this customer's situation differently from how the customer stated it.
+
+    Deterministic, and only when the question states that situation: a claim that says "you arrived
+    10 hours late" when the customer wrote "my flight was 2 hours late" picks the wrong tier, however
+    well its amount matches that tier."""
+    out = []
+    for key in _SITUATION_TEXT:
+        asked = situation_values(question, key)
+        if not asked:
+            continue
+        for v in situation_values(claim, key):
+            if not any(_close(v, a, _SITUATION_UNITS[key]) for a in asked):
+                out.append(f"claim says {v:g} {_SITUATION_UNITS[key]}; the customer said "
+                           + ", ".join(f"{a:g}" for a in asked))
+    return tuple(out)
 
 
 def _in_range(value: float, lo: float, hi: float | None) -> bool:

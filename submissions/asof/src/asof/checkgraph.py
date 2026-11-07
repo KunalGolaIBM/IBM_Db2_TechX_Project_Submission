@@ -179,7 +179,8 @@ def build(gate: Gate, req: GateRequest, deadline_at: float | None = None):
         return {"per_claim": per_claim, "pool": pool_of(per_claim)}
 
     def judge(state: CheckState) -> dict[str, Any]:
-        return {"outcomes": gate.judge(state["claims"], state["per_claim"], state["pool"], req.as_of, domain=domain)}
+        return {"outcomes": gate.judge(state["claims"], state["per_claim"], state["pool"], req.as_of, domain=domain,
+                                       question=state["question"])}
 
     def investigate(state: CheckState) -> dict[str, Any]:
         outcomes: list[ClaimOutcome] = list(state["outcomes"])
@@ -198,7 +199,7 @@ def build(gate: Gate, req: GateRequest, deadline_at: float | None = None):
         claims = [state["claims"][i] for i in open_idx]
         found = [list(state["per_claim"][i]) + list(new.values()) for i in open_idx]
         rejudged = gate.judge(claims, found, pool, req.as_of, numbers=[outcomes[i].claim_no for i in open_idx],
-                              domain=domain)
+                              domain=domain, question=state["question"])
         for i, o in zip(open_idx, rejudged, strict=True):
             outcomes[i] = o
         return {"outcomes": outcomes, "pool": pool, "investigation": trace, "tool_calls_left": left}

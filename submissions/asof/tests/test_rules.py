@@ -7,7 +7,7 @@ from datetime import date
 import pytest
 
 from asof.corpus import load_corpus
-from asof.rules import RuleClause, asserted_flag, check, extract_quantities
+from asof.rules import RuleClause, asserted_flag, check, extract_quantities, situation_conflicts
 
 MARCH, JUNE, JULY, OCT = date(2026, 3, 10), date(2026, 6, 2), date(2026, 7, 15), date(2026, 10, 1)
 
@@ -131,3 +131,32 @@ def test_every_fact_a_clause_states_needs_its_parameter_or_the_rule_check_misfir
     assert check("Electronic statements are free.", clause).status == "MATCH"
     assert check("Paper statements cost $5 each.", clause).status == "MISMATCH"
     assert check("Paper statements cost $2 per statement.", clause).status == "MATCH"
+
+
+# ---- a unit word inside the key (min_days_before_departure) ----------------------------------------
+CXL1 = RuleClause("CXL-001", {"free_cancel_window_hours": 24, "min_days_before_departure": 7})
+CXL2 = RuleClause("CXL-001", {"free_cancel_window_hours": 24, "min_days_before_departure": 0})
+
+
+@pytest.mark.parametrize("claim, clause, status", [
+    ("your booking was made at least 7 days before the scheduled departure", CXL1, "MATCH"),  # was a false MISMATCH
+    ("you must book at least 3 days before departure", CXL1, "MISMATCH"),
+    ("you must book at least 7 days before departure", CXL2, "MISMATCH"),  # v2 dropped the requirement
+    ("free of charge within 24 hours of purchase", CXL2, "MATCH"),
+])
+def test_unit_inside_the_key_is_read(claim, clause, status):
+    assert check(claim, clause, [clause]).status == status
+
+
+# ---- the customer's situation, as stated in the question, against the claim -----------------------
+@pytest.mark.parametrize("claim, question, conflict", [
+    ("Because you arrived 10 hours late, you are entitled to $400.", "My flight was 2 hours late.", True),
+    ("Your flight was delayed by 8 hours, so you get $250", "we were delayed 5 hours", True),
+    ("you arrived 7 hours late, so $250", "My flight landed 7 hours late", False),
+    ("For a 7-hour delay caused by us, we owe you $250", "My flight was 7 hours late", False),
+    ("For delays of 9 hours or more, you get $400", "My flight was 10 hours late", False),   # a threshold
+    ("If you arrive at least 9 hours late, you get $400", "My flight was 10 hours late", False),
+    ("you arrived 10 hours late", "Do I get compensation for my delayed flight?", False),     # nothing to compare
+])
+def test_situation_conflicts(claim, question, conflict):
+    assert bool(situation_conflicts(claim, question)) == conflict

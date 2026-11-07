@@ -20,9 +20,11 @@ from asof.prompts import ClauseView
 from asof.retriever import RetrievedClause
 from asof.schemas import BankExtractedClaim, BankExtractionResult, ExtractionResult, JudgeResult, RewriteResult
 
-# sha256 of the airline prompts, prompt version, output schemas and rendered messages, taken on
-# 6 Nov 2026 before the bank domain was added (commit 918bcbd). Airline checks are byte-identical.
-AIRLINE_FINGERPRINT = "fd957f31a91f72d213ee39a043a3730c8780250461ba4a7ac595f642a89f6c6a"
+# sha256 of the airline prompts, prompt version, output schemas and rendered messages. First taken on
+# 6 Nov 2026 before the bank domain was added (918bcbd), which proved the bank changed nothing for the
+# airline. Re-pinned on 7 Nov 2026 for prompt version 2026-11-07.1 (the escalation changes), so any
+# further change to what airline checks send fails here until it is made on purpose.
+AIRLINE_FINGERPRINT = "7c2a61fae928ac93ab3e7118ef6b030961d36a832dec6dde567386c4893efc3e"
 
 
 def fingerprint(**system) -> str:
@@ -40,7 +42,7 @@ def fingerprint(**system) -> str:
     return hashlib.sha256("\n\x00\n".join(parts).encode()).hexdigest()
 
 
-def test_airline_prompts_schemas_and_messages_are_byte_identical_to_before_the_bank():
+def test_airline_prompts_schemas_and_messages_are_pinned():
     assert fingerprint() == AIRLINE_FINGERPRINT
     via_domain = {"extract": {"system": AIRLINE.extract_system}, "judge": {"system": AIRLINE.judge_system},
                   "rewrite": {"system": AIRLINE.rewrite_system}, "investigate": {"system": AIRLINE.investigate_system},

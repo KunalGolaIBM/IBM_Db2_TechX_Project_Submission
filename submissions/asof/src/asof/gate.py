@@ -36,7 +36,7 @@ from .llm import LLMClient, LLMError
 from .prompts import extract_messages, judge_messages, rewrite_messages
 from .redact import redact
 from .retriever import RetrievedClause, clauses_as_of
-from .rules import RuleClause, extract_quantities
+from .rules import RuleClause, RuleResult, extract_quantities, situation_conflicts
 from .rules import _close as same_amount
 from .rules import check as rule_check
 from .schemas import MAX_CLAIMS, JudgeResult, RewriteResult
@@ -148,6 +148,40 @@ def quote_is_verbatim(span: str | None, clause_text: str) -> bool:
     return len(s) >= MIN_QUOTE_CHARS and s in normalise(clause_text)
 
 
+MIN_SHORT_QUOTE_CHARS = 3
+
+
+def sentence_holding(span: str | None, clause_text: str) -> str | None:
+    """The clause sentence that contains the quote exactly (case and spacing aside), for a quote too short
+    to stand on its own, such as "$35" or "60 days"."""
+    if not span:
+        return None
+    s = normalise(span)
+    if len(s) < MIN_SHORT_QUOTE_CHARS or not re.search(r"[0-9a-z]", s):
+        return None
+    return next((sentence for sentence in re.split(r"(?<=[.!?])\s+", clause_text.strip())
+                 if s in normalise(sentence)), None)
+
+
+def contradiction_ground(span: str | None, claim_text: str, clause: RetrievedClause,
+                         found: Sequence[RetrievedClause]) -> tuple[str | None, str] | None:
+    """Grounds a CONTRADICTED verdict whose quote failed the verbatim rule, or returns None.
+
+    Only for contradictions, which never release a draft: they lead to a rewrite that must pass a full
+    re-check (where SUPPORTED needs a full verbatim quote again) or to ESCALATED. Grounded either by the
+    cited clause's sentence that holds the judge's short exact quote, or, when the quote is not in the
+    clause at all, by the deterministic rule check finding a mismatch with that clause's RULE_JSON.
+    """
+    sentence = sentence_holding(span, clause.clause_text)
+    if sentence is not None:
+        return sentence, "the judge's short quote, extended to its clause sentence"
+    cited = RuleClause(clause.clause_id, clause.rule)
+    rule = rule_check(claim_text, cited, [RuleClause(c.clause_id, c.rule) for c in found] + [cited])
+    if rule.status == "MISMATCH" and rule.clause_id in (None, clause.clause_id):
+        return None, "quote not in the clause; the rule check confirms the contradiction"
+    return None
+
+
 def clause_sentences(clauses) -> list[str]:
     """Every sentence of the given clauses, the only quotes a grammar-constrained judge may give."""
     out: list[str] = []
@@ -214,18 +248,20 @@ class Gate:
             conn.close()
 
     def judge(self, claims, per_claim, pool: dict[str, RetrievedClause], as_of: date,
-              numbers: list[int] | None = None, domain: Domain = AIRLINE) -> list[ClaimOutcome]:
-        """One batched judge call over `claims`, then the verbatim-quote rule and the rule check."""
+              numbers: list[int] | None = None, domain: Domain = AIRLINE, question: str = "") -> list[ClaimOutcome]:
+        """One batched judge call over `claims`, then the verbatim-quote rule and the rule check. The judge also
+        sees the (redacted) customer question, to test situation facts a claim rests on against it."""
         numbers = numbers or list(range(1, len(claims) + 1))
         if not pool:
             return [ClaimOutcome(n, c.text, c.area, c.claim_type, "NOT_COVERED", None, "NOT_APPLICABLE", [], None,
                                  None, f"no policy clause is in force on {as_of.isoformat()}", list(found))
                     for n, c, found in zip(numbers, claims, per_claim, strict=True)]
         judged = self.llm.structured(JudgeResult, judge_messages(as_of, [c.text for c in claims],
-                                                                 [c.view() for c in pool.values()], domain.judge_system),
+                                                                 [c.view() for c in pool.values()], domain.judge_system,
+                                                                 question=question),
                                      choices={"clause_id": list(pool), "quoted_span": clause_sentences(pool.values())}).value
         by_no = {v.claim_no: v for v in judged.verdicts}
-        return [self._settle(n, claim, found, pool, by_no.get(i))
+        return [self._settle(n, claim, found, pool, by_no.get(i), question)
                 for i, (n, claim, found) in enumerate(zip(numbers, claims, per_claim, strict=True), start=1)]
 
     def evaluate(self, question: str, answer: str, as_of: date, doc_id: str) -> list[ClaimOutcome]:
@@ -235,9 +271,9 @@ class Gate:
         if not extracted:
             return []
         per_claim = self.retrieve(extracted, as_of, doc_id)
-        return self.judge(extracted, per_claim, pool_of(per_claim), as_of, domain=domain)
+        return self.judge(extracted, per_claim, pool_of(per_claim), as_of, domain=domain, question=question)
 
-    def _settle(self, no, claim, found, pool, v) -> ClaimOutcome:
+    def _settle(self, no, claim, found, pool, v, question: str = "") -> ClaimOutcome:
         base = dict(claim_no=no, text=claim.text, area=claim.area, claim_type=claim.claim_type, candidates=found)
         if v is None:
             return ClaimOutcome(**base, verdict="NOT_COVERED", llm_verdict=None, rule_check="NOT_APPLICABLE",
@@ -247,6 +283,17 @@ class Gate:
         if verdict != "NOT_COVERED":
             if clause is None:
                 verdict, reason = "NOT_COVERED", f"cited clause {v.clause_id!r} was not among the clauses in force"
+            elif verdict == "CONTRADICTED" and not quote_is_verbatim(span, clause.clause_text):
+                # A contradiction never releases anything: it leads to a rewrite that must pass a full
+                # re-check, or to ESCALATED. So it may be grounded more narrowly than a SUPPORTED verdict:
+                # by the clause sentence holding the judge's short exact quote ("$35"), or, failing that,
+                # by the deterministic rule check finding the mismatch in the clause's RULE_JSON.
+                grounded = contradiction_ground(span, claim.text, clause, found)
+                if grounded is None:
+                    verdict, reason = "NOT_COVERED", "the quoted text does not appear in the cited clause"
+                else:
+                    span, note = grounded
+                    reason = f"{reason} ({note})" if reason else note
             elif not quote_is_verbatim(span, clause.clause_text):
                 verdict, reason = "NOT_COVERED", "the quoted text does not appear in the cited clause"
         if verdict == "NOT_COVERED":
@@ -255,6 +302,11 @@ class Gate:
 
         candidates = [RuleClause(c.clause_id, c.rule) for c in found] + [RuleClause(clause.clause_id, clause.rule)]
         rule = rule_check(claim.text, RuleClause(clause.clause_id, clause.rule), candidates)
+        # The claim may state this customer's situation ("you arrived 10 hours late") differently from the
+        # question ("2 hours late"); then it picks the wrong tier, whatever the judge said.
+        conflicts = situation_conflicts(claim.text, question) if question else ()
+        if conflicts:
+            rule = RuleResult("MISMATCH", (*rule.details, *conflicts), rule.clause_id)
         if rule.clause_id and rule.clause_id in pool:
             clause, span = pool[rule.clause_id], None
         if rule.status == "MISMATCH":
