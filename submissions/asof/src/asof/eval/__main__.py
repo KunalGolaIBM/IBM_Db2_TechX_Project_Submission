@@ -93,8 +93,9 @@ def render_report(results: list[dict]) -> str:
              "was written after the change that shows the judge the question, and pinned before its first run. That run released "
              "3 of 7 drafts whose premise contradicted the customer, which led to the situation_conflict check; "
              "`situation-test2` (12 new cases) was then pinned before its first run as the blind measure. Runs marked "
-             "\"(ablation: current-policy)\" check every case against the policy in force on the run date instead of its own "
-             "date, as a guardrail without dates would, scored against the same labels.", ""]
+             "\"(ablation: current-policy)\" check every case against the policy in force on 7 Nov 2026 instead of the case's "
+             "own date: AsOf's own check standing in for one that only knows the current policy, scored "
+             "against the same labels.", ""]
     order = {"test": 0, "escalation-test": 1, "situation-test2": 2, "situation-test": 3, "bank-test2": 4, "bank-test": 5,
              "extractor-test": 6, "dev": 7, "bank-dev": 8, "escalation-dev": 9, "situation-dev": 10}
     providers = {"openrouter": 0, "openai_compatible": 1, "ollama": 2}  # the default provider first
@@ -148,8 +149,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--workers", type=int, help="parallel cases (default 4 hosted, 1 for ollama)")
     p.add_argument("--limit", type=int, help="run only the first N cases (smoke test; not written)")
     p.add_argument("--ablation", choices=["current-policy"],
-                   help="current-policy: check every case against the policy in force on the run date instead of the "
-                        "case's own date, as a guardrail without dates would (scored against the same labels)")
+                   help="current-policy: check every case against the policy in force on 7 Nov 2026 instead of the "
+                        "case's own date: AsOf's own check standing in for one that only knows the current policy "
+                        "(scored against the same labels)")
     args = p.parse_args(argv)
 
     if args.split in FROZEN and split_sha256(args.split) != FROZEN[args.split]:
