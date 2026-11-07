@@ -34,7 +34,7 @@
       "BEFORE UPDATE / BEFORE DELETE triggers making ledger tables append-only",
       "SQL/JSON: JSON_TABLE (citations and the policy timeline view), JSON_EXISTS check constraints",
       "Views for the policy timeline and analytics",
-      "Indexes, foreign keys and check constraints",
+      "Indexes, foreign keys and check constraints, including a composite index (DOC_ID, BUS_START, BUS_END) that the as-of query uses for its start and stop keys",
       "Least-privilege Db2 users: SELECT plus EXECUTE only, PUBLIC defaults revoked",
       "LangChain DB2VS vector store (langchain-db2)",
       "Catalog views (SYSCAT) for idempotent, self-checking setup",
@@ -50,7 +50,8 @@
       "LLM-generated SQL checked with SQLGlot and IBM's db2-sqlglot-dialect, then run with a Db2 statement timeout (SQL_ATTR_QUERY_TIMEOUT)",
       "Two fictional policy documents (an airline and a bank fee schedule) in the same bitemporal tables, separated by DOC_ID in every as-of query, with a CHECK constraint covering both domains' areas",
       "dbt marts over the ledger with IBM's ibm-dbt-db2 adapter, with audit tests (CORRECTED implies a contradiction, every cited clause version exists in current or history rows, marts add up to the ledger)",
-      "Apache Airflow DAG with the IBM Db2 provider: nightly VERIFY_CHAIN, system-time detection of changed clauses, CHANGE_IMPACT per clause as mapped tasks"
+      "Apache Airflow DAG with the IBM Db2 provider: nightly VERIFY_CHAIN, system-time detection of changed clauses, CHANGE_IMPACT per clause as mapped tasks",
+      "SET CURRENT LOCK TIMEOUT (bound parameter) for the runtime users, so a held ledger lock fails a check closed in seconds"
     ]
   },
   "tech_stack": {
@@ -72,7 +73,8 @@
     "ai_models": [
       "google/gemini-3.1-flash-lite via OpenRouter (default)",
       "qwen2.5:7b-instruct via Ollama (local, no key)",
-      "sentence-transformers/all-MiniLM-L6-v2 (local embeddings)"
+      "sentence-transformers/all-MiniLM-L6-v2 (local embeddings)",
+      "Replay mode: outputs of the default model recorded for the built-in scenarios, so the full check runs with no key (anything unrecorded fails closed)"
     ]
   }
 }
