@@ -587,7 +587,8 @@ Both policy documents run through the same screens: the playground has two bank 
   - Under emulation on Apple Silicon, Db2 is slower, and local Ollama models are slow while Db2 is busy.
   - On Apple Silicon under Rosetta, Db2 *fenced* routines crash, so AsOf deliberately uses only built-in SQL, triggers and SQL PL, which run inside the engine.
 - **Next Steps** (the residual risks in [architecture.md](architecture.md#threat-model), in the order they matter):
-  - Anchor the chain head outside Db2 (published or signed periodically), so an owner who rewrites every hash is caught too.
+  - Anchor the chain head outside Db2 on a schedule, so rows nobody kept a receipt for are covered too (receipts already catch a rebuilt ledger for the decisions they were issued for).
+  - TLS between AsOf and Db2 (`SECURITY=SSL`), needed for a remote Db2 such as Db2 on Cloud; every documented setup today connects over plain TCP to `127.0.0.1`.
   - Per-user authentication in front of the API instead of one shared token, and Db2 audit (`db2audit`) on the history table.
   - Fewer safe-but-slow escalations: when the judge is right but its quote is not verbatim, a contradiction the rule check confirms could still go to a rewrite. To be measured on a new frozen split, not tuned on the existing ones.
   - Redact names and free-text identifiers, not only emails, phone, card and booking numbers.
