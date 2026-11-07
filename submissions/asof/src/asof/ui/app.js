@@ -624,7 +624,7 @@ async function Impact() {
   const f = imp.form;
   mount(view, html`
     <div class="page-head"><div><h1>Change impact</h1>
-      <p>Apply a policy change as the editor user <code>asofedit</code>. <code>APPLY_POLICY_CHANGE</code> runs <code>UPDATE ... FOR PORTION OF BUSINESS_TIME</code>, so Db2 splits the version and keeps the replaced row in history. <code>CHANGE_IMPACT</code> then finds every released answer and help-centre answer that relied on the clause, and tells stale from historically valid.</p></div></div>
+      <p>Preview or apply a policy change as the editor user <code>asofedit</code>. <code>APPLY_POLICY_CHANGE</code> runs <code>UPDATE ... FOR PORTION OF BUSINESS_TIME</code>, so Db2 splits the version and keeps the replaced row in history. <code>CHANGE_IMPACT</code> then finds every released answer and help-centre answer that relied on the clause, and tells stale from historically valid.</p></div></div>
     <div class="grid-2">
       <form class="card" id="imp-form" autocomplete="off">
         <div class="field"><label>Presets</label><div class="chips">${PRESETS.map((p, i) => html`<button type="button" class="chip" data-preset="${i}">${p.label}</button>`)}</div></div>
@@ -638,7 +638,8 @@ async function Impact() {
         <div class="field"><label for="imp-text">New clause text</label><textarea id="imp-text" rows="4" required>${f.text}</textarea></div>
         <div class="field"><label for="imp-rule">Rule parameters (RULE_JSON)</label><textarea id="imp-rule" class="code" rows="3" required>${f.rule}</textarea></div>
         <div class="field"><label for="imp-note">Change note</label><input id="imp-note" type="text" value="${f.note}" maxlength="400" required></div>
-        <div class="field row"><button class="btn grow" id="imp-apply" type="submit">Apply change as asofedit</button><button class="btn ghost" id="imp-show" type="button">Impact only</button></div>
+        <div class="field"><button class="btn block" id="imp-apply" type="submit">Apply change as asofedit</button></div>
+        <div class="field row"><button class="btn ghost grow" id="imp-preview" type="button" title="Db2 applies the change and computes its impact in one transaction, then rolls it back">Preview impact</button><button class="btn ghost" id="imp-show" type="button">Impact only</button></div>
       </form>
       <section id="imp-result">${imp.result ? impactView(imp.result, imp.applied) : html`<div class="empty"><h3>Nothing applied yet</h3>
         <p>Record a couple of answers about pets in the <a href="#/playground">Playground</a> (the December pet-fee scenario, and the same question for a November date), then apply the pet fee preset.</p></div>`}</section>
@@ -657,6 +658,20 @@ async function Impact() {
     Impact();
   });
   $("#imp-clause").addEventListener("change", (e) => { imp.clause = e.target.value; imp.form = null; imp.result = null; Impact(); });
+  $("#imp-preview").addEventListener("click", async () => {
+    sync();
+    const btn = $("#imp-preview"); btn.disabled = true;
+    try {
+      let rule;
+      try { rule = JSON.parse(imp.form.rule); } catch { throw new Error("Rule parameters must be valid JSON."); }
+      const { body } = await post("/api/policy/preview", { clause_id: imp.clause, effective_from: imp.form.from,
+        effective_to: imp.form.to || null, version_label: imp.form.version, clause_text: imp.form.text, rule, change_note: imp.form.note });
+      imp.result = body.impact; imp.applied = body;
+      mount($("#imp-result"), impactView(imp.result, imp.applied));
+    } catch (err) {
+      mount($("#imp-result"), html`<div class="error-box">${err.message}</div>`);
+    } finally { btn.disabled = false; }
+  });
   $("#imp-show").addEventListener("click", async () => {
     sync();
     imp.result = (await api(`/api/impact/${imp.clause}`)).body; imp.applied = null;
@@ -686,7 +701,8 @@ function impactView(rows, applied) {
   const pubs = rows.filter((r) => r.kind === "PUBLISHED");
   const n = (arr, s) => arr.filter((r) => r.status === s).length;
   return html`
-    ${applied ? html`<div class="banner ok"><strong>Change applied.</strong><span>Db2 split ${applied.rows_changed} row${applied.rows_changed === 1 ? "" : "s"} with FOR PORTION OF BUSINESS_TIME; the replaced row moved to POLICY_CLAUSE_HIST. ${applied.published_flagged} help-centre answer${applied.published_flagged === 1 ? " was" : "s were"} flagged for review. <a href="#/timeline">See it on the timeline →</a></span></div>` : ""}
+    ${applied && applied.preview ? html`<div class="banner fix"><strong>Preview only: nothing was saved.</strong><span>Db2 applied the change with FOR PORTION OF BUSINESS_TIME, ran CHANGE_IMPACT on the result and rolled the transaction back. ${applied.published_flagged} help-centre answer${applied.published_flagged === 1 ? " would" : "s would"} be flagged for review. Apply the change to make it real.</span></div>` : ""}
+    ${applied && !applied.preview ? html`<div class="banner ok"><strong>Change applied.</strong><span>Db2 split ${applied.rows_changed} row${applied.rows_changed === 1 ? "" : "s"} with FOR PORTION OF BUSINESS_TIME; the replaced row moved to POLICY_CLAUSE_HIST. ${applied.published_flagged} help-centre answer${applied.published_flagged === 1 ? " was" : "s were"} flagged for review. <a href="#/timeline">See it on the timeline →</a></span></div>` : ""}
     <div class="cols-3 impact-stats">
       <div class="stat bad"><div class="n">${n(answers, "STALE")}</div><div class="l">released answers now stale</div></div>
       <div class="stat good"><div class="n">${n(answers, "HISTORICALLY_VALID")}</div><div class="l">answers still right for their date</div></div>

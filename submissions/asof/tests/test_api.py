@@ -185,6 +185,7 @@ def test_policy_change_is_refused_from_a_remote_client():
     app = create_app(Settings(_env_file=None), gate=FakeGate(), assistant=FakeAssistant())
     remote = TestClient(app, client=("203.0.113.7", 50000))
     assert remote.post("/api/policy/change", json=CHANGE).status_code == 403
+    assert remote.post("/api/policy/preview", json=CHANGE).status_code == 403  # a preview is an editor action too
 
 
 def test_policy_change_token_is_enforced_when_set():
@@ -193,6 +194,7 @@ def test_policy_change_token_is_enforced_when_set():
     local = TestClient(app, client=("127.0.0.1", 50000))
     assert local.post("/api/policy/change", json=CHANGE).status_code == 403
     assert local.post("/api/policy/change", json=CHANGE, headers={"X-AsOf-Editor-Token": "wrong"}).status_code == 403
+    assert local.post("/api/policy/preview", json=CHANGE).status_code == 403
 
 
 @pytest.mark.parametrize("change", [

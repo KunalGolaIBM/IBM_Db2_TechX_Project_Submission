@@ -73,7 +73,7 @@ class PolicyChange(BaseModel):
 
 
 def apply_change(conn: ibm_db_dbi.Connection, change: PolicyChange, embeddings: Embeddings | None,
-                 schema: str = db.SCHEMA, in_db: bool | None = None) -> dict[str, Any]:
+                 schema: str = db.SCHEMA, in_db: bool | None = None, commit: bool = True) -> dict[str, Any]:
     """Apply a change as the connected user (the editor). Commits.
 
     The new version's embedding is made by Db2 itself inside APPLY_POLICY_CHANGE when the
@@ -100,7 +100,8 @@ def apply_change(conn: ibm_db_dbi.Connection, change: PolicyChange, embeddings: 
             out = cur.callproc("APPLY_POLICY_CHANGE", (
                 change.clause_id, change.effective_from, change.end, change.version_label, change.clause_text,
                 json.dumps(change.rule, sort_keys=True), vector, change.change_note, 0, 0))
-            conn.commit()
+            if commit:
+                conn.commit()
             return out
         except Exception as exc:  # noqa: BLE001
             conn.rollback()
@@ -119,6 +120,22 @@ def apply_change(conn: ibm_db_dbi.Connection, change: PolicyChange, embeddings: 
         log.warning("in-database embedding failed for %s; embedding locally instead", change.clause_id)
         out, embedded_in = call(local_vector()), "app (Db2 model unavailable)"
     return {"rows_changed": int(out[8]), "published_flagged": int(out[9]), "embedded_in": embedded_in}
+
+
+def preview_change(conn: ibm_db_dbi.Connection, change: PolicyChange, embeddings: Embeddings | None,
+                   schema: str = db.SCHEMA) -> dict[str, Any]:
+    """What a change would do, without making it.
+
+    APPLY_POLICY_CHANGE and CHANGE_IMPACT run in one transaction, which is then rolled back: the
+    impact is read from Db2's own view of the changed policy, and afterwards there is no new version,
+    no history row and no flagged help-centre answer. The caller's connection must not autocommit.
+    """
+    try:
+        applied = apply_change(conn, change, embeddings, schema, commit=False)
+        impact = change_impact(conn, change.clause_id, schema)
+    finally:
+        conn.rollback()
+    return applied | {"impact": impact, "preview": True}
 
 
 SQL_PUBLISHED = ("SELECT ANSWER_ID, DOC_ID, QUESTION, ANSWER_TEXT, CITED_CLAUSE_ID, CITED_VERSION, APPLIES_FROM, "

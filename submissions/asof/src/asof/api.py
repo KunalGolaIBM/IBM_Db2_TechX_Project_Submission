@@ -471,14 +471,15 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
             editor.close()
         return {"suggestion_id": suggestion_id, "approved": body.approve, "published_answer_id": published or None}
 
-    @app.post("/api/policy/change")
-    def change_policy(body: policy.PolicyChange, request: Request,
-                      x_asof_editor_token: Annotated[str | None, Header()] = None):
-        require_editor(request, x_asof_editor_token)
+    def as_editor(body: policy.PolicyChange, request: Request, token: str | None, preview: bool) -> dict[str, Any]:
+        require_editor(request, token)
         editor = db.connect(settings, "editor")
         try:
+            emb = get_embeddings(settings.embedding_model)
             try:
-                result = policy.apply_change(editor, body, get_embeddings(settings.embedding_model), schema)
+                if preview:
+                    return policy.preview_change(editor, body, emb, schema)
+                result = policy.apply_change(editor, body, emb, schema)
             except ValueError as exc:
                 raise HTTPException(422, str(exc)) from None
             except db.DatabaseError as exc:
@@ -488,6 +489,17 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
             return result | {"impact": policy.change_impact(editor, body.clause_id, schema)}
         finally:
             editor.close()
+
+    @app.post("/api/policy/change")
+    def change_policy(body: policy.PolicyChange, request: Request,
+                      x_asof_editor_token: Annotated[str | None, Header()] = None):
+        return as_editor(body, request, x_asof_editor_token, preview=False)
+
+    @app.post("/api/policy/preview")
+    def preview_policy(body: policy.PolicyChange, request: Request,
+                       x_asof_editor_token: Annotated[str | None, Header()] = None):
+        """The impact of a change, computed by Db2 inside a transaction that is rolled back: nothing is saved."""
+        return as_editor(body, request, x_asof_editor_token, preview=True)
 
     @app.get("/", include_in_schema=False)
     def root():

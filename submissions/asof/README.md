@@ -68,7 +68,7 @@ Given an AI-generated answer and the date that matters (booking or travel date, 
 2. **Claim check.** An LLM extracts atomic policy claims; one batched LLM call judges all of them against the retrieved clauses, quoting the deciding text; deterministic rules then compare numbers, deadlines and eligibility flags with each clause's JSON rule parameters.
 3. **Decision.** PASS with citations, CORRECTED (rewritten from clause text and re-checked), or ESCALATED to a person. Any error, timeout or invalid model output fails closed.
 4. **Audit ledger.** Append-only, hash-chained Db2 rows, replayable with `FOR SYSTEM_TIME AS OF`.
-5. **Change impact.** After a policy change, find past answers and published help-centre answers whose cited version is no longer the one in force for their date.
+5. **Change impact.** After a policy change, find past answers and published help-centre answers whose cited version is no longer the one in force for their date. Before it, preview the same result: Db2 makes the change and computes its impact in a transaction that is rolled back.
 
 **Two domains, one check.** The demo data has two fictional policy documents: Aurelia Air's customer service plan (34 clauses, 38 versions) and Fernhollow Bank's personal account fee schedule (18 clauses, 26 versions: overdraft fees, courtesy refunds, monthly fees and waivers, foreign transaction fees, wires, ATMs, disputes, account closure). The bank has its own Moffatt-style case: a bot that says overdraft fees are "refunded automatically" when the fee schedule offers a courtesy refund on request. The Db2 schema, the as-of query, the rule checker, the ledger and the agents are shared; each document gets its own prompt wording and claim areas ([src/asof/domains.py](src/asof/domains.py)), and a test pins the airline prompts by hash so they did not change by a byte.
 
@@ -423,6 +423,7 @@ python -m asof.setup --reset-ledger      # asks you to type "reset"; add --yes t
 | `POST /api/ledger/ask` | "Ask the ledger": a plain-English question about the audit trail, answered as the read-only analyst `asofread`. Returns the answer, the checked SQL that ran and the rows. |
 | `GET /api/chain/verify` | Run `VERIFY_CHAIN` over the whole ledger |
 | `POST /api/policy/change` | Apply a new clause version through `APPLY_POLICY_CHANGE` as the editor user. Accepted only from localhost, unless `ASOF_EDITOR_TOKEN` is set, in which case the `X-AsOf-Editor-Token` header must match. |
+| `POST /api/policy/preview` | The same change as a preview: `APPLY_POLICY_CHANGE` and `CHANGE_IMPACT` run in one transaction that is then rolled back, so the response shows what would split, be flagged and go stale, and nothing is saved (editor action: localhost or token) |
 | `GET /api/impact/{clause_id}` | `CHANGE_IMPACT`: stale and historically valid answers, help-centre answers to review |
 | `POST /api/impact/{clause_id}/suggestions` | Run the change-impact agent: draft a correction for each help-centre answer that needs review, run the full check on it for the date it must hold from, store it as pending (editor action: localhost or token) |
 | `GET /api/suggestions`, `POST /api/suggestions/{id}/decision` | List drafted corrections; approve (publish) or reject one as `asofedit` (`DECIDE_SUGGESTION`) |
@@ -446,7 +447,7 @@ The runnable takes the assistant's draft and returns the checked answer, and eve
 ## Testing & Verification
 
 ```bash
-pytest -q                                 # 459 tests: 452 run, 7 need an opt-in flag (live LLM, remote endpoint)
+pytest -q                                 # 460 tests: 453 run, 7 need an opt-in flag (live LLM, remote endpoint)
 pytest -q -m "not db2"                    # unit tests only, no database needed
 ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 4 live tests against the configured LLM (spends API calls)
 
@@ -559,7 +560,7 @@ The two misses were both escalations instead of corrections. **BT10:** the judge
 | **Playground** | Ask the naive demo assistant (or paste a draft) for a customer date. See the decision, the draft next to what the customer receives, and every claim with its verdict, the judge's and the rule check's view, and the clause version (with its effective dates) whose quoted text is highlighted. |
 | **Policy timeline** | Every clause version on its business-time period, with its key rule parameter read out of `RULE_JSON` by a Db2 view (`$35` then `$40`, "before travel only" then "retroactive, 90 days"). Move the as-of date; click a version for its text, rule JSON and its system-time history: every row Db2 has held, when, and which user changed it. |
 | **Ledger and replay** | Every decision, a one-click `VERIFY_CHAIN`, and per entry the replay: the clause row the decision used, what Db2 held at that moment (`FOR SYSTEM_TIME AS OF`), and what applies today for that customer date (`FOR BUSINESS_TIME AS OF`), with the SQL. |
-| **Change impact** | Apply a new clause version as `asofedit` (presets included), then see which released answers are now stale, which are still right for their date, and which help-centre answers need review and from when. **Draft corrections with the agent** writes a fix for each help-centre answer that needs review, after looking up related clauses in Db2, and runs it through the full check; **Approve and publish** splits the answer in time, so the old text keeps the dates before the change. |
+| **Change impact** | Preview a new clause version (Db2 applies it and rolls back, nothing saved) or apply it as `asofedit` (presets included), then see which released answers are now stale, which are still right for their date, and which help-centre answers need review and from when. **Draft corrections with the agent** writes a fix for each help-centre answer that needs review, after looking up related clauses in Db2, and runs it through the full check; **Approve and publish** splits the answer in time, so the old text keeps the dates before the change. |
 | **Ask the ledger** | Plain-English questions about the audit trail, answered as the read-only analyst `asofread`: the answer, the SQL that ran (regenerated by SQLGlot) and the rows, with the customer's question and our reply shown as Db2's `[masked]`. |
 | **Analytics** | Decisions, claims by area and rule-check overrides, from Db2 views. |
 

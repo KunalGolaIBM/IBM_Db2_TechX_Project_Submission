@@ -136,3 +136,32 @@ def test_without_a_db2_model_or_local_embeddings_the_procedure_refuses(settings,
         assert err.value.sqlstate == "75014"
     finally:
         editor.close()
+
+
+def test_a_preview_reports_the_real_impact_and_leaves_nothing_behind(settings, embeddings, world, admin_conn):
+    """POST /api/policy/preview: APPLY_POLICY_CHANGE and CHANGE_IMPACT in one transaction, rolled back."""
+    def state():
+        db.use_schema(admin_conn, world)
+        clauses = db.query(admin_conn, "SELECT COUNT(*) FROM POLICY_CLAUSE WHERE CLAUSE_ID = ?", ("PET-001",))[0][0]
+        history = db.query(admin_conn, "SELECT COUNT(*) FROM POLICY_CLAUSE_HIST WHERE CLAUSE_ID = ?", ("PET-001",))[0][0]
+        status = db.query(admin_conn, "SELECT STATUS FROM PUBLISHED_ANSWER WHERE ANSWER_ID = ?", ("PA-PET-001",))[0][0]
+        admin_conn.commit()
+        return clauses, history, status.strip()
+
+    def rows(impact):
+        return sorted((r["kind"], str(r["ref_id"]), r["status"], r["current_version"]) for r in impact)
+
+    before = state()
+    editor = db.connect(settings, "editor")
+    try:
+        preview = policy.preview_change(editor, PET_CHANGE, embeddings, world)
+        after_preview = state()
+        applied = policy.apply_change(editor, PET_CHANGE, embeddings, world)
+        real = policy.change_impact(editor, PET_CHANGE.clause_id, world)
+    finally:
+        editor.close()
+    assert after_preview == before == (1, 0, "LIVE")  # no split, no history row, no flag
+    assert preview["preview"] is True and preview["rows_changed"] == applied["rows_changed"]
+    assert preview["published_flagged"] == applied["published_flagged"] == 1
+    assert rows(preview["impact"]) == rows(real) and ("PUBLISHED", "PA-PET-001", "NEEDS_REVIEW", "v1, v2") in rows(real)
+    assert state() == (2, 1, "NEEDS_REVIEW")  # the real change did land
