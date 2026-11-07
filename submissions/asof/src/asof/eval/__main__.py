@@ -137,6 +137,9 @@ def main(argv: list[str] | None = None) -> int:
     domain = domain_for(SPLIT_DOC[args.split])
     settings = get_settings()
     provider = args.provider or settings.llm_provider
+    if provider == "replay":  # the frozen cases are not recorded, and a replay would not measure a model anyway
+        print("Refusing to run: eval measures a live model; set --provider or LLM_PROVIDER to one (not replay).")
+        return 2
     llm = build_llm(settings, provider=provider, model=args.model, fallback=False)  # measure one provider only
     workers = args.workers or (1 if provider == "ollama" else 4)
     cases = load_cases(args.split)[: args.limit] if args.limit else load_cases(args.split)

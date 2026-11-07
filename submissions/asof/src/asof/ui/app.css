@@ -345,3 +345,5 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .token-bar { display: flex; gap: 10px; align-items: center; justify-content: center; padding: 10px 16px;
   background: var(--hold-bg); border-bottom: 1px solid var(--hold-line); color: var(--hold); flex-wrap: wrap; }
 .token-bar input { max-width: 280px; }
+/* Replay mode: a notice, not an error */
+.token-bar.notice { background: var(--brand-soft); border-bottom-color: var(--line-2); color: var(--ink-2); font-size: 14px; }

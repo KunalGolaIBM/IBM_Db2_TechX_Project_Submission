@@ -116,12 +116,24 @@ async function route() {
 }
 window.addEventListener("hashchange", route);
 
+const health = { replay: false };
 async function status() {
   try {
     const { body } = await api("/healthz");
     mount($("#status"), html`
       <span class="tag ${body.db2 === "ok" ? "" : "warn"}" title="IBM Db2 connection as the least-privilege user">Db2 ${body.db2 === "ok" ? "connected" : "unavailable"}</span>
-      <span class="tag ${body.llm_ready ? "brand" : "warn"}" title="LLM provider and model">${body.llm_ready ? body.llm : "no model configured"}</span>`);
+      <span class="tag ${body.llm_ready ? (body.replay ? "warn" : "brand") : "warn"}" title="LLM provider and model">${body.llm_ready ? (body.replay ? "replay: recorded model outputs" : body.llm) : "no model configured"}</span>`);
+    health.replay = Boolean(body.replay);
+    if (body.replay && !$("#replay-mode")) {
+      const bar = document.createElement("div");
+      bar.id = "replay-mode";
+      bar.className = "token-bar notice";
+      bar.textContent = "Replay mode: no language model is called. The built-in scenarios replay the model outputs recorded "
+        + `from ${body.replay_model || "a hosted model"}; Db2 retrieval, the rule checks, the decision and the ledger run live. `
+        + "Any other input is held for a specialist (fail closed). To check your own answers, add OPENROUTER_API_KEY "
+        + "and set LLM_PROVIDER=openrouter in .env (or use Ollama), then restart.";
+      document.body.prepend(bar);
+    }
     if (!body.llm_ready && !$("#no-model")) {
       const bar = document.createElement("div");
       bar.id = "no-model";
@@ -139,19 +151,7 @@ const QUESTION_MOFFATT = "My grandmother just died. Can I get the bereavement fa
 const AIRLINE = "AURELIA-CSP";
 const BANK = "FERNHOLLOW-FEES";
 const DOC_NAME = { [AIRLINE]: "Aurelia Air", [BANK]: "Fernhollow Bank" };
-const SCENARIOS = [
-  { label: "Moffatt: March booking", mode: "ask", question: QUESTION_MOFFATT, as_of: "2026-03-10" },
-  { label: "Same question: June booking", mode: "ask", question: QUESTION_MOFFATT, as_of: "2026-06-02" },
-  { label: "Stale bag fee (July)", mode: "ask", question: "How much is the first checked bag?", as_of: "2026-07-15" },
-  { label: "Ticket transfer", mode: "ask", question: "Can I transfer my ticket to a friend?", as_of: "2026-04-01" },
-  { label: "Pet fee, December trip", mode: "ask", question: "Can my cat fly in the cabin with me, and what does it cost?", as_of: "2026-12-15" },
-  { label: "Paste a draft", mode: "draft", question: "Can my dog fly in the cabin with me?",
-    draft: "Yes, dogs up to 12 kg including the carrier can fly in the cabin for $100 each way.", as_of: "2026-05-05" },
-  { label: "Bank: \"refunded automatically\"", mode: "draft", doc: BANK, question: "I was charged an overdraft fee yesterday. Will you refund it?",
-    draft: "Yes, don't worry: overdraft fees are refunded automatically within a few days.", as_of: "2026-03-15" },
-  { label: "Bank: overdraft fee in August", mode: "draft", doc: BANK, question: "How much is the overdraft fee?",
-    draft: "The overdraft fee is $35 for each item we pay.", as_of: "2026-08-03" },
-];
+let SCENARIOS = [];  // the playground chips, from scenarios.json (replay mode has recordings for exactly these)
 const play = { mode: "ask", doc: AIRLINE, question: QUESTION_MOFFATT, draft: "", as_of: "2026-03-10", scenario: 0, result: null };
 
 const HEADLINE = {
@@ -170,7 +170,9 @@ function explain(r, asOf) {
     case "UNCHECKED_DETAILS": return `The draft states ${(r.unchecked || []).join(", ") || "details"} that the claim check never covered, so it was held rather than sent unchecked.`;
     case "CORRECTION_FAILED": return "The answer contradicted the policy, and the rewrite did not pass the re-check, so it was held back.";
     case "TOO_MANY_CLAIMS": return "The answer makes more than 8 policy claims; long answers go to a person.";
-    case "ERROR_FAIL_CLOSED": return "A check could not complete, so the answer was held (fail closed).";
+    case "ERROR_FAIL_CLOSED": return health.replay
+      ? "Replay mode has recorded model outputs only for the built-in scenarios, so this answer could not be checked and was held (fail closed)."
+      : "A check could not complete, so the answer was held (fail closed).";
     case "LEDGER_UNAVAILABLE": return "The decision could not be recorded in the ledger, so nothing was released.";
     default: return r.reason_code;
   }
@@ -551,14 +553,8 @@ async function LedgerEntry(id) {
 }
 
 // ---------- Ask the ledger ----------
-const ASK_EXAMPLES = [
-  "How many decisions of each kind were made, per channel?",
-  "Which clause versions had the most contradicted claims?",
-  "Where did the rule check overrule the model judge?",
-  "What share of checks for March 2026 travel dates were escalated?",
-  "Show the escalated decisions with the customer's question and our reply.",
-];
-const ask = { question: ASK_EXAMPLES[0], result: null, busy: false };
+let ASK_EXAMPLES = [];  // from scenarios.json
+const ask = { question: "", result: null, busy: false };
 async function Ask() {
   mount(view, html`
     <div class="page-head"><div><h1>Ask the ledger</h1>
@@ -615,19 +611,7 @@ function askView(r) {
 }
 
 // ---------- Change impact ----------
-const PRESETS = [
-  { label: "Pet fee to $125 from 1 Dec 2026", clause: "PET-001", from: "2026-12-01",
-    text: "Small cats and dogs may travel in the cabin if the pet and its carrier together weigh no more than 8 kg. The pet fee is $125 each way.",
-    rule: { max_pet_weight_kg: 8, pet_fee_usd: 125 }, note: "Pet fee rises to $125 from 1 December 2026." },
-  { label: "Bereavement window to 60 days from 1 Jan 2027", clause: "BRV-002", from: "2027-01-01",
-    text: "Bereavement fares may be requested before travel or retroactively. A retroactive request must be submitted within 60 days of the date the original ticket was issued, together with the documentation listed in clause BRV-003. Approved retroactive requests are refunded the fare difference to the original form of payment.",
-    rule: { retroactive_allowed: true, request_window_days: 60, request_before_travel_required: false }, note: "Retroactive window shortened to 60 days." },
-  { label: "First bag to $45 from 1 Jan 2027", clause: "BAG-001", from: "2027-01-01",
-    text: "The first checked bag costs $45 each way on Economy fares.", rule: { first_bag_fee_usd: 45 }, note: "First bag fee rises to $45." },
-  { label: "Bank: overdraft fee to $20 from 1 Jan 2027", clause: "OVD-001", from: "2027-01-01",
-    text: "An overdraft fee of $20 is charged for each item we pay when the account does not have enough available funds.",
-    rule: { overdraft_fee_usd: 20 }, note: "Overdraft fee falls to $20 from 1 January 2027." },
-];
+let PRESETS = [];  // from scenarios.json
 const imp = { clause: "PET-001", form: null, result: null, applied: null };
 function nextVersion(c) { return `v${Math.max(...c.versions.map((v) => Number(v.version.slice(1)))) + 1}`; }
 async function Impact() {
@@ -809,5 +793,13 @@ async function Analytics() {
       </tbody></table>` : html`<p class="muted">No overrides recorded yet.</p>`}</div>`);
 }
 
+async function loadScenarios() {
+  try {
+    const res = await fetch("/ui/scenarios.json", { cache: "no-store" });
+    if (res.ok) ({ playground: SCENARIOS, presets: PRESETS, ask_examples: ASK_EXAMPLES } = await res.json());
+  } catch { /* every screen still works; only the scenario chips are missing */ }
+  ask.question = ASK_EXAMPLES[0] || "";
+}
+
 status();
-route();
+loadScenarios().then(route);

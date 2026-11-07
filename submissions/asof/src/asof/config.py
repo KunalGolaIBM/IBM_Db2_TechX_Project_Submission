@@ -18,8 +18,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ENV_FILE = PROJECT_ROOT / ".env"
+REPLAY_FILE = Path(__file__).with_name("data") / "replay.json"  # LLM_PROVIDER=replay
 
-LLMProvider = Literal["openrouter", "openai_compatible", "ollama"]
+# "replay" answers the built-in scenarios from recorded model outputs, with no model at all (asof/replay.py).
+LLMProvider = Literal["openrouter", "openai_compatible", "ollama", "replay"]
 
 
 class ConfigError(RuntimeError):
@@ -147,6 +149,8 @@ class Settings(BaseSettings):
         Ollama needs no key; whether its server runs is only known on the first call."""
         if self.llm_provider == "openrouter":
             return _is_set(self.openrouter_api_key)
+        if self.llm_provider == "replay":
+            return REPLAY_FILE.is_file()
         if self.llm_provider == "openai_compatible":
             return (_is_set(self.openai_compat_base_url) and _is_set(self.openai_compat_model)
                     and _is_set(self.openai_compat_api_key))
@@ -158,6 +162,7 @@ class Settings(BaseSettings):
             "openrouter": self.openrouter_model,
             "openai_compatible": self.openai_compat_model or "",
             "ollama": self.ollama_model,
+            "replay": "recorded outputs",
         }[self.llm_provider]
 
 

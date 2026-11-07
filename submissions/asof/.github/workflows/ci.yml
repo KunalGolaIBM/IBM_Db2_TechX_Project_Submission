@@ -153,6 +153,10 @@ jobs:
           curl -sf localhost:8000/healthz
           test "$(curl -sf localhost:8000/api/policy/timeline | python -c 'import json,sys; print(len(json.load(sys.stdin)))')" = 52
           curl -sf localhost:8000/api/chain/verify
+      - name: A real check end to end with no key (replay mode, which quickstart picked)
+        run: |
+          grep -q '^LLM_PROVIDER=replay$' .env
+          .venv/bin/python scripts/smoke_check.py http://127.0.0.1:8000
       - name: Logs on failure
         if: failure()
         run: |

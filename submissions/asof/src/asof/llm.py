@@ -313,7 +313,12 @@ class FallbackLLM:
 def build_llm(settings: Settings, provider: str | None = None, model: str | None = None,
               fallback: bool = True) -> LLMClient | FallbackLLM:
     """The configured model client; for a hosted primary, wrapped with the local fallback
-    (LLM_FALLBACK=ollama, the default). Eval passes fallback=False to measure one provider."""
+    (LLM_FALLBACK=ollama, the default). Eval passes fallback=False to measure one provider.
+    LLM_PROVIDER=replay returns recorded outputs for the built-in scenarios instead (asof/replay.py)."""
+    if (provider or settings.llm_provider) == "replay":
+        from .replay import Recording, ReplayLLM
+
+        return ReplayLLM(Recording.load())  # type: ignore[return-value]
     client = _build_one(settings, provider, model)
     if fallback and settings.llm_fallback == "ollama" and client.provider != "ollama":
         local = _build_one(settings, "ollama", None, deadline=settings.llm_fallback_timeout_s)

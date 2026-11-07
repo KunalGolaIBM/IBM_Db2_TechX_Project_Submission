@@ -303,3 +303,12 @@ def test_the_app_starts_and_serves_policy_screens_without_a_model():
     with TestClient(app) as c:  # runs the lifespan, as uvicorn does
         assert c.get("/healthz").json()["llm_ready"] is False
         assert c.post("/api/gate", json=OK).status_code == 503
+
+
+def test_health_names_replay_mode_and_the_model_the_outputs_were_recorded_from():
+    body = TestClient(create_app(Settings(_env_file=None, llm_provider="replay"), gate=FakeGate(),
+                                 assistant=FakeAssistant())).get("/healthz").json()
+    assert body["replay"] is True and body["llm_ready"] is True and body["llm"] == "replay:recorded outputs"
+    assert body["replay_model"].startswith("openrouter:")  # the UI banner names it
+    assert TestClient(create_app(Settings(_env_file=None, llm_provider="ollama"), gate=FakeGate(),
+                                 assistant=FakeAssistant())).get("/healthz").json()["replay"] is False

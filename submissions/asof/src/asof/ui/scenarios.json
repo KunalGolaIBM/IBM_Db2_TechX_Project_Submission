@@ -1,0 +1,116 @@
+{
+  "note": "Built-in scenarios: the playground chips, the change-impact presets and the Ask the ledger examples. The UI loads this file; replay mode has recorded model outputs for exactly these (python -m asof.replay record).",
+  "playground": [
+    {
+      "label": "Moffatt: March booking",
+      "mode": "ask",
+      "doc": "AURELIA-CSP",
+      "question": "My grandmother just died. Can I get the bereavement fare after I travel?",
+      "as_of": "2026-03-10"
+    },
+    {
+      "label": "Same question: June booking",
+      "mode": "ask",
+      "doc": "AURELIA-CSP",
+      "question": "My grandmother just died. Can I get the bereavement fare after I travel?",
+      "as_of": "2026-06-02"
+    },
+    {
+      "label": "Stale bag fee (July)",
+      "mode": "ask",
+      "doc": "AURELIA-CSP",
+      "question": "How much is the first checked bag?",
+      "as_of": "2026-07-15"
+    },
+    {
+      "label": "Ticket transfer",
+      "mode": "ask",
+      "doc": "AURELIA-CSP",
+      "question": "Can I transfer my ticket to a friend?",
+      "as_of": "2026-04-01"
+    },
+    {
+      "label": "Pet fee, December trip",
+      "mode": "ask",
+      "doc": "AURELIA-CSP",
+      "question": "Can my cat fly in the cabin with me, and what does it cost?",
+      "as_of": "2026-12-15"
+    },
+    {
+      "label": "Paste a draft",
+      "mode": "draft",
+      "doc": "AURELIA-CSP",
+      "question": "Can my dog fly in the cabin with me?",
+      "as_of": "2026-05-05",
+      "draft": "Yes, dogs up to 12 kg including the carrier can fly in the cabin for $100 each way."
+    },
+    {
+      "label": "Bank: \"refunded automatically\"",
+      "mode": "draft",
+      "doc": "FERNHOLLOW-FEES",
+      "question": "I was charged an overdraft fee yesterday. Will you refund it?",
+      "as_of": "2026-03-15",
+      "draft": "Yes, don't worry: overdraft fees are refunded automatically within a few days."
+    },
+    {
+      "label": "Bank: overdraft fee in August",
+      "mode": "draft",
+      "doc": "FERNHOLLOW-FEES",
+      "question": "How much is the overdraft fee?",
+      "as_of": "2026-08-03",
+      "draft": "The overdraft fee is $35 for each item we pay."
+    }
+  ],
+  "presets": [
+    {
+      "label": "Pet fee to $125 from 1 Dec 2026",
+      "clause": "PET-001",
+      "from": "2026-12-01",
+      "text": "Small cats and dogs may travel in the cabin if the pet and its carrier together weigh no more than 8 kg. The pet fee is $125 each way.",
+      "rule": {
+        "max_pet_weight_kg": 8,
+        "pet_fee_usd": 125
+      },
+      "note": "Pet fee rises to $125 from 1 December 2026."
+    },
+    {
+      "label": "Bereavement window to 60 days from 1 Jan 2027",
+      "clause": "BRV-002",
+      "from": "2027-01-01",
+      "text": "Bereavement fares may be requested before travel or retroactively. A retroactive request must be submitted within 60 days of the date the original ticket was issued, together with the documentation listed in clause BRV-003. Approved retroactive requests are refunded the fare difference to the original form of payment.",
+      "rule": {
+        "retroactive_allowed": true,
+        "request_window_days": 60,
+        "request_before_travel_required": false
+      },
+      "note": "Retroactive window shortened to 60 days."
+    },
+    {
+      "label": "First bag to $45 from 1 Jan 2027",
+      "clause": "BAG-001",
+      "from": "2027-01-01",
+      "text": "The first checked bag costs $45 each way on Economy fares.",
+      "rule": {
+        "first_bag_fee_usd": 45
+      },
+      "note": "First bag fee rises to $45."
+    },
+    {
+      "label": "Bank: overdraft fee to $20 from 1 Jan 2027",
+      "clause": "OVD-001",
+      "from": "2027-01-01",
+      "text": "An overdraft fee of $20 is charged for each item we pay when the account does not have enough available funds.",
+      "rule": {
+        "overdraft_fee_usd": 20
+      },
+      "note": "Overdraft fee falls to $20 from 1 January 2027."
+    }
+  ],
+  "ask_examples": [
+    "How many decisions of each kind were made, per channel?",
+    "Which clause versions had the most contradicted claims?",
+    "Where did the rule check overrule the model judge?",
+    "What share of checks for March 2026 travel dates were escalated?",
+    "Show the escalated decisions with the customer's question and our reply."
+  ]
+}

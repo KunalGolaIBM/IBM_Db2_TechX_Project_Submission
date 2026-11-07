@@ -10,7 +10,8 @@
 #    written to .env (mode 600) and never printed.
 # 3. Db2: the one already on localhost:50000 (README paths A and B), otherwise AsOf's Compose service (path C).
 # 4. python -m asof.setup: users, schema, seed data, grants, self-check.
-# 5. The API and UI.
+# 5. The API and UI. With no OPENROUTER_API_KEY it switches .env to replay mode (recorded model outputs for
+#    the built-in scenarios; see README, Configuration).
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -75,10 +76,19 @@ say "4/5 Schema, users and data"
 
 key="$(sed -n 's/^OPENROUTER_API_KEY=//p' .env | head -1)"
 provider="$(sed -n 's/^LLM_PROVIDER=//p' .env | head -1)"
-if [[ -z "$key" && "$provider" != "ollama" && "$provider" != "openai_compatible" ]]; then
+if [[ -z "$key" && ( -z "$provider" || "$provider" == "openrouter" ) ]]; then
+  .venv/bin/python - <<'PY'
+import pathlib, re
+p = pathlib.Path(".env")
+text = p.read_text(encoding="utf-8")
+text, n = re.subn(r"(?m)^LLM_PROVIDER=.*$", "LLM_PROVIDER=replay", text)
+p.write_text(text if n else text.rstrip("\n") + "\nLLM_PROVIDER=replay\n", encoding="utf-8")
+PY
   echo
-  echo "  NOTE: no OPENROUTER_API_KEY in .env, so answers cannot be checked until you add one, or set"
-  echo "  LLM_PROVIDER=ollama with a local Ollama. The ledger, replay, timeline and change impact work regardless."
+  echo "  NOTE: no OPENROUTER_API_KEY in .env, so AsOf starts in replay mode (LLM_PROVIDER=replay): the built-in"
+  echo "  scenarios replay recorded model outputs, while Db2, the rule checks and the ledger run live. Any other"
+  echo "  input is held for a specialist. To check your own answers, add OPENROUTER_API_KEY and set"
+  echo "  LLM_PROVIDER=openrouter in .env (or LLM_PROVIDER=ollama with a local Ollama), then restart."
 fi
 unset key
 

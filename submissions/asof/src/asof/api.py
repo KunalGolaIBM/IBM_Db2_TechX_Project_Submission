@@ -42,7 +42,7 @@ MAX_BODY_BYTES = 64 * 1024
 UI_DIR = __import__("pathlib").Path(__file__).with_name("ui")
 LOCAL_CLIENTS = {"127.0.0.1", "::1"}
 NO_MODEL = ("No language model is configured: add OPENROUTER_API_KEY to .env, or set LLM_PROVIDER=ollama with Ollama "
-            "running, then restart AsOf.")
+            "running, or LLM_PROVIDER=replay to replay the built-in scenarios, then restart AsOf.")
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 
@@ -287,6 +287,11 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         log.error("LLM error: %s", exc)
         return JSONResponse({"error": "the language model is unavailable"}, status_code=503)
 
+    def replay_model() -> str | None:
+        from .replay import shipped_model
+
+        return shipped_model() if settings.llm_provider == "replay" else None
+
     @app.get("/healthz")
     def healthz():
         try:
@@ -302,6 +307,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
             db_state = f"error: SQLSTATE {exc.sqlstate or 'unknown'}"  # no host, user or message details
         return {"status": "ok" if db_state == "ok" and settings.llm_ready else "degraded", "db2": db_state,
                 "llm": f"{settings.llm_provider}:{settings.llm_model_name}", "llm_ready": settings.llm_ready,
+                "replay": settings.llm_provider == "replay", "replay_model": replay_model(),
                 "version": __version__}
 
     def respond(result: GateResult) -> JSONResponse:

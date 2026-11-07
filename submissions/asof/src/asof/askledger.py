@@ -43,6 +43,7 @@ from . import db
 from .config import Settings
 from .llm import LLMError
 from .prompts import ASK_PROMPT_VERSION, ask_answer_messages, ask_sql_messages
+from .replay import ReplayMiss
 from .schemas import LedgerAnswer, LedgerSql
 
 log = logging.getLogger(__name__)
@@ -357,5 +358,6 @@ class LedgerAsker:
         except LLMError as exc:  # the rows stand on their own; the summary is a convenience
             log.warning("ask-the-ledger summary failed: %s", exc)
             out.answer = None
-            out.reason = "the rows are below; the written summary could not be produced"
+            out.reason = ("the rows are below; replay mode has no recorded summary for these exact rows"
+                          if isinstance(exc, ReplayMiss) else "the rows are below; the written summary could not be produced")
         return out
