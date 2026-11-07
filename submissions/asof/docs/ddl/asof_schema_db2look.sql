@@ -103,9 +103,10 @@ ALTER TABLE "ASOF    "."POLICY_CLAUSE"
 
 SET SYSIBM.NLS_STRING_UNITS = 'SYSTEM';
 
-CREATE INDEX "ASOF    "."IX_CLAUSE_DOC_AREA" ON "ASOF    "."POLICY_CLAUSE" 
+CREATE INDEX "ASOF    "."IX_CLAUSE_DOC_ASOF" ON "ASOF    "."POLICY_CLAUSE" 
 		("DOC_ID" ASC,
-		 "AREA" ASC)
+		 "BUS_START" ASC,
+		 "BUS_END" ASC)
 		
 		COMPRESS NO 
 		INCLUDE NULL KEYS ALLOW REVERSE SCANS;
@@ -224,7 +225,7 @@ SET SYSIBM.NLS_STRING_UNITS = 'SYSTEM';
 
 CREATE INDEX "ASOF    "."IX_LEDGER_DECISION" ON "ASOF    "."ANSWER_LEDGER" 
 		("DECISION" ASC,
-		 "CREATED_AT" ASC)
+		 "LEDGER_ID" ASC)
 		
 		COMPRESS YES 
 		INCLUDE NULL KEYS ALLOW REVERSE SCANS;
@@ -339,29 +340,6 @@ CREATE INDEX "ASOF    "."IX_PUBLISHED_CLAUSE" ON "ASOF    "."PUBLISHED_ANSWER"
 		INCLUDE NULL KEYS ALLOW REVERSE SCANS;
 
 ------------------------------------------------
--- DDL Statements for Table "ASOF    "."FAQ_KB"
-------------------------------------------------
- 
-
-CREATE TABLE "ASOF    "."FAQ_KB"  (
-		  "ID" CHAR(16 OCTETS) NOT NULL , 
-		  "TEXT" CLOB(1048576 OCTETS) LOGGED NOT COMPACT , 
-		  "METADATA" BLOB(1048576) LOGGED NOT COMPACT , 
-		  "EMBEDDING" VECTOR(384,FLOAT32) )   
-		 IN "ASOF_TS32K"  
-		 ORGANIZE BY ROW; 
-
-
--- DDL Statements for Primary Key on Table "ASOF    "."FAQ_KB"
-
-ALTER TABLE "ASOF    "."FAQ_KB" 
-	ADD PRIMARY KEY
-		("ID")
-	ENFORCED;
-
-
-
-------------------------------------------------
 -- DDL Statements for Table "ASOF    "."ANSWER_SUGGESTION"
 ------------------------------------------------
  
@@ -412,7 +390,28 @@ CREATE INDEX "ASOF    "."IX_SUGGESTION_ANSWER" ON "ASOF    "."ANSWER_SUGGESTION"
 		COMPRESS NO 
 		INCLUDE NULL KEYS ALLOW REVERSE SCANS;
 
-ALTER TABLE "ASOF    "."ANSWER_SUGGESTION" ALTER COLUMN "SUGGESTION_ID" RESTART WITH 21;
+------------------------------------------------
+-- DDL Statements for Table "ASOF    "."FAQ_KB"
+------------------------------------------------
+ 
+
+CREATE TABLE "ASOF    "."FAQ_KB"  (
+		  "ID" CHAR(16 OCTETS) NOT NULL , 
+		  "TEXT" CLOB(1048576 OCTETS) LOGGED NOT COMPACT , 
+		  "METADATA" BLOB(1048576) LOGGED NOT COMPACT , 
+		  "EMBEDDING" VECTOR(384,FLOAT32) )   
+		 IN "ASOF_TS32K"  
+		 ORGANIZE BY ROW; 
+
+
+-- DDL Statements for Primary Key on Table "ASOF    "."FAQ_KB"
+
+ALTER TABLE "ASOF    "."FAQ_KB" 
+	ADD PRIMARY KEY
+		("ID")
+	ENFORCED;
+
+
 
 --------------------------------------------------------------
 -- DDL Statements for system-period temporal table "ASOF    "."POLICY_CLAUSE"
@@ -441,7 +440,10 @@ ALTER TABLE "ASOF    "."POLICY_CLAUSE"
 	ADD CONSTRAINT "CK_CLAUSE_AREA" CHECK 
 		(AREA IN ('bereavement', 'cancellation', 'change_fee', 'baggage',       
                                      'refund', 'delay', 'travel_credit',
-'pets', 'other'))
+'pets', 'other',                                             'overdraft',
+'fee_refund', 'monthly_fee', 'foreign_transaction',                   
+                         'wire_transfer', 'atm', 'dispute', 'account_closure',
+'checks'))
 	ENFORCED
 	ENABLE QUERY OPTIMIZATION;
 
@@ -462,6 +464,18 @@ SET SYSIBM.NLS_STRING_UNITS = 'SYSTEM';
 ALTER TABLE "ASOF    "."POLICY_CLAUSE" 
 	ADD CONSTRAINT "CK_CLAUSE_VERSION" CHECK 
 		(VERSION_LABEL LIKE 'v%')
+	ENFORCED
+	ENABLE QUERY OPTIMIZATION;
+
+-- DDL Statements for Foreign Keys on Table "ASOF    "."ANSWER_LEDGER"
+
+ALTER TABLE "ASOF    "."ANSWER_LEDGER" 
+	ADD CONSTRAINT "FK_LEDGER_DOC" FOREIGN KEY
+		("DOC_ID")
+	REFERENCES "ASOF    "."POLICY_DOC"
+		("DOC_ID")
+	ON DELETE NO ACTION
+	ON UPDATE NO ACTION
 	ENFORCED
 	ENABLE QUERY OPTIMIZATION;
 
@@ -636,6 +650,16 @@ ALTER TABLE "ASOF    "."ANSWER_SUGGESTION"
 		("ANSWER_ID")
 	REFERENCES "ASOF    "."PUBLISHED_ANSWER"
 		("ANSWER_ID")
+	ON DELETE NO ACTION
+	ON UPDATE NO ACTION
+	ENFORCED
+	ENABLE QUERY OPTIMIZATION;
+
+ALTER TABLE "ASOF    "."ANSWER_SUGGESTION" 
+	ADD CONSTRAINT "FK_SUGGESTION_CHECK" FOREIGN KEY
+		("CHECK_LEDGER_ID")
+	REFERENCES "ASOF    "."ANSWER_LEDGER"
+		("LEDGER_ID")
 	ON DELETE NO ACTION
 	ON UPDATE NO ACTION
 	ENFORCED

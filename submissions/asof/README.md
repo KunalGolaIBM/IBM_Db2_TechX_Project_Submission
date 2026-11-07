@@ -9,7 +9,18 @@
 
 > **Fictional data.** "Aurelia Air", "Fernhollow Bank" and every policy, fee schedule, FAQ and help-centre answer in this repository are invented for the demo. The airline is modelled on the kind of policy at issue in *Moffatt v. Air Canada*; neither describes a real company.
 
-**Try it:** `./quickstart.sh` from this folder (Python 3.12 and Docker; details in [Setup & Installation](#setup--installation)).
+**Five minutes for a reviewer** (from this folder; Python 3.12 and Docker; no API key needed):
+
+```bash
+./quickstart.sh --no-serve          # Db2, schema, three least-privilege users, seed data; no key: replay mode
+source .venv/bin/activate
+python src/main.py &                # the UI and API on http://127.0.0.1:8000
+python scripts/smoke_check.py       # a real check through the API: the Moffatt question, recorded in the Db2 ledger
+python -m asof.db2check             # 29 checks of the Db2 features AsOf relies on
+pytest -q                           # unit tests plus Db2 integration tests in throwaway schemas
+```
+
+Without a key, AsOf runs in **replay mode**: the built-in scenarios replay model outputs recorded from the hosted model, while retrieval, the rule checks, the decision and the hash-chained ledger run live in Db2 ([details](#replay-mode-no-model-at-all)). Add an OpenRouter key, or use Ollama, to check answers of your own. Full setup in [Setup & Installation](#setup--installation).
 
 ![AsOf checking the Moffatt scenario for a March booking: the demo assistant promised a retroactive bereavement refund, AsOf found it contradicted by clause BRV-002 v1 and released a corrected, cited answer](docs/screenshots/01-playground-moffatt-march.png)
 
@@ -135,7 +146,7 @@ A refused or failed query gets one retry with the reason. The answer is written 
 - **Native vector index.** `CREATE VECTOR INDEX IX_CLAUSE_EMBEDDING ON POLICY_CLAUSE (EMBEDDING) WITH DISTANCE COSINE` (catalog type `VANN`, new in Db2 12.1.5). It coexists with system versioning and `FOR PORTION OF BUSINESS_TIME` updates (tested).
 - **Compression.** The append-only ledger tables use adaptive row compression (`COMPRESS YES ADAPTIVE`).
 - **Statistics.** Setup runs `RUNSTATS` on the five tables the hot queries read, so plans are costed from real counts.
-- **Access plans.** `python -m asof.explain` explains the exact statements the app runs, with bound values, under `SET CURRENT EXPLAIN MODE = EXPLAIN`, and writes IBM `db2exfmt` plans to [docs/explain/](docs/explain/README.md). The as-of query reads `PK_POLICY_CLAUSE` (an index scan on the business-time key), then sorts the handful of rows in force by distance.
+- **Access plans.** `python -m asof.explain` explains the exact statements the app runs, with bound values, under `SET CURRENT EXPLAIN MODE = EXPLAIN`, and writes IBM `db2exfmt` plans to [docs/explain/](docs/explain/README.md). Each plan file keeps Db2's Plan Details, so the predicates and start and stop keys are visible. The as-of query reads `IX_CLAUSE_DOC_ASOF (DOC_ID, BUS_START, BUS_END)`, an index added for it after an audit found the first plan scanning the whole primary-key index: `DOC_ID = ?` is the start and stop key, the `BUS_START <= ?` that Db2 derives from `FOR BUSINESS_TIME AS OF` is a stop key, and `? < BUS_END` is applied inside the index scan. Then it fetches the rows in force and sorts them by distance (estimated cost 7.07 timerons, from 17.36). The filtered ledger page has its own index, `IX_LEDGER_DECISION (DECISION, LEDGER_ID)`, but with a handful of rows the optimizer still prefers to read the primary key newest first and filter, which is the cheaper plan at that size.
 
 **When does Db2 use the vector index?** `python -m asof.vectorbench` measures it on synthetic, clustered 384-dimension vectors in the same tablespace with the same index type ([full results](docs/vector_benchmark.md), Db2 12.1.5 under Rosetta on a MacBook Air, top 10, 20 queries per size):
 
@@ -149,7 +160,7 @@ A refused or failed query gets one retry with the reason. The answer is written 
 What this means for AsOf, and two things we learned about Db2 along the way:
 
 - **The demo corpus (64 clause versions across the two documents) uses exact search, on purpose.** At this size the optimizer would scan anyway, and AsOf's query says `FETCH EXACT`: with an index present, Db2's default is approximate.
-- **Approximate search and a date filter do not mix well.** At 100,000 rows, adding the business-time filter cut recall to 0.73: the approximate top 10 is taken before the filter, so nearer vectors from versions not in force push out the right ones. For a check whose whole point is the version in force on a date, a missed version is a wrong answer, so the temporal query stays exact. A policy library large enough to need the index would keep an exact search over the clauses in force (one `IXSCAN` on the business-time key, as the plan shows) and use approximate search only for unfiltered discovery.
+- **Approximate search and a date filter do not mix well.** At 100,000 rows, adding the business-time filter cut recall to 0.73: the approximate top 10 is taken before the filter, so nearer vectors from versions not in force push out the right ones. For a check whose whole point is the version in force on a date, a missed version is a wrong answer, so the temporal query stays exact. A policy library large enough to need the index would keep an exact search over the clauses in force (an index scan on `IX_CLAUSE_DOC_ASOF`, as the plan shows) and use approximate search only for unfiltered discovery.
 - **Keyword search was tested and left out.** Db2 Text Search could add a keyword leg to retrieval, but vector search alone already retrieves the right clause version for 18 of 18 dev cases at the 4 clauses per claim the check uses, and enabling Text Search failed in IBM's own container setup here (details in [architecture.md](architecture.md#design-decisions)).
 - **The index is only used when `k` is a constant.** With `FETCH APPROX FIRST ? ROWS ONLY` (a parameter marker), Db2 12.1.5 never chose the index at any size; with `FETCH APPROX FIRST 10 ROWS ONLY` it did from 20,000 rows. An optimizer guideline (`<IXSCAN TABLE='...' SEARCH_LIST_SIZE='100'/>`) also forces it.
 
@@ -234,7 +245,18 @@ PASS  Column mask (RCAC) with SECURED triggers: owner reads '[masked]'; predicat
   8. **Record** the decision with `APPEND_LEDGER`. If the ledger cannot record it, the answer is withheld (HTTP 503).
 
   Every LLM call has a hard deadline and an output-token cap and returns a validated object or raises. If the hosted model fails or times out, the same call goes once to local Ollama, and the ledger records it.
+- **Replay mode** ([src/asof/replay.py](src/asof/replay.py), `LLM_PROVIDER=replay`): see [below](#replay-mode-no-model-at-all).
 - **Ask the ledger** ([src/asof/askledger.py](src/asof/askledger.py)): a LangChain SQL chain (`SQLDatabase` over SQLAlchemy and `ibm_db_sa`, LCEL steps) that writes one `SELECT`, has it checked by SQLGlot, runs it as the read-only analyst and answers from the rows. Section [Ask the ledger](#ask-the-ledger-questions-for-auditors-as-a-read-only-db2-user) lists the five layers between the model and Db2.
+
+### Replay mode: no model at all
+
+A reviewer without an API key, or without the 5 GB and the 12 to 40 s per call of a local model, can still watch the whole check run. With `LLM_PROVIDER=replay` (what `./quickstart.sh` sets when no key is in `.env`), every model call is answered from [src/asof/data/replay.json](src/asof/data/replay.json), recorded by `python -m asof.replay record` against `google/gemini-3.1-flash-lite`:
+
+- **Only the model is replaced.** The as-of query (`FOR BUSINESS_TIME AS OF` with `VECTOR_DISTANCE`), the verbatim-quote rule, the rule check on `RULE_JSON`, the coverage check, the decision, the re-check of a rewrite, the change-impact agent's Db2 tools, the SQLGlot gate and the hash-chained ledger all run for real.
+- **One input, one output.** Each recorded output is keyed by a SHA-256 of everything the model would have been sent: the output schema or the tools on offer, and every message. A recording answers only the exact input it was made for. Anything else, such as a draft you type yourself, raises a replay miss, which is an `LLMError`, so the check **fails closed** and the answer is held for a specialist. The UI says so.
+- **Recorded outputs are not trusted more than live ones.** They pass the same Pydantic schemas, and every decision made this way says `replay:` in the ledger's `MODEL_INFO`, with the model and the date of the recording.
+- **What is recorded:** the playground scenarios, the demo's decisions, the five Ask-the-ledger examples (the SQL replays and then runs live through the SQLGlot gate, so the rows are always today's) and the change-impact presets ([src/asof/ui/scenarios.json](src/asof/ui/scenarios.json), the same file the UI loads). `tests/test_db2_replay.py` replays all of it through Db2 and requires every decision to match the recording; CI also runs `scripts/smoke_check.py` against the app that `./quickstart.sh` started on a bare runner with no key.
+- **One run, not a measurement.** The recording is a single run of the live model, kept as it came out: in it the July bag-fee draft was escalated (no clause covered one of its claims), where earlier live runs corrected it from $35 to $40. Replay shows the pipeline; the [evaluation](#evaluation-the-frozen-test-split) measures the live model, and `python -m asof.eval` refuses to run in replay mode.
 
 ---
 
@@ -252,10 +274,11 @@ PASS  Column mask (RCAC) with SECURED triggers: owner reads '[masked]'; predicat
 
 ## Prerequisites
 
-- **Python 3.12** (the tested version; the lock file pins for it). On macOS: `brew install python@3.12`, then use `python3.12`.
+- **Python 3.12**, the only version the lock file supports (NumPy 2.5 in it has no 3.11 build). macOS: `brew install python@3.12`. Ubuntu 24.04: `sudo apt install python3.12 python3.12-venv`. Elsewhere: [python.org](https://www.python.org/downloads/) or `pyenv install 3.12`.
+- **Operating system:** macOS 14 or later on Apple Silicon (tested, path C) or x86-64 Linux (tested in CI, paths B and C). **Windows:** use WSL 2 with Ubuntu, as the organizers' guide does, and run everything inside it. **Intel Macs** cannot install the Python side: PyTorch 2.15, which the local embedding model needs, publishes macOS wheels for Apple Silicon on macOS 14 and later only.
 - **Docker** (Docker Desktop, Docker Engine, or Colima on macOS) and about 10 GB of free disk for the Db2 image and data
 - **IBM Db2 12.1.2 or later** (12.1.5 tested), from any of the three paths below
-- **An LLM:** an [OpenRouter](https://openrouter.ai/keys) API key, or [Ollama](https://ollama.com) with `ollama pull qwen2.5:7b-instruct` (no key)
+- **An LLM, optional:** an [OpenRouter](https://openrouter.ai/keys) API key, or [Ollama](https://ollama.com) with `ollama pull qwen2.5:7b-instruct` (no key). With neither, [replay mode](#replay-mode-no-model-at-all) runs the built-in scenarios.
 - **Apple Silicon only:** IBM's Db2 image is Intel-only and runs under emulation. With Colima: `colima start --cpu 4 --memory 6 --vz-rosetta`, then use path C.
 
 ---
@@ -268,7 +291,7 @@ PASS  Column mask (RCAC) with SECURED triggers: owner reads '[masked]'; predicat
 ./quickstart.sh
 ```
 
-It creates `.venv` with the locked dependencies, creates `.env`, uses the Db2 already listening on `localhost:50000` (paths A and B below; it asks for that owner password without echoing it) or starts AsOf's Compose service (path C) with a generated owner password, runs `python -m asof.setup`, and serves the app on http://127.0.0.1:8000. Add `OPENROUTER_API_KEY` to `.env` (or set `LLM_PROVIDER=ollama`); without a model the app runs but cannot check answers, and both the script and the app say so. CI runs `./quickstart.sh --no-serve` on a bare runner and then queries the app. The steps it automates:
+It creates `.venv` with the locked dependencies, creates `.env`, uses the Db2 already listening on `localhost:50000` (paths A and B below; it asks for that owner password without echoing it) or starts AsOf's Compose service (path C) with a generated owner password, runs `python -m asof.setup`, and serves the app on http://127.0.0.1:8000. With no `OPENROUTER_API_KEY` in `.env` it switches `.env` to replay mode and says so; to check your own answers, add the key and set `LLM_PROVIDER=openrouter` (or `LLM_PROVIDER=ollama`), then restart. CI runs `./quickstart.sh --no-serve` on a bare runner, queries the app and runs a real check with `scripts/smoke_check.py`. The steps it automates:
 
 **1. Python and configuration** (from `submissions/asof`):
 
@@ -333,16 +356,19 @@ All settings are environment variables, read from `.env` ([.env.example](.env.ex
 |---|---|
 | `DB2_HOST`, `DB2_PORT`, `DB2_DATABASE` | Where Db2 runs (default `localhost`, `50000`, `testdb`) |
 | `DB2_USER`, `DB2_PASSWORD` | Owner account (default `db2inst1`), used only by setup and the feature check. The older names `DB2_ADMIN_USER` / `DB2_ADMIN_PASSWORD` still work. |
+| `DB2_CONNECT_TIMEOUT_S`, `DB2_LOCK_TIMEOUT_S` | Seconds to wait for a connection (15) and, for the runtime users, for a row lock (10, `SET CURRENT LOCK TIMEOUT`) before failing closed |
 | `DB2_CONTAINER` | Container in which setup creates the three OS users (default `asof-db2`; `db2server` and any single running Db2 container are found automatically) |
 | `ASOF_APP_PASSWORD`, `ASOF_EDITOR_PASSWORD`, `ASOF_ANALYST_PASSWORD` | Least-privilege users (runtime, policy editor, read-only analyst); generated by setup if empty |
 | `ASOF_API_TOKEN` | Optional. When set, every `/api/` request needs `Authorization: Bearer <token>` (16 to 256 printable ASCII characters, constant-time compare); `/healthz` and the UI stay open, and the UI asks for the token once per tab. Empty: the server relies on binding to localhost. |
 | `ASOF_EDITOR_TOKEN` | Optional. Lets a non-local client make editor changes (policy changes, approving drafted corrections) with the `X-AsOf-Editor-Token` header; otherwise those are localhost only. |
-| `LLM_PROVIDER` | `openrouter` (default), `ollama`, or `openai_compatible` |
+| `LLM_PROVIDER` | `openrouter` (default), `ollama`, `openai_compatible`, or `replay` (no model: recorded outputs for the built-in scenarios, anything else held; see [Replay mode](#replay-mode-no-model-at-all)) |
 | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | Hosted model (default `google/gemini-3.1-flash-lite`) |
 | `OLLAMA_BASE_URL`, `OLLAMA_MODEL` | Local model (default `qwen2.5:7b-instruct`) |
 | `LLM_FALLBACK`, `LLM_FALLBACK_TIMEOUT_S` | `ollama` (default): a call the hosted model cannot answer (timeout, transport error, no valid output) goes once to local Ollama, and the ledger's model field records it, for example `openrouter:... (fallback ollama:qwen2.5:7b-instruct on 2 of 4 calls)`. `none` turns it off. If both fail, the check fails closed. |
 | `ASOF_INDB_EMBEDDINGS`, `EMBEDDING_API_URL`, `EMBEDDING_API_MODEL`, `EMBEDDING_API_KEY` | In-database embeddings: `auto` (default, on when an API key is set), `on` or `off`; HTTPS endpoint serving the same model as the app (default OpenRouter, `sentence-transformers/all-minilm-l6-v2`); the key defaults to `OPENROUTER_API_KEY` |
 | `LLM_TIMEOUT_S`, `LLM_MAX_OUTPUT_TOKENS` | Hard per-call deadline and output cap; the gate fails closed when hit. Use `LLM_TIMEOUT_S=180` for Ollama on a laptop (the value the recorded Ollama run used). |
+| `ASOF_CHECK_DEADLINE_S` | Whole-check budget (300 s): no step of a check starts after it, and the check fails closed |
+| `ASOF_ALLOWED_HOSTS` | Host headers the API answers to (default `127.0.0.1,localhost,::1`), against DNS rebinding |
 
 > **Security:** never commit `.env`. Before every commit, `python scripts/check_secrets.py` compares the staged changes against the real values in your local `.env` and against common key patterns, and fails without printing anything secret.
 
@@ -441,7 +467,7 @@ Integration tests install everything into a throwaway `ASOF_TEST` schema, connec
 - no string-built SQL: an AST scan of every module and test fails the build on SQL built with f-strings, `%`, `+` or `.format()`; runtime statements are literals and even the schema is a bound parameter (`SET CURRENT SCHEMA = ?`)
 - the ledger: gapless IDs and linked hashes under three concurrent writers; triggers stopping even the owner; `VERIFY_CHAIN` catching an owner who drops a trigger and edits a row, edits a citation, or deletes the last row
 - every gate decision path with a scripted LLM, including a manipulated judge that says SUPPORTED with a real quote (the rule check still overrides it), an invented quote, a clause not in force, timeouts and a ledger outage
-- 61 rule-checker tests, mostly realistic claims against the real corpus rules, in both directions (real contradictions caught, situational numbers left alone)
+- 62 rule-checker tests, mostly realistic claims against the real corpus rules, in both directions (real contradictions caught, situational numbers left alone)
 - API validation (byte limits, dates, allow-listed `doc_id`, control characters, unknown fields), body cap, rate limit and security headers
 
 > **Note on the submission validator:** `scripts/validate_submission.py` flags any `.env` or `*.pem` file under the folder, including your local `.env` and certificate files inside `.venv`. Neither is committed. Run the validator from a clean checkout to see what a reviewer sees.
