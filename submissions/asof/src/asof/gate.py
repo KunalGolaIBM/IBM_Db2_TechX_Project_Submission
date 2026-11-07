@@ -63,6 +63,7 @@ class GateRequest:
     as_of: date
     doc_id: str
     channel: str = "api"
+    requested_by: str | None = None  # the API user, when ASOF_AUTH=users; recorded in the hashed verdicts
 
 
 @dataclass
@@ -376,6 +377,8 @@ class Gate:
             "unchecked": result.unchecked[:20],
             "error": result.error,
         }
+        if req.requested_by:
+            verdicts["requested_by"] = req.requested_by[:40]
         entry = ledger.LedgerEntry(
             request_id=result.request_id, channel=req.channel, doc_id=req.doc_id, as_of=req.as_of,
             # The caller gets the answer as written; the ledger keeps the redacted form.

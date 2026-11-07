@@ -413,6 +413,41 @@ ALTER TABLE "ASOF    "."FAQ_KB"
 
 
 
+------------------------------------------------
+-- DDL Statements for Table "ASOF    "."API_USER"
+------------------------------------------------
+ 
+
+CREATE TABLE "ASOF    "."API_USER"  (
+		  "USER_NAME" VARCHAR(40 OCTETS) NOT NULL , 
+		  "TOKEN_SHA256" CHAR(64 OCTETS) NOT NULL , 
+		  "CAN_CHECK" SMALLINT NOT NULL WITH DEFAULT 0 , 
+		  "CAN_AUDIT" SMALLINT NOT NULL WITH DEFAULT 0 , 
+		  "CAN_EDIT" SMALLINT NOT NULL WITH DEFAULT 0 , 
+		  "CREATED_AT" TIMESTAMP NOT NULL WITH DEFAULT CURRENT TIMESTAMP , 
+		  "CREATED_BY" VARCHAR(128 OCTETS) NOT NULL WITH DEFAULT USER , 
+		  "DISABLED_AT" TIMESTAMP )   
+		 IN "ASOF_TS32K"  
+		 ORGANIZE BY ROW; 
+
+
+-- DDL Statements for Primary Key on Table "ASOF    "."API_USER"
+
+ALTER TABLE "ASOF    "."API_USER" 
+	ADD CONSTRAINT "PK_API_USER" PRIMARY KEY
+		("USER_NAME")
+	ENFORCED;
+
+
+-- DDL Statements for Unique Constraints on Table "ASOF    "."API_USER"
+
+
+ALTER TABLE "ASOF    "."API_USER" 
+	ADD CONSTRAINT "UQ_API_USER_TOKEN" UNIQUE
+		("TOKEN_SHA256")
+	ENFORCED;
+
+
 --------------------------------------------------------------
 -- DDL Statements for system-period temporal table "ASOF    "."POLICY_CLAUSE"
 --------------------------------------------------------------
@@ -692,6 +727,36 @@ SET SYSIBM.NLS_STRING_UNITS = 'SYSTEM';
 ALTER TABLE "ASOF    "."ANSWER_SUGGESTION" 
 	ADD CONSTRAINT "CK_SUGGESTION_TRACE" CHECK 
 		(JSON_EXISTS(AGENT_TRACE, '$'))
+	ENFORCED
+	ENABLE QUERY OPTIMIZATION;
+
+-- DDL Statements for Check Constraints on Table "ASOF    "."API_USER"
+
+SET SYSIBM.NLS_STRING_UNITS = 'SYSTEM';
+
+ALTER TABLE "ASOF    "."API_USER" 
+	ADD CONSTRAINT "CK_API_USER_FLAGS" CHECK 
+		(CAN_CHECK IN (0, 1) AND CAN_AUDIT IN (0, 1) AND CAN_EDIT IN (0, 1))
+	ENFORCED
+	ENABLE QUERY OPTIMIZATION;
+
+-- DDL Statements for Check Constraints on Table "ASOF    "."API_USER"
+
+SET SYSIBM.NLS_STRING_UNITS = 'SYSTEM';
+
+ALTER TABLE "ASOF    "."API_USER" 
+	ADD CONSTRAINT "CK_API_USER_HASH" CHECK 
+		(TRANSLATE(TOKEN_SHA256, '', '0123456789abcdef') = '')
+	ENFORCED
+	ENABLE QUERY OPTIMIZATION;
+
+-- DDL Statements for Check Constraints on Table "ASOF    "."API_USER"
+
+SET SYSIBM.NLS_STRING_UNITS = 'SYSTEM';
+
+ALTER TABLE "ASOF    "."API_USER" 
+	ADD CONSTRAINT "CK_API_USER_SOME_ROLE" CHECK 
+		(CAN_CHECK + CAN_AUDIT + CAN_EDIT >= 1)
 	ENFORCED
 	ENABLE QUERY OPTIMIZATION;
 

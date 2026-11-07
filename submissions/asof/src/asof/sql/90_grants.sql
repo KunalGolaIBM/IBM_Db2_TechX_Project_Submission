@@ -44,6 +44,11 @@ GRANT SELECT ON TABLE ASOF.PUBLISHED_ANSWER TO USER ASOF_APP_USER
 -- grant: APP_SELECT_FAQ_KB
 GRANT SELECT ON TABLE ASOF.FAQ_KB TO USER ASOF_APP_USER
 @
+-- The runtime user looks API users up by token hash to authenticate requests (ASOF_AUTH=users).
+-- Only the owner adds, rotates or disables them.
+-- grant: APP_SELECT_API_USER
+GRANT SELECT ON TABLE ASOF.API_USER TO USER ASOF_APP_USER
+@
 
 -- Policy editor: connect and read policy. Changes go only through APPLY_POLICY_CHANGE.
 -- grant: EDITOR_CONNECT

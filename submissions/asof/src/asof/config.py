@@ -70,6 +70,10 @@ class Settings(BaseSettings):
     # Policy changes over HTTP: localhost only, unless this token is set, in which case the
     # X-AsOf-Editor-Token header must match it.
     asof_editor_token: SecretStr | None = None
+    # "local": the server binds to localhost; the optional shared ASOF_API_TOKEN below applies. "users": every
+    # /api/ request needs a personal token from ASOF.API_USER (python -m asof.users) holding the route's role
+    # (checker, auditor, editor); the shared tokens are then not used.
+    asof_auth: Literal["local", "users"] = "local"
     # Optional API token. When set, every /api/ request needs "Authorization: Bearer <token>"
     # (constant-time compare); /healthz and the static UI stay open. Unset: localhost binding only.
     asof_api_token: SecretStr | None = None

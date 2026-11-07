@@ -35,7 +35,7 @@ function askToken() {
   const form = document.createElement("form");
   form.id = "token-form";
   form.className = "token-bar";
-  form.innerHTML = '<label for="api-token">This AsOf server needs its API token</label>'
+  form.innerHTML = '<label for="api-token">This AsOf server needs an API token (yours, if it has per-user tokens)</label>'
     + '<input id="api-token" type="password" autocomplete="off" required><button class="btn sm" type="submit">Use token</button>';
   form.addEventListener("submit", (e) => {
     e.preventDefault();

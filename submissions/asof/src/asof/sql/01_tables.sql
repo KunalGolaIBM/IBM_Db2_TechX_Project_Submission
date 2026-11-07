@@ -223,3 +223,26 @@ CREATE TABLE ASOF.ANSWER_SUGGESTION (
 -- index: IX_SUGGESTION_ANSWER
 CREATE INDEX ASOF.IX_SUGGESTION_ANSWER ON ASOF.ANSWER_SUGGESTION (ANSWER_ID, STATUS)
 @
+
+-- table: API_USER
+-- Per-user API access (ASOF_AUTH=users). Only the SHA-256 of each personal token is stored: the
+-- token itself is shown once, when the owner adds the user (python -m asof.users add). The flags
+-- are the API roles: CAN_CHECK (submit drafts), CAN_AUDIT (ledger, chain, analytics, Ask the
+-- ledger), CAN_EDIT (policy changes, approving drafted corrections). A disabled user keeps its
+-- row, so the ledger's requested_by names stay resolvable.
+CREATE TABLE ASOF.API_USER (
+  USER_NAME    VARCHAR(40)  NOT NULL,
+  TOKEN_SHA256 CHAR(64)     NOT NULL,
+  CAN_CHECK    SMALLINT     NOT NULL DEFAULT 0,
+  CAN_AUDIT    SMALLINT     NOT NULL DEFAULT 0,
+  CAN_EDIT     SMALLINT     NOT NULL DEFAULT 0,
+  CREATED_AT   TIMESTAMP    NOT NULL DEFAULT CURRENT TIMESTAMP,
+  CREATED_BY   VARCHAR(128) NOT NULL DEFAULT SESSION_USER,
+  DISABLED_AT  TIMESTAMP,
+  CONSTRAINT PK_API_USER PRIMARY KEY (USER_NAME),
+  CONSTRAINT UQ_API_USER_TOKEN UNIQUE (TOKEN_SHA256),
+  CONSTRAINT CK_API_USER_FLAGS CHECK (CAN_CHECK IN (0, 1) AND CAN_AUDIT IN (0, 1) AND CAN_EDIT IN (0, 1)),
+  CONSTRAINT CK_API_USER_SOME_ROLE CHECK (CAN_CHECK + CAN_AUDIT + CAN_EDIT >= 1),
+  CONSTRAINT CK_API_USER_HASH CHECK (TRANSLATE(TOKEN_SHA256, '', '0123456789abcdef') = '')
+) IN ASOF_TS32K
+@

@@ -26,6 +26,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import __version__, db, impactagent, ledger, policy
@@ -38,6 +39,7 @@ from .embeddings import get_embeddings
 from .gate import Gate, GateRequest, GateResult
 from .llm import LLMError, build_llm
 from .replay import ReplayMiss
+from .users import APIUser, authenticate
 
 log = logging.getLogger("asof.api")
 
@@ -45,6 +47,20 @@ MIN_DATE, MAX_DATE = date(2020, 1, 1), date(2035, 12, 31)
 MAX_BODY_BYTES = 64 * 1024
 # GETs that do real work in Db2 share the POST rate limit: VERIFY_CHAIN recomputes every hash in the ledger.
 COSTLY_GETS = frozenset({"/api/chain/verify", "/api/chain/anchors"})
+
+_EDITOR_POSTS = re.compile(r"^/api/(?:policy/(?:change|preview)|impact/[^/]+/suggestions|suggestions/[^/]+/decision)$")
+
+
+def required_role(method: str, path: str) -> str | None:
+    """The role an /api/ request needs with ASOF_AUTH=users. None: any signed-in user. A route not named
+    here needs the auditor role, so a new route is never open by accident."""
+    if method == "POST" and path in ("/api/gate", "/api/assistant/ask"):
+        return "checker"
+    if method == "POST" and _EDITOR_POSTS.match(path):
+        return "editor"
+    if method == "GET" and (path.startswith("/api/policy/") or path == "/api/whoami"):
+        return None
+    return "auditor"
 COSTLY_GET_SUFFIXES = ("/evidence",)  # evidence packs run VERIFY_CHAIN too
 UI_DIR = __import__("pathlib").Path(__file__).with_name("ui")
 LOCAL_CLIENTS = {"127.0.0.1", "::1"}
@@ -225,7 +241,10 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
                asker: LedgerAsker | None = None, schema: str = db.SCHEMA, rate_limit: int = 30) -> FastAPI:
     settings = settings or get_settings()
     state: dict[str, Any] = {"gate": gate, "assistant": assistant, "asker": asker}
-    api_token = settings.asof_api_token.get_secret_value() if settings.asof_api_token else None
+    users_mode = settings.asof_auth == "users"
+    api_token = settings.asof_api_token.get_secret_value() if settings.asof_api_token and not users_mode else None
+    if users_mode and (settings.asof_api_token or settings.asof_editor_token):
+        log.warning("ASOF_AUTH=users: the shared ASOF_API_TOKEN and ASOF_EDITOR_TOKEN are not used")
     limiter = RateLimiter(rate_limit)
 
     # Runtime connections are pooled: on the dev machine opening one costs about 0.2 s and closing it
@@ -270,20 +289,48 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     app.add_middleware(TrustedHostMiddleware,
                        allowed_hosts=[h.strip() for h in settings.asof_allowed_hosts.split(",") if h.strip()])
 
+    def lookup_user(token: str | None) -> APIUser | None:
+        if not token:
+            return None
+        conn = app_conn()
+        try:
+            return authenticate(conn, token, schema)
+        finally:
+            conn.close()
+
+    def requested_by(request: Request) -> str | None:
+        user = getattr(request.state, "user", None)
+        return user.name if user else None
+
     @app.middleware("http")
     async def guard(request: Request, call_next):
         length = request.headers.get("content-length")
         if length and length.isdigit() and int(length) > MAX_BODY_BYTES:
             return JSONResponse({"error": "request body too large"}, status_code=413)
-        if api_token and request.url.path.startswith("/api/"):
-            auth = request.headers.get("authorization", "")
-            given = auth[7:].strip() if auth[:7].lower() == "bearer " else None
+        auth = request.headers.get("authorization", "")
+        given = auth[7:].strip() if auth[:7].lower() == "bearer " else None
+        user: APIUser | None = None
+        if users_mode and request.url.path.startswith("/api/"):
+            try:
+                user = await run_in_threadpool(lookup_user, given)
+            except db.DatabaseError as exc:
+                log.error("API user lookup failed: %s", exc)
+                return JSONResponse({"error": "the database is unavailable", "sqlstate": exc.sqlstate}, status_code=503)
+            if user is None:
+                return JSONResponse({"error": "this AsOf server needs your personal API token (Authorization: Bearer ...)"},
+                                    status_code=401, headers={"WWW-Authenticate": "Bearer"})
+            role = required_role(request.method, request.url.path)
+            if role and not user.can(role):
+                return JSONResponse({"error": f"API user {user.name} does not have the {role} role"}, status_code=403)
+            request.state.user = user
+        elif api_token and request.url.path.startswith("/api/"):
             if not token_matches(given, api_token):
                 return JSONResponse({"error": "this AsOf server needs an API token (Authorization: Bearer ...)"},
                                     status_code=401, headers={"WWW-Authenticate": "Bearer"})
         costly = (request.method == "POST" or request.url.path in COSTLY_GETS
                   or request.url.path.endswith(COSTLY_GET_SUFFIXES))
-        if costly and not limiter.allow(request.client.host if request.client else "unknown"):
+        caller = f"user:{user.name}" if user else (request.client.host if request.client else "unknown")
+        if costly and not limiter.allow(caller):
             return JSONResponse({"error": "too many requests, try again in a minute"}, status_code=429)
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -337,22 +384,31 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
                 "llm": f"{settings.llm_provider}:{settings.llm_model_name}", "llm_ready": settings.llm_ready,
                 "replay": settings.llm_provider == "replay", "replay_model": replay_model(),
                 "anchoring": "on" if anchors is not None else "off", "db2_tls": settings.db2_ssl,
+                "auth": "users" if users_mode else ("token" if api_token else "local"),
                 "version": __version__}
 
     def respond(result: GateResult) -> JSONResponse:
         body = gate_out(result).model_dump(mode="json")
         return JSONResponse(body, status_code=200 if result.released else 503)
 
+    @app.get("/api/whoami")
+    def whoami(request: Request):
+        user = getattr(request.state, "user", None)
+        return {"auth": "users" if users_mode else ("token" if api_token else "local"),
+                "user": user.name if user else None, "roles": sorted(user.roles) if user else None}
+
     @app.post("/api/gate", response_model=GateOut)
-    def check_answer(body: GateIn):
+    def check_answer(body: GateIn, request: Request):
         g, _ = components()
-        return respond(g.check(GateRequest(body.question, body.draft_answer, body.as_of_date, body.doc_id, body.channel)))
+        return respond(g.check(GateRequest(body.question, body.draft_answer, body.as_of_date, body.doc_id, body.channel,
+                                           requested_by(request))))
 
     @app.post("/api/assistant/ask")
-    def ask_assistant(body: AskIn):
+    def ask_assistant(body: AskIn, request: Request):
         g, a = components()
         draft = a.answer(body.question)
-        result = g.check(GateRequest(body.question, draft.text, body.as_of_date, body.doc_id, body.channel))
+        result = g.check(GateRequest(body.question, draft.text, body.as_of_date, body.doc_id, body.channel,
+                                     requested_by(request)))
         out = gate_out(result).model_dump(mode="json")
         out["assistant"] = {"draft": draft.text, "faq_ids": draft.faq_ids, "latency_ms": draft.latency_ms}
         return JSONResponse(out, status_code=200 if result.released else 503)
@@ -480,7 +536,10 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
             conn.close()
 
     def require_editor(request: Request, token_header: str | None) -> None:
-        """Editor actions: localhost only, or a matching ASOF_EDITOR_TOKEN (constant-time compare)."""
+        """Editor actions: localhost only, or a matching ASOF_EDITOR_TOKEN (constant-time compare). With
+        ASOF_AUTH=users the middleware has already required the editor role, from any client."""
+        if users_mode:
+            return
         token = settings.asof_editor_token.get_secret_value() if settings.asof_editor_token else None
         if token:
             if not token_matches(token_header, token):
@@ -529,6 +588,8 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
 
     def as_editor(body: policy.PolicyChange, request: Request, token: str | None, preview: bool) -> dict[str, Any]:
         require_editor(request, token)
+        if (who := requested_by(request)) is not None:  # the editor's name goes into the clause's change note
+            body = body.model_copy(update={"change_note": f"[{who}] {body.change_note}"[:400]})
         editor = db.connect(settings, "editor")
         try:
             emb = get_embeddings(settings.embedding_model)
