@@ -54,6 +54,19 @@ It uses the following third-party software. No third-party code is copied into t
 |---|---|---|
 | icr.io/db2_community/db2:12.1.5.0 | IBM Db2 Community Edition, base of `docker/db2/Dockerfile` | IBM Db2 Community Edition licence (accepted with `LICENSE=accept`) |
 
+## Slide deck (`docs/slides/AsOf_slides.pdf`)
+
+| Asset | Use | Licence or terms |
+|---|---|---|
+| IBM Plex Sans, IBM Plex Mono | Typefaces, embedded in the PDF | SIL Open Font License 1.1 |
+| Carbon icons (`@carbon/icons` 11.92.0) | Slide icons | Apache-2.0 |
+| LangChain and LangGraph logos | "Built with" strip and feature labels, unmodified | LangChain brand guidelines (langchain.com/brand-assets) |
+| dbt logo | "Built with" strip only, same size as the other logos | dbt Labs trademark policy; dbt and the dbt logo are trademarks of dbt Labs, LLC; AsOf is not affiliated with dbt Labs |
+| Apache Airflow logo | "Built with" strip and next to the Airflow feature, unmodified | ASF trademark policy; Apache Airflow, Apache, Airflow and the Airflow logo are either registered trademarks or trademarks of The Apache Software Foundation; no endorsement is implied |
+| IBM Db2, Langflow, SQLGlot | Named in text only (no logo) | IBM and Db2 are trademarks of International Business Machines Corporation, registered in many jurisdictions worldwide |
+
+The deck follows IBM's Carbon Design System (colour tokens, 2x grid); the AsOf mark and backgrounds were made for this project.
+
 ## Data
 
 All policies, FAQ entries and help-centre answers are fictional and were written for this project. The case *Moffatt v. Air Canada*, 2024 BCCRT 149, is cited as background only.
