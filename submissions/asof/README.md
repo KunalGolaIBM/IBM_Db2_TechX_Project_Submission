@@ -641,7 +641,7 @@ The two misses were both escalations instead of corrections. **BT10:** the judge
 
 ## Screenshots & Demo
 
-- **Slides:** [docs/slides/AsOf_slides.pdf](docs/slides/AsOf_slides.pdf), a 13-slide overview (problem, workflow, architecture, Db2 integration, evaluation, impact).
+- **Slides:** [docs/slides/AsOf_slides.pdf](docs/slides/AsOf_slides.pdf), a 14-slide deck in IBM's Carbon design (problem, solution, agentic AI, Db2 integration, workflow, architecture, security, evaluation, impact and status).
 - **Live demo:** not hosted, on purpose. AsOf's core flows write to Db2 (the ledger, policy changes) and call a paid LLM; hosting them publicly would mean exposing a writable database or a funded API key, and a read-only snapshot would hide exactly the flows that matter. The setup above runs it locally with one command (`./quickstart.sh`).
 - **Screenshots:** all taken from a clean demo run (`python -m asof.setup --reset --yes`, then `python -m asof.demo`). The playground is at the top of this README.
 
@@ -664,8 +664,8 @@ Both policy documents run through the same screens: the playground has two bank 
 | ![Replay of a December pet answer after the fee change](docs/screenshots/05-replay-after-change.png) | ![Timeline and system-time history after the change](docs/screenshots/06-timeline-after-change.png) |
 | ![The change-impact agent's drafted correction, checked and waiting for the editor](docs/screenshots/12-drafted-correction.png) | ![The correction approved: the help-centre answer split in time](docs/screenshots/13-correction-approved.png) |
 | ![Ask the ledger as the read-only analyst: decisions visible, customer text masked by Db2](docs/screenshots/09-ask-the-ledger.png) | ![The bank's Moffatt case: "refunded automatically", corrected from FRV-001 v1](docs/screenshots/10-bank-playground.png) |
-| ![Fernhollow Bank's fee schedule on the policy timeline](docs/screenshots/11-bank-timeline.png) | ![Audit ledger with the chain verified](docs/screenshots/07-ledger.png) |
-| ![Ledger entry #1 with its replay: the clause row used, what Db2 held at that moment, and what applies today](docs/screenshots/03-ledger-replay.png) | ![Analytics from Db2 views: decisions, claims by area, rule-check overrides](docs/screenshots/08-analytics.png) |
+| ![Fernhollow Bank's fee schedule on the policy timeline](docs/screenshots/11-bank-timeline.png) | ![Audit ledger: VERIFY_CHAIN intact, and the chain-head anchors kept outside Db2 matching every entry](docs/screenshots/07-ledger.png) |
+| ![Ledger entry #1 with the chain and anchor checks and its replay: the clause row used, what Db2 held at that moment, and what applies today](docs/screenshots/03-ledger-replay.png) | ![Analytics from Db2 views: decisions, claims by area, rule-check overrides](docs/screenshots/08-analytics.png) |
 | ![The pet fee change previewed: Db2 applied it, ran CHANGE_IMPACT and rolled back, nothing saved](docs/screenshots/14-impact-preview.png) | ![A receipt checked against the ledger: entry #1 is intact](docs/screenshots/15-receipt-check.png) |
 
 **The change-impact story in four clicks:** run `python -m asof.demo` (it records pet-fee answers for a November and a December trip), open **Change impact**, choose the preset "Pet fee to $125 from 1 Dec 2026", and apply it. Db2 splits PET-001 into v1 (to 1 Dec) and v2 (from 1 Dec) with `FOR PORTION OF BUSINESS_TIME`. `CHANGE_IMPACT` reports the November answer as historically valid, the December answer as stale (the customer was told $100 for a trip that now costs $125), and help-centre answer PA-PET-001 as needing review from 1 Dec 2026. Replay on the December entry shows all three states side by side.
