@@ -44,7 +44,7 @@ log = logging.getLogger(__name__)
 RECORDING_PATH = REPLAY_FILE
 SCENARIOS_PATH = Path(__file__).with_name("ui") / "scenarios.json"
 REPLAY_SCHEMA = "ASOF_REPLAY"  # where `record` runs the scenarios (a scratch copy of the seed data)
-FORMAT = 1
+FORMAT = 2  # 2: keys cover the output schema and the tools' argument schemas, not just their names
 
 MISS = ("replay mode has no recorded model output for this input (only the built-in scenarios are recorded). "
         "To check other answers, set OPENROUTER_API_KEY and LLM_PROVIDER=openrouter in .env, or "
@@ -88,12 +88,20 @@ def _key(kind: str, name: str, messages, extra: Any = None) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _shape(obj: Any) -> str:
+    return hashlib.sha256(json.dumps(obj, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+
+
 def structured_key(schema: type, messages, choices: dict[str, list[str]] | None = None) -> str:
-    return _key("structured", schema.__name__, messages, {k: list(v) for k, v in sorted((choices or {}).items())})
+    # The schema's shape is part of the key: if a schema changes, its old outputs stop replaying.
+    return _key("structured", schema.__name__, messages,
+                {"choices": {k: list(v) for k, v in sorted((choices or {}).items())},
+                 "schema": _shape(schema.model_json_schema())})
 
 
 def tools_key(messages, tools) -> str:
-    return _key("tools", ",".join(sorted(t.name for t in tools)), messages)
+    shapes = sorted((t.name, _shape(getattr(t, "args", {}))) for t in tools)
+    return _key("tools", ",".join(name for name, _ in shapes), messages, shapes)
 
 
 def chat_key(messages) -> str:

@@ -76,15 +76,17 @@ def test_the_ask_the_ledger_examples_replay_their_sql_which_then_runs_live(repla
     assert [(q, r.status, r.sql) for q, r in got] == [(a["question"], a["status"], a["sql"]) for a in RECORDING.scenarios["ask"]]
 
 
-def test_the_first_preset_replays_the_change_impact_agent(replayed, settings, embeddings):
-    preset, recorded = replay.load_scenarios()["presets"][0], RECORDING.scenarios["impact"][0]
-    assert recorded["preset"] == preset["label"]
-    with db.connection(settings, "app") as reader:
-        assert replay.next_version(policy.timeline(reader, replayed.schema), preset["clause"]) == recorded["version_label"]
-    with db.connection(settings, "editor") as ed:
-        policy.apply_change(ed, policy.PolicyChange(
-            clause_id=preset["clause"], effective_from=preset["from"], version_label=recorded["version_label"],
-            clause_text=preset["text"], rule=preset["rule"], change_note=preset["note"]), embeddings, replayed.schema)
-    drafted = impactagent.draft_fixes(replayed.gate, preset["clause"])
-    assert [(d["answer_id"], d.get("check_decision"), d.get("error")) for d in drafted] == \
-        [(d["answer_id"], d["check_decision"], None) for d in recorded["drafts"]]
+def test_every_preset_replays_the_change_impact_agent_in_recorded_order(replayed, settings, embeddings):
+    presets, recorded = replay.load_scenarios()["presets"], RECORDING.scenarios["impact"]
+    assert [p["label"] for p in presets] == [r["preset"] for r in recorded]
+    for preset, rec in zip(presets, recorded, strict=True):
+        with db.connection(settings, "app") as reader:
+            assert replay.next_version(policy.timeline(reader, replayed.schema), preset["clause"]) == rec["version_label"]
+        with db.connection(settings, "editor") as ed:
+            policy.apply_change(ed, policy.PolicyChange(
+                clause_id=preset["clause"], effective_from=preset["from"], version_label=rec["version_label"],
+                clause_text=preset["text"], rule=preset["rule"], change_note=preset["note"]), embeddings, replayed.schema)
+        drafted = impactagent.draft_fixes(replayed.gate, preset["clause"])
+        assert [(d["answer_id"], d.get("check_decision"), d.get("error")) for d in drafted] == \
+            [(d["answer_id"], d["check_decision"], None) for d in rec["drafts"]], preset["label"]
+

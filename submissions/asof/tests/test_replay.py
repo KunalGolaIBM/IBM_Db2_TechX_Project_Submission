@@ -119,7 +119,7 @@ def test_a_missing_or_foreign_recording_file_is_a_configuration_error(tmp_path):
     with pytest.raises(ConfigError, match="could not be read"):
         replay.Recording.load(tmp_path / "missing.json")
     (tmp_path / "other.json").write_text(json.dumps({"format": 99, "entries": {}}))
-    with pytest.raises(ConfigError, match="not a format-1"):
+    with pytest.raises(ConfigError, match="not a format-2"):
         replay.Recording.load(tmp_path / "other.json")
 
 
@@ -159,3 +159,20 @@ def test_eval_refuses_to_measure_a_replay(monkeypatch):
         assert main(["--split", "dev"]) == 2
     finally:
         get_settings.cache_clear()
+
+
+def test_a_changed_output_schema_or_tool_signature_stops_old_outputs_replaying():
+    from pydantic import BaseModel
+
+    class Before(BaseModel):
+        answer: str
+
+    class After(BaseModel):  # same name, new shape
+        answer: str
+        cited: list[str]
+
+    After.__name__ = "Before"
+    assert replay.structured_key(Before, MSGS) != replay.structured_key(After, MSGS)
+    tool = SimpleNamespace(name="search_policy", args={"query": {"type": "string"}})
+    changed = SimpleNamespace(name="search_policy", args={"query": {"type": "string"}, "k": {"type": "integer"}})
+    assert replay.tools_key(MSGS, [tool]) != replay.tools_key(MSGS, [changed])
