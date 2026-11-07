@@ -833,7 +833,7 @@ async function Analytics() {
   const maxArea = Math.max(1, ...a.areas.map((x) => x.claims));
   const pct = (v, t) => (t ? (100 * v) / t : 0).toFixed(2);
   mount(view, html`
-    <div class="page-head"><div><h1>Analytics</h1><p>Straight from the Db2 views <code>V_DECISION_STATS</code>, <code>V_CLAIM_OUTCOMES_BY_AREA</code> and <code>V_RULE_OVERRIDES</code>.</p></div></div>
+    <div class="page-head"><div><h1>Analytics</h1><p>Straight from Db2: the views <code>V_DECISION_STATS</code>, <code>V_CLAIM_OUTCOMES_BY_AREA</code> and <code>V_RULE_OVERRIDES</code>, and a count over <code>CLAIM_CITATION</code> for the rule check.</p></div></div>
     ${total ? "" : html`<div class="empty"><h3>No decisions yet</h3><p>Check a few answers in the <a href="#/playground">Playground</a>.</p></div>`}
     <div class="cols-2">
       <div class="card"><div class="card-head"><h2>Decisions</h2><span class="sub">${total} recorded</span></div><div class="bars">
