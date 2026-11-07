@@ -31,11 +31,11 @@ from urllib.parse import urlparse
 
 from . import db, indb, schema, seed
 from .anchor import AnchorLog
-from .config import DEFAULT_ENV_FILE, ConfigError, Settings, get_settings
+from .config import DEFAULT_ENV_FILE, PROJECT_ROOT, ConfigError, Settings, get_settings
 from .embeddings import get_embeddings
 from .retriever import clauses_as_of
 
-GENERATED_KEYS = ("ASOF_APP_PASSWORD", "ASOF_EDITOR_PASSWORD", "ASOF_ANALYST_PASSWORD", "ASOF_ANCHOR_KEY")
+GENERATED_KEYS = ("ASOF_APP_PASSWORD", "ASOF_EDITOR_PASSWORD", "ASOF_ANALYST_PASSWORD")
 DOCKER_TIMEOUT_S = 60
 
 
@@ -48,7 +48,7 @@ def say(msg: str) -> None:
 
 
 def ensure_generated_passwords(env_path: Path = DEFAULT_ENV_FILE) -> list[str]:
-    """Fill empty ASOF_*_PASSWORD keys and ASOF_ANCHOR_KEY in .env with strong random values. Returns the keys filled."""
+    """Fill empty ASOF_*_PASSWORD keys in .env with strong random values. Returns the keys filled."""
     if not env_path.is_file():
         raise SetupError(f"{env_path} not found. Run: cp .env.example .env  (then set DB2_PASSWORD)")
     lines = env_path.read_text(encoding="utf-8").splitlines()
@@ -60,12 +60,12 @@ def ensure_generated_passwords(env_path: Path = DEFAULT_ENV_FILE) -> list[str]:
         if key in GENERATED_KEYS:
             seen.add(key)
             if not line.split("=", 1)[1].strip():
-                line = f"{key}={secrets.token_urlsafe(32 if key == 'ASOF_ANCHOR_KEY' else 24)}"
+                line = f"{key}={secrets.token_urlsafe(24)}"
                 filled.append(key)
         out.append(line)
     for key in GENERATED_KEYS:
         if key not in seen:
-            out.append(f"{key}={secrets.token_urlsafe(32 if key == 'ASOF_ANCHOR_KEY' else 24)}")
+            out.append(f"{key}={secrets.token_urlsafe(24)}")
             filled.append(key)
     if filled:
         fd, tmp = tempfile.mkstemp(dir=env_path.parent, prefix=".env.")
@@ -74,6 +74,50 @@ def ensure_generated_passwords(env_path: Path = DEFAULT_ENV_FILE) -> list[str]:
         os.chmod(tmp, 0o600)
         os.replace(tmp, env_path)
     return filled
+
+
+def ensure_anchor_key(settings: Settings, env_path: Path = DEFAULT_ENV_FILE) -> str:
+    """The chain-head anchor key lives in its own file outside the project folder, never in .env (which holds
+    the owner's password) and never where git could pick it up. Creates it (mode 600, directory 700) if
+    missing. A key an earlier version wrote into .env is moved there unchanged, so existing anchors still
+    verify. Returns what happened, for the setup log; never the key."""
+    if settings.asof_anchor_key and os.environ.get("ASOF_ANCHOR_KEY"):
+        return "from the ASOF_ANCHOR_KEY environment variable (override)"
+    path = settings.anchor_key_path
+    if path.resolve().is_relative_to(PROJECT_ROOT.resolve()):
+        raise SetupError(f"ASOF_ANCHOR_KEY_FILE ({path}) is inside the project folder; choose a path outside it")
+    legacy = _env_value(env_path, "ASOF_ANCHOR_KEY")
+    if path.is_file():
+        if legacy:
+            _blank_env_value(env_path, "ASOF_ANCHOR_KEY")
+        return f"in {path}"
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write((legacy or secrets.token_urlsafe(32)) + "\n")
+    if legacy:
+        _blank_env_value(env_path, "ASOF_ANCHOR_KEY")
+        return f"moved from .env to {path} (same key, so existing anchors still verify)"
+    return f"generated in {path} (mode 600, not shown)"
+
+
+def _env_value(env_path: Path, key: str) -> str:
+    if not env_path.is_file():
+        return ""
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        if line.split("=", 1)[0].strip() == key and "=" in line:
+            return line.split("=", 1)[1].strip()
+    return ""
+
+
+def _blank_env_value(env_path: Path, key: str) -> None:
+    lines = [f"{key}=" if line.split("=", 1)[0].strip() == key else line
+             for line in env_path.read_text(encoding="utf-8").splitlines()]
+    fd, tmp = tempfile.mkstemp(dir=env_path.parent, prefix=".env.")
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(lines) + "\n")
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, env_path)
 
 
 def wait_for_db2(settings: Settings, timeout_s: int = 300) -> None:
@@ -252,6 +296,9 @@ def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False
     get_settings.cache_clear()
     settings = get_settings()
     settings.require("db2_admin_password", "asof_app_password", "asof_editor_password", "asof_analyst_password")
+    say(f"  chain-head anchor key: {ensure_anchor_key(settings)}")
+    get_settings.cache_clear()
+    settings = get_settings()
 
     say("2/9 Db2 connection")
     wait_for_db2(settings)

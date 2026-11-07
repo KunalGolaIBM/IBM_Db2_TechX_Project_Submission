@@ -10,6 +10,9 @@ os.environ.setdefault("ASOF_ALLOWED_HOSTS", "127.0.0.1,localhost,::1,testserver"
 import tempfile  # noqa: E402
 
 os.environ["ASOF_ANCHOR_DIR"] = tempfile.mkdtemp(prefix="asof-test-anchors-")
+# ... and never read the real anchor key: tests that need one make their own.
+os.environ["ASOF_ANCHOR_KEY_FILE"] = os.path.join(os.environ["ASOF_ANCHOR_DIR"], "no-such-anchor.key")
+os.environ.pop("ASOF_ANCHOR_KEY", None)
 
 import pytest
 

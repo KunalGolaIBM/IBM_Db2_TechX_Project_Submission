@@ -78,7 +78,12 @@ class Settings(BaseSettings):
     # (constant-time compare); /healthz and the static UI stay open. Unset: localhost binding only.
     asof_api_token: SecretStr | None = None
     # Chain-head anchors (asof/anchor.py): after each ledger append the new head is written, with an HMAC
-    # under this key, to a log outside Db2. Setup generates the key; unset means anchoring is off.
+    # under a key Db2 never holds, to a log outside Db2. The key lives in its own file, outside the project
+    # folder and away from .env (which holds the owner's DB2_PASSWORD): setup generates it there. Default
+    # $XDG_CONFIG_HOME/asof/anchor.key, else ~/.config/asof/anchor.key; mode 600; a path inside the project
+    # folder is refused. No key file and no override: anchoring is off.
+    asof_anchor_key_file: str | None = Field(None, pattern=r"^[A-Za-z0-9_./~ -]{0,400}$")
+    # Override for containers and CI only: the key itself, from the environment. Setup never writes it.
     asof_anchor_key: SecretStr | None = None
     # Where the anchor logs go. Relative paths are under the project folder. For real use, a place the
     # database owner cannot write (another host, a write-once bucket mounted here).
@@ -174,8 +179,30 @@ class Settings(BaseSettings):
         return self.db2_host in ("localhost", "127.0.0.1", "::1")
 
     @property
+    def anchor_key_path(self) -> Path:
+        if self.asof_anchor_key_file:
+            path = Path(self.asof_anchor_key_file).expanduser()
+            return path if path.is_absolute() else Path.cwd() / path
+        base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+        return base / "asof" / "anchor.key"
+
+    @property
     def anchor_key(self) -> bytes | None:
-        return self.asof_anchor_key.get_secret_value().encode("utf-8") if _is_set(self.asof_anchor_key) else None
+        """The anchor HMAC key: ASOF_ANCHOR_KEY if set, else the key file, else None (anchoring off)."""
+        if _is_set(self.asof_anchor_key):
+            return self.asof_anchor_key.get_secret_value().encode("utf-8")  # type: ignore[union-attr]
+        path = self.anchor_key_path
+        if not path.is_file():
+            return None
+        if path.resolve().is_relative_to(PROJECT_ROOT.resolve()):
+            raise ConfigError(f"the anchor key file {path} is inside the project folder; keep it outside "
+                              "(default ~/.config/asof/anchor.key) so it can never be committed")
+        if path.stat().st_mode & 0o077:
+            raise ConfigError(f"the anchor key file {path} is readable by other users: chmod 600 it")
+        key = path.read_text(encoding="utf-8").strip().encode("utf-8")
+        if len(key) < 32:
+            raise ConfigError(f"the anchor key in {path} is shorter than 32 characters")
+        return key
 
     @property
     def anchor_dir(self) -> Path:

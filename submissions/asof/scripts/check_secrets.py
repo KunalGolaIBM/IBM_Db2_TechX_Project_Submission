@@ -5,10 +5,12 @@
     python scripts/check_secrets.py --all      # checks every tracked file in this folder
 
 Two kinds of checks:
-1. The real values in your local .env. If any of them appears in what you are about to commit,
+1. The real values in your local .env (passwords, tokens and keys) and the chain-head anchor key
+   file (default ~/.config/asof/anchor.key). If any of them appears in what you are about to commit,
    that is a leak, whatever it looks like (values of 8+ characters anywhere; shorter ones, down to
    4 characters, when they stand as a word of their own).
-2. Generic patterns: private keys, provider API keys, and forbidden files (.env, *.pem, ...).
+2. Generic patterns: private keys, provider API keys, and forbidden files (.env, *.pem, *.key, GSKit
+   key databases and stash files, anything under var/, where anchor logs and TLS files are kept).
 
 It prints file and line for each finding, never the secret. Exit code 1 means do not commit.
 Standard library only, so it runs before any dependency is installed.
@@ -16,6 +18,7 @@ Standard library only, so it runs before any dependency is installed.
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -25,7 +28,8 @@ PROJECT = Path(__file__).resolve().parents[1]
 ENV_FILE = PROJECT / ".env"
 
 FORBIDDEN_NAMES = {".env", ".env.local", ".env.production", "id_rsa", "id_ed25519"}
-FORBIDDEN_SUFFIXES = (".pem", ".key", ".p12", ".pfx")
+FORBIDDEN_SUFFIXES = (".pem", ".key", ".p12", ".pfx", ".kdb", ".sth", ".jks", ".crt", ".arm")
+FORBIDDEN_DIRS = ("var/",)  # runtime state: anchor logs, the local TLS certificate
 PATTERNS = {
     "private key": re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
     "OpenRouter key": re.compile(r"sk-or-v1-[0-9a-f]{32,}"),
@@ -34,20 +38,35 @@ PATTERNS = {
     "GitHub token": re.compile(r"\bgh[pousr]_[A-Za-z0-9]{36,}\b"),
     "Google API key": re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b"),
 }
-SECRET_KEYS = re.compile(r"(PASSWORD|SECRET|TOKEN|API_KEY|APIKEY)$")
+SECRET_KEYS = re.compile(r"(PASSWORD|SECRET|TOKEN|KEY|APIKEY)$")
+
+
+def _env() -> dict[str, str]:
+    out: dict[str, str] = {}
+    if ENV_FILE.is_file():
+        for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+            if "=" in line and not line.lstrip().startswith("#"):
+                key, value = line.split("=", 1)
+                out[key.strip().upper()] = value.strip().strip("'\"")
+    return out
+
+
+def anchor_key_file(env: dict[str, str]) -> Path:
+    """Where asof/config.py looks for the anchor key (kept in step with Settings.anchor_key_path)."""
+    configured = os.environ.get("ASOF_ANCHOR_KEY_FILE") or env.get("ASOF_ANCHOR_KEY_FILE")
+    if configured:
+        return Path(configured).expanduser()
+    return Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "asof" / "anchor.key"
 
 
 def local_secret_values() -> list[str]:
-    if not ENV_FILE.is_file():
-        return []
-    values = []
-    for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
-        if "=" not in line or line.lstrip().startswith("#"):
-            continue
-        key, value = line.split("=", 1)
-        value = value.strip().strip("'\"")
-        if SECRET_KEYS.search(key.strip().upper()) and len(value) >= MIN_SECRET_CHARS:
-            values.append(value)
+    env = _env()
+    values = [v for k, v in env.items() if SECRET_KEYS.search(k) and len(v) >= MIN_SECRET_CHARS]
+    key_file = anchor_key_file(env)
+    if key_file.is_file():
+        key = key_file.read_text(encoding="utf-8").strip()
+        if len(key) >= MIN_SECRET_CHARS:
+            values.append(key)
     return values
 
 
@@ -90,7 +109,7 @@ def main(argv: list[str]) -> int:
 
     for path in files:
         name = Path(path).name.lower()
-        if name in FORBIDDEN_NAMES or name.endswith(FORBIDDEN_SUFFIXES):
+        if name in FORBIDDEN_NAMES or name.endswith(FORBIDDEN_SUFFIXES) or path.startswith(FORBIDDEN_DIRS):
             findings.append(f"{path}: forbidden file type")
             continue
         text = (PROJECT / path).read_text(encoding="utf-8", errors="ignore") if scan_all else staged_text(path)
