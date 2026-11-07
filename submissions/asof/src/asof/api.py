@@ -233,10 +233,13 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
-        try:
-            components()
-        except ConfigError as exc:
-            log.error("AsOf is not configured: %s", exc)
+        if not settings.llm_ready:  # start anyway: the timeline, ledger and impact screens need no model
+            log.warning("no language model configured; checks will answer 503 until one is")
+        else:
+            try:
+                components()
+            except ConfigError as exc:
+                log.error("AsOf is not configured: %s", exc)
         yield
 
     app = FastAPI(title="AsOf", version=__version__, lifespan=lifespan,

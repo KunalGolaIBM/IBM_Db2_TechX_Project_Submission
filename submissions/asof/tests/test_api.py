@@ -296,3 +296,10 @@ def test_a_check_without_a_model_gets_a_plain_503_not_a_server_error():
     app = create_app(Settings(_env_file=None, llm_provider="openrouter", openrouter_api_key=""))
     r = TestClient(app).post("/api/gate", json=OK)
     assert r.status_code == 503 and "OPENROUTER_API_KEY" in r.json()["detail"] and "/" not in r.json()["detail"].split(".env")[0]
+
+
+def test_the_app_starts_and_serves_policy_screens_without_a_model():
+    app = create_app(Settings(_env_file=None, llm_provider="openrouter", openrouter_api_key=""))
+    with TestClient(app) as c:  # runs the lifespan, as uvicorn does
+        assert c.get("/healthz").json()["llm_ready"] is False
+        assert c.post("/api/gate", json=OK).status_code == 503
