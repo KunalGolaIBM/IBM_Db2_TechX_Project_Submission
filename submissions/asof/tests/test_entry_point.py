@@ -43,7 +43,8 @@ def test_the_dbt_project_takes_credentials_only_from_the_environment():
 
     root = Path(__file__).resolve().parents[1] / "dbt"
     profile = (root / "profiles.yml").read_text()
-    assert "env_var('DB2_PASSWORD')" in profile and not re.search(r"password:\s*[^\s\"{]", profile)
+    assert "env_var('ASOF_MART_PASSWORD')" in profile and "env_var('ASOF_MART_USER', 'asofmart')" in profile
+    assert not re.search(r"password:\s*[^\s\"{]", profile)
     pins = [line for line in (root / "requirements-dbt.txt").read_text().splitlines() if line and not line.startswith("#")]
     assert pins and all("==" in line for line in pins)
     models = sorted(p.stem for p in (root / "models").rglob("*.sql"))

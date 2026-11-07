@@ -35,7 +35,7 @@ from .config import DEFAULT_ENV_FILE, PROJECT_ROOT, ConfigError, Settings, get_s
 from .embeddings import get_embeddings
 from .retriever import clauses_as_of
 
-GENERATED_KEYS = ("ASOF_APP_PASSWORD", "ASOF_EDITOR_PASSWORD", "ASOF_ANALYST_PASSWORD")
+GENERATED_KEYS = ("ASOF_APP_PASSWORD", "ASOF_EDITOR_PASSWORD", "ASOF_ANALYST_PASSWORD", "ASOF_MART_PASSWORD")
 DOCKER_TIMEOUT_S = 60
 
 
@@ -143,7 +143,7 @@ def _docker(args: list[str], stdin: str | None = None) -> subprocess.CompletedPr
 
 
 def ensure_os_users(settings: Settings) -> bool:
-    """Create the three users inside the Db2 container and set their passwords from .env.
+    """Create the four users inside the Db2 container and set their passwords from .env.
 
     Passwords go to chpasswd on stdin, so they never show up in a process list.
     Returns False (with instructions) when the container cannot be reached.
@@ -160,7 +160,8 @@ def ensure_os_users(settings: Settings) -> bool:
         say(f"  DB2_CONTAINER '{settings.db2_container}' is not running; using the Db2 container '{container}' instead")
     for user, secret in ((settings.asof_app_user, settings.asof_app_password),
                          (settings.asof_editor_user, settings.asof_editor_password),
-                         (settings.asof_analyst_user, settings.asof_analyst_password)):
+                         (settings.asof_analyst_user, settings.asof_analyst_password),
+                         (settings.asof_mart_user, settings.asof_mart_password)):
         if _docker(["exec", container, "id", "-u", user]).returncode != 0:
             made = _docker(["exec", container, "useradd", "--no-create-home", "--shell", "/sbin/nologin", user])
             if made.returncode != 0:
@@ -169,8 +170,8 @@ def ensure_os_users(settings: Settings) -> bool:
         pw = _docker(["exec", "-i", container, "chpasswd"], stdin=f"{user}:{secret.get_secret_value()}\n")  # type: ignore[union-attr]
         if pw.returncode != 0:
             raise SetupError(f"setting the password for {user} failed: {pw.stderr.strip()}")
-    say(f"  OS users {settings.asof_app_user}, {settings.asof_editor_user} and {settings.asof_analyst_user} ready "
-        "(passwords from .env)")
+    say(f"  OS users {settings.asof_app_user}, {settings.asof_editor_user}, {settings.asof_analyst_user} and "
+        f"{settings.asof_mart_user} ready (passwords from .env)")
     return True
 
 
@@ -260,12 +261,28 @@ def collect_statistics(settings: Settings, target: str) -> str:
         return f"WARNING: statistics not collected ({exc.sqlstate}); Db2's automatic statistics will catch up"
 
 
+def _must_refuse(conn, user: str, statements: tuple[tuple[str, str], ...]) -> str:
+    """Run each literal statement as `user` and require Db2 to refuse it; return what was refused, with states."""
+    refused = []
+    for label, sql in statements:
+        try:
+            db.execute(conn, sql)
+            conn.rollback()
+            raise SetupError(f"{user} was allowed to run: {sql}")
+        except db.DatabaseError as exc:
+            conn.rollback()
+            if exc.sqlstate not in ("42501", "42502"):
+                raise SetupError(f"unexpected error for {user} running {sql}: {exc}") from None
+            refused.append(f"{label} ({exc.sqlstate})")
+    return ", ".join(refused)
+
+
 def verify_least_privilege(settings: Settings, target: str) -> None:
-    """Prove the runtime user can read policy as of a date and cannot write anything."""
+    """Prove the runtime user can read policy as of a date and cannot write anything, and that dbt's user cannot
+    change the ledger or build next to it."""
     embeddings = get_embeddings(settings.embedding_model)
     # The same claim, checked for two travel dates, must reach different versions of BRV-002.
     vec = embeddings.embed_query("You can apply for the bereavement fare retroactively after you travel.")
-    refused: list[str] = []
     with db.connection(settings, "app") as conn:
         for day, want in ((date(2026, 3, 10), "v1"), (date(2026, 6, 2), "v2")):
             found = {c.clause_id: c.version_label for c in clauses_as_of(conn, vec, day, "AURELIA-CSP", k=3, schema=target)}
@@ -273,19 +290,17 @@ def verify_least_privilege(settings: Settings, target: str) -> None:
                 raise SetupError(f"as-of retrieval for {day} returned {found}, expected BRV-002 {want}")
         say(f"  as {settings.asof_app_user}: 2026-03-10 -> BRV-002 v1, 2026-06-02 -> BRV-002 v2")
         db.use_schema(conn, target)  # the statements below are literals with unqualified names
-        for label, sql in (("UPDATE", "UPDATE POLICY_CLAUSE SET CLAUSE_TEXT = 'x'"),
-                           ("DELETE", "DELETE FROM ANSWER_LEDGER"),
-                           ("CREATE TABLE", "CREATE TABLE SHOULD_NOT_EXIST (X INT)")):
-            try:
-                db.execute(conn, sql)
-                conn.rollback()
-                raise SetupError(f"{settings.asof_app_user} was allowed to run: {sql}")
-            except db.DatabaseError as exc:
-                conn.rollback()
-                if exc.sqlstate not in ("42501", "42502"):
-                    raise SetupError(f"unexpected error for {sql}: {exc}") from None
-                refused.append(f"{label} ({exc.sqlstate})")
-        say(f"  as {settings.asof_app_user}: refused " + ", ".join(refused))
+        refused = _must_refuse(conn, settings.asof_app_user, (
+            ("UPDATE", "UPDATE POLICY_CLAUSE SET CLAUSE_TEXT = 'x'"),
+            ("DELETE", "DELETE FROM ANSWER_LEDGER"),
+            ("CREATE TABLE", "CREATE TABLE SHOULD_NOT_EXIST (X INT)")))
+        say(f"  as {settings.asof_app_user}: refused {refused}")
+    with db.connection(settings, "mart") as conn:
+        db.use_schema(conn, target)
+        refused = _must_refuse(conn, settings.asof_mart_user, (
+            ("DELETE on the ledger", "DELETE FROM ANSWER_LEDGER"),
+            ("CREATE TABLE beside the ledger", "CREATE TABLE SHOULD_NOT_EXIST (X INT)")))
+        say(f"  as {settings.asof_mart_user}: refused {refused}")
 
 
 def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False) -> None:
@@ -295,7 +310,8 @@ def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False
     say(f"  generated {', '.join(filled)} and saved to .env (not shown)" if filled else "  already set in .env")
     get_settings.cache_clear()
     settings = get_settings()
-    settings.require("db2_admin_password", "asof_app_password", "asof_editor_password", "asof_analyst_password")
+    settings.require("db2_admin_password", "asof_app_password", "asof_editor_password", "asof_analyst_password",
+                     "asof_mart_password")
     say(f"  chain-head anchor key: {ensure_anchor_key(settings)}")
     get_settings.cache_clear()
     settings = get_settings()
@@ -337,9 +353,9 @@ def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False
 
         say("7/9 Least-privilege grants")
         g = schema.apply_grants(conn, settings.asof_app_user, settings.asof_editor_user, target,
-                                analyst_user=settings.asof_analyst_user)
+                                analyst_user=settings.asof_analyst_user, mart_user=settings.asof_mart_user)
         say(f"  {g['applied']} grants and revokes applied"
-            + (f"; PUBLIC already lacked {g['already_revoked']} of the 4 default database privileges"
+            + (f"; PUBLIC already lacked {g['already_revoked']} of the 5 defaults setup revokes"
                if g["already_revoked"] else ""))
 
     say("8/9 Optimizer statistics (RUNSTATS)")

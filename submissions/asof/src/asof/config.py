@@ -67,6 +67,10 @@ class Settings(BaseSettings):
     # Read-only analyst ("Ask the ledger"): SELECT on the audit views only, ledger text masked.
     asof_analyst_user: str = Field("asofread", pattern=r"^[a-z][a-z0-9]{0,7}$")
     asof_analyst_password: SecretStr | None = None
+    # dbt's own user (the optional analytics marts): SELECT on the four tables the marts read, and tables only in
+    # its own schema, <schema>_MART. Setup creates it and generates the password.
+    asof_mart_user: str = Field("asofmart", pattern=r"^[a-z][a-z0-9]{0,7}$")
+    asof_mart_password: SecretStr | None = None
     # Policy changes over HTTP: localhost only, unless this token is set, in which case the
     # X-AsOf-Editor-Token header must match it.
     asof_editor_token: SecretStr | None = None

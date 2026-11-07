@@ -100,22 +100,35 @@ def install(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> dict[str, i
 
 
 DEFAULT_ANALYST_USER = "asofread"
+DEFAULT_MART_USER = "asofmart"
 ALREADY_GRANTED = ("42502", "01548")  # role already granted (error on some levels, warning on others)
 
 
+def mart_schema(schema: str = db.SCHEMA) -> str:
+    """Where dbt builds its marts: ASOF_MART for ASOF, and a schema of its own for every other target."""
+    return validate_schema(f"{schema}_MART")
+
+
 def apply_grants(conn: ibm_db_dbi.Connection, app_user: str, editor_user: str, schema: str = db.SCHEMA,
-                 analyst_user: str = DEFAULT_ANALYST_USER) -> dict[str, int]:
-    """Revoke PUBLIC defaults, create the two roles if missing, and grant each user exactly what it needs."""
-    for user in (app_user, editor_user, analyst_user):
+                 analyst_user: str = DEFAULT_ANALYST_USER, mart_user: str = DEFAULT_MART_USER) -> dict[str, int]:
+    """Revoke PUBLIC defaults, create the two roles and the mart schema if missing, and grant each user exactly what
+    it needs."""
+    for user in (app_user, editor_user, analyst_user, mart_user):
         if not USER_RE.match(user):
             raise ValueError(f"invalid Db2 user name {user!r}")
     names = {"ASOF_APP_USER": db.ident(app_user), "ASOF_EDITOR_USER": db.ident(editor_user),
-             "ASOF_ANALYST_USER": db.ident(analyst_user)}
+             "ASOF_ANALYST_USER": db.ident(analyst_user), "ASOF_MART_USER": db.ident(mart_user)}
+    mart = mart_schema(schema)
+    if not db.query(conn, "SELECT 1 FROM SYSCAT.SCHEMATA WHERE SCHEMANAME = ?", (mart,)):
+        db.execute(conn, f"CREATE SCHEMA {db.ident(mart)}")  # owned by the owner; dbt gets CREATEIN on it below
+        conn.commit()
     counts = {"applied": 0, "already_revoked": 0}
     for st in load_statements(schema, grants=True):
         if st.kind == "role" and db.query(conn, "SELECT 1 FROM SYSCAT.ROLES WHERE ROLENAME = ?", (st.name,)):
             continue
-        sql = re.sub(r"\bASOF_(APP|EDITOR|ANALYST)_USER\b", lambda m: names[m.group(0)], st.sql)
+        sql = re.sub(r"\bASOF_(APP|EDITOR|ANALYST|MART)_USER\b", lambda m: names[m.group(0)], st.sql)
+        sql = re.sub(r"\bASOF_MART_SCHEMA\b", db.ident(mart), sql)
+        sql = re.sub(r"\bASOF_TARGET_SCHEMA\b", db.ident(validate_schema(schema)), sql)
         try:
             db.execute(conn, sql)
             conn.commit()
@@ -199,6 +212,21 @@ def drop(conn: ibm_db_dbi.Connection, schema: str) -> None:
     if q("SELECT SCHEMANAME FROM SYSCAT.SCHEMATA WHERE SCHEMANAME = ?"):
         db.execute(conn, f"DROP SCHEMA {db.ident(schema)} RESTRICT")
         conn.commit()
+    _drop_marts(conn, schema)
+
+
+def _drop_marts(conn: ibm_db_dbi.Connection, schema: str) -> None:
+    """The dbt marts are derived from the ledger, so they go with it."""
+    mart = mart_schema(schema)
+    q = lambda sql: [r[0].strip() for r in db.query(conn, sql, (mart,))]  # noqa: E731
+    if not q("SELECT SCHEMANAME FROM SYSCAT.SCHEMATA WHERE SCHEMANAME = ?"):
+        return
+    for name in q("SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'V'"):
+        db.execute(conn, f"DROP VIEW {db.ident(mart)}.{db.ident(name)}")
+    for name in q("SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'T'"):
+        db.execute(conn, f"DROP TABLE {db.ident(mart)}.{db.ident(name)}")
+    db.execute(conn, f"DROP SCHEMA {db.ident(mart)} RESTRICT")
+    conn.commit()
 
 
 # Children first. The drafted corrections go too: each cites the ledger row of its check (FK_SUGGESTION_CHECK).

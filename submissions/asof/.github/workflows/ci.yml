@@ -119,7 +119,7 @@ jobs:
         run: |
           python -m venv /tmp/dbt-venv
           /tmp/dbt-venv/bin/pip install -q -r dbt/requirements-dbt.txt
-          export DB2_PASSWORD="$(sed -n 's/^DB2_PASSWORD=//p' .env)"
+          export ASOF_MART_PASSWORD="$(sed -n 's/^ASOF_MART_PASSWORD=//p' .env)"
           cd dbt && DBT_PROFILES_DIR=. DBT_SEND_ANONYMOUS_USAGE_STATS=False /tmp/dbt-venv/bin/dbt build
       - name: Airflow nightly audit DAG (own virtualenv; tests, then a real run against Db2)
         run: |

@@ -27,7 +27,7 @@
 **The reviewer's quick path** (from this folder; Python 3.12 and Docker; no API key needed). About 90 seconds when Db2 is already running and the Python packages are cached; a first Db2 start adds 2 to 25 minutes, depending on the machine, and the first install downloads PyTorch:
 
 ```bash
-./quickstart.sh --no-serve          # Db2, schema, three least-privilege users, seed data; no key: replay mode
+./quickstart.sh --no-serve          # Db2, schema, four least-privilege users, seed data; no key: replay mode
 source .venv/bin/activate
 python src/main.py &                # the UI and API on http://127.0.0.1:8000
 python scripts/smoke_check.py       # a real check through the API: the Moffatt question, recorded in the Db2 ledger
@@ -139,8 +139,9 @@ What AsOf adds is time, inside the customer's own system of record: effective-da
   - the runtime user `asofapp`: `CONNECT`; `SELECT` on the policy, ledger, help-centre, suggestion, FAQ and API-user tables and four analytics views; `EXECUTE` on `APPEND_LEDGER`, `VERIFY_CHAIN`, `CHANGE_IMPACT` and `ADD_SUGGESTION`; role `ASOF_TEXT_READER`. No `INSERT`, `UPDATE`, `DELETE` or DDL anywhere.
   - the policy editor `asofedit`: `CONNECT`; `SELECT` on the policy and suggestion tables; `EXECUTE` on `APPLY_POLICY_CHANGE`, `CHANGE_IMPACT` and `DECIDE_SUGGESTION`; `USAGE` on the `EMBEDDER` model, so the change procedure can embed a new version.
   - the analyst `asofread`: nothing but role `ASOF_ANALYST`, which holds `CONNECT` and `SELECT` on six audit views.
+  - dbt's user `asofmart` (optional marts): `CONNECT`; `SELECT` on the four tables the marts read; `CREATETAB`, confined to its own schema `ASOF_MART`, the only one where it holds `CREATEIN`.
 
-  The procedures run with the owner's authority. Setup revokes Db2's default `PUBLIC` database privileges.
+  The procedures run with the owner's authority. Setup revokes Db2's default `PUBLIC` database privileges, and `PUBLIC`'s `CREATEIN` on the AsOf schema, which Db2 grants on a schema it creates implicitly.
 - **Row and column access control (RCAC):** column masks on `ANSWER_LEDGER` return `[masked]` for the customer's question, the draft, the released answer and the verdict JSON to every user without the role `ASOF_TEXT_READER`. Only the runtime user holds it; the owner, the policy editor and the analyst all read `[masked]`. The ledger triggers are `SECURED`, as Db2 requires on a table with column access control, and `VERIFY_CHAIN` refuses to run for a user who would only see masked text (SQLSTATE 75030) instead of reporting a false break.
 
 ### Ask the ledger: questions for auditors, as a read-only Db2 user
@@ -343,7 +344,7 @@ cp .env.example .env     # set DB2_PASSWORD, and OPENROUTER_API_KEY (or LLM_PROV
 python -m asof.setup
 ```
 
-`python -m asof.setup` is safe to re-run. It generates passwords for the three least-privilege users into `.env` (never printed), creates them as OS users inside the Db2 container (Db2 authenticates against the operating system), installs the schema, seeds the fictional data, applies grants, and finishes by proving, as the runtime user, that the as-of query works and that writes are refused. If it cannot reach any Db2 container (for example a remote Db2), it prints the exact `useradd` commands to run on the Db2 host.
+`python -m asof.setup` is safe to re-run. It generates passwords for the four least-privilege users into `.env` (never printed), creates them as OS users inside the Db2 container (Db2 authenticates against the operating system), installs the schema, seeds the fictional data, applies grants, and finishes by proving, as the runtime user, that the as-of query works and that writes are refused, and, as dbt's user, that it can neither delete ledger rows nor create a table in `ASOF`. If it cannot reach any Db2 container (for example a remote Db2), it prints the exact `useradd` commands to run on the Db2 host.
 
 Which paths were run end to end: C on Apple Silicon (dev machine and a fresh clone), and B in CI on every push: x86-64 Linux, IBM's unmodified `icr.io/db2_community/db2:12.1.5.0`, the `docker run` command above, then setup, the Db2 feature checks, the full test suite and the access plans (each run takes Db2 about 60 to 90 s to be ready, then runs everything listed, plus the dbt marts and a real Airflow DAG run). A third CI job runs `./quickstart.sh --no-serve` on a bare runner, which takes path C from nothing. A creates the same `db2server` container and `testdb` database as B.
 
@@ -375,7 +376,7 @@ All settings are environment variables, read from `.env` ([.env.example](.env.ex
 | `DB2_CONNECT_TIMEOUT_S`, `DB2_LOCK_TIMEOUT_S` | Seconds to wait for a connection (15) and, for the runtime users, for a row lock (10, `SET CURRENT LOCK TIMEOUT`) before failing closed |
 | `DB2_SSL`, `DB2_SSL_SERVER_CERT` | TLS to Db2 (default off). `DB2_SSL=true` adds `SECURITY=SSL`; the certificate file, if set, is pinned with `SSLServerCertificate`. See [TLS to Db2](#tls-to-db2). |
 | `DB2_CONTAINER` | Container in which setup creates the three OS users (default `asof-db2`; `db2server` and any single running Db2 container are found automatically) |
-| `ASOF_APP_PASSWORD`, `ASOF_EDITOR_PASSWORD`, `ASOF_ANALYST_PASSWORD` | Least-privilege users (runtime, policy editor, read-only analyst); generated by setup if empty |
+| `ASOF_APP_PASSWORD`, `ASOF_EDITOR_PASSWORD`, `ASOF_ANALYST_PASSWORD`, `ASOF_MART_PASSWORD` | Least-privilege users (runtime, policy editor, read-only analyst, dbt's mart builder); generated by setup if empty. The `*_USER` names next to them default to `asofapp`, `asofedit`, `asofread` and `asofmart`. |
 | `ASOF_AUTH` | `local` (default): the server binds to localhost and the optional shared tokens below apply. `users`: every `/api/` request needs a personal token holding the route's role; see [Per-user API access](#per-user-api-access). |
 | `ASOF_API_TOKEN` | Optional. When set, every `/api/` request needs `Authorization: Bearer <token>` (16 to 256 printable ASCII characters, constant-time compare); `/healthz` and the UI stay open, and the UI asks for the token once per tab. Empty: the server relies on binding to localhost. |
 | `ASOF_ANCHOR_KEY_FILE`, `ASOF_ANCHOR_DIR` | Chain-head anchors. The HMAC key is not in `.env` (which holds the owner's password): setup generates it in its own file outside the project folder, `~/.config/asof/anchor.key` by default (`$XDG_CONFIG_HOME/asof/anchor.key` if set), mode 600 in a 700 directory, never printed. A key file inside the project folder, or readable by other users, is refused. `ASOF_ANCHOR_KEY` overrides the file from the environment, for containers and CI. `ASOF_ANCHOR_DIR` is where the anchor logs go (default `var/anchors`, gitignored; for real use, storage the database owner cannot write). No key: anchoring is off and `/healthz` says so. |
@@ -422,7 +423,7 @@ DB2_SSL=true
 DB2_SSL_SERVER_CERT=/path/to/the/downloaded/certificate.crt
 ```
 
-The certificate path must exist and may not contain `;`, `=` or braces, so it cannot add a keyword to the connection string. AsOf logs a warning when it connects to a non-local Db2 without TLS. On Db2 on Cloud there is no container to create OS users in: create `asofapp`, `asofedit` and `asofread` in the service console, put their passwords in `.env`, and setup skips the container step with a message.
+The certificate path must exist and may not contain `;`, `=` or braces, so it cannot add a keyword to the connection string. AsOf logs a warning when it connects to a non-local Db2 without TLS. On Db2 on Cloud there is no container to create OS users in: create `asofapp`, `asofedit`, `asofread` and `asofmart` in the service console, put their passwords in `.env`, and setup skips the container step with a message.
 
 To try TLS on one machine, turn it on in the local container (self-signed certificate, port 50001; plain TCP on 50000 keeps working):
 

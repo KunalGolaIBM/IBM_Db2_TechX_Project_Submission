@@ -151,3 +151,38 @@ GRANT SELECT ON TABLE ASOF.V_CLAIM_OUTCOMES_BY_AREA TO ROLE ASOF_ANALYST
 -- grant: ANALYST_SELECT_V_RULE_OVERRIDES
 GRANT SELECT ON TABLE ASOF.V_RULE_OVERRIDES TO ROLE ASOF_ANALYST
 @
+
+-- dbt's user (the optional analytics marts): reads the four tables the marts are built from, never the
+-- masked ledger text (the masks would return '[masked]' anyway), and creates tables and views only in its
+-- own schema, ASOF_MART for ASOF. CREATETAB is the database authority to create tables at all; the schema
+-- privileges confine it to ASOF_MART, since PUBLIC no longer holds IMPLICIT_SCHEMA. A schema Db2 created
+-- implicitly (owner SYSIBM) gives PUBLIC CREATEIN, which would let this user create tables next to the
+-- ledger, so that goes first.
+-- grant: REVOKE_PUBLIC_CREATEIN
+REVOKE CREATEIN ON SCHEMA ASOF_TARGET_SCHEMA FROM PUBLIC
+@
+-- grant: MART_CONNECT
+GRANT CONNECT ON DATABASE TO USER ASOF_MART_USER
+@
+-- grant: MART_CREATETAB
+GRANT CREATETAB ON DATABASE TO USER ASOF_MART_USER
+@
+-- grant: MART_SCHEMA
+GRANT CREATEIN, ALTERIN, DROPIN ON SCHEMA ASOF_MART_SCHEMA TO USER ASOF_MART_USER
+@
+-- The marts' tables go where every AsOf table goes (00_storage.sql).
+-- grant: MART_TABLESPACE
+GRANT USE OF TABLESPACE ASOF_TS32K TO USER ASOF_MART_USER
+@
+-- grant: MART_SELECT_ANSWER_LEDGER
+GRANT SELECT ON TABLE ASOF.ANSWER_LEDGER TO USER ASOF_MART_USER
+@
+-- grant: MART_SELECT_CLAIM_CITATION
+GRANT SELECT ON TABLE ASOF.CLAIM_CITATION TO USER ASOF_MART_USER
+@
+-- grant: MART_SELECT_POLICY_CLAUSE
+GRANT SELECT ON TABLE ASOF.POLICY_CLAUSE TO USER ASOF_MART_USER
+@
+-- grant: MART_SELECT_POLICY_CLAUSE_HIST
+GRANT SELECT ON TABLE ASOF.POLICY_CLAUSE_HIST TO USER ASOF_MART_USER
+@
