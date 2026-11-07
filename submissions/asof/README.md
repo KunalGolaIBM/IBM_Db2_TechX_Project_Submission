@@ -145,7 +145,7 @@ A refused or failed query gets one retry with the reason. The answer is written 
 - **Dedicated storage.** Every AsOf table lives in its own 32K-page tablespace with its own bufferpool ([00_storage.sql](src/asof/sql/00_storage.sql)). The page size is required, not a preference: a vector index key on `VECTOR(384, FLOAT32)` is 1,536 bytes, and Db2 rejects it in a 4K tablespace (SQL0614N). A ledger row with up to 30 KB of verdict JSON also fits in one page.
 - **Native vector index.** `CREATE VECTOR INDEX IX_CLAUSE_EMBEDDING ON POLICY_CLAUSE (EMBEDDING) WITH DISTANCE COSINE` (catalog type `VANN`, new in Db2 12.1.5). It coexists with system versioning and `FOR PORTION OF BUSINESS_TIME` updates (tested).
 - **Compression.** The append-only ledger tables use adaptive row compression (`COMPRESS YES ADAPTIVE`).
-- **Pooled runtime connections.** On the dev machine an `ibm_db` connection takes about 0.2 s to open and 0.9 s to close, against 0.5 ms for a query on an open one, and a check used three. The API, demo and eval now share a small pool ([db.py](src/asof/db.py) `ConnectionPool`: exclusive checkout, rollback on return, a ping before reuse, so a connection broken by a Db2 restart is replaced, not handed out). `python -m asof.connbench` replays the fixed-draft scenarios both ways in a scratch schema: **3,290 ms per check with a fresh connection per use, 57 ms with the pool** (median of 12, same decisions). Latencies in the evaluation tables were measured before the pool and include that overhead.
+- **Pooled runtime connections.** On the dev machine an `ibm_db` connection takes about 0.2 s to open and 0.9 s to close, against 0.5 ms for a query on an open one, and a check used three. The API, demo and eval now share a small pool ([db.py](src/asof/db.py) `ConnectionPool`: exclusive checkout, rollback on return, a ping before reuse, so a connection broken by a Db2 restart is replaced, not handed out). `python -m asof.connbench` replays the fixed-draft scenarios both ways in a scratch schema: **3,290 ms per check with a fresh connection per use, 57 ms with the pool** (median of 12, same decisions). The latest evaluation run (`397c920`) uses the pool; latencies from earlier runs include that overhead.
 - **Statistics.** Setup runs `RUNSTATS` on the five tables the hot queries read, so plans are costed from real counts.
 - **Access plans.** `python -m asof.explain` explains the exact statements the app runs, with bound values, under `SET CURRENT EXPLAIN MODE = EXPLAIN`, and writes IBM `db2exfmt` plans to [docs/explain/](docs/explain/README.md). Each plan file keeps Db2's Plan Details, so the predicates and start and stop keys are visible. The as-of query reads `IX_CLAUSE_DOC_ASOF (DOC_ID, BUS_START, BUS_END)`, an index added for it after an audit found the first plan scanning the whole primary-key index: `DOC_ID = ?` is the start and stop key, the `BUS_START <= ?` that Db2 derives from `FOR BUSINESS_TIME AS OF` is a stop key, and `? < BUS_END` is applied inside the index scan. Then it fetches the rows in force and sorts them by distance (estimated cost 7.07 timerons, from 17.36). The filtered ledger page has its own index, `IX_LEDGER_DECISION (DECISION, LEDGER_ID)`, but with a handful of rows the optimizer still prefers to read the primary key newest first and filter, which is the cheaper plan at that size.
 
@@ -481,20 +481,32 @@ Integration tests install everything into a throwaway `ASOF_TEST` schema, connec
 
 `python -m asof.eval --split test` runs the gate on 40 labelled cases and writes [docs/eval_results.md](docs/eval_results.md), with every per-case decision recorded in [docs/eval/](docs/eval/). The 40 test cases are new scenarios, none used while building or choosing the model. They were committed (`81b5b69`) before the first run and are frozen: a unit test pins their SHA-256 and the runner refuses to run them if it changes. The 20-case dev split holds the scenarios used while debugging. Each case is labelled with the decision it should get and the clause version its key claim must be checked against.
 
-**Latest runs, on the current check** (commit `36291ab`, OpenRouter `google/gemini-3.1-flash-lite`, every frozen split, run Fri 6 Nov after the coverage-check, lock-timeout and schema changes):
+**Latest runs, on the current check** (commit `397c920`, OpenRouter `google/gemini-3.1-flash-lite`, every frozen split, run Sat 7 Nov with the connection pool in place):
 
 | Frozen split | Cases | False allow | False block | Safe | Ideal | Citation | p50 |
 |---|---|---|---|---|---|---|---|
-| Airline `test` | 40 | **0 of 26** | 1 of 14 | 97.5% | 90.0% | 94.3% | 6.7 s |
-| Bank `bank-test` (not blind, see below) | 26 | **0 of 16** | 0 of 10 | 100% | 84.6% | 87.5% | 5.4 s |
-| `extractor-test`: drafts that try to talk the claim extractor out of a wrong claim | 10 | **0 of 8** | 0 of 2 | 100% | 80.0% | 90.0% | 6.6 s |
-| Bank `bank-test2`: 22 bank cases, blind on their first run (pinned in `bcce2f3`) | 22 | **0 of 14** | 0 of 8 | 100% | 95.5% | 95.0% | 5.5 s |
+| Airline `test` | 40 | **0 of 26** | 2 of 14 | 95.0% | 92.5% | 97.1% | 4.6 s |
+| Bank `bank-test` (not blind, see below) | 26 | **0 of 16** | 0 of 10 | 100% | 88.5% | 87.5% | 4.1 s |
+| `extractor-test`: drafts that try to talk the claim extractor out of a wrong claim | 10 | **0 of 8** | 0 of 2 | 100% | 90.0% | 100% | 5.5 s |
+| Bank `bank-test2`: 22 bank cases, blind on their first run (pinned in `bcce2f3`) | 22 | **0 of 14** | 0 of 8 | 100% | 95.5% | 100% | 4.4 s |
 
-**The run before** (`a7bece1`; `bcce2f3` for `bank-test2`, its one blind run), same cases: airline 0 of 26, 1 of 14, 92.5% ideal; `bank-test` 0 of 16, 0 of 10, 88.5%; `extractor-test` 0 of 8, 0 of 2, 90.0%; `bank-test2` 0 of 14, 0 of 8, 95.5%. Across both runs, none of the 64 wrong drafts was released.
+**The same cases across runs** (false allow, false block, ideal decisions; every run's per-case results are in [docs/eval/](docs/eval/)):
 
-What moved, and why: no frozen draft contains a "-free" word, so the coverage-check fix in `d87a552` cannot have changed any of them. The differences are the hosted model's run-to-run variance (it is called without a fixed temperature), and every one is a swap between two safe outcomes, corrected or escalated: for example BT06 was escalated before and corrected now, BT10 and BT12 the other way round. The one false block changed case: before it was T24 (a correct $75 change fee called contradicted, then rewritten); now it is T06, where the extractor dropped "after the first 24 hours" from its claim and the deterministic coverage check held the draft because no claim stated the 24 hours. That is the backstop working as designed, at the cost of one correct answer going to a person. Every other miss in these runs is an escalation instead of a correction, mostly because the judge paraphrased instead of quoting and the verbatim-quote rule downgraded the claim.
+| Frozen split | `a7bece1` (`bcce2f3` for `bank-test2`, its blind run) | `36291ab`, after the audit fixes | `397c920`, after the review fixes |
+|---|---|---|---|
+| Airline `test` | 0 of 26, 1 of 14, 92.5% | 0 of 26, 1 of 14, 90.0% | 0 of 26, 2 of 14, 92.5% |
+| Bank `bank-test` | 0 of 16, 0 of 10, 88.5% | 0 of 16, 0 of 10, 84.6% | 0 of 16, 0 of 10, 88.5% |
+| `extractor-test` | 0 of 8, 0 of 2, 90.0% | 0 of 8, 0 of 2, 80.0% | 0 of 8, 0 of 2, 90.0% |
+| Bank `bank-test2` | 0 of 14, 0 of 8, 95.5% | 0 of 14, 0 of 8, 95.5% | 0 of 14, 0 of 8, 95.5% |
 
-The first bank split stopped being blind when its run found a gap in MTF-003's rule data that was then fixed, so `bank-test2`'s first run is the bank number to quote: written after the fix, pinned before its run. The investigating agent ran in 14 of 40 airline checks and 6 of 26 bank checks and added clauses the first retrieval missed in 9 and 4 of them (the per-case records keep `agent_tool_calls` and `agent_new_clauses`).
+In three runs, none of the 64 wrong drafts was released. What moved, and why:
+
+- **T06, held in both runs since the coverage check's fix:** the extractor dropped "after the first 24 hours" from its claim, so no claim stated the 24 hours and the deterministic coverage check held a correct draft. Twice in a row looks systematic for this draft, not chance. It is a frozen test case, so the check was not tuned for it; it stays a reported false block, the cost of the backstop.
+- **T33** is the familiar one from earlier runs: the extractor turned the customer's own situation into a policy claim that no clause covers. **T24** (the earlier false block, a correct $75 fee called contradicted) passed in both later runs.
+- **Everything else** is the hosted model's run-to-run variance (it is called without a fixed temperature) swapping between two safe outcomes, corrected or escalated, mostly when the judge paraphrased instead of quoting and the verbatim-quote rule downgraded the claim. No frozen draft contains a "-free" word, so the coverage-check fix in `d87a552` cannot have changed any of them.
+- **Latency:** the airline split's median fell from 6.7 s to 4.6 s per answer, and the whole split from 78 s to 46 s. Most of that is the connection pool added in between (it removed about 3 s of connection setup and teardown per check on this machine); the hosted model's own latency also varies between runs.
+
+The first bank split stopped being blind when its run found a gap in MTF-003's rule data that was then fixed, so `bank-test2`'s first run is the bank number to quote: written after the fix, pinned before its run. In the latest run the investigating agent ran in 10 of 40 airline checks and 8 of 26 bank checks and added clauses the first retrieval missed in 5 and 6 of them (the per-case records keep `agent_tool_calls` and `agent_new_clauses`).
 
 **History of the airline split** (40 cases: 14 correct drafts, 26 wrong for their date). Same cases in every run; every run's per-case results are in [docs/eval/](docs/eval/):
 
