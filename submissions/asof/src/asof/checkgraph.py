@@ -220,7 +220,11 @@ def build(gate: Gate, req: GateRequest, deadline_at: float | None = None):
         return {"rewrite": text, "text": text, "pass_no": 2}
 
     def fail_closed(state: CheckState) -> dict[str, Any]:
-        return {"decision": "ESCALATED", "reason": state.get("reason") or "ERROR_FAIL_CLOSED", "final": HOLDING_REPLY}
+        out: dict[str, Any] = {"decision": "ESCALATED", "reason": state.get("reason") or "ERROR_FAIL_CLOSED",
+                               "final": HOLDING_REPLY}
+        if state["pass_no"] == 1 and not state.get("first"):  # keep what was judged before the failure as evidence
+            out["first"] = state.get("outcomes", [])
+        return out
 
     # ---- routing: deterministic, from state only ----------------------------------------------
     def after(step: str):
@@ -248,7 +252,7 @@ def build(gate: Gate, req: GateRequest, deadline_at: float | None = None):
     g.add_conditional_edges("retrieve", after("retrieve"), ["judge", "fail_closed"])
     g.add_conditional_edges("judge", after("judge"), ["investigate", "decide", "fail_closed"])
     g.add_conditional_edges("investigate", after("investigate"), ["decide", "fail_closed"])
-    g.add_conditional_edges("decide", after("decide"), ["rewrite", END])
+    g.add_conditional_edges("decide", after("decide"), ["rewrite", "fail_closed", END])
     g.add_conditional_edges("rewrite", after("rewrite"), ["extract", "fail_closed"])
     g.add_edge("fail_closed", END)
     return g.compile()

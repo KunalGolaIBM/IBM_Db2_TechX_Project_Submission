@@ -206,3 +206,28 @@ def test_a_check_whose_budget_has_run_out_fails_closed_before_any_model_call(wor
     assert (result.decision, result.reason_code, result.final_answer) == ("ESCALATED", "ERROR_FAIL_CLOSED", HOLDING_REPLY)
     assert "budget ran out" in (result.error or "") and llm.calls == []
     assert len(world["entries"]) == 1  # still recorded in the ledger
+
+
+def test_a_budget_that_runs_out_mid_check_fails_closed_and_keeps_what_was_judged(world, monkeypatch):
+    """Found by review: the budget can end while the judge runs; the next node must still route to fail_closed."""
+    import time as _time
+
+    slow = Gate.judge
+
+    def judge_then_overrun(self, *args, **kwargs):
+        out = slow(self, *args, **kwargs)
+        _time.sleep(0.3)
+        return out
+
+    monkeypatch.setattr(Gate, "judge", judge_then_overrun)
+    llm = ScriptedLLM(extract=[claims((DOGS, "pets", "eligibility"))],
+                      judge=[judge(verdict(1, "SUPPORTED", "PET-001", PET_QUOTE))])
+    g = Gate(llm, ZeroEmbeddings(), connect=FakeConn, deadline_s=0.2, investigate=False)
+    world["searches"].clear()
+    monkeypatch.setattr(gate_mod, "clauses_as_of", lambda conn, vec, as_of, doc_id, k, system_time=None,
+                        schema="ASOF": [clause("PET-001", as_of)])
+    result = g.check(GateRequest("Can my dog come in the cabin?", DOGS, ON, "AURELIA-CSP", "api"))
+    assert (result.decision, result.reason_code) == ("ESCALATED", "ERROR_FAIL_CLOSED")
+    assert "budget ran out" in (result.error or "")  # not a KeyError from the graph
+    assert [c.verdict for c in result.claims] == ["SUPPORTED"]  # the judged claim is kept as evidence
+    assert len(world["entries"][-1].verdicts["claims"]) == 1
