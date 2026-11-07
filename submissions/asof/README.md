@@ -459,7 +459,7 @@ python scripts/audit_deps.py             # pip-audit over all 108 pinned package
 
 `requirements.txt` lists the 23 direct dependencies; `requirements.lock` pins all 108 packages, transitive ones included, at the versions tested. It is used as a pip constraints file, so Linux and Windows still get their platform-only packages. `python scripts/lock_deps.py` regenerates it, and a test fails if the two files disagree. Last audit (6 Nov 2026): no known vulnerabilities.
 
-Checked from a fresh clone of the standalone repo on Fri 6 Nov 2026 (commit `945019e`): `./quickstart.sh --no-serve` against an already running Db2 took 92 s with a warm pip cache, and the clone's own app then answered (52 clauses in two documents, chain verified, the bank's "$35" overdraft draft corrected to $25 from OVD-001 v2). CI's quick-start job does the same from a bare runner, starting Db2 through Compose.
+Checked from a fresh clone of the standalone repo on Sat 7 Nov 2026 (commit `14749b4`), with only the Db2 passwords in `.env` and no API key: `./quickstart.sh --no-serve` against an already running Db2 took 88 s with a warm pip cache and switched to replay mode; `scripts/smoke_check.py` against the clone's own app passed (the March Moffatt answer corrected from BRV-002 v1, an unrecorded draft held, the receipt intact, the chain verified), and `pytest -q` in the clone ran 472 tests with 7 opt-in skips. CI's quick-start job does the same from a bare runner, starting Db2 through Compose.
 
 Integration tests install everything into a throwaway `ASOF_TEST` schema, connect as the real least-privilege user, and drop the schema afterwards. They skip automatically when Db2 is unreachable. They cover:
 
