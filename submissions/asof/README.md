@@ -485,13 +485,14 @@ python -m asof.setup --reset-ledger      # asks you to type "reset"; add --yes t
 **Drop it into an existing LangChain app**
 
 ```python
+from langchain_core.runnables import RunnablePassthrough
 from asof import as_runnable
 
-chain = assistant_prompt | llm | StrOutputParser() | as_runnable(as_of=booking_date)
-answer = chain.invoke({"question": "Can I get a bereavement fare after I travel?"})
+chain = RunnablePassthrough.assign(draft=assistant_prompt | llm | StrOutputParser()) | as_runnable()
+answer = chain.invoke({"question": "Can I get a bereavement fare after I travel?", "as_of": booking_date})
 ```
 
-The runnable takes the assistant's draft and returns the checked answer, and every decision lands in the Db2 ledger.
+One chain serves every customer: the assistant's draft joins the input, and the question and the customer's date travel with each call (the check tests the draft's premises against the question). A call with no date is refused, never guessed. The runnable returns the checked answer, and every decision lands in the Db2 ledger.
 
 ---
 

@@ -44,3 +44,24 @@ def test_bad_input_is_refused_before_any_check(kwargs, draft):
     with pytest.raises(ValidationError):
         step.invoke(draft)
     assert gate.requests == []
+
+
+def test_one_chain_serves_every_customer_with_their_own_question_and_date():
+    """The assistant's draft joins the input dict; the question and the date travel with each call."""
+    from langchain_core.runnables import RunnablePassthrough
+
+    gate = RecordingGate()
+    assistant = RunnableLambda(lambda d: f"Answer to: {d['question']}")
+    chain = RunnablePassthrough.assign(draft=assistant) | as_runnable(gate=gate)
+    chain.invoke({"question": "Bereavement fare after travel?", "as_of": date(2026, 3, 10)})
+    chain.invoke({"question": "Bereavement fare after travel?", "as_of": "2026-06-02"})
+    assert [(r.as_of, r.question, r.draft_answer) for r in gate.requests] == [
+        (date(2026, 3, 10), "Bereavement fare after travel?", "Answer to: Bereavement fare after travel?"),
+        (date(2026, 6, 2), "Bereavement fare after travel?", "Answer to: Bereavement fare after travel?")]
+
+
+def test_a_call_without_any_date_is_refused_not_guessed():
+    gate = RecordingGate()
+    with pytest.raises(ValueError, match="customer's date"):
+        as_runnable(gate=gate).invoke({"draft": "Bags are $40.", "question": "Bag fee?"})
+    assert gate.requests == []
