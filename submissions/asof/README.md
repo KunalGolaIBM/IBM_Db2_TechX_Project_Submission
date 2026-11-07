@@ -419,7 +419,7 @@ The runnable takes the assistant's draft and returns the checked answer, and eve
 ## Testing & Verification
 
 ```bash
-pytest -q                                 # 418 tests: 411 run, 7 need an opt-in flag (live LLM, remote endpoint)
+pytest -q                                 # 419 tests: 412 run, 7 need an opt-in flag (live LLM, remote endpoint)
 pytest -q -m "not db2"                    # unit tests only, no database needed
 ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 4 live tests against the configured LLM (spends API calls)
 
