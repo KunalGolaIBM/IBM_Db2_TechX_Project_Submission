@@ -179,3 +179,11 @@ def test_a_rewrite_must_state_only_checked_numbers_to_be_released(world, monkeyp
     result = check(llm, draft=wrong, investigate=False)
     assert (result.decision, result.reason_code) == ("ESCALATED", "CORRECTION_FAILED")
     assert result.unchecked == ["12 kg"]
+
+
+def test_idioms_with_free_are_not_prices_but_a_free_bag_still_is():
+    from asof.gate import unchecked_details
+
+    chit_chat = "We have no details on that. Please feel free to call our toll-free number."
+    assert unchecked_details(chit_chat, []) == []
+    assert unchecked_details("Your first checked bag is free.", []) == ["free"]

@@ -113,6 +113,11 @@ class GateResult:
     unchecked: list[str] = field(default_factory=list)  # details in the draft that no extracted claim stated
 
 
+# "Feel free to call" and "toll-free" are not prices. Found when the demo assistant's "feel free to reach
+# out" was held as an unchecked $0; the rule checker still reads "the bag is free" as $0.
+NOT_A_PRICE = re.compile(r"\bfeel free\b|\b[A-Za-z]+-free\b", re.I)
+
+
 def unchecked_details(text: str, claim_texts: Sequence[str], context: str = "") -> list[str]:
     """Amounts, percentages, durations and counts in `text` that no extracted claim states.
 
@@ -120,6 +125,7 @@ def unchecked_details(text: str, claim_texts: Sequence[str], context: str = "") 
     the deterministic backstop: every number the draft states must reach the claim check, unless it
     only repeats the customer's own question (`context`), such as "your flight was 4 hours late".
     """
+    text = NOT_A_PRICE.sub(" ", text)
     stated = [f for c in claim_texts for q in extract_quantities(c) for f in q.forms]
     stated += [f for q in extract_quantities(context) for f in q.forms]
     return [q.text for q in extract_quantities(text)
