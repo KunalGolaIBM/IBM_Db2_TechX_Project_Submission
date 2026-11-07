@@ -1,0 +1,3 @@
+# Optional but recommended: real semantic embeddings (all-MiniLM-L6-v2, 384-dim, runs locally on CPU).
+# Without it IssueSmith falls back to deterministic hash embeddings automatically.
+sentence-transformers>=3.0

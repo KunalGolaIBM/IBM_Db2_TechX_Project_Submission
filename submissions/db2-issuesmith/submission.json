@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "IssueSmith - Agentic Db2 Issue Assistant",
+    "slug": "db2-issuesmith",
+    "short_description": "LangGraph agents turn messy IBM Db2 Developer Extension logs into sanitised, evidence-based GitHub issues, using IBM Db2 for vector search (VECTOR, DB2VS, stored procedure), incident memory, analytics views and a full agent audit trail.",
+    "category": "AI Agents / RAG / Developer Tooling",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": ""
+  },
+  "team": {
+    "name": "AloneDev",
+    "members": [
+      {
+        "name": "Shiva Gupta",
+        "github": "shivagupta114",
+        "email": "guptashiva7060@gmail.com",
+        "role": "Full-stack / AI / Db2 Developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1 (Docker / Podman)",
+    "connector": "ibm_db / ibm_db_dbi, LangChain langchain-db2 (DB2VS)",
+    "features_used": [
+      "Relational Tables with constraints and foreign keys",
+      "VECTOR(384, FLOAT32) columns and VECTOR_DISTANCE (COSINE)",
+      "LangChain DB2VS vector store (BSON metadata)",
+      "SQL PL stored procedure with result set",
+      "Indexing",
+      "Analytics views",
+      "JSON_VALUE over CLOB JSON",
+      "SELECT FROM FINAL TABLE (INSERT)",
+      "Agent audit trail"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "SQL"],
+    "frameworks": ["LangGraph", "LangChain", "Streamlit"],
+    "ai_models": ["IBM Granite (Ollama / watsonx.ai)", "sentence-transformers all-MiniLM-L6-v2", "Any OpenAI-compatible model (optional)"]
+  }
+}
