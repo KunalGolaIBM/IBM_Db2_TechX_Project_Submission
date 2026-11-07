@@ -112,3 +112,21 @@ def test_verify_reports_a_broken_chain_even_when_anchors_match(log, ledger_now):
     log.append(1, H1)
     ledger_now["hashes"], ledger_now["chain"] = {1: H1}, "BROKEN"
     assert anchor.verify(log, None, "ASOF_X").status == "CHAIN_BROKEN"
+
+
+def test_every_gate_that_writes_the_real_ledger_anchors_it(tmp_path, monkeypatch):
+    """The API, the demo and the LangChain runnable write to schema ASOF, so they anchor; the eval, replay
+    recording and benchmark write to scratch schemas that are wiped on every run, so they do not."""
+    import inspect
+
+    from asof import demo, integration
+
+    monkeypatch.setenv("ASOF_ANCHOR_KEY_FILE", str(tmp_path / "anchor.key"))
+    (tmp_path / "anchor.key").write_text("k" * 43)
+    (tmp_path / "anchor.key").chmod(0o600)
+    monkeypatch.setattr(integration, "build_llm", lambda settings: None)
+    monkeypatch.setattr(integration, "get_embeddings", lambda name: None)
+    s = Settings(_env_file=None, asof_app_password="x" * 20, asof_anchor_key_file=str(tmp_path / "anchor.key"))
+    gate = integration.build_gate(s)
+    assert gate.anchors is not None and gate.anchors.path.name == "anchors-ASOF.jsonl"
+    assert "anchors=AnchorLog.from_settings(settings)" in inspect.getsource(demo.main)

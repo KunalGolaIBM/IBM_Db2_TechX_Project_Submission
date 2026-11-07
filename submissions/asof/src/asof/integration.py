@@ -17,6 +17,7 @@ from typing import Any, Literal
 from langchain_core.runnables import RunnableLambda
 
 from . import db
+from .anchor import AnchorLog
 from .config import Settings, get_settings
 from .embeddings import get_embeddings
 from .gate import Gate, GateRequest, GateResult
@@ -27,7 +28,8 @@ def build_gate(settings: Settings | None = None, schema: str = db.SCHEMA) -> Gat
     settings = settings or get_settings()
     settings.require("asof_app_password")
     return Gate(build_llm(settings), get_embeddings(settings.embedding_model),
-                connect=db.ConnectionPool(settings, "app").connect, schema=schema)
+                connect=db.ConnectionPool(settings, "app").connect, schema=schema,
+                anchors=AnchorLog.from_settings(settings, schema))  # every write to a ledger is anchored
 
 
 def as_runnable(*, as_of: date, doc_id: str = "AURELIA-CSP", question: str = "", channel: str = "api",

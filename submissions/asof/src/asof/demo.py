@@ -15,6 +15,7 @@ import sys
 from datetime import date
 
 from . import db
+from .anchor import AnchorLog
 from .assistant import DemoAssistant
 from .config import ConfigError, get_settings
 from .embeddings import get_embeddings
@@ -47,7 +48,8 @@ def main() -> int:
         llm = build_llm(settings)
         emb = get_embeddings(settings.embedding_model)
         connect = db.ConnectionPool(settings, "app").connect
-        assistant, gate = DemoAssistant(llm, emb, connect), Gate(llm, emb, connect)
+        # The demo writes to the real ledger, so its decisions are anchored like the API's.
+        assistant, gate = DemoAssistant(llm, emb, connect), Gate(llm, emb, connect, anchors=AnchorLog.from_settings(settings))
         for question, as_of in SCENARIOS:
             draft = assistant.answer(question)
             r = gate.check(GateRequest(question, draft.text, as_of, "AURELIA-CSP", "demo"))
