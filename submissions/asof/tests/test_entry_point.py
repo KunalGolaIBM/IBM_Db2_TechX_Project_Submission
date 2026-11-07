@@ -32,7 +32,7 @@ def test_the_cookbook_recipe_is_complete_and_holds_no_secrets():
     assert code and all(c.get("outputs") for c in code)  # committed as executed, every code cell ran
     text = (recipe / "temporal-search.ipynb").read_text(encoding="utf-8")
     assert "DB_PASSWORD" in text and not re.search(r"PWD=|password\s*=\s*['\"]", text, re.I)
-    assert "/Users/" not in text and "/tmp/" not in text  # no local paths in the committed outputs
+    assert not re.search(r"/(?:Users|home|private|tmp|var/folders)/", text)  # no local paths in the outputs
     assert all(re.match(r"^[A-Za-z0-9_.\-]+==\S+$", line) for line in
                (recipe / "requirements.txt").read_text().splitlines() if line and not line.startswith("#"))
     assert "DB_PASSWORD=your-db2-password" in (recipe / ".env.example").read_text()
