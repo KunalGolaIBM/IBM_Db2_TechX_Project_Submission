@@ -78,7 +78,10 @@ def render_report(results: list[dict]) -> str:
              "", "The airline test split (40 cases) was committed in `81b5b69` before any run and is frozen: the runner "
              "refuses to run it if its SHA-256 changes. The dev split (20 cases) holds the scenarios used while building. "
              "The bank splits (Fernhollow Bank, the second fictional domain) work the same way: `bank-test` (26 cases) "
-             "was committed and pinned before its first run, and `bank-dev` (12 cases) is for iterating.", ""]
+             "was committed and pinned before its first run, and `bank-dev` (12 cases) is for iterating. That first bank run "
+             "found a gap in clause MTF-003's rule data, which was then fixed, so bank runs after `ffdf2af` are not blind. "
+             "`extractor-test` (10 cases, both documents) holds drafts that try to talk the claim extractor out of a wrong "
+             "claim; it was pinned before its first run at `4f694a6`.", ""]
     order = {"test": 0, "bank-test": 1, "extractor-test": 2, "dev": 3, "bank-dev": 4}
     providers = {"openrouter": 0, "openai_compatible": 1, "ollama": 2}  # the default provider first
     newest_first = sorted(results, key=lambda r: r["started_at"], reverse=True)

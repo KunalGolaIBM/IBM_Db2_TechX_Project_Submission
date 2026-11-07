@@ -9,6 +9,8 @@
 
 > **Fictional data.** "Aurelia Air", "Fernhollow Bank" and every policy, fee schedule, FAQ and help-centre answer in this repository are invented for the demo. The airline is modelled on the kind of policy at issue in *Moffatt v. Air Canada*; neither describes a real company.
 
+**Try it:** `./quickstart.sh` from this folder (Python 3.12 and Docker; details in [Setup & Installation](#setup--installation)).
+
 ![AsOf checking the Moffatt scenario for a March booking: the demo assistant promised a retroactive bereavement refund, AsOf found it contradicted by clause BRV-002 v1 and released a corrected, cited answer](docs/screenshots/01-playground-moffatt-march.png)
 
 ---
@@ -68,6 +70,10 @@ Given an AI-generated answer and the date that matters (booking or travel date, 
 | Claim pipeline, deterministic rule checks, redaction, hash-chained ledger, API, LangChain runnable | Done, tested (incl. live LLM) |
 | Policy changes (`APPLY_POLICY_CHANGE`), change impact (`CHANGE_IMPACT`), JSON_TABLE views, web UI | Done, tested, checked in a browser |
 | Evaluation: frozen 40-case test split | Done for OpenRouter and Ollama; results below |
+| LangGraph check graph with an investigating agent; change-impact agent drafting corrections for approval | Done, tested, evaluated |
+| Second domain (a bank fee schedule) with its own frozen split; extractor-injection split | Done, evaluated |
+| Row and column access control; "Ask the ledger" (SQL chain as a read-only analyst, SQLGlot gate) | Done, tested against Db2 |
+| dbt marts, Airflow nightly audit, Langflow component, cookbook recipe, one-command quick start | Done, each run for real and in CI |
 
 ### How AsOf compares
 
@@ -100,10 +106,15 @@ What AsOf adds is time, inside the customer's own system of record: effective-da
   ORDER BY DIST FETCH EXACT FIRST ? ROWS ONLY
   ```
 
-  Every value is a bound parameter, and so is the schema: the connection runs `SET CURRENT SCHEMA = ?` once, so no SQL text is ever assembled at runtime.
+  Every value is a bound parameter, and so is the schema: the connection runs `SET CURRENT SCHEMA = ?` once, so the app's own request-time SQL is fixed text with `?` markers. Three exceptions are deliberate and named: setup DDL names objects only through the validating `db.ident`; `langchain-db2`'s `DB2VS` builds its own SQL for the demo assistant's FAQ store; and "Ask the ledger" runs SQL that SQLGlot regenerated from a parse tree it checked (see below).
 
   For replay, `FOR SYSTEM_TIME AS OF ?` goes in front of `FOR BUSINESS_TIME AS OF ?`: the same question, answered from what the database held at an earlier moment. Each citation also records the clause row's `SYS_START`, so replay can show the exact row a decision used, what the database held for that customer date at decision time, and what applies today.
-- **Least privilege:** the runtime user `asofapp` holds `SELECT` on the tables it reads and `EXECUTE` on `APPEND_LEDGER` and `VERIFY_CHAIN`, nothing else: no `INSERT`, `UPDATE`, `DELETE` or DDL anywhere. The procedures run with the owner's authority. The analyst `asofread` (role `ASOF_ANALYST`) can only `SELECT` six audit views. Setup revokes Db2's default `PUBLIC` database privileges.
+- **Least privilege** (as `SYSCAT.TABAUTH`, `ROUTINEAUTH` and `ROLEAUTH` show it after setup):
+  - the runtime user `asofapp`: `CONNECT`; `SELECT` on the policy, ledger, help-centre, suggestion and FAQ tables and four analytics views; `EXECUTE` on `APPEND_LEDGER`, `VERIFY_CHAIN`, `CHANGE_IMPACT` and `ADD_SUGGESTION`; role `ASOF_TEXT_READER`. No `INSERT`, `UPDATE`, `DELETE` or DDL anywhere.
+  - the policy editor `asofedit`: `CONNECT`; `SELECT` on the policy and suggestion tables; `EXECUTE` on `APPLY_POLICY_CHANGE`, `CHANGE_IMPACT` and `DECIDE_SUGGESTION`; `USAGE` on the `EMBEDDER` model, so the change procedure can embed a new version.
+  - the analyst `asofread`: nothing but role `ASOF_ANALYST`, which holds `CONNECT` and `SELECT` on six audit views.
+
+  The procedures run with the owner's authority. Setup revokes Db2's default `PUBLIC` database privileges.
 - **Row and column access control (RCAC):** column masks on `ANSWER_LEDGER` return `[masked]` for the customer's question, the draft, the released answer and the verdict JSON to every user without the role `ASOF_TEXT_READER`. Only the runtime user holds it; the owner, the policy editor and the analyst all read `[masked]`. The ledger triggers are `SECURED`, as Db2 requires on a table with column access control, and `VERIFY_CHAIN` refuses to run for a user who would only see masked text (SQLSTATE 75030) instead of reporting a false break.
 
 ### Ask the ledger: questions for auditors, as a read-only Db2 user
@@ -137,7 +148,7 @@ A refused or failed query gets one retry with the reason. The answer is written 
 
 What this means for AsOf, and two things we learned about Db2 along the way:
 
-- **The 38-clause demo uses exact search, on purpose.** At this size the optimizer would scan anyway, and AsOf's query says `FETCH EXACT`: with an index present, Db2's default is approximate.
+- **The demo corpus (64 clause versions across the two documents) uses exact search, on purpose.** At this size the optimizer would scan anyway, and AsOf's query says `FETCH EXACT`: with an index present, Db2's default is approximate.
 - **Approximate search and a date filter do not mix well.** At 100,000 rows, adding the business-time filter cut recall to 0.73: the approximate top 10 is taken before the filter, so nearer vectors from versions not in force push out the right ones. For a check whose whole point is the version in force on a date, a missed version is a wrong answer, so the temporal query stays exact. A policy library large enough to need the index would keep an exact search over the clauses in force (one `IXSCAN` on the business-time key, as the plan shows) and use approximate search only for unfiltered discovery.
 - **Keyword search was tested and left out.** Db2 Text Search could add a keyword leg to retrieval, but vector search alone already retrieves the right clause version for 18 of 18 dev cases at the 4 clauses per claim the check uses, and enabling Text Search failed in IBM's own container setup here (details in [architecture.md](architecture.md#design-decisions)).
 - **The index is only used when `k` is a constant.** With `FETCH APPROX FIRST ? ROWS ONLY` (a parameter marker), Db2 12.1.5 never chose the index at any size; with `FETCH APPROX FIRST 10 ROWS ONLY` it did from 20,000 rows. An optimizer guideline (`<IXSCAN TABLE='...' SEARCH_LIST_SIZE='100'/>`) also forces it.
@@ -177,7 +188,7 @@ Things worth knowing:
 
 ### A nightly audit with Apache Airflow
 
-[airflow/](airflow/) holds a DAG for the IBM Db2 Airflow provider that runs as the runtime user every night: `VERIFY_CHAIN` (a broken chain fails the run), then the clause versions recorded in the last 24 hours (system time), then `CHANGE_IMPACT` for each of them as a mapped task, then a report. Against the dev database after the demo's pet fee change it found `PET-001` and its impact (1 historically valid answer, 1 stale, 1 help-centre answer to review); on a quiet night it reports zeros. Its tests, including that a broken chain fails the run, and a real `airflow dags test` run in CI.
+[airflow/](airflow/) holds a DAG for the IBM Db2 Airflow provider that runs as the runtime user every night: `VERIFY_CHAIN` (a broken chain fails the run), then the clause versions recorded in the last 24 hours (system time), then `CHANGE_IMPACT` for each of them as a mapped task, then a report. Against the dev database after the demo's pet fee change it found `PET-001` and its impact (1 historically valid answer, 1 stale, 1 help-centre answer to review); on a quiet night it reports zeros. CI runs its tests (including that a broken chain fails the run) and a real `airflow dags test`.
 
 ### Check that your Db2 supports all of it: one command
 
@@ -230,16 +241,18 @@ PASS  Column mask (RCAC) with SECURED triggers: owner reads '[masked]'; predicat
 ## Tech Stack
 
 - **Backend / Core:** Python 3.12, FastAPI, Pydantic v2, pydantic-settings
-- **Database:** IBM Db2 12.1.5.0 Community Edition (Docker), `ibm_db`
-- **AI:** LangChain, `langchain-db2`, `langchain-openai` (OpenRouter), `langchain-ollama`, `sentence-transformers/all-MiniLM-L6-v2` (local, CPU)
+- **Database:** IBM Db2 12.1.5.0 Community Edition (Docker); `ibm_db` / `ibm_db_dbi`; SQLAlchemy with IBM's `ibm_db_sa`
+- **AI:** LangGraph (the check graph and the change-impact agent), LangChain (structured output, a custom retriever, `SQLDatabase`), `langchain-db2` (`DB2VS`), `langchain-openai` (OpenRouter), `langchain-ollama`, `sentence-transformers/all-MiniLM-L6-v2` (local, CPU), Db2's `CREATE EXTERNAL MODEL` / `TO_EMBEDDING`
+- **SQL safety:** SQLGlot with IBM's `db2-sqlglot-dialect`
 - **Frontend / UI:** plain HTML, CSS and JavaScript served by FastAPI (no framework, no build step), under a strict Content Security Policy
-- **Libraries & Tools:** Docker Compose, pytest
+- **Data and orchestration (each in its own environment):** dbt with IBM's `ibm-dbt-db2`, Apache Airflow with the IBM Db2 provider, Langflow's executor `lfx` with IBM's `lfx-ibm`
+- **Libraries & Tools:** Docker Compose, pytest, ruff, pip-audit, GitHub Actions
 
 ---
 
 ## Prerequisites
 
-- **Python 3.11 or 3.12**
+- **Python 3.12** (the tested version; the lock file pins for it). On macOS: `brew install python@3.12`, then use `python3.12`.
 - **Docker** (Docker Desktop, Docker Engine, or Colima on macOS) and about 10 GB of free disk for the Db2 image and data
 - **IBM Db2 12.1.2 or later** (12.1.5 tested), from any of the three paths below
 - **An LLM:** an [OpenRouter](https://openrouter.ai/keys) API key, or [Ollama](https://ollama.com) with `ollama pull qwen2.5:7b-instruct` (no key)
@@ -260,7 +273,8 @@ It creates `.venv` with the locked dependencies, creates `.env`, uses the Db2 al
 **1. Python and configuration** (from `submissions/asof`):
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
+python3.12 -m venv .venv && source .venv/bin/activate
+# Linux only, first: pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu   (else pip pulls CUDA)
 pip install -r requirements.txt -c requirements.lock && pip install -e . --no-deps
 cp .env.example .env     # set DB2_PASSWORD, and OPENROUTER_API_KEY (or LLM_PROVIDER=ollama)
 ```
@@ -292,7 +306,7 @@ python -m asof.setup
 
 `python -m asof.setup` is safe to re-run. It generates passwords for the three least-privilege users into `.env` (never printed), creates them as OS users inside the Db2 container (Db2 authenticates against the operating system), installs the schema, seeds the fictional data, applies grants, and finishes by proving, as the runtime user, that the as-of query works and that writes are refused. If it cannot reach any Db2 container (for example a remote Db2), it prints the exact `useradd` commands to run on the Db2 host.
 
-Which paths were run end to end: C on Apple Silicon (dev machine and a fresh clone), and B in CI on every push: x86-64 Linux, IBM's unmodified `icr.io/db2_community/db2:12.1.5.0`, the `docker run` command above, then setup, the Db2 feature checks, the full test suite and the access plans (first green run: Db2 ready in 75 s, 287 tests passed). A creates the same `db2server` container and `testdb` database as B.
+Which paths were run end to end: C on Apple Silicon (dev machine and a fresh clone), and B in CI on every push: x86-64 Linux, IBM's unmodified `icr.io/db2_community/db2:12.1.5.0`, the `docker run` command above, then setup, the Db2 feature checks, the full test suite and the access plans (each run takes Db2 about 60 to 90 s to be ready, then runs everything listed, plus the dbt marts and a real Airflow DAG run). A third CI job runs `./quickstart.sh --no-serve` on a bare runner, which takes path C from nothing. A creates the same `db2server` container and `testdb` database as B.
 
 ### Why AsOf builds its own Db2 image
 
@@ -340,7 +354,7 @@ All settings are environment variables, read from `.env` ([.env.example](.env.ex
 python -m asof.db2check      # verify the Db2 features AsOf needs (owner account)
 python -m asof.setup         # schema, users, seed data, grants, self-check
 python src/main.py           # web UI at http://127.0.0.1:8000, API docs at /docs (same as python -m asof.api)
-python -m asof.demo          # optional: record seven sample decisions so every screen has history
+python -m asof.demo          # optional: record ten sample decisions (seven airline, three bank) so every screen has history
 ```
 
 ### The Moffatt scenario through the API
@@ -405,17 +419,17 @@ The runnable takes the assistant's draft and returns the checked answer, and eve
 ## Testing & Verification
 
 ```bash
-pytest -q                                 # 215 tests: unit tests plus Db2 integration tests
+pytest -q                                 # 418 tests: 411 run, 7 need an opt-in flag (live LLM, remote endpoint)
 pytest -q -m "not db2"                    # unit tests only, no database needed
 ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 4 live tests against the configured LLM (spends API calls)
 
 pip install -r requirements-dev.txt
-python scripts/audit_deps.py             # pip-audit over all 105 pinned packages; exit 1 on any known vulnerability
+python scripts/audit_deps.py             # pip-audit over all 108 pinned packages; exit 1 on any known vulnerability
 ```
 
-`requirements.txt` lists the 18 direct dependencies; `requirements.lock` pins all 105 packages, transitive ones included, at the versions tested. It is used as a pip constraints file, so Linux and Windows still get their platform-only packages. `python scripts/lock_deps.py` regenerates it, and a test fails if the two files disagree. Last audit (6 Nov 2026): no known vulnerabilities.
+`requirements.txt` lists the 23 direct dependencies; `requirements.lock` pins all 108 packages, transitive ones included, at the versions tested. It is used as a pip constraints file, so Linux and Windows still get their platform-only packages. `python scripts/lock_deps.py` regenerates it, and a test fails if the two files disagree. Last audit (6 Nov 2026): no known vulnerabilities.
 
-Checked from a fresh clone on Fri 6 Nov 2026, following only this README, on a Mac that already had the pip cache and the Db2 image layers: install 68 s, Db2 healthy in 167 s, setup 30 s, 215 passed, 26/26 Db2 checks, and the Moffatt example above returned CORRECTED (BRV-002 v1) for March and PASS (BRV-002 v2) for June.
+Checked from a fresh clone of the standalone repo on Fri 6 Nov 2026 (commit `5fcf90d`): `./quickstart.sh --no-serve` against an already running Db2 took 92 s with a warm pip cache, and the clone's own app then answered (52 clauses in two documents, chain verified, the bank's "$35" overdraft draft corrected to $25 from OVD-001 v2). CI's quick-start job does the same from a bare runner, starting Db2 through Compose.
 
 Integration tests install everything into a throwaway `ASOF_TEST` schema, connect as the real least-privilege user, and drop the schema afterwards. They skip automatically when Db2 is unreachable. They cover:
 
@@ -437,9 +451,19 @@ Integration tests install everything into a throwaway `ASOF_TEST` schema, connec
 
 `python -m asof.eval --split test` runs the gate on 40 labelled cases and writes [docs/eval_results.md](docs/eval_results.md), with every per-case decision recorded in [docs/eval/](docs/eval/). The 40 test cases are new scenarios, none used while building or choosing the model. They were committed (`81b5b69`) before the first run and are frozen: a unit test pins their SHA-256 and the runner refuses to run them if it changes. The 20-case dev split holds the scenarios used while debugging. Each case is labelled with the decision it should get and the clause version its key claim must be checked against.
 
-**Frozen test split** (40 cases: 14 correct drafts, 26 wrong for their date). Same cases and prompts in every run; every run's per-case results are in [docs/eval/](docs/eval/):
+**Latest runs, on the current check** (commit `4f694a6`, OpenRouter `google/gemini-3.1-flash-lite`, every frozen split):
 
-| Metric | OpenRouter `gemini-3.1-flash-lite`, before the agent (`eefc50c`) | OpenRouter, LangGraph check with the agent, run 1 (`1ccd7a1`) | OpenRouter, agent, run 2 (`861a650`) | Ollama `qwen2.5:7b-instruct`, local, no key, before the agent (`a4207d8`) |
+| Frozen split | Cases | False allow | False block | Safe | Ideal | Citation | p50 |
+|---|---|---|---|---|---|---|---|
+| Airline `test` | 40 | **0 of 26** | 1 of 14 | 97.5% | 92.5% | 94.3% | 4.6 s |
+| Bank `bank-test` (second run; not blind, see below) | 26 | **0 of 16** | 0 of 10 | 100% | 88.5% | 87.5% | 4.3 s |
+| `extractor-test`: drafts that try to talk the claim extractor out of a wrong claim (first run) | 10 | **0 of 8** | 0 of 2 | 100% | 90.0% | 100% | 4.8 s |
+
+The investigating agent ran in 10 of 40 airline checks and 7 of 26 bank checks and added clauses the first retrieval missed in 6 of each (the per-case records now keep `agent_tool_calls` and `agent_new_clauses`). The new deterministic coverage check, which holds a draft whose amounts or durations no extracted claim states, held none of these 76 drafts: it cost no false blocks. Every miss in these runs was an escalation instead of a correction (the judge's quote failed the verbatim rule, so the claim fell back to "not covered") except T24, where the judge called a correct $75 change fee contradicted, the rule check disagreed, and the rewrite was released.
+
+**History of the airline split** (40 cases: 14 correct drafts, 26 wrong for their date). Same cases in every run; every run's per-case results are in [docs/eval/](docs/eval/):
+
+| Metric | OpenRouter `gemini-3.1-flash-lite`, before the agent (`eefc50c`) | OpenRouter, LangGraph check with the agent, run 1 (`1ccd7a1`) | OpenRouter, agent, run 2 (`861a650`) | Ollama `qwen2.5:7b-instruct`, local, no key, before the agent (run at `4b103fd`, recorded in `a4207d8`) |
 |---|---|---|---|---|
 | **False-allow rate** (wrong drafts released as PASS) | **0.0%** (0 of 26) | **0.0%** (0 of 26) | **0.0%** (0 of 26) | **3.8%** (1 of 26) |
 | False-block rate (correct drafts rewritten or escalated) | 7.1% (1 of 14) | 7.1% (1 of 14) | 7.1% (1 of 14) | 21.4% (3 of 14) |
@@ -493,7 +517,7 @@ The two misses were both escalations instead of corrections. **BT10:** the judge
 ## Screenshots & Demo
 
 - **Slides:** [docs/slides/AsOf_slides.pdf](docs/slides/AsOf_slides.pdf), a 13-slide overview (problem, workflow, architecture, Db2 integration, evaluation, impact).
-- **Live demo:** not hosted, on purpose. AsOf's core flows write to Db2 (the ledger, policy changes) and call a paid LLM; hosting them publicly would mean exposing a writable database or a funded API key, and a read-only snapshot would hide exactly the flows that matter. The setup above runs it locally in four commands.
+- **Live demo:** not hosted, on purpose. AsOf's core flows write to Db2 (the ledger, policy changes) and call a paid LLM; hosting them publicly would mean exposing a writable database or a funded API key, and a read-only snapshot would hide exactly the flows that matter. The setup above runs it locally with one command (`./quickstart.sh`).
 - **Screenshots:** all taken from a clean demo run (`python -m asof.setup --reset --yes`, then `python -m asof.demo`). The playground is at the top of this README.
 
 ### The web UI, screen by screen
@@ -522,7 +546,12 @@ The two misses were both escalations instead of corrections. **BT10:** the judge
   - All data is synthetic, and the demo is single-node.
   - Under emulation on Apple Silicon, Db2 is slower, and local Ollama models are slow while Db2 is busy.
   - On Apple Silicon under Rosetta, Db2 *fenced* routines crash, so AsOf deliberately uses only built-in SQL, triggers and SQL PL, which run inside the engine.
-- **Next Steps:** see [Build status](#build-status).
+- **Next Steps** (the residual risks in [architecture.md](architecture.md#threat-model), in the order they matter):
+  - Anchor the chain head outside Db2 (published or signed periodically), so an owner who rewrites every hash is caught too.
+  - Per-user authentication in front of the API instead of one shared token, and Db2 audit (`db2audit`) on the history table.
+  - Fewer safe-but-slow escalations: when the judge is right but its quote is not verbatim, a contradiction the rule check confirms could still go to a rewrite. To be measured on a new frozen split, not tuned on the existing ones.
+  - Redact names and free-text identifiers, not only emails, phone, card and booking numbers.
+  - A larger policy library, where the investigating agent has more to find than in a 64-version corpus.
 
 ### Contributing back to IBM's Db2 AI Cookbook
 
