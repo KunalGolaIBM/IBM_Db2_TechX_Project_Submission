@@ -9,7 +9,7 @@
 
 > **Fictional data.** "Aurelia Air", "Fernhollow Bank" and every policy, fee schedule, FAQ and help-centre answer in this repository are invented for the demo. The airline is modelled on the kind of policy at issue in *Moffatt v. Air Canada*; neither describes a real company.
 
-**Five minutes for a reviewer** (from this folder; Python 3.12 and Docker; no API key needed):
+**The reviewer's quick path** (from this folder; Python 3.12 and Docker; no API key needed). About 90 seconds when Db2 is already running and the Python packages are cached; a first Db2 start adds 2 to 25 minutes, depending on the machine, and the first install downloads PyTorch:
 
 ```bash
 ./quickstart.sh --no-serve          # Db2, schema, three least-privilege users, seed data; no key: replay mode
@@ -84,7 +84,7 @@ Given an AI-generated answer and the date that matters (booking or travel date, 
 | LangGraph check graph with an investigating agent; change-impact agent drafting corrections for approval | Done, tested, evaluated |
 | Second domain (a bank fee schedule) with its own frozen split; extractor-injection split | Done, evaluated |
 | Row and column access control; "Ask the ledger" (SQL chain as a read-only analyst, SQLGlot gate) | Done, tested against Db2 |
-| dbt marts, Airflow nightly audit, Langflow component, cookbook recipe, one-command quick start | Done, each run for real and in CI |
+| dbt marts, Airflow nightly audit, Langflow component, cookbook recipe, one-command quick start | Done and run for real: dbt and Airflow against Db2 in CI; the quick start in CI from a bare runner; the Langflow flow against a live AsOf on 6 Nov (its component tests run in CI); the cookbook notebook against Db2 on 7 Nov |
 
 ### How AsOf compares
 
@@ -121,7 +121,7 @@ What AsOf adds is time, inside the customer's own system of record: effective-da
 
   For replay, `FOR SYSTEM_TIME AS OF ?` goes in front of `FOR BUSINESS_TIME AS OF ?`: the same question, answered from what the database held at an earlier moment. Each citation also records the clause row's `SYS_START`, so replay can show the exact row a decision used, what the database held for that customer date at decision time, and what applies today.
 - **Least privilege** (as `SYSCAT.TABAUTH`, `ROUTINEAUTH` and `ROLEAUTH` show it after setup):
-  - the runtime user `asofapp`: `CONNECT`; `SELECT` on the policy, ledger, help-centre, suggestion and FAQ tables and four analytics views; `EXECUTE` on `APPEND_LEDGER`, `VERIFY_CHAIN`, `CHANGE_IMPACT` and `ADD_SUGGESTION`; role `ASOF_TEXT_READER`. No `INSERT`, `UPDATE`, `DELETE` or DDL anywhere.
+  - the runtime user `asofapp`: `CONNECT`; `SELECT` on the policy, ledger, help-centre, suggestion, FAQ and API-user tables and four analytics views; `EXECUTE` on `APPEND_LEDGER`, `VERIFY_CHAIN`, `CHANGE_IMPACT` and `ADD_SUGGESTION`; role `ASOF_TEXT_READER`. No `INSERT`, `UPDATE`, `DELETE` or DDL anywhere.
   - the policy editor `asofedit`: `CONNECT`; `SELECT` on the policy and suggestion tables; `EXECUTE` on `APPLY_POLICY_CHANGE`, `CHANGE_IMPACT` and `DECIDE_SUGGESTION`; `USAGE` on the `EMBEDDER` model, so the change procedure can embed a new version.
   - the analyst `asofread`: nothing but role `ASOF_ANALYST`, which holds `CONNECT` and `SELECT` on six audit views.
 
@@ -145,7 +145,7 @@ A refused or failed query gets one retry with the reason. The answer is written 
 - **Dedicated storage.** Every AsOf table lives in its own 32K-page tablespace with its own bufferpool ([00_storage.sql](src/asof/sql/00_storage.sql)). The page size is required, not a preference: a vector index key on `VECTOR(384, FLOAT32)` is 1,536 bytes, and Db2 rejects it in a 4K tablespace (SQL0614N). A ledger row with up to 30 KB of verdict JSON also fits in one page.
 - **Native vector index.** `CREATE VECTOR INDEX IX_CLAUSE_EMBEDDING ON POLICY_CLAUSE (EMBEDDING) WITH DISTANCE COSINE` (catalog type `VANN`, new in Db2 12.1.5). It coexists with system versioning and `FOR PORTION OF BUSINESS_TIME` updates (tested).
 - **Compression.** The append-only ledger tables use adaptive row compression (`COMPRESS YES ADAPTIVE`).
-- **Pooled runtime connections.** On the dev machine an `ibm_db` connection takes about 0.2 s to open and 0.9 s to close, against 0.5 ms for a query on an open one, and a check used three. The API, demo and eval now share a small pool ([db.py](src/asof/db.py) `ConnectionPool`: exclusive checkout, rollback on return, a ping before reuse, so a connection broken by a Db2 restart is replaced, not handed out). `python -m asof.connbench` replays the fixed-draft scenarios both ways in a scratch schema: **3,290 ms per check with a fresh connection per use, 57 ms with the pool** (median of 12, same decisions). The latest evaluation run (`397c920`) uses the pool; latencies from earlier runs include that overhead.
+- **Pooled runtime connections.** On the dev machine an `ibm_db` connection takes about 0.2 s to open and 0.9 s to close, against 0.5 ms for a query on an open one, and a check used three. The API, demo and eval now share a small pool ([db.py](src/asof/db.py) `ConnectionPool`: exclusive checkout, rollback on return, a ping before reuse, so a connection broken by a Db2 restart is replaced, not handed out). `python -m asof.connbench` replays the fixed-draft scenarios both ways in a scratch schema: **3,290 ms per check with a fresh connection per use, 57 ms with the pool** (median of 12, same decisions). Evaluation runs from `397c920` on use the pool; latencies from earlier runs include that overhead.
 - **Statistics.** Setup runs `RUNSTATS` on the five tables the hot queries read, so plans are costed from real counts.
 - **Access plans.** `python -m asof.explain` explains the exact statements the app runs, with bound values, under `SET CURRENT EXPLAIN MODE = EXPLAIN`, and writes IBM `db2exfmt` plans to [docs/explain/](docs/explain/README.md). Each plan file keeps Db2's Plan Details, so the predicates and start and stop keys are visible. The as-of query reads `IX_CLAUSE_DOC_ASOF (DOC_ID, BUS_START, BUS_END)`, an index added for it after an audit found the first plan scanning the whole primary-key index: `DOC_ID = ?` is the start and stop key, the `BUS_START <= ?` that Db2 derives from `FOR BUSINESS_TIME AS OF` is a stop key, and `? < BUS_END` is applied inside the index scan. Then it fetches the rows in force and sorts them by distance (estimated cost 7.07 timerons, from 17.36). The filtered ledger page has its own index, `IX_LEDGER_DECISION (DECISION, LEDGER_ID)`, but with a handful of rows the optimizer still prefers to read the primary key newest first and filter, which is the cheaper plan at that size.
 
@@ -257,7 +257,7 @@ A reviewer without an API key, or without the 5 GB and the 12 to 40 s per call o
 - **One input, one output.** Each recorded output is keyed by a SHA-256 of everything the model would have been sent: the output schema or the tools on offer, and every message. A recording answers only the exact input it was made for. Anything else, such as a draft you type yourself, raises a replay miss, which is an `LLMError`, so the check **fails closed** and the answer is held for a specialist. The UI says so.
 - **Recorded outputs are not trusted more than live ones.** They pass the same Pydantic schemas, and every decision made this way says `replay:` in the ledger's `MODEL_INFO`, with the model and the date of the recording.
 - **What is recorded:** the playground scenarios, the demo's decisions, the five Ask-the-ledger examples (the SQL replays and then runs live through the SQLGlot gate, so the rows are always today's) and the change-impact presets ([src/asof/ui/scenarios.json](src/asof/ui/scenarios.json), the same file the UI loads). `tests/test_db2_replay.py` replays all of it through Db2 and requires every check decision, every Ask-the-ledger status and SQL statement, and every drafted correction's check decision (all four presets, in recorded order) to match the recording; CI also runs `scripts/smoke_check.py` against the app that `./quickstart.sh` started on a bare runner with no key.
-- **One run, not a measurement.** The recording is a single run of the live model, kept as it came out: in it the July bag-fee draft was escalated (no clause covered one of its claims), where earlier live runs corrected it from $35 to $40. Replay shows the pipeline; the [evaluation](#evaluation-the-frozen-test-split) measures the live model, and `python -m asof.eval` refuses to run in replay mode.
+- **One run, not a measurement.** The recording is a single run of the live model, kept as it came out: the 7 Nov recording corrects the July bag-fee draft from $35 to $40, where the recording before it had escalated the same draft. Replay shows the pipeline; the [evaluation](#evaluation-the-frozen-test-split) measures the live model, and `python -m asof.eval` refuses to run in replay mode.
 
 ---
 
@@ -498,7 +498,7 @@ The runnable takes the assistant's draft and returns the checked answer, and eve
 ## Testing & Verification
 
 ```bash
-pytest -q                                 # 589 tests: 582 run, 7 need an opt-in flag (live LLM, remote endpoint)
+pytest -q                                 # 596 tests: 7 need an opt-in flag (live LLM, remote endpoint), 3 need TLS on (scripts/enable_db2_tls.sh; CI turns it on)
 pytest -q -m "not db2"                    # unit tests only, no database needed
 ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 4 live tests against the configured LLM (spends API calls)
 
@@ -520,7 +520,7 @@ Integration tests install everything into a throwaway `ASOF_TEST` schema, connec
 - no string-built SQL: an AST scan of every module and test fails the build on SQL built with f-strings, `%`, `+` or `.format()`; runtime statements are literals and even the schema is a bound parameter (`SET CURRENT SCHEMA = ?`)
 - the ledger: gapless IDs and linked hashes under three concurrent writers; triggers stopping even the owner; `VERIFY_CHAIN` catching an owner who drops a trigger and edits a row, edits a citation, or deletes the last row
 - every gate decision path with a scripted LLM, including a manipulated judge that says SUPPORTED with a real quote (the rule check still overrides it), an invented quote, a clause not in force, timeouts and a ledger outage
-- 62 rule-checker tests, mostly realistic claims against the real corpus rules, in both directions (real contradictions caught, situational numbers left alone)
+- 73 rule-checker tests, mostly realistic claims against the real corpus rules, in both directions (real contradictions caught, situational numbers left alone)
 - API validation (byte limits, dates, allow-listed `doc_id`, control characters, unknown fields), body cap, rate limit and security headers
 
 > **Note on the submission validator:** `scripts/validate_submission.py` flags any `.env` or `*.pem` file under the folder, including your local `.env` and certificate files inside `.venv`. Neither is committed. Run the validator from a clean checkout to see what a reviewer sees.
@@ -584,7 +584,7 @@ A second split, `situation-test2`, was then written from scratch and pinned befo
 
 What is still held, by design: a draft that classifies the customer's situation in a way no clause states ("a mechanical problem is within our control", ET16). The policy lists the causes outside the airline's control but does not say which others are inside it, so a person decides. Two `escalation-test` false blocks in the last run (ET09, ET12) came from a judge quote that was not verbatim on a SUPPORTED verdict; that rule was not relaxed.
 
-The first bank split stopped being blind when its run found a gap in MTF-003's rule data that was then fixed, so `bank-test2`'s first run is the bank number to quote: written after the fix, pinned before its run. In the latest run the investigating agent ran in 10 of 40 airline checks and 8 of 26 bank checks and added clauses the first retrieval missed in 5 and 6 of them (the per-case records keep `agent_tool_calls` and `agent_new_clauses`).
+The first bank split stopped being blind when its run found a gap in MTF-003's rule data that was then fixed, so `bank-test2`'s first run is the bank number to quote: written after the fix, pinned before its run. In the latest run (`512ee74`) the investigating agent ran in 5 of 40 airline checks and 3 of 26 bank checks, and found a clause the first retrieval missed in all 8; in the `397c920` run it ran in 10 and 8, and found one in 5 and 6 (the per-case records keep `agent_tool_calls` and `agent_new_clauses`).
 
 **History of the airline split** (40 cases: 14 correct drafts, 26 wrong for their date). Same cases in every run; every run's per-case results are in [docs/eval/](docs/eval/):
 
