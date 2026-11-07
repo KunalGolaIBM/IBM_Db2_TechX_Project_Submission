@@ -16,6 +16,22 @@
       "as_of": "2026-06-02"
     },
     {
+      "label": "Same draft: March booking",
+      "mode": "draft",
+      "doc": "AURELIA-CSP",
+      "question": "My grandmother died. Can I get the bereavement fare after I travel?",
+      "as_of": "2026-03-10",
+      "draft": "Yes. You can request the bereavement fare after you travel, within 90 days of the date your ticket was issued, with a death certificate or a letter from the attending physician or funeral home."
+    },
+    {
+      "label": "Same draft: June booking",
+      "mode": "draft",
+      "doc": "AURELIA-CSP",
+      "question": "My grandmother died. Can I get the bereavement fare after I travel?",
+      "as_of": "2026-06-02",
+      "draft": "Yes. You can request the bereavement fare after you travel, within 90 days of the date your ticket was issued, with a death certificate or a letter from the attending physician or funeral home."
+    },
+    {
       "label": "Stale bag fee (July)",
       "mode": "ask",
       "doc": "AURELIA-CSP",
