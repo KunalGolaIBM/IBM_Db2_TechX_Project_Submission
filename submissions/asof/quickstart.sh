@@ -6,9 +6,9 @@
 #
 # 1. A Python 3.12 virtualenv with the locked dependencies (.venv).
 # 2. .env from .env.example. If no Db2 owner password is set, it either asks for the password of the Db2
-#    already listening on localhost:50000, or generates one for the Db2 this script starts. Secrets are
+#    already listening on localhost (DB2_PORT, default 50000), or generates one for the Db2 this script starts. Secrets are
 #    written to .env (mode 600) and never printed.
-# 3. Db2: the one already on localhost:50000 (README paths A and B), otherwise AsOf's Compose service (path C).
+# 3. Db2: the one already on localhost:DB2_PORT (README paths A and B), otherwise AsOf's Compose service (path C).
 # 4. python -m asof.setup: users, schema, seed data, grants, self-check.
 # 5. The API and UI. With no OPENROUTER_API_KEY it switches .env to replay mode (recorded model outputs for
 #    the built-in scenarios; see README, Configuration).
@@ -18,7 +18,8 @@ cd "$(dirname "$0")"
 SERVE=1
 [[ "${1:-}" == "--no-serve" ]] && SERVE=0
 say() { printf '\n== %s\n' "$*"; }
-port_open() { (exec 3<>/dev/tcp/127.0.0.1/50000) 2>/dev/null; }
+DB2_PORT_NUM=50000  # replaced by DB2_PORT from .env once it exists (the extension may use another port)
+port_open() { (exec 3<>"/dev/tcp/127.0.0.1/$DB2_PORT_NUM") 2>/dev/null; }
 
 PY=""
 for candidate in python3.12 python3; do
@@ -43,10 +44,13 @@ if [[ ! -f .env ]]; then
   echo "  created .env from .env.example"
 fi
 chmod 600 .env
+DB2_PORT_NUM="$(sed -n 's/^DB2_PORT=//p' .env | head -1)"
+DB2_PORT_NUM="${DB2_PORT_NUM:-50000}"
+[[ "$DB2_PORT_NUM" =~ ^[0-9]{1,5}$ ]] || { echo "  DB2_PORT in .env must be a port number"; exit 1; }
 owner_pw="$(sed -n 's/^DB2_PASSWORD=//p; s/^DB2_ADMIN_PASSWORD=//p' .env | grep -v '^$' | head -1 || true)"
 if [[ -z "$owner_pw" || "$owner_pw" == "change-me-db2-admin" ]]; then
   if port_open; then
-    read -rsp "  A Db2 is listening on localhost:50000. Its owner (db2inst1) password: " owner_pw; echo
+    read -rsp "  A Db2 is listening on localhost:$DB2_PORT_NUM. Its owner (db2inst1) password: " owner_pw; echo
   else
     owner_pw="$(.venv/bin/python -c 'import secrets; print(secrets.token_urlsafe(18))')"
     echo "  generated an owner password for the Db2 this script will start (saved in .env, not shown)"
@@ -64,9 +68,9 @@ unset owner_pw
 
 say "3/5 IBM Db2"
 if port_open; then
-  echo "  using the Db2 already listening on localhost:50000"
+  echo "  using the Db2 already listening on localhost:$DB2_PORT_NUM"
 else
-  command -v docker > /dev/null || { echo "  No Db2 on localhost:50000 and no docker: see README, Setup paths A to C."; exit 1; }
+  command -v docker > /dev/null || { echo "  No Db2 on localhost:$DB2_PORT_NUM and no docker: see README, Setup paths A to C."; exit 1; }
   echo "  starting AsOf's Db2 service (the first start can take several minutes; it waits until testdb is ready)"
   docker compose up -d --wait db2
 fi

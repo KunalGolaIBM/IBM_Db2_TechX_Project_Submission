@@ -275,7 +275,7 @@ A reviewer without an API key, or without the 5 GB and the 12 to 40 s per call o
 
 ## Prerequisites
 
-- **Python 3.12**, the only version the lock file supports (NumPy 2.5 in it has no 3.11 build). macOS: `brew install python@3.12`. Ubuntu 24.04: `sudo apt install python3.12 python3.12-venv`. Elsewhere: [python.org](https://www.python.org/downloads/) or `pyenv install 3.12`.
+- **Python 3.12**, the only version the lock file supports (NumPy 2.5 in it has no 3.11 build). macOS: `brew install python@3.12`. Ubuntu 24.04: `sudo apt install python3.12 python3.12-venv`. Ubuntu 22.04 (the organizers' WSL image): `sudo add-apt-repository ppa:deadsnakes/ppa && sudo apt install python3.12 python3.12-venv`. Elsewhere: [python.org](https://www.python.org/downloads/) or `pyenv install 3.12`.
 - **Operating system:** macOS 14 or later on Apple Silicon (tested, path C) or x86-64 Linux (tested in CI, paths B and C). **Windows:** use WSL 2 with Ubuntu, as the organizers' guide does, and run everything inside it. **Intel Macs** cannot install the Python side: PyTorch 2.15, which the local embedding model needs, publishes macOS wheels for Apple Silicon on macOS 14 and later only.
 - **Docker** (Docker Desktop, Docker Engine, or Colima on macOS) and about 10 GB of free disk for the Db2 image and data
 - **IBM Db2 12.1.2 or later** (12.1.5 tested), from any of the three paths below
@@ -305,7 +305,7 @@ cp .env.example .env     # set DB2_PASSWORD, and OPENROUTER_API_KEY (or LLM_PROV
 
 **2. A Db2 database.** Pick one; AsOf only needs `localhost:50000/testdb` and the owner account.
 
-- **A. IBM Db2 Developer Extension for VS Code** (the organizers' recommended path). Install `IBM.db2-for-luw`, click the Db2 icon, then **Create Db2 instance** with host `localhost`, port `50000`, username `db2inst1`, a password, and database `testdb`. Put that password in `.env` as `DB2_PASSWORD`. The extension's container is called `db2server`, which setup finds on its own. On Apple Silicon with Colima the create flow can switch the Docker context to Docker Desktop and stall; if `docker context show` says `desktop-linux`, run `docker context use colima` and use path C.
+- **A. IBM Db2 Developer Extension for VS Code** (the organizers' recommended path). Install `IBM.db2-for-luw`, click the Db2 icon, then **Create Db2 instance** with host `localhost`, port `50000`, username `db2inst1`, a password, and database `testdb`. Put that password in `.env` as `DB2_PASSWORD`, and if the instance page shows a port other than 50000 (under WSL it is often 50001), set `DB2_PORT` to it; `./quickstart.sh` and setup both read it. The extension's container is called `db2server`, which setup finds on its own. On Apple Silicon with Colima the create flow can switch the Docker context to Docker Desktop and stall; if `docker context show` says `desktop-linux`, run `docker context use colima` and use path C.
 - **B. Plain Docker with IBM's image** (Intel or Linux). Same container and database the organizers' setup guide uses:
 
   ```bash
