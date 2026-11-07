@@ -1,0 +1,24 @@
+{
+  "selection_ignores_labels": true,
+  "selection_method": "Label-agnostic: first N claims by benchmark ID; gold labels are only used for scoring.",
+  "subset_size": 100,
+  "gold_label_distribution_for_reporting_only": {
+    "SUPPORTED": 45,
+    "CONTRADICTED": 20,
+    "INSUFFICIENT_EVIDENCE": 35
+  },
+  "predictions_contain_gold_fields": false,
+  "predictions_record_count": 100,
+  "cited_passages_checked": 139,
+  "missing_passages": [],
+  "misattributed_passages": [],
+  "evidence_attribution_passed": true,
+  "model": "qwen2.5:7b-instruct",
+  "retrieval": "db2_full_corpus_bm25",
+  "retrieval_k": 10,
+  "classification_k": 4,
+  "predictions_file": "experiments/predictions/scifact_dev_predictions.jsonl",
+  "results_file": "experiments/results/scifact_dev_metrics.json",
+  "dataset_license": "CC BY-NC 2.0",
+  "note": "Gold labels are used only in the scoring step; the verifier receives claim text and retrieved passages."
+}

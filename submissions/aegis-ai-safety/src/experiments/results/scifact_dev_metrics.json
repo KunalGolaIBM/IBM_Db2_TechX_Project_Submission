@@ -1,0 +1,147 @@
+{
+  "dataset": {
+    "name": "SciFact",
+    "split": "dev",
+    "license": "CC BY-NC 2.0",
+    "claims_file": "data/scifact/claims_dev.jsonl",
+    "corpus_file": "data/scifact/corpus.jsonl",
+    "corpus_documents": 5183,
+    "evaluated_claims": 100,
+    "scored_claims": 100,
+    "errors": 0,
+    "coverage": 1.0,
+    "gold_label_distribution": {
+      "SUPPORTED": 45,
+      "CONTRADICTED": 20,
+      "INSUFFICIENT_EVIDENCE": 35
+    },
+    "note": "SciFact test split has no public evidence labels; dev is used as the held-out labelled set."
+  },
+  "settings": {
+    "model": "qwen2.5:7b-instruct",
+    "temperature": 0.0,
+    "retrieval": "db2_full_corpus_bm25",
+    "retrieval_k": 10,
+    "classification_k": 4,
+    "max_tokens": 450,
+    "repair_explanations": false,
+    "prompt_version": "aegis-claim-verification-v1"
+  },
+  "classification": {
+    "n": 100,
+    "invalid_records": 0,
+    "accuracy": 0.7,
+    "macro_precision": 0.709586,
+    "macro_recall": 0.674603,
+    "macro_f1": 0.678006,
+    "per_class": {
+      "SUPPORTED": {
+        "precision": 0.789474,
+        "recall": 0.666667,
+        "f1": 0.722892,
+        "support": 45
+      },
+      "CONTRADICTED": {
+        "precision": 0.714286,
+        "recall": 0.5,
+        "f1": 0.588235,
+        "support": 20
+      },
+      "INSUFFICIENT_EVIDENCE": {
+        "precision": 0.625,
+        "recall": 0.857143,
+        "f1": 0.722892,
+        "support": 35
+      }
+    },
+    "confusion_matrix": {
+      "SUPPORTED": {
+        "SUPPORTED": 30,
+        "CONTRADICTED": 3,
+        "INSUFFICIENT_EVIDENCE": 12
+      },
+      "CONTRADICTED": {
+        "SUPPORTED": 4,
+        "CONTRADICTED": 10,
+        "INSUFFICIENT_EVIDENCE": 6
+      },
+      "INSUFFICIENT_EVIDENCE": {
+        "SUPPORTED": 4,
+        "CONTRADICTED": 1,
+        "INSUFFICIENT_EVIDENCE": 30
+      }
+    },
+    "false_positive_analysis": {
+      "total": 5,
+      "supported_when_nei": 4,
+      "contradicted_when_nei": 1
+    }
+  },
+  "retrieval": {
+    "recall_at_1": {
+      "k": 1,
+      "n": 100,
+      "recall": 0.55,
+      "hits": 55
+    },
+    "recall_at_3": {
+      "k": 3,
+      "n": 100,
+      "recall": 0.67,
+      "hits": 67
+    },
+    "recall_at_5": {
+      "k": 5,
+      "n": 100,
+      "recall": 0.76,
+      "hits": 76
+    },
+    "recall_at_10": {
+      "k": 10,
+      "n": 100,
+      "recall": 0.77,
+      "hits": 77
+    },
+    "claims_with_gold_docs": 100,
+    "mean_retrieval_ms": 153.59
+  },
+  "latency": {
+    "n": 100,
+    "mean_ms": 36604.915,
+    "median_ms": 34829.015,
+    "p95_ms": 53697.12
+  },
+  "total_claim_processing_seconds": 3660.49,
+  "total_evaluation_seconds": 3663.11,
+  "false_positive_examples": [
+    {
+      "claim_id": "300",
+      "gold": "INSUFFICIENT_EVIDENCE",
+      "predicted": "SUPPORTED"
+    },
+    {
+      "claim_id": "303",
+      "gold": "INSUFFICIENT_EVIDENCE",
+      "predicted": "SUPPORTED"
+    },
+    {
+      "claim_id": "354",
+      "gold": "INSUFFICIENT_EVIDENCE",
+      "predicted": "SUPPORTED"
+    },
+    {
+      "claim_id": "384",
+      "gold": "INSUFFICIENT_EVIDENCE",
+      "predicted": "SUPPORTED"
+    },
+    {
+      "claim_id": "437",
+      "gold": "INSUFFICIENT_EVIDENCE",
+      "predicted": "CONTRADICTED"
+    }
+  ],
+  "predictions_file": "experiments/predictions/scifact_dev_predictions.jsonl",
+  "document_id_map_file": "experiments/results/scifact_doc_map.json",
+  "import": null,
+  "generated_at": "2026-11-06T06:00:51.477948+00:00"
+}

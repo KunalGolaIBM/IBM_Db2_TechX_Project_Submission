@@ -1,0 +1,83 @@
+{
+  "model": "ollama/qwen2.5:7b-instruct",
+  "temperature": 0.0,
+  "max_tokens": 1500,
+  "top_k": 4,
+  "timings": {
+    "pdf_processing_seconds": 0.483,
+    "claim_extraction_seconds": 19.025,
+    "retrieval_seconds": 7.098,
+    "llm_verification_seconds": 60.822,
+    "persistence_seconds": 2.453,
+    "total_seconds": 89.881
+  },
+  "detail": {
+    "pdf": {
+      "attention-is-all-you-need.pdf": {
+        "seconds": 0.394,
+        "passages": 44
+      },
+      "bert-pre-training.pdf": {
+        "seconds": 0.089,
+        "passages": 69
+      }
+    },
+    "document_ids": [
+      121,
+      141
+    ],
+    "claims": 4,
+    "retrieval": [
+      {
+        "claim": "The Transformer achieved 28.4 BLEU on the WMT 2014 English-to-German translation",
+        "seconds": 2.534,
+        "candidates": 4
+      },
+      {
+        "claim": "The Transformer encoder consists of 8 identical layers.",
+        "seconds": 1.156,
+        "candidates": 4
+      },
+      {
+        "claim": "BERT is pre-trained with a unidirectional language model rather than a bidirecti",
+        "seconds": 2.191,
+        "candidates": 4
+      },
+      {
+        "claim": "The Transformer reduced inference latency on mobile devices by 50%.",
+        "seconds": 1.217,
+        "candidates": 4
+      }
+    ],
+    "verification": [
+      {
+        "claim": "The Transformer achieved 28.4 BLEU on the WMT 2014 English-to-German translation",
+        "classification": "SUPPORTED",
+        "seconds": 13.039,
+        "evidence": 1,
+        "method": "langchain_llm+db2_lexical_retrieval"
+      },
+      {
+        "claim": "The Transformer encoder consists of 8 identical layers.",
+        "classification": "CONTRADICTED",
+        "seconds": 5.913,
+        "evidence": 1,
+        "method": "langchain_llm+db2_lexical_retrieval+deterministic_numeric_check"
+      },
+      {
+        "claim": "BERT is pre-trained with a unidirectional language model rather than a bidirecti",
+        "classification": "CONTRADICTED",
+        "seconds": 26.399,
+        "evidence": 1,
+        "method": "langchain_llm+db2_lexical_retrieval"
+      },
+      {
+        "claim": "The Transformer reduced inference latency on mobile devices by 50%.",
+        "classification": "INSUFFICIENT_EVIDENCE",
+        "seconds": 15.472,
+        "evidence": 0,
+        "method": "langchain_llm+db2_lexical_retrieval"
+      }
+    ]
+  }
+}

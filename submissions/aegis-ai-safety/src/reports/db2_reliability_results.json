@@ -1,0 +1,60 @@
+{
+  "health": {
+    "passed": true,
+    "tables": [
+      "DOCUMENTS",
+      "PASSAGES",
+      "VERIFICATION_SESSIONS",
+      "CLAIMS",
+      "VERIFICATION_RESULTS",
+      "EVIDENCE_LINKS"
+    ],
+    "missing": []
+  },
+  "schema": {
+    "passed": true,
+    "constraints": 15,
+    "indexes": 18,
+    "documents_columns": [
+      "CONTENT_HASH",
+      "CREATED_AT",
+      "DOCUMENT_ID",
+      "EXTERNAL_ID",
+      "FILENAME",
+      "PROCESSING_STATUS",
+      "SOURCE_TYPE",
+      "TITLE"
+    ]
+  },
+  "idempotent_init": {
+    "passed": true,
+    "first_exit": 0,
+    "second_exit": 0,
+    "second_tail": "  All six required tables are present."
+  },
+  "duplicate_upload": {
+    "passed": true,
+    "first_id": 5661,
+    "second_id": 5661,
+    "already_existed": true,
+    "rows": 1
+  },
+  "transaction_rollback": {
+    "passed": true,
+    "orphan_passages": 0
+  },
+  "failed_session": {
+    "passed": true,
+    "status": "FAILED",
+    "duration_ms": 12
+  },
+  "concurrent_reads": {
+    "passed": true,
+    "requests": 16,
+    "seconds": 1.157
+  },
+  "connection_failure": {
+    "passed": true,
+    "raised_safe_error": true
+  }
+}

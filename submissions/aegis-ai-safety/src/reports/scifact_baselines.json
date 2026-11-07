@@ -1,0 +1,471 @@
+{
+  "dataset": "SciFact dev label-agnostic subset (first 20 by claim ID)",
+  "n": 20,
+  "model": "qwen2.5:7b-instruct",
+  "retrieval": "full-corpus BM25, top 4",
+  "baselines": {
+    "llm_only": {
+      "metrics": {
+        "n": 20,
+        "invalid_records": 0,
+        "accuracy": 0.45,
+        "macro_precision": 0.510101,
+        "macro_recall": 0.44881,
+        "macro_f1": 0.457672,
+        "per_class": {
+          "SUPPORTED": {
+            "precision": 0.5,
+            "recall": 0.375,
+            "f1": 0.428571,
+            "support": 8
+          },
+          "CONTRADICTED": {
+            "precision": 0.666667,
+            "recall": 0.4,
+            "f1": 0.5,
+            "support": 5
+          },
+          "INSUFFICIENT_EVIDENCE": {
+            "precision": 0.363636,
+            "recall": 0.571429,
+            "f1": 0.444444,
+            "support": 7
+          }
+        },
+        "confusion_matrix": {
+          "SUPPORTED": {
+            "SUPPORTED": 3,
+            "CONTRADICTED": 1,
+            "INSUFFICIENT_EVIDENCE": 4
+          },
+          "CONTRADICTED": {
+            "SUPPORTED": 0,
+            "CONTRADICTED": 2,
+            "INSUFFICIENT_EVIDENCE": 3
+          },
+          "INSUFFICIENT_EVIDENCE": {
+            "SUPPORTED": 3,
+            "CONTRADICTED": 0,
+            "INSUFFICIENT_EVIDENCE": 4
+          }
+        },
+        "false_positive_analysis": {
+          "total": 3,
+          "supported_when_nei": 3,
+          "contradicted_when_nei": 0
+        }
+      },
+      "records": [
+        {
+          "claim_id": "1",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "3",
+          "gold": "SUPPORTED",
+          "predicted": "SUPPORTED"
+        },
+        {
+          "claim_id": "5",
+          "gold": "SUPPORTED",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "13",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "36",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "SUPPORTED"
+        },
+        {
+          "claim_id": "42",
+          "gold": "CONTRADICTED",
+          "predicted": "CONTRADICTED"
+        },
+        {
+          "claim_id": "48",
+          "gold": "CONTRADICTED",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "49",
+          "gold": "SUPPORTED",
+          "predicted": "SUPPORTED"
+        },
+        {
+          "claim_id": "50",
+          "gold": "SUPPORTED",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "51",
+          "gold": "CONTRADICTED",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "53",
+          "gold": "SUPPORTED",
+          "predicted": "SUPPORTED"
+        },
+        {
+          "claim_id": "54",
+          "gold": "CONTRADICTED",
+          "predicted": "CONTRADICTED"
+        },
+        {
+          "claim_id": "56",
+          "gold": "SUPPORTED",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "57",
+          "gold": "CONTRADICTED",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "70",
+          "gold": "SUPPORTED",
+          "predicted": "CONTRADICTED"
+        },
+        {
+          "claim_id": "72",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "75",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "SUPPORTED"
+        },
+        {
+          "claim_id": "94",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "SUPPORTED"
+        },
+        {
+          "claim_id": "99",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "100",
+          "gold": "SUPPORTED",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        }
+      ]
+    },
+    "llm_with_evidence": {
+      "metrics": {
+        "n": 20,
+        "invalid_records": 0,
+        "accuracy": 0.7,
+        "macro_precision": 0.813492,
+        "macro_recall": 0.65,
+        "macro_f1": 0.623392,
+        "per_class": {
+          "SUPPORTED": {
+            "precision": 0.857143,
+            "recall": 0.75,
+            "f1": 0.8,
+            "support": 8
+          },
+          "CONTRADICTED": {
+            "precision": 1.0,
+            "recall": 0.2,
+            "f1": 0.333333,
+            "support": 5
+          },
+          "INSUFFICIENT_EVIDENCE": {
+            "precision": 0.583333,
+            "recall": 1.0,
+            "f1": 0.736842,
+            "support": 7
+          }
+        },
+        "confusion_matrix": {
+          "SUPPORTED": {
+            "SUPPORTED": 6,
+            "CONTRADICTED": 0,
+            "INSUFFICIENT_EVIDENCE": 2
+          },
+          "CONTRADICTED": {
+            "SUPPORTED": 1,
+            "CONTRADICTED": 1,
+            "INSUFFICIENT_EVIDENCE": 3
+          },
+          "INSUFFICIENT_EVIDENCE": {
+            "SUPPORTED": 0,
+            "CONTRADICTED": 0,
+            "INSUFFICIENT_EVIDENCE": 7
+          }
+        },
+        "false_positive_analysis": {
+          "total": 0,
+          "supported_when_nei": 0,
+          "contradicted_when_nei": 0
+        }
+      },
+      "records": [
+        {
+          "claim_id": "1",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "3",
+          "gold": "SUPPORTED",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "5",
+          "gold": "SUPPORTED",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "13",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "36",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "42",
+          "gold": "CONTRADICTED",
+          "predicted": "CONTRADICTED"
+        },
+        {
+          "claim_id": "48",
+          "gold": "CONTRADICTED",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "49",
+          "gold": "SUPPORTED",
+          "predicted": "SUPPORTED"
+        },
+        {
+          "claim_id": "50",
+          "gold": "SUPPORTED",
+          "predicted": "SUPPORTED"
+        },
+        {
+          "claim_id": "51",
+          "gold": "CONTRADICTED",
+          "predicted": "SUPPORTED"
+        },
+        {
+          "claim_id": "53",
+          "gold": "SUPPORTED",
+          "predicted": "SUPPORTED"
+        },
+        {
+          "claim_id": "54",
+          "gold": "CONTRADICTED",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "56",
+          "gold": "SUPPORTED",
+          "predicted": "SUPPORTED"
+        },
+        {
+          "claim_id": "57",
+          "gold": "CONTRADICTED",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "70",
+          "gold": "SUPPORTED",
+          "predicted": "SUPPORTED"
+        },
+        {
+          "claim_id": "72",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "75",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "94",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "99",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "100",
+          "gold": "SUPPORTED",
+          "predicted": "SUPPORTED"
+        }
+      ]
+    },
+    "aegis": {
+      "metrics": {
+        "n": 20,
+        "invalid_records": 0,
+        "accuracy": 0.7,
+        "macro_precision": 0.805556,
+        "macro_recall": 0.675,
+        "macro_f1": 0.674185,
+        "per_class": {
+          "SUPPORTED": {
+            "precision": 0.833333,
+            "recall": 0.625,
+            "f1": 0.714286,
+            "support": 8
+          },
+          "CONTRADICTED": {
+            "precision": 1.0,
+            "recall": 0.4,
+            "f1": 0.571429,
+            "support": 5
+          },
+          "INSUFFICIENT_EVIDENCE": {
+            "precision": 0.583333,
+            "recall": 1.0,
+            "f1": 0.736842,
+            "support": 7
+          }
+        },
+        "confusion_matrix": {
+          "SUPPORTED": {
+            "SUPPORTED": 5,
+            "CONTRADICTED": 0,
+            "INSUFFICIENT_EVIDENCE": 3
+          },
+          "CONTRADICTED": {
+            "SUPPORTED": 1,
+            "CONTRADICTED": 2,
+            "INSUFFICIENT_EVIDENCE": 2
+          },
+          "INSUFFICIENT_EVIDENCE": {
+            "SUPPORTED": 0,
+            "CONTRADICTED": 0,
+            "INSUFFICIENT_EVIDENCE": 7
+          }
+        },
+        "false_positive_analysis": {
+          "total": 0,
+          "supported_when_nei": 0,
+          "contradicted_when_nei": 0
+        }
+      },
+      "records": [
+        {
+          "claim_id": "1",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "3",
+          "gold": "SUPPORTED",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "5",
+          "gold": "SUPPORTED",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "13",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "36",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "42",
+          "gold": "CONTRADICTED",
+          "predicted": "CONTRADICTED"
+        },
+        {
+          "claim_id": "48",
+          "gold": "CONTRADICTED",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "49",
+          "gold": "SUPPORTED",
+          "predicted": "SUPPORTED"
+        },
+        {
+          "claim_id": "50",
+          "gold": "SUPPORTED",
+          "predicted": "SUPPORTED"
+        },
+        {
+          "claim_id": "51",
+          "gold": "CONTRADICTED",
+          "predicted": "CONTRADICTED"
+        },
+        {
+          "claim_id": "53",
+          "gold": "SUPPORTED",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "54",
+          "gold": "CONTRADICTED",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "56",
+          "gold": "SUPPORTED",
+          "predicted": "SUPPORTED"
+        },
+        {
+          "claim_id": "57",
+          "gold": "CONTRADICTED",
+          "predicted": "SUPPORTED"
+        },
+        {
+          "claim_id": "70",
+          "gold": "SUPPORTED",
+          "predicted": "SUPPORTED"
+        },
+        {
+          "claim_id": "72",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "75",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "94",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "99",
+          "gold": "INSUFFICIENT_EVIDENCE",
+          "predicted": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "claim_id": "100",
+          "gold": "SUPPORTED",
+          "predicted": "SUPPORTED"
+        }
+      ]
+    }
+  },
+  "notes": "A has no evidence. B and AEGIS use the same retrieved passages; AEGIS adds citation validation, numeric checks, and guardrails. The 20 claims are the first 20 prediction records by claim ID; gold labels are used only for scoring."
+}

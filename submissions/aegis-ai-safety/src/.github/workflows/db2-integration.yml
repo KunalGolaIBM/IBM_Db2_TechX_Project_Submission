@@ -1,0 +1,61 @@
+name: Db2 integration
+
+# Manual workflow: starts the IBM Db2 Community Edition 12.1.5 container,
+# initializes the AEGIS schema, and runs the real database vertical-slice test.
+on:
+  workflow_dispatch:
+
+jobs:
+  integration:
+    name: Real Db2 vertical slice
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      db2:
+        image: icr.io/db2_community/db2:12.1.5.0
+        env:
+          LICENSE: accept
+          DB2INST1_PASSWORD: AegisCiPassword1!
+          DBNAME: TESTDB
+          ARCHIVE_LOGS: "false"
+        ports:
+          - 50000:50000
+        options: >-
+          --privileged=true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r backend/requirements-dev.txt
+      - name: Wait for Db2
+        run: |
+          for i in $(seq 1 60); do
+            if (echo > /dev/tcp/127.0.0.1/50000) 2>/dev/null; then
+              echo "Db2 port is open"; exit 0
+            fi
+            sleep 10
+          done
+          echo "Db2 did not become ready"; exit 1
+      - name: Initialize schema
+        env:
+          DB2_HOST: localhost
+          DB2_PORT: "50000"
+          DB2_DATABASE: TESTDB
+          DB2_USERNAME: db2inst1
+          DB2_PASSWORD: AegisCiPassword1!
+          DB2_SCHEMA: AEGIS
+        run: python database/init_db.py --stats
+      - name: Full pipeline integration test
+        env:
+          AEGIS_TEST_DB2: "1"
+          DB2_HOST: localhost
+          DB2_PORT: "50000"
+          DB2_DATABASE: TESTDB
+          DB2_USERNAME: db2inst1
+          DB2_PASSWORD: AegisCiPassword1!
+          DB2_SCHEMA: AEGIS
+        working-directory: backend
+        run: pytest tests/test_integration_db2.py -v

@@ -1,0 +1,157 @@
+{
+  "project": "AEGIS",
+  "full_name": "AI Evidence Grounding & Integrity System",
+  "tagline": "Verify Before You Trust.",
+  "repository": "https://github.com/sakethdonepudi/aegis-ai-safety",
+  "version": "0.2.0",
+  "hackathon": "Db2Hack 2026",
+  "status": "Final release: verification engine frozen; local smoke test, tests, and production build pass",
+  "category": "AI Safety / Trustworthy AI / Research Infrastructure",
+  "stack": {
+    "frontend": [
+      "Next.js App Router",
+      "TypeScript",
+      "Tailwind CSS",
+      "shadcn/ui",
+      "Lucide",
+      "Recharts"
+    ],
+    "backend": [
+      "Python",
+      "FastAPI",
+      "Pydantic",
+      "Uvicorn",
+      "HTTPX",
+      "PyMuPDF"
+    ],
+    "database": "IBM Db2 Community Edition 12.1.5",
+    "ai_orchestration": "LangChain with a configurable OpenAI-compatible chat model",
+    "documents": "PyMuPDF"
+  },
+  "database": {
+    "schema": "AEGIS",
+    "tables": [
+      "DOCUMENTS",
+      "PASSAGES",
+      "VERIFICATION_SESSIONS",
+      "CLAIMS",
+      "VERIFICATION_RESULTS",
+      "EVIDENCE_LINKS"
+    ],
+    "migrations": "database/init_db.py applies missing columns and indexes idempotently",
+    "referential_integrity": true,
+    "indexes": true,
+    "parameterized_sql": true
+  },
+  "features": [
+    "LangChain atomic claim extraction",
+    "Db2-backed lexical retrieval with BM25 ranking",
+    "Evidence-grounded SUPPORTED / CONTRADICTED / INSUFFICIENT_EVIDENCE / VERIFICATION_ERROR",
+    "Passage-ID validation and fabricated-citation downgrade",
+    "Deterministic numeric consistency checks",
+    "PDF/TXT/MD ingestion with page and character provenance",
+    "Claim inspector with evidence, page, relationship, explanation, limitations, and numeric check",
+    "JSON and Markdown report export",
+    "Verification history and session reopening",
+    "Document detail API and evaluation status endpoint",
+    "Comparability-aware conflicting-evidence abstention",
+    "Absence, scope, and citation guards against forced contradictions",
+    "SciFact evaluation harness with label-agnostic subset selection",
+    "Benchmark-integrity audit for labels, selection, and evidence attribution"
+  ],
+  "classifications": [
+    "SUPPORTED",
+    "CONTRADICTED",
+    "INSUFFICIENT_EVIDENCE",
+    "VERIFICATION_ERROR"
+  ],
+  "demo": {
+    "paper": {
+      "evidence": "Attention Is All You Need (arXiv 1706.03762) and BERT (arXiv 1810.04805)",
+      "evidence_committed": false,
+      "download_command": "make demo-papers",
+      "hardcoded_expectations": false,
+      "verified_with": "ollama/qwen2.5:7b-instruct (local, temperature 0)",
+      "verified_outcome": {
+        "total_claims": 4,
+        "supported": 1,
+        "contradicted": 2,
+        "insufficient_evidence": 1,
+        "verification_error": 0,
+        "numeric_discrepancy": "claimed 8 encoder layers; cited paper states 6",
+        "persisted_in_db2": true
+      }
+    },
+    "synthetic": {
+      "evidence": "Fictional SolarCell-X study",
+      "hardcoded_expectations": false,
+      "verified_outcome": {
+        "total_claims": 3,
+        "supported": 1,
+        "contradicted": 1,
+        "insufficient_evidence": 1,
+        "verification_error": 0
+      }
+    },
+    "verified_outcome": {
+      "session_id": 741,
+      "total_claims": 3,
+      "supported": 1,
+      "contradicted": 1,
+      "insufficient_evidence": 1,
+      "verification_error": 0,
+      "pdf": "BERT: Pre-training of Deep Bidirectional Transformers",
+      "exports": [
+        "json",
+        "markdown"
+      ],
+      "persisted_in_db2": true
+    }
+  },
+  "evaluation": {
+    "dataset": "SciFact",
+    "split": "dev (test labels are not public)",
+    "license": "CC BY-NC 2.0",
+    "benchmark_executed": true,
+    "evaluated_claims": 100,
+    "subset": "label-agnostic first 100 by benchmark claim ID (45 supported / 20 contradicted / 35 insufficient)",
+    "model": "qwen2.5:7b-instruct (local Ollama)",
+    "macro_f1": 0.678,
+    "accuracy": 0.7,
+    "retrieval_recall": {
+      "at_1": 0.55,
+      "at_5": 0.76,
+      "at_10": 0.77
+    },
+    "verification_errors": 0,
+    "mean_latency_ms": 36604.915,
+    "results_file": "experiments/results/scifact_dev_metrics.json",
+    "results_exposed_only_if_present": true,
+    "metrics_implemented": [
+      "macro_f1",
+      "precision",
+      "recall",
+      "confusion_matrix",
+      "false_positive_analysis",
+      "retrieval_recall_at_k",
+      "latency"
+    ],
+    "contradiction_precision": 0.714,
+    "contradiction_recall": 0.5,
+    "same_87_claim_before_after": {
+      "old_macro_f1": 0.66,
+      "new_macro_f1": 0.671
+    }
+  },
+  "documentation": {
+    "architecture": "docs/architecture.md",
+    "api": "docs/api.md",
+    "demo": "docs/demo.md",
+    "macos_setup": "docs/setup-macos.md",
+    "security": "docs/security.md",
+    "deployment": "docs/deployment.md",
+    "limitations": "docs/limitations.md",
+    "research": "research/methodology.md"
+  },
+  "submission_notes": "Official organizer submission is prepared in submissions/aegis-ai-safety/ of the organizer repository fork; this file remains project metadata."
+}

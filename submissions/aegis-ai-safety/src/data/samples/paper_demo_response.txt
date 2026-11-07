@@ -1,0 +1,3 @@
+The Transformer achieved 28.4 BLEU on the WMT 2014 English-to-German translation task. The Transformer encoder consists of 8 identical layers. BERT is pre-trained with a unidirectional language model rather than a bidirectional one. The Transformer reduced inference latency on mobile devices by 50%.
+
+This response is an AI-generated style summary used for the AEGIS paper demonstration. It is designed to exercise supported, contradicted, insufficient-evidence, and numerical-discrepancy outcomes against the two attached arXiv papers. It is not a real research summary.

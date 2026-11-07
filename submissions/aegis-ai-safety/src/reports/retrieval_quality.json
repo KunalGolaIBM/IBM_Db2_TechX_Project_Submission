@@ -1,0 +1,414 @@
+{
+  "controlled_40": {
+    "cases_with_gold_paper": 30,
+    "recall": {
+      "at_1": {
+        "k": 1,
+        "n": 30,
+        "recall": 0.8,
+        "hits": 24
+      },
+      "at_3": {
+        "k": 3,
+        "n": 30,
+        "recall": 0.966667,
+        "hits": 29
+      },
+      "at_5": {
+        "k": 5,
+        "n": 30,
+        "recall": 0.966667,
+        "hits": 29
+      }
+    },
+    "latency_ms": {
+      "mean": 2.56,
+      "min": 1.42,
+      "max": 3.98
+    },
+    "top1_misses_or_wrong": [
+      {
+        "claim_id": "C01",
+        "expected_paper": "transformer",
+        "top_1": 141,
+        "hit_at_5": true
+      },
+      {
+        "claim_id": "C02",
+        "expected_paper": "transformer",
+        "top_1": 141,
+        "hit_at_5": true
+      },
+      {
+        "claim_id": "C10",
+        "expected_paper": "bert",
+        "top_1": 121,
+        "hit_at_5": false
+      },
+      {
+        "claim_id": "N03",
+        "expected_paper": "bert",
+        "top_1": 121,
+        "hit_at_5": true
+      },
+      {
+        "claim_id": "N04",
+        "expected_paper": "bert",
+        "top_1": 121,
+        "hit_at_5": true
+      },
+      {
+        "claim_id": "N07",
+        "expected_paper": "bert",
+        "top_1": 121,
+        "hit_at_5": true
+      }
+    ],
+    "details": [
+      {
+        "claim_id": "S01",
+        "category": "supported",
+        "expected_paper": "transformer",
+        "retrieved_docs": [
+          121
+        ],
+        "hit_at_5": true,
+        "latency_ms": 2.98
+      },
+      {
+        "claim_id": "S02",
+        "category": "supported",
+        "expected_paper": "transformer",
+        "retrieved_docs": [
+          121,
+          5481,
+          141
+        ],
+        "hit_at_5": true,
+        "latency_ms": 1.44
+      },
+      {
+        "claim_id": "S03",
+        "category": "supported",
+        "expected_paper": "bert",
+        "retrieved_docs": [
+          141
+        ],
+        "hit_at_5": true,
+        "latency_ms": 1.97
+      },
+      {
+        "claim_id": "S04",
+        "category": "supported",
+        "expected_paper": "bert",
+        "retrieved_docs": [
+          141
+        ],
+        "hit_at_5": true,
+        "latency_ms": 3.38
+      },
+      {
+        "claim_id": "S05",
+        "category": "supported",
+        "expected_paper": "bert",
+        "retrieved_docs": [
+          141
+        ],
+        "hit_at_5": true,
+        "latency_ms": 2.59
+      },
+      {
+        "claim_id": "S06",
+        "category": "supported",
+        "expected_paper": "lora",
+        "retrieved_docs": [
+          5481
+        ],
+        "hit_at_5": true,
+        "latency_ms": 3.52
+      },
+      {
+        "claim_id": "S07",
+        "category": "supported",
+        "expected_paper": "lora",
+        "retrieved_docs": [
+          5481
+        ],
+        "hit_at_5": true,
+        "latency_ms": 2.98
+      },
+      {
+        "claim_id": "S08",
+        "category": "supported",
+        "expected_paper": "lora",
+        "retrieved_docs": [
+          5481
+        ],
+        "hit_at_5": true,
+        "latency_ms": 3.36
+      },
+      {
+        "claim_id": "S09",
+        "category": "supported",
+        "expected_paper": "lora",
+        "retrieved_docs": [
+          5481
+        ],
+        "hit_at_5": true,
+        "latency_ms": 2.13
+      },
+      {
+        "claim_id": "S10",
+        "category": "supported",
+        "expected_paper": "bert",
+        "retrieved_docs": [
+          141,
+          5481
+        ],
+        "hit_at_5": true,
+        "latency_ms": 3.88
+      },
+      {
+        "claim_id": "C01",
+        "category": "contradicted",
+        "expected_paper": "transformer",
+        "retrieved_docs": [
+          141,
+          121
+        ],
+        "hit_at_5": true,
+        "latency_ms": 1.99
+      },
+      {
+        "claim_id": "C02",
+        "category": "contradicted",
+        "expected_paper": "transformer",
+        "retrieved_docs": [
+          141,
+          121
+        ],
+        "hit_at_5": true,
+        "latency_ms": 2.16
+      },
+      {
+        "claim_id": "C03",
+        "category": "contradicted",
+        "expected_paper": "bert",
+        "retrieved_docs": [
+          141
+        ],
+        "hit_at_5": true,
+        "latency_ms": 2.88
+      },
+      {
+        "claim_id": "C04",
+        "category": "contradicted",
+        "expected_paper": "bert",
+        "retrieved_docs": [
+          141
+        ],
+        "hit_at_5": true,
+        "latency_ms": 2.12
+      },
+      {
+        "claim_id": "C05",
+        "category": "contradicted",
+        "expected_paper": "lora",
+        "retrieved_docs": [
+          5481,
+          141
+        ],
+        "hit_at_5": true,
+        "latency_ms": 1.91
+      },
+      {
+        "claim_id": "C06",
+        "category": "contradicted",
+        "expected_paper": "lora",
+        "retrieved_docs": [
+          5481
+        ],
+        "hit_at_5": true,
+        "latency_ms": 3.57
+      },
+      {
+        "claim_id": "C07",
+        "category": "contradicted",
+        "expected_paper": "lora",
+        "retrieved_docs": [
+          5481,
+          121
+        ],
+        "hit_at_5": true,
+        "latency_ms": 2.58
+      },
+      {
+        "claim_id": "C08",
+        "category": "contradicted",
+        "expected_paper": "bert",
+        "retrieved_docs": [
+          141,
+          5481
+        ],
+        "hit_at_5": true,
+        "latency_ms": 3.98
+      },
+      {
+        "claim_id": "C09",
+        "category": "contradicted",
+        "expected_paper": "lora",
+        "retrieved_docs": [
+          5481,
+          141
+        ],
+        "hit_at_5": true,
+        "latency_ms": 3.27
+      },
+      {
+        "claim_id": "C10",
+        "category": "contradicted",
+        "expected_paper": "bert",
+        "retrieved_docs": [
+          121,
+          5481
+        ],
+        "hit_at_5": false,
+        "latency_ms": 1.42
+      },
+      {
+        "claim_id": "N01",
+        "category": "numerical",
+        "expected_paper": "transformer",
+        "retrieved_docs": [
+          121
+        ],
+        "hit_at_5": true,
+        "latency_ms": 2.24
+      },
+      {
+        "claim_id": "N02",
+        "category": "numerical",
+        "expected_paper": "transformer",
+        "retrieved_docs": [
+          121
+        ],
+        "hit_at_5": true,
+        "latency_ms": 2.33
+      },
+      {
+        "claim_id": "N03",
+        "category": "numerical",
+        "expected_paper": "bert",
+        "retrieved_docs": [
+          121,
+          141,
+          5481
+        ],
+        "hit_at_5": true,
+        "latency_ms": 1.43
+      },
+      {
+        "claim_id": "N04",
+        "category": "numerical",
+        "expected_paper": "bert",
+        "retrieved_docs": [
+          121,
+          141,
+          5481
+        ],
+        "hit_at_5": true,
+        "latency_ms": 1.46
+      },
+      {
+        "claim_id": "N05",
+        "category": "numerical",
+        "expected_paper": "lora",
+        "retrieved_docs": [
+          5481
+        ],
+        "hit_at_5": true,
+        "latency_ms": 3.42
+      },
+      {
+        "claim_id": "N06",
+        "category": "numerical",
+        "expected_paper": "transformer",
+        "retrieved_docs": [
+          121
+        ],
+        "hit_at_5": true,
+        "latency_ms": 2.12
+      },
+      {
+        "claim_id": "N07",
+        "category": "numerical",
+        "expected_paper": "bert",
+        "retrieved_docs": [
+          121,
+          141,
+          5481
+        ],
+        "hit_at_5": true,
+        "latency_ms": 1.51
+      },
+      {
+        "claim_id": "N08",
+        "category": "numerical",
+        "expected_paper": "transformer",
+        "retrieved_docs": [
+          121
+        ],
+        "hit_at_5": true,
+        "latency_ms": 2.93
+      },
+      {
+        "claim_id": "N09",
+        "category": "numerical",
+        "expected_paper": "lora",
+        "retrieved_docs": [
+          5481
+        ],
+        "hit_at_5": true,
+        "latency_ms": 2.93
+      },
+      {
+        "claim_id": "N10",
+        "category": "numerical",
+        "expected_paper": "lora",
+        "retrieved_docs": [
+          5481
+        ],
+        "hit_at_5": true,
+        "latency_ms": 2.33
+      }
+    ]
+  },
+  "scifact_100": {
+    "recall_at_1": {
+      "k": 1,
+      "n": 100,
+      "recall": 0.55,
+      "hits": 55
+    },
+    "recall_at_3": {
+      "k": 3,
+      "n": 100,
+      "recall": 0.67,
+      "hits": 67
+    },
+    "recall_at_5": {
+      "k": 5,
+      "n": 100,
+      "recall": 0.76,
+      "hits": 76
+    },
+    "recall_at_10": {
+      "k": 10,
+      "n": 100,
+      "recall": 0.77,
+      "hits": 77
+    },
+    "claims_with_gold": 100,
+    "retrieval_mean_ms": 153.59
+  }
+}

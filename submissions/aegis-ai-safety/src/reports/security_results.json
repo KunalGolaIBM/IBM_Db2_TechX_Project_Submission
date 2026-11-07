@@ -1,0 +1,57 @@
+{
+  "http_cases": [
+    {
+      "case": "malformed_pdf",
+      "status": 422,
+      "passed": true
+    },
+    {
+      "case": "unsupported_extension",
+      "status": 400,
+      "passed": true
+    },
+    {
+      "case": "empty_upload",
+      "status": 400,
+      "passed": true
+    },
+    {
+      "case": "oversized_upload",
+      "status": 400,
+      "passed": true
+    },
+    {
+      "case": "invalid_utf8",
+      "status": 201,
+      "passed": true,
+      "note": "Decodes with latin-1; documented behavior, not a crash."
+    },
+    {
+      "case": "sql_injection_metadata",
+      "status": 201,
+      "passed": true
+    },
+    {
+      "case": "xss_stored_as_data",
+      "status": 201,
+      "passed": true
+    },
+    {
+      "case": "path_traversal_filename",
+      "status": 201,
+      "passed": true
+    },
+    {
+      "case": "cors_preflight",
+      "status": 200,
+      "passed": true
+    }
+  ],
+  "missing_llm_key": {
+    "passed": true
+  },
+  "unreachable_llm": {
+    "passed": true,
+    "message": "The configured language model could not be reached or returned an error."
+  }
+}
