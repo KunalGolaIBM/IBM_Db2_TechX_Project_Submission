@@ -152,44 +152,62 @@ class ConnectionPool:
     setup in connect()), a query on an open one about 0.5 ms, and one check opens two to six. A
     checked-out connection belongs to one caller until it is closed. A returned one is rolled back,
     and an idle one is pinged before it is handed out again, so a connection broken by a Db2 restart
-    is dropped and replaced instead of failing a check. At most `size` idle connections are kept.
+    is dropped and replaced instead of failing a check. At most `size` idle connections are kept and
+    at most `max_open` are checked out at once; a caller that cannot get one within `wait_s` gets a
+    DatabaseError, so a burst of requests fails closed instead of opening connections without limit.
     """
 
-    def __init__(self, settings: Settings, role: Role = "app", size: int = 8):
+    def __init__(self, settings: Settings, role: Role = "app", size: int = 8, max_open: int = 16,
+                 wait_s: float | None = None):
         self._settings, self._role, self._size = settings, role, size
         self._idle: list[ibm_db_dbi.Connection] = []
         self._lock = threading.Lock()
+        self._slots = threading.BoundedSemaphore(max_open)
+        self._wait_s = settings.db2_connect_timeout_s if wait_s is None else wait_s
+        self._closed = False
         self.opened = 0  # connections opened over the pool's life (tests and the benchmark read it)
 
     def connect(self) -> PooledConnection:
-        while True:
-            with self._lock:
-                raw = self._idle.pop() if self._idle else None
-            if raw is None:
-                conn = connect(self._settings, self._role)
+        if not self._slots.acquire(timeout=self._wait_s):
+            raise DatabaseError("every pooled Db2 connection is busy", sqlstate="57030")
+        try:
+            while True:
                 with self._lock:
-                    self.opened += 1
-                return PooledConnection(self, conn)
-            try:
-                query(raw, SQL_PING)
-                return PooledConnection(self, raw)
-            except Exception:  # noqa: BLE001 - however it failed, it is not handed out
-                _close_quietly(raw)
+                    if self._closed:
+                        raise DatabaseError("the connection pool is closed")
+                    raw = self._idle.pop() if self._idle else None
+                if raw is None:
+                    conn = connect(self._settings, self._role)
+                    with self._lock:
+                        self.opened += 1
+                    return PooledConnection(self, conn)
+                try:
+                    query(raw, SQL_PING)
+                    return PooledConnection(self, raw)
+                except Exception:  # noqa: BLE001 - however it failed, it is not handed out
+                    _close_quietly(raw)
+        except BaseException:
+            self._slots.release()
+            raise
 
     def _release(self, raw: ibm_db_dbi.Connection) -> None:
         try:
-            raw.rollback()  # nothing a caller left uncommitted carries over to the next one
-        except Exception:  # noqa: BLE001
-            _close_quietly(raw)
-            return
-        with self._lock:
-            if len(self._idle) < self._size:
-                self._idle.append(raw)
+            try:
+                raw.rollback()  # nothing a caller left uncommitted carries over to the next one
+            except Exception:  # noqa: BLE001
+                _close_quietly(raw)
                 return
-        _close_quietly(raw)
+            with self._lock:
+                if not self._closed and len(self._idle) < self._size:
+                    self._idle.append(raw)
+                    return
+            _close_quietly(raw)  # pool full or closed: a connection returned late is closed, not kept
+        finally:
+            self._slots.release()
 
     def close(self) -> None:
         with self._lock:
+            self._closed = True
             idle, self._idle = self._idle, []
         for raw in idle:
             _close_quietly(raw)

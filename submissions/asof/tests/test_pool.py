@@ -84,6 +84,29 @@ def test_a_dead_idle_connection_is_dropped_and_replaced_not_handed_out(opened):
     assert fresh.raw is not dead and dead.closed and pool.opened == 2
 
 
+def test_at_most_max_open_are_checked_out_and_the_next_caller_fails_closed(opened):
+    pool = db.ConnectionPool(Settings(_env_file=None), max_open=2, wait_s=0.05)
+    a, b = pool.connect(), pool.connect()
+    with pytest.raises(db.DatabaseError, match="busy"):
+        pool.connect()
+    a.close()
+    c = pool.connect()  # a returned slot is usable again
+    assert c.raw is not None and len(opened) == 2
+    b.close()
+    c.close()
+
+
+def test_a_connection_returned_after_the_pool_closed_is_closed_not_kept(opened):
+    pool = db.ConnectionPool(Settings(_env_file=None))
+    held = pool.connect()
+    raw = held.raw
+    pool.close()
+    held.close()
+    assert raw.closed
+    with pytest.raises(db.DatabaseError, match="closed"):
+        pool.connect()
+
+
 @pytest.mark.db2
 def test_the_pool_reuses_real_connections_and_survives_one_killed_underneath(settings, test_schema):
     pool = db.ConnectionPool(settings)
