@@ -1,0 +1,672 @@
+{
+ "split": "situation-test3",
+ "provider": "openrouter",
+ "model": "google/gemini-3.1-flash-lite",
+ "started_at": "2026-11-07T21:44:32+00:00",
+ "git_commit": "0116ee5",
+ "prompt_version": "2026-11-07.1 + bank-2026-11-07.1",
+ "cases_sha256": "cfb8c55b6beb7dbae7ad4fef5be8482cd7f8c4a9c9aea5c701f85bef65e273a9",
+ "workers": 4,
+ "wall_time_s": 35.0,
+ "ledger_chain": "OK",
+ "summary": {
+  "overall": {
+   "n": 20,
+   "wrong_drafts": 12,
+   "false_allows": 2,
+   "correct_drafts": 8,
+   "false_blocks": 0,
+   "false_allow_rate": 0.166667,
+   "false_block_rate": 0.0,
+   "safe_rate": 0.9,
+   "ideal_rate": 0.75,
+   "escalation_rate": 0.15,
+   "correction_rate": 0.35,
+   "citation_accuracy": 1.0,
+   "rule_overrides": 2,
+   "rule_flagged": 1,
+   "errors": 0,
+   "latency_p50_ms": 5192,
+   "latency_p90_ms": 7153,
+   "llm_calls_mean": 3.65
+  },
+  "by_category": {
+   "premise_conflict": {
+    "n": 12,
+    "wrong_drafts": 12,
+    "false_allows": 2,
+    "correct_drafts": 0,
+    "false_blocks": 0,
+    "false_allow_rate": 0.166667,
+    "false_block_rate": null,
+    "safe_rate": 0.833333,
+    "ideal_rate": 0.583333,
+    "escalation_rate": 0.25,
+    "correction_rate": 0.583333,
+    "citation_accuracy": 1.0,
+    "rule_overrides": 2,
+    "rule_flagged": 1,
+    "errors": 0,
+    "latency_p50_ms": 5587,
+    "latency_p90_ms": 7763,
+    "llm_calls_mean": 4.75
+   },
+   "premise_consistent": {
+    "n": 8,
+    "wrong_drafts": 0,
+    "false_allows": 0,
+    "correct_drafts": 8,
+    "false_blocks": 0,
+    "false_allow_rate": null,
+    "false_block_rate": 0.0,
+    "safe_rate": 1.0,
+    "ideal_rate": 1.0,
+    "escalation_rate": 0.0,
+    "correction_rate": 0.0,
+    "citation_accuracy": 1.0,
+    "rule_overrides": 0,
+    "rule_flagged": 0,
+    "errors": 0,
+    "latency_p50_ms": 2475,
+    "latency_p90_ms": 4449,
+    "llm_calls_mean": 2.0
+   }
+  }
+ },
+ "records": [
+  {
+   "id": "SW01",
+   "category": "premise_conflict",
+   "as_of": "2026-05-12",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "CORRECTED",
+   "reason": "CORRECTED_FROM_CLAUSES",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 7763,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MATCH) DLY-004 v1: Because the delay was due to air traffic control restrictions, it is outside our control, ",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) DLY-004 v1: For delays of 3 hours or more, Aurelia Air provides meal vouchers.",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule MATCH) DLY-004 v1: Compensation is only eligible for delays that are not caused by weather, air traffic contr"
+   ],
+   "final_answer": "For delays of 3 hours or more, Aurelia Air provides meal vouchers. Compensation is only eligible for delays that are not caused by weather, air traffic control restrictions, or security events.\n\nPolicy references: DLY-004 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 5
+  },
+  {
+   "id": "SW02",
+   "category": "premise_consistent",
+   "as_of": "2026-08-12",
+   "draft_ok": true,
+   "expected": "PASS",
+   "acceptable": [
+    "PASS"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 3126,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) WIR-001 v1: Since it's an outgoing domestic wire transfer, it costs $30."
+   ],
+   "final_answer": "Since it's an outgoing domestic wire transfer, it costs $30.\n\nPolicy references: WIR-001 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 2
+  },
+  {
+   "id": "SW03",
+   "category": "premise_conflict",
+   "as_of": "2026-02-20",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "CORRECTED",
+   "reason": "CORRECTED_FROM_CLAUSES",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 7153,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MATCH) PET-001 v1: Since your cat and her carrier come to more than 8 kg, she will need to travel in the hold",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) PET-001 v1: Small cats and dogs may travel in the cabin if the pet and its carrier together weigh no m",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule MATCH) PET-001 v1: The pet fee is $100 each way."
+   ],
+   "final_answer": "Small cats and dogs may travel in the cabin if the pet and its carrier together weigh no more than 8 kg. The pet fee is $100 each way.\n\nPolicy references: PET-001 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 5
+  },
+  {
+   "id": "SW04",
+   "category": "premise_conflict",
+   "as_of": "2026-03-11",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "CORRECTED",
+   "reason": "CORRECTED_FROM_CLAUSES",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 5757,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MATCH) OVD-002 v1: Since your account was overdrawn by more than $5, an overdraft fee of $35 applies.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) OVD-002 v1: No overdraft fee is charged if the account is overdrawn by $5 or less at the end of the bu"
+   ],
+   "final_answer": "No overdraft fee is charged if the account is overdrawn by $5 or less at the end of the business day.\n\nPolicy references: OVD-002 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 5
+  },
+  {
+   "id": "SW05",
+   "category": "premise_consistent",
+   "as_of": "2026-01-25",
+   "draft_ok": true,
+   "expected": "PASS",
+   "acceptable": [
+    "PASS"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 4449,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) DLY-004 v1: Because the delay was caused by weather, it is outside our control and not eligible for co",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule MATCH) DLY-004 v1: Meal vouchers are provided for delays of 3 hours or more."
+   ],
+   "final_answer": "I'm sorry for the disruption. Because the delay was caused by weather, it is outside our control and not eligible for compensation, but meal vouchers are provided for delays of 3 hours or more.\n\nPolicy references: DLY-004 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 2
+  },
+  {
+   "id": "SW06",
+   "category": "premise_conflict",
+   "as_of": "2026-03-28",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "ESCALATED",
+   "reason": "CORRECTION_FAILED",
+   "ideal": false,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 5959,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MATCH) BAG-003 v1: Since your suitcase is over 32 kg, we can't accept it as checked baggage.",
+    "p2#1 CONTRADICTED (llm CONTRADICTED, rule MATCH) BAG-003 v1: Checked bags weighing between 23 kg and 32 kg are accepted",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule MATCH) BAG-003 v1: Checked bags weighing between 23 kg and 32 kg are accepted for an overweight fee of $100 e"
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 5
+  },
+  {
+   "id": "SW07",
+   "category": "premise_conflict",
+   "as_of": "2026-04-22",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": false,
+   "safe": false,
+   "false_allow": true,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 5418,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) WIR-002 v1: The fee for an outgoing international wire is $45."
+   ],
+   "final_answer": "Because it was an outgoing international wire, the fee is $45.\n\nPolicy references: WIR-002 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 2,
+   "agent_new_clauses": [
+    "FXF-001"
+   ],
+   "llm_calls": 5
+  },
+  {
+   "id": "SW08",
+   "category": "premise_consistent",
+   "as_of": "2026-10-02",
+   "draft_ok": true,
+   "expected": "PASS",
+   "acceptable": [
+    "PASS"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 2607,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) DLY-003 v1: Since the delay was within our control and you arrived 10 hours late, you're entitled to $"
+   ],
+   "final_answer": "Since the delay was within our control and you arrived 10 hours late, you're entitled to $400 in compensation.\n\nPolicy references: DLY-003 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 2
+  },
+  {
+   "id": "SW09",
+   "category": "premise_conflict",
+   "as_of": "2026-06-15",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "CORRECTED",
+   "reason": "CORRECTED_FROM_CLAUSES",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 5278,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) BRV-005 v1: As you're booked in Business class, the bereavement fare is not available for your ticket.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) BRV-005 v1: A bereavement fare is available in Economy and Premium Economy only."
+   ],
+   "final_answer": "I am very sorry for your loss. A bereavement fare is available in Economy and Premium Economy only.\n\nPolicy references: BRV-005 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 5
+  },
+  {
+   "id": "SW10",
+   "category": "premise_consistent",
+   "as_of": "2026-09-08",
+   "draft_ok": true,
+   "expected": "PASS",
+   "acceptable": [
+    "PASS"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 2163,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) OVD-002 v1: Since your account was overdrawn by $5 or less at the end of the business day, no overdraf"
+   ],
+   "final_answer": "No. Since your account was overdrawn by $5 or less at the end of the business day, no overdraft fee is charged.\n\nPolicy references: OVD-002 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 2
+  },
+  {
+   "id": "SW11",
+   "category": "premise_conflict",
+   "as_of": "2026-07-09",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": false,
+   "safe": false,
+   "false_allow": true,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 2920,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) BRV-001 v1: Cousins do not count as immediate family for the bereavement fare",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) BRV-001 v1: The bereavement fare does not apply to a cousin"
+   ],
+   "final_answer": "I'm sorry for your loss. Because she was your cousin, she does not count as immediate family, so the bereavement fare does not apply.\n\nPolicy references: BRV-001 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 2
+  },
+  {
+   "id": "SW12",
+   "category": "premise_conflict",
+   "as_of": "2026-06-30",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "ESCALATED",
+   "reason": "CORRECTION_FAILED",
+   "ideal": false,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 1,
+   "latency_ms": 4807,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MATCH) CLS-001 v1: Because you're closing the account within 90 days of opening it, there is an early closure",
+    "p2#1 CONTRADICTED (llm SUPPORTED, rule MISMATCH) CLS-001 v1: There is no fee for closing a checking account after it has been open for more than 90 day"
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 5
+  },
+  {
+   "id": "SW13",
+   "category": "premise_consistent",
+   "as_of": "2026-04-14",
+   "draft_ok": true,
+   "expected": "PASS",
+   "acceptable": [
+    "PASS"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 5801,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) PET-001 v1: Since your dog and his carrier weigh 7 kg together, he can travel in the cabin",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule MATCH) PET-001 v1: Your dog can travel in the cabin for a $100 pet fee each way"
+   ],
+   "final_answer": "Yes. Since your dog and his carrier weigh 7 kg together, he can travel in the cabin for a $100 pet fee each way.\n\nPolicy references: PET-001 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 2
+  },
+  {
+   "id": "SW14",
+   "category": "premise_conflict",
+   "as_of": "2026-09-14",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "CORRECTED",
+   "reason": "CORRECTED_FROM_CLAUSES",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 5332,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MATCH) PET-004 v1: Since your flight is longer than 8 hours, pets cannot travel in the cabin on it.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) PET-004 v1: Pets are not accepted in the cabin on flights scheduled for more than 8 hours."
+   ],
+   "final_answer": "Pets are not accepted in the cabin on flights scheduled for more than 8 hours.\n\nPolicy references: PET-004 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 5
+  },
+  {
+   "id": "SW15",
+   "category": "premise_conflict",
+   "as_of": "2026-02-17",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "CORRECTED",
+   "reason": "CORRECTED_FROM_CLAUSES",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 5106,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MATCH) MTF-003 v1: Since you receive paper statements, each one costs $2.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) MTF-003 v1: Electronic statements are free."
+   ],
+   "final_answer": "Electronic statements are free.\n\nPolicy references: MTF-003 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 5
+  },
+  {
+   "id": "SW16",
+   "category": "premise_consistent",
+   "as_of": "2026-05-19",
+   "draft_ok": true,
+   "expected": "PASS",
+   "acceptable": [
+    "PASS"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 2344,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) BAG-004 v1: Since your carry-on weighs under 10 kg, you can bring it into the cabin free of charge.",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule MATCH) BAG-004 v1: You can bring one personal item into the cabin."
+   ],
+   "final_answer": "Yes. Since your carry-on weighs under 10 kg, you can bring it into the cabin free of charge, along with one personal item.\n\nPolicy references: BAG-004 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 2
+  },
+  {
+   "id": "SW17",
+   "category": "premise_conflict",
+   "as_of": "2026-08-03",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "ESCALATED",
+   "reason": "CORRECTION_FAILED",
+   "ideal": false,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 1,
+   "latency_ms": 16449,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) DLY-002 v1: Since your delay was caused by a security event, it isn't eligible for compensation.",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) DLY-004 v1: You can get a meal voucher.",
+    "p2#1 CONTRADICTED (llm SUPPORTED, rule MISMATCH) DLY-003 v1: For a delay within Aurelia Air's control that results in an arrival 6 to 9 hours late, the"
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 5
+  },
+  {
+   "id": "SW18",
+   "category": "premise_consistent",
+   "as_of": "2026-07-21",
+   "draft_ok": true,
+   "expected": "PASS",
+   "acceptable": [
+    "PASS"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 2197,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) CLS-001 v1: Because you're closing it within 90 days of opening, an early closure fee of $25 applies."
+   ],
+   "final_answer": "Because you're closing it within 90 days of opening, an early closure fee of $25 applies.\n\nPolicy references: CLS-001 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 2
+  },
+  {
+   "id": "SW19",
+   "category": "premise_conflict",
+   "as_of": "2026-08-20",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "CORRECTED",
+   "reason": "CORRECTED_FROM_CLAUSES",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 6174,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MATCH) CXL-001 v2: Since more than 24 hours have passed since your purchase, free cancellation no longer appl",
+    "p1#2 CONTRADICTED (llm CONTRADICTED, rule MATCH) CXL-001 v2: Since more than 24 hours have passed since your purchase, a $100 fee is charged",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) CXL-001 v2: You may cancel your booking free of charge within 24 hours of purchase",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule MATCH) CXL-001 v2: The 24-hour cancellation window applies regardless of how close the booking is to the sche"
+   ],
+   "final_answer": "You may cancel your booking free of charge within 24 hours of purchase, regardless of how close the booking is to the scheduled departure.\n\nPolicy references: CXL-001 v2 (in effect from 2026-07-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 5
+  },
+  {
+   "id": "SW20",
+   "category": "premise_consistent",
+   "as_of": "2026-03-02",
+   "draft_ok": true,
+   "expected": "PASS",
+   "acceptable": [
+    "PASS"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 2143,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) BRV-005 v1: Because you're travelling in Premium Economy for your brother's funeral, you can request t"
+   ],
+   "final_answer": "I'm so sorry. Because you're travelling in Premium Economy for your brother's funeral, you can request the bereavement fare.\n\nPolicy references: BRV-005 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 2
+  }
+ ]
+}

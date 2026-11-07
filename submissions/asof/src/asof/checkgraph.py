@@ -40,6 +40,7 @@ from .gate import (
     GateRequest,
     GateResult,
     TooManyClaims,
+    invented_details,
     pool_of,
     references,
     unchecked_details,
@@ -206,7 +207,9 @@ def build(gate: Gate, req: GateRequest, deadline_at: float | None = None):
 
     def decide(state: CheckState) -> dict[str, Any]:
         outcomes = state.get("outcomes", [])
-        unchecked = unchecked_details(state["text"], [c.text for c in outcomes], state["question"])
+        claim_texts = [c.text for c in outcomes]
+        unchecked = (unchecked_details(state["text"], claim_texts, state["question"])
+                     + invented_details(state["text"], claim_texts))
         if state["pass_no"] == 1:
             decision, reason, final = gate._decide(outcomes, req.draft_answer, unchecked)
             return {"first": outcomes, "decision": decision, "reason": reason, "final": final, "unchecked": unchecked}
