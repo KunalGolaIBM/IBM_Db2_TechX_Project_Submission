@@ -51,3 +51,6 @@ data/scifact/
 
 # Agent collaboration
 .context/
+
+# Vercel
+.vercel/

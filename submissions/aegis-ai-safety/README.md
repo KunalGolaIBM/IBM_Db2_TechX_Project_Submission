@@ -8,7 +8,7 @@ with page-level Db2-backed evidence links, explanations, limitations, and numeri
 A report can be exported as JSON or Markdown.
 
 - **Repository:** https://github.com/sakethdonepudi/aegis-ai-safety
-- **Public demo:** none. The application runs locally; no hosted deployment is claimed.
+- **Public interactive demo:** https://aegis-research-verification.vercel.app (recorded Db2 session #741; live upload/inference runs locally)
 - **Model used for reported results:** local Ollama `qwen2.5:7b-instruct`, temperature 0.
 
 ## Problem statement
@@ -221,13 +221,17 @@ Full reports: `src/reports/AEGIS_TESTING_MASTER_REPORT.md`,
 
 Desktop and mobile screenshots are in `docs/screenshots/`.
 
-![Desktop dashboard](docs/screenshots/ui-desktop.png)
+![AEGIS landing](docs/screenshots/landing.png)
 
-![Mobile dashboard](docs/screenshots/ui-mobile.png)
+![AEGIS workspace](docs/screenshots/workspace.png)
 
-A five-minute demo script is in `src/docs/demo-script.md`. It uploads a real paper,
-verifies a small mixed claim set, inspects evidence, and exports a report. No live demo
-URL is provided because no public deployment exists.
+![AEGIS results](docs/screenshots/results.png)
+
+![AEGIS evidence inspector](docs/screenshots/evidence.png)
+
+![AEGIS mobile](docs/screenshots/mobile.png)
+
+A five-minute demo script is in `src/docs/demo-script.md`. The public Vercel page is a clearly labelled interactive demonstration using the recorded Db2 session #741. The full live flow (upload, inference, Db2 history, exports) runs locally from `src/`.
 
 ## Known limitations and roadmap
 

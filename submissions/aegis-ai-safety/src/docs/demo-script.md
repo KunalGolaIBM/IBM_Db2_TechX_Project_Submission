@@ -3,6 +3,9 @@
 **Goal:** show that AEGIS verifies claims against the actual paper, links the exact
 evidence, abstains when evidence is missing, and exports an auditable report.
 
+**Public interactive demonstration:** https://aegis-research-verification.vercel.app
+(the recorded session #741; no live inference). The full live flow below runs locally.
+
 **Setup before the demo**
 
 ```bash

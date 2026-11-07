@@ -9,13 +9,22 @@ from documents you supply, and records an evidence-linked judgment for every cla
 AEGIS is not a general-purpose chatbot. It exists to evaluate information produced by
 other AI systems, preserve provenance, and support reproducible evaluation.
 
-![AEGIS dashboard](docs/screenshots/dashboard.png)
+**Public interactive demonstration:** https://aegis-research-verification.vercel.app
 
-![AEGIS claim inspector](docs/screenshots/claim-inspector.png)
+The public site is an honest **interactive demonstration** built from the real recorded
+Db2 session #741. Live upload, inference, and verification remain available through the
+local application documented below; the public page does not pretend to be connected to
+the local Db2 or Ollama instance.
 
-![AEGIS numeric check](docs/screenshots/numeric-check.png)
+![AEGIS landing](docs/screenshots/landing.png)
 
-![AEGIS evaluation empty state](docs/screenshots/evaluation.png)
+![AEGIS workspace](docs/screenshots/workspace.png)
+
+![AEGIS results](docs/screenshots/results.png)
+
+![AEGIS evidence inspector](docs/screenshots/evidence.png)
+
+![AEGIS mobile](docs/screenshots/mobile.png)
 
 ![status](https://img.shields.io/badge/status-working%20vertical%20slice-4C8DFF)
 ![database](https://img.shields.io/badge/database-IBM%20Db2%2012.1.5-0F62FE)
@@ -26,7 +35,8 @@ other AI systems, preserve provenance, and support reproducible evaluation.
 
 | Area | Status |
 | --- | --- |
-| Next.js research dashboard (dark-first, optional light mode) | Working |
+| Next.js research workspace (light editorial UI, responsive, reduced-motion support) | Working |
+| Public interactive demonstration on Vercel | Live; recorded example, no fake live inference |
 | FastAPI API with Pydantic request/response schemas | Working |
 | IBM Db2 12.1.5 persistence (six tables, FKs, indexes) | Working; initialized and integration-tested |
 | PDF / TXT / MD evidence ingestion with PyMuPDF | Working |
@@ -318,6 +328,11 @@ Tested in this build environment:
 - SciFact held-out run: 100 label-agnostic dev claims, macro F1 0.678, accuracy 0.700,
   retrieval Recall@5 0.76, Recall@10 0.77, 0 verification errors
 - Controlled real-paper suite: 40/40; hallucination/false-positive suite: 10/10
+- Local live smoke test on 2026-11-07: BERT PDF ingested, 3 claims returned
+  1 supported / 1 contradicted / 1 insufficient, 0 errors, JSON + Markdown exports,
+  session #741 persisted in Db2
+- Public show-case deployment on Vercel: HTTPS, desktop/mobile, example flow, no browser
+  console errors, no horizontal overflow
 
 Not tested here, and therefore not claimed:
 
@@ -329,7 +344,9 @@ Not tested here, and therefore not claimed:
   and the two demo PDFs were ingested through the API, but the file-picker flow was not
   driven by a browser test)
 - Windows or Linux application runtime beyond Ubuntu CI unit tests
-- Public deployment with a hosted Db2 instance
+- Full live public verification with a hosted Db2 instance. The public Vercel site is a
+  clearly labelled interactive demonstration; live verification requires the local
+  backend, Db2, and inference service.
 
 ## Security posture
 

@@ -4,6 +4,27 @@ AEGIS is built for local verification first. A public deployment requires a host
 privately reachable IBM Db2 instance. A backend running in the cloud cannot reach a
 Db2 instance that only listens on a developer's Mac.
 
+## Current public deployment — interactive demonstration
+
+**URL:** https://aegis-research-verification.vercel.app
+
+This is **Deployment Strategy B**: the full frontend is public on Vercel Hobby, but it
+runs in showcase mode (`NEXT_PUBLIC_SHOWCASE_ONLY=1`). It loads a real recorded Db2
+session (#741) with actual BERT page/passage evidence. It does not send uploads, call an
+LLM, or claim a live Db2 connection.
+
+Verified on 2026-11-08:
+
+- HTTPS returns 200; title and landing render correctly.
+- Desktop 1440 px and mobile 390 px have no horizontal overflow.
+- “Try an example” opens the recorded results and evidence inspector.
+- No browser console errors.
+- The page clearly labels itself “Demo” and “Interactive demonstration”.
+
+**Full live mode** (upload + inference + Db2 history) remains the local application
+described below. A fully live public backend requires a hosted Db2 instance and a hosted
+OpenAI-compatible model; that is not configured or claimed.
+
 ## Components
 
 ```text
@@ -105,6 +126,8 @@ or a self-hosted Ollama instance. Do not expose Ollama publicly without authenti
 - A hosted Db2 instance or credentials.
 - Secret manager integration.
 - Container image definitions.
-- A verified public deployment or public benchmark.
+- A fully live public deployment connected to hosted Db2. Only the interactive frontend
+  demonstration is public.
 
-Do not represent a mocked database or a local-only setup as a production integration.
+Do not represent the showcase as a live Db2 connection, and do not represent a mocked
+database or local-only setup as a production integration.

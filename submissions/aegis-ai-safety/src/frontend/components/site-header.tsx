@@ -1,80 +1,61 @@
-import Link from "next/link";
-import { Database, ShieldCheck, Sparkles } from "lucide-react";
+"use client";
 
-import { ThemeToggle } from "@/components/theme-toggle";
+import { Github, Play } from "lucide-react";
+import Link from "next/link";
+
 import { cn } from "@/lib/utils";
-import type { DbHealth } from "@/lib/types";
 
 interface SiteHeaderProps {
-  apiOnline: boolean | null;
-  db: DbHealth | null;
-  provider?: string | null;
+  live: boolean | null;
 }
 
-export function SiteHeader({ apiOnline, db, provider }: SiteHeaderProps) {
-  const dbState =
-    apiOnline === null
-      ? { label: "Checking API", className: "text-muted border-border bg-panel-2" }
-      : apiOnline === false
-        ? { label: "API offline", className: "text-contradicted border-contradicted/30 bg-contradicted/10" }
-        : db?.connected
-          ? db.missing_tables.length === 0
-            ? { label: "Db2 connected", className: "text-supported border-supported/30 bg-supported/10" }
-            : { label: "Db2 schema incomplete", className: "text-insufficient border-insufficient/30 bg-insufficient/10" }
-          : { label: "Db2 unavailable", className: "text-insufficient border-insufficient/30 bg-insufficient/10" };
-
+export function SiteHeader({ live }: SiteHeaderProps) {
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-bg/85 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-4 px-5 lg:px-8">
-        <Link href="/" className="group flex items-center gap-3" aria-label="AEGIS home">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-accent/30 bg-accent-soft">
-            <ShieldCheck className="h-5 w-5 text-accent" aria-hidden="true" />
+    <header className="sticky top-0 z-30 border-b border-line/80 bg-canvas/90 backdrop-blur-xl">
+      <div className="shell flex h-[68px] items-center justify-between gap-4">
+        <Link href="/" className="flex items-center gap-2.5" aria-label="AEGIS home">
+          <span className="relative flex h-7 w-7 items-center justify-center rounded-[9px] bg-ink text-[12px] font-semibold text-canvas">
+            A
+            <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-accent ring-2 ring-canvas" />
           </span>
-          <span className="leading-none">
-            <span className="block text-[15px] font-semibold tracking-[0.2em] text-fg">AEGIS</span>
-            <span className="mt-1 hidden font-mono text-[9px] uppercase tracking-[0.18em] text-muted sm:block">
-              Verify before you trust.
-            </span>
+          <span className="text-[15px] font-semibold tracking-[0.16em] text-ink">AEGIS</span>
+          <span
+            className={cn(
+              "ml-1 hidden items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] sm:flex",
+              live
+                ? "border-supported/25 bg-supported-soft text-supported"
+                : "border-line bg-surface text-muted"
+            )}
+          >
+            <span className={cn("h-1 w-1 rounded-full", live ? "bg-supported" : "bg-muted")} />
+            {live ? "Live" : "Demo"}
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-6 text-xs text-muted md:flex" aria-label="Primary">
-          <a className="transition-colors hover:text-fg" href="#workspace">
-            Workspace
+        <nav className="flex items-center gap-1.5 sm:gap-4" aria-label="Primary">
+          <a
+            href="#how-it-works"
+            className="hidden rounded-full px-3 py-2 text-[13px] text-muted transition-colors hover:text-ink sm:block"
+          >
+            How it works
           </a>
-          <a className="transition-colors hover:text-fg" href="#results">
-            Results
+          <a
+            href="#workspace"
+            className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3.5 py-2 text-[12.5px] font-medium text-canvas transition-transform hover:-translate-y-0.5 hover:bg-ink/90"
+          >
+            <Play className="h-3 w-3" aria-hidden="true" />
+            Try AEGIS
           </a>
-          <a className="transition-colors hover:text-fg" href="#history">
-            History
-          </a>
-          <a className="transition-colors hover:text-fg" href="#method">
-            Method
-          </a>
-          <a className="transition-colors hover:text-fg" href="#evaluation">
-            Evaluation
+          <a
+            href="https://github.com/sakethdonepudi/aegis-ai-safety"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="AEGIS on GitHub"
+            className="rounded-full p-2 text-muted transition-colors hover:bg-surface-2 hover:text-ink"
+          >
+            <Github className="h-4 w-4" aria-hidden="true" />
           </a>
         </nav>
-
-        <div className="flex items-center gap-2">
-          {provider ? (
-            <span className="hidden items-center gap-1.5 rounded-full border border-border bg-panel-2 px-2.5 py-1 font-mono text-[10px] text-muted lg:flex">
-              <Sparkles className="h-3 w-3 text-accent" aria-hidden="true" />
-              {provider}
-            </span>
-          ) : null}
-          <span
-            className={cn(
-              "flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px]",
-              dbState.className
-            )}
-            title={db?.message ?? "IBM Db2 connection status"}
-          >
-            <Database className="h-3 w-3" aria-hidden="true" />
-            {dbState.label}
-          </span>
-          <ThemeToggle />
-        </div>
       </div>
     </header>
   );

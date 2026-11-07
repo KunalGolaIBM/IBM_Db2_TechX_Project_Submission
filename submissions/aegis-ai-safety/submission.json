@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "project": {
-    "title": "AEGIS — AI Evidence Grounding & Integrity System",
+    "title": "AEGIS \u2014 AI Evidence Grounding & Integrity System",
     "slug": "aegis-ai-safety",
     "short_description": "Evidence-grounded research claim verification with page-level IBM Db2 provenance, LangChain verification, and explicit abstention for conflicting or absent evidence.",
     "category": "AI Safety / Trustworthy AI / Research Infrastructure",
-    "demo_url": "",
+    "demo_url": "https://aegis-research-verification.vercel.app",
     "video_url": "",
     "repo_url": "https://github.com/sakethdonepudi/aegis-ai-safety"
   },
@@ -34,8 +34,20 @@
     ]
   },
   "tech_stack": {
-    "languages": ["Python", "TypeScript", "JavaScript"],
-    "frameworks": ["FastAPI", "Next.js", "React", "LangChain"],
-    "ai_models": ["qwen2.5:7b-instruct via local Ollama", "OpenAI-compatible providers (configurable)"]
+    "languages": [
+      "Python",
+      "TypeScript",
+      "JavaScript"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "Next.js",
+      "React",
+      "LangChain"
+    ],
+    "ai_models": [
+      "qwen2.5:7b-instruct via local Ollama",
+      "OpenAI-compatible providers (configurable)"
+    ]
   }
 }

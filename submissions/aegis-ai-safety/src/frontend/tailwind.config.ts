@@ -1,54 +1,64 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  darkMode: ["class"],
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./lib/**/*.{ts,tsx}"],
   theme: {
-    container: {
-      center: true,
-      padding: "1.5rem",
-      screens: { "2xl": "1400px" },
-    },
     extend: {
       colors: {
-        bg: "hsl(var(--bg))",
-        panel: "hsl(var(--panel))",
-        "panel-2": "hsl(var(--panel-2))",
-        border: "hsl(var(--border))",
-        fg: "hsl(var(--fg))",
+        canvas: "hsl(var(--canvas))",
+        surface: "hsl(var(--surface))",
+        "surface-2": "hsl(var(--surface-2))",
+        line: "hsl(var(--line))",
+        ink: "hsl(var(--ink))",
         muted: "hsl(var(--muted))",
         accent: {
           DEFAULT: "hsl(var(--accent))",
           soft: "hsl(var(--accent-soft))",
         },
-        supported: "hsl(var(--supported))",
-        contradicted: "hsl(var(--contradicted))",
-        insufficient: "hsl(var(--insufficient))",
-        verror: "hsl(var(--verror))",
+        supported: {
+          DEFAULT: "hsl(var(--supported))",
+          soft: "hsl(var(--supported-soft))",
+        },
+        contradicted: {
+          DEFAULT: "hsl(var(--contradicted))",
+          soft: "hsl(var(--contradicted-soft))",
+        },
+        insufficient: {
+          DEFAULT: "hsl(var(--insufficient))",
+          soft: "hsl(var(--insufficient-soft))",
+        },
+        verror: {
+          DEFAULT: "hsl(var(--verror))",
+          soft: "hsl(var(--verror-soft))",
+        },
+        // Backwards-compatible aliases used by the retained evidence components.
+        bg: "hsl(var(--canvas))",
+        panel: "hsl(var(--surface))",
+        "panel-2": "hsl(var(--surface-2))",
+        border: "hsl(var(--line))",
+        fg: "hsl(var(--ink))",
       },
       fontFamily: {
-        sans: [
-          "ui-sans-serif",
-          "-apple-system",
-          "BlinkMacSystemFont",
-          "Segoe UI",
-          "Helvetica Neue",
-          "Arial",
-          "sans-serif",
-        ],
-        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "monospace"],
+        sans: ["var(--font-geist-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       boxShadow: {
-        panel: "0 1px 0 0 hsl(var(--border) / 0.6) inset, 0 16px 40px -24px rgb(0 0 0 / 0.6)",
+        panel:
+          "0 1px 2px rgba(24,24,22,0.03), 0 18px 50px -30px rgba(24,24,22,0.18)",
       },
       keyframes: {
         "fade-up": {
-          from: { opacity: "0", transform: "translateY(6px)" },
+          from: { opacity: "0", transform: "translateY(10px)" },
           to: { opacity: "1", transform: "translateY(0)" },
+        },
+        pulsebar: {
+          "0%, 100%": { opacity: "0.35", transform: "scaleX(0.7)" },
+          "50%": { opacity: "1", transform: "scaleX(1)" },
         },
       },
       animation: {
-        "fade-up": "fade-up 300ms ease-out both",
+        "fade-up": "fade-up 500ms cubic-bezier(0.22,1,0.36,1) both",
+        pulsebar: "pulsebar 1.5s ease-in-out infinite",
       },
     },
   },

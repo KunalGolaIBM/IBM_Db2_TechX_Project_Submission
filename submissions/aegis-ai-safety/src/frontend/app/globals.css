@@ -4,59 +4,56 @@
 
 @layer base {
   :root {
-    --bg: 210 25% 98%;
-    --panel: 0 0% 100%;
-    --panel-2: 210 20% 96%;
-    --border: 215 18% 87%;
-    --fg: 222 24% 12%;
-    --muted: 215 12% 44%;
-    --accent: 218 88% 54%;
-    --accent-soft: 218 80% 93%;
-    --supported: 152 42% 33%;
-    --contradicted: 358 58% 46%;
-    --insufficient: 36 72% 36%;
-    --verror: 262 48% 52%;
-  }
-
-  .dark {
-    --bg: 220 16% 4%;
-    --panel: 220 14% 6.5%;
-    --panel-2: 220 12% 9%;
-    --border: 220 10% 15%;
-    --fg: 210 22% 94%;
-    --muted: 215 10% 58%;
-    --accent: 218 100% 67%;
-    --accent-soft: 218 55% 16%;
-    --supported: 152 36% 62%;
-    --contradicted: 358 68% 69%;
-    --insufficient: 38 82% 63%;
-    --verror: 262 72% 74%;
+    --canvas: 42 30% 97%;
+    --surface: 0 0% 100%;
+    --surface-2: 42 20% 95%;
+    --line: 38 14% 87%;
+    --ink: 210 14% 13%;
+    --muted: 212 8% 43%;
+    --accent: 226 78% 54%;
+    --accent-soft: 226 80% 96%;
+    --supported: 155 38% 32%;
+    --supported-soft: 154 34% 94%;
+    --contradicted: 4 63% 47%;
+    --contradicted-soft: 4 62% 96%;
+    --insufficient: 31 82% 38%;
+    --insufficient-soft: 34 88% 94%;
+    --verror: 218 8% 42%;
+    --verror-soft: 218 12% 94%;
   }
 
   * {
-    border-color: hsl(var(--border));
+    border-color: hsl(var(--line));
   }
 
   html {
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
-    background-color: hsl(var(--bg));
-    color: hsl(var(--fg));
+    background-color: hsl(var(--canvas));
+    color: hsl(var(--ink));
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    text-rendering: optimizeLegibility;
   }
 
   ::selection {
-    background-color: hsl(var(--accent) / 0.25);
+    background: hsl(var(--accent) / 0.16);
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--accent));
+    outline-offset: 3px;
   }
 
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 11px;
+    height: 11px;
   }
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
+    background: hsl(var(--line));
+    border: 3px solid hsl(var(--canvas));
     border-radius: 999px;
   }
   ::-webkit-scrollbar-track {
@@ -65,23 +62,45 @@
 }
 
 @layer components {
-  .panel {
-    @apply min-w-0 rounded-xl border border-border bg-panel shadow-panel;
+  .shell {
+    @apply mx-auto w-full max-w-[1180px] px-5 sm:px-7 lg:px-9;
+  }
+
+  .surface {
+    @apply rounded-2xl border border-line bg-surface shadow-[0_1px_2px_rgba(24,24,22,0.03),0_18px_50px_-30px_rgba(24,24,22,0.18)];
   }
 
   .eyebrow {
-    @apply font-mono text-[10px] uppercase tracking-[0.22em] text-muted;
+    @apply font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-muted;
   }
 
-  .grid-fade {
-    background-image:
-      linear-gradient(to right, hsl(var(--border) / 0.35) 1px, transparent 1px),
-      linear-gradient(to bottom, hsl(var(--border) / 0.35) 1px, transparent 1px);
-    background-size: 44px 44px;
-    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 75%);
+  .display {
+    @apply font-semibold leading-[0.98] tracking-[-0.045em];
+  }
+
+  .hairline {
+    @apply h-px w-full bg-line;
   }
 
   .prose-evidence {
-    @apply whitespace-pre-wrap break-words text-[13.5px] leading-7 text-fg/90;
+    @apply whitespace-pre-wrap break-words text-[14px] leading-[1.85] text-ink/85;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
