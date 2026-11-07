@@ -7,6 +7,21 @@
 
 **Built on IBM Db2 12.1 for Db2Hack 2026.** Source: [github.com/JustJay7/asof](https://github.com/JustJay7/asof) (standalone mirror of `submissions/asof`). Bitemporal tables, native `VECTOR` search, SQL/JSON, in-database SHA-256, triggers, SQL PL and least-privilege users, with LangChain and the official `langchain-db2` connector.
 
+![The same draft checked for two customer dates: for 10 March 2026 the retroactive bereavement claim is contradicted by BRV-002 v1 and the answer is corrected; for 2 June 2026 it is supported by BRV-002 v2 and released as written](docs/screenshots/00-same-draft-two-dates.png)
+
+*The same draft, two customer dates, in the playground (the "Same draft" scenarios, which replay without a key). In live runs the March answer was corrected 5 times out of 5 and the June answer released 4 times out of 5; once the judge paraphrased a quote and the June answer was held for a specialist.*
+
+**At a glance** (latest runs, 7 Nov 2026):
+
+| | |
+|---|---|
+| **The date decides** | On the 25 frozen cases whose policy changed between the customer's date and today, judging by today's policy instead released 7 of 16 wrong drafts; AsOf released none ([measured](#why-the-date-matters-measured)). |
+| **Safety** | 0 of 100 wrong drafts released across seven frozen splits, each pinned before its first run (95% upper bound under 3%); 3 of 55 correct drafts held ([results](#evaluation-the-frozen-test-split)). |
+| **A deterministic backstop** | The rule check on `RULE_JSON` found the mismatch itself in 63 of those 100 wrong drafts ([rules.py](src/asof/rules.py)). |
+| **Db2 does the work** | Bitemporal tables queried `FOR BUSINESS_TIME AS OF` with `VECTOR_DISTANCE` in the same statement ([retriever.py](src/asof/retriever.py)), a SQL PL ledger with SHA-256 computed in SQL ([03_procedures.sql](src/asof/sql/03_procedures.sql)), `JSON_TABLE`, column masks ([05_masks.sql](src/asof/sql/05_masks.sql)) and `CREATE EXTERNAL MODEL`; `python -m asof.db2check` runs 29 of 29 feature checks. |
+| **Tamper evidence** | Triggers stop even the owner; `VERIFY_CHAIN` finds an edited row; receipts and chain-head anchors kept outside Db2 catch a ledger its owner rebuilt ([anchor.py](src/asof/anchor.py)). |
+| **Engineering** | A LangGraph check with fixed edges that fails closed ([checkgraph.py](src/asof/checkgraph.py)), per-user API roles, optional TLS to Db2, 599 tests, and three CI jobs including IBM's stock Db2 image. |
+
 > **Fictional data.** "Aurelia Air", "Fernhollow Bank" and every policy, fee schedule, FAQ and help-centre answer in this repository are invented for the demo. The airline is modelled on the kind of policy at issue in *Moffatt v. Air Canada*; neither describes a real company.
 
 **The reviewer's quick path** (from this folder; Python 3.12 and Docker; no API key needed). About 90 seconds when Db2 is already running and the Python packages are cached; a first Db2 start adds 2 to 25 minutes, depending on the machine, and the first install downloads PyTorch:
@@ -499,7 +514,7 @@ One chain serves every customer: the assistant's draft joins the input, and the 
 ## Testing & Verification
 
 ```bash
-pytest -q                                 # 596 tests: 7 need an opt-in flag (live LLM, remote endpoint), 3 need TLS on (scripts/enable_db2_tls.sh; CI turns it on)
+pytest -q                                 # 599 tests: 7 need an opt-in flag (live LLM, remote endpoint), 3 need TLS on (scripts/enable_db2_tls.sh; CI turns it on)
 pytest -q -m "not db2"                    # unit tests only, no database needed
 ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 4 live tests against the configured LLM (spends API calls)
 
@@ -543,7 +558,24 @@ Integration tests install everything into a throwaway `ASOF_TEST` schema, connec
 | Bank `bank-test` (not blind, see below) | 26 | **0 of 16** | 0 of 10 | 100% | 100% | 100% | 4.6 s |
 | `extractor-test`: drafts that try to talk the claim extractor out of a wrong claim | 10 | **0 of 8** | 0 of 2 | 100% | 100% | 100% | 5.5 s |
 
-Across the seven splits, 0 of 100 wrong drafts were released and 3 of 55 correct drafts were held. The check has not changed in a way that alters decisions since `512ee74`: name redaction changes none of the eval texts (a test proves it), and anchors, TLS and per-user access act after the decision or outside the check.
+Across the seven splits, 0 of 100 wrong drafts were released and 3 of 55 correct drafts were held. The check has not changed in a way that alters decisions since `512ee74`: name redaction changes none of the eval texts (a test proves it), and anchors, TLS and per-user access act after the decision or outside the check. With no false allows, the 95% upper bound on the false-allow rate is about 3/n (the rule of three): under 3% across the 100, under 12% on the airline split's 26. Only `bank-test2` and `situation-test2` were never used to choose a change: 0 of 21 wrong drafts there (95% bound under 14%). The other splits were run before and after changes their failures motivated, so they show the check holding up, not a blind estimate.
+
+### Why the date matters, measured
+
+The same check, run with every case's date replaced by the run date (7 Nov 2026), is what a guardrail without dates does: it judges each draft by the policy in force today. `python -m asof.eval --ablation current-policy` runs exactly that, scored against the same labels; nothing in the check changes. On the 25 cases across the seven splits whose key clause has a different version today than on the customer's date:
+
+| | With the customer's date (AsOf, `512ee74`) | Today's policy instead (`da7804d`) |
+|---|---|---|
+| Wrong drafts released | **0 of 16** | **7 of 16** |
+| Correct drafts held | 1 of 9 | 8 of 9 |
+| All seven splits: wrong drafts released | 0 of 100 | 8 of 100 |
+| All seven splits: correct drafts held | 3 of 55 | 9 of 55 |
+
+The seven released drafts include the Moffatt pattern (T21, X01: a retroactive bereavement claim that is wrong in March and right from May) and old fees that are wrong for their date and right today. The per-case records are in [docs/eval/](docs/eval/) (files named `*-ablation-current-policy*`).
+
+
+<details>
+<summary><b>Earlier runs of the same splits, and what moved</b></summary>
 
 **The same cases across runs** (false allow, false block, ideal decisions; every run's per-case results are in [docs/eval/](docs/eval/)):
 
@@ -561,6 +593,8 @@ In five runs of the original four splits, none of the 64 wrong drafts was releas
 - **T33** is the familiar one from earlier runs: the extractor turned the customer's own situation into a policy claim that no clause covers. **T24** (the earlier false block, a correct $75 fee called contradicted) passed in both later runs.
 - **Everything else** is the hosted model's run-to-run variance (it is called without a fixed temperature) swapping between two safe outcomes, corrected or escalated, mostly when the judge paraphrased instead of quoting and the verbatim-quote rule downgraded the claim. No frozen draft contains a "-free" word, so the coverage-check fix in `d87a552` cannot have changed any of them.
 - **Latency:** the airline split's median fell from 6.7 s to 4.6 s per answer, and the whole split from 78 s to 46 s. Most of that is the connection pool added in between (it removed about 3 s of connection setup and teardown per check on this machine); the hosted model's own latency also varies between runs.
+
+</details>
 
 ### Fewer needless holds, measured on new frozen splits
 
@@ -587,19 +621,22 @@ What is still held, by design: a draft that classifies the customer's situation 
 
 The first bank split stopped being blind when its run found a gap in MTF-003's rule data that was then fixed, so `bank-test2`'s first run is the bank number to quote: written after the fix, pinned before its run. In the latest run (`512ee74`) the investigating agent ran in 5 of 40 airline checks and 3 of 26 bank checks, and found a clause the first retrieval missed in all 8; in the `397c920` run it ran in 10 and 8, and found one in 5 and 6 (the per-case records keep `agent_tool_calls` and `agent_new_clauses`).
 
+<details>
+<summary><b>History of the airline split: both providers, every run, every miss</b></summary>
+
 **History of the airline split** (40 cases: 14 correct drafts, 26 wrong for their date). Same cases in every run; every run's per-case results are in [docs/eval/](docs/eval/):
 
-| Metric | OpenRouter `gemini-3.1-flash-lite`, before the agent (`eefc50c`) | OpenRouter, LangGraph check with the agent, run 1 (`b49f60f`) | OpenRouter, agent, run 2 (`1ffe744`) | Ollama `qwen2.5:7b-instruct`, local, no key, before the agent (run at `4b103fd`, recorded in `a4207d8`) |
-|---|---|---|---|---|
-| **False-allow rate** (wrong drafts released as PASS) | **0.0%** (0 of 26) | **0.0%** (0 of 26) | **0.0%** (0 of 26) | **3.8%** (1 of 26) |
-| False-block rate (correct drafts rewritten or escalated) | 7.1% (1 of 14) | 7.1% (1 of 14) | 7.1% (1 of 14) | 21.4% (3 of 14) |
-| Safe decisions | 97.5% | 97.5% | 97.5% | 90.0% |
-| Ideal decisions | 92.5% | 90.0% | 90.0% | 82.5% |
-| Citation accuracy (key claim checked against the right version) | 100% | 94.3% | 97.1% | 91.4% |
-| Errors (failed closed) | 0 | 0 | 0 | 0 |
-| Latency per answer, p50 | 5.9 s | 6.7 s | 6.4 s | 37.9 s |
-| LLM calls per answer | 3.6 | 4.3 | 4.3 | 3.65 |
-| Whole split | 66 s (4 workers) | 75 s | 73 s | 32 min (1 worker) |
+| Metric | OpenRouter `gemini-3.1-flash-lite`, before the agent (`eefc50c`) | OpenRouter, LangGraph check with the agent, run 1 (`b49f60f`) | OpenRouter, agent, run 2 (`1ffe744`) | Ollama `qwen2.5:7b-instruct`, local, no key, before the agent (run at `4b103fd`, recorded in `a4207d8`) | Ollama, current check (`da7804d`, 7 Nov) |
+|---|---|---|---|---|---|
+| **False-allow rate** (wrong drafts released as PASS) | **0.0%** (0 of 26) | **0.0%** (0 of 26) | **0.0%** (0 of 26) | **3.8%** (1 of 26) | **0.0%** (0 of 26) |
+| False-block rate (correct drafts rewritten or escalated) | 7.1% (1 of 14) | 7.1% (1 of 14) | 7.1% (1 of 14) | 21.4% (3 of 14) | 35.7% (5 of 14) |
+| Safe decisions | 97.5% | 97.5% | 97.5% | 90.0% | 87.5% |
+| Ideal decisions | 92.5% | 90.0% | 90.0% | 82.5% | 67.5% |
+| Citation accuracy (key claim checked against the right version) | 100% | 94.3% | 97.1% | 91.4% | 88.6% |
+| Errors (failed closed) | 0 | 0 | 0 | 0 | 0 |
+| Latency per answer, p50 | 5.9 s | 6.7 s | 6.4 s | 37.9 s | 51.6 s |
+| LLM calls per answer | 3.6 | 4.3 | 4.3 | 3.65 | 4.58 |
+| Whole split | 66 s (4 workers) | 75 s | 73 s | 32 min (1 worker) | 41 min (1 worker) |
 
 **What the agent did, honestly.** On this split the LangGraph agent step left the safety numbers unchanged and did not improve the others: ideal decisions were 90.0% in both agent runs against 92.5% before, and each check costs about 0.7 more model calls. The two agent runs, with identical logic, missed different cases (run 1: T11, T12, T23, T33; run 2: T11, T20, T23, T33), which is the model's run-to-run variance at work: the hosted model is called without a fixed temperature, and misses such as a judge paraphrasing instead of quoting (T12, T23) come and go between runs. In run 2 the agent ran in 12 checks and surfaced clauses the first retrieval had not found in 6; in the four out-of-scope questions (lounge access, meals, sports equipment, seat selection) nothing it found survived the quote and rule checks, so they escalated, as labelled. On this corpus the first retrieval already finds the right clause version for every dev case (see the text-search decision in architecture.md), so there is little left for the agent to find; it is built for policy libraries large enough for retrieval to miss.
 
@@ -615,11 +652,15 @@ What went wrong, from the recorded runs (left unfixed so the numbers stay honest
 - **Ollama T33, T38, T40 (false blocks):** the judge marked correct claims (a 1-year claim window, a family of four on one bereavement booking, one pet per passenger) as contradicted or not covered, so good answers were rewritten or escalated.
 - **Ollama T18, T31, T39 (escalated instead of corrected):** the rewrite's re-check did not come back clean, so the answer went to a specialist instead. Safe, but slower for the customer.
 
+**Ollama on the current check (7 Nov, `da7804d`).** The local model released no wrong draft (the earlier run released T20), but held 5 of 14 correct drafts against 3, and its ideal decisions fell from 82.5% to 67.5%. Most misses (9 of 13) are corrections whose re-check did not come back clean, so the answer went to a specialist instead of out; two correct drafts were held because a detail reached no extracted claim. With the situation check and the stricter extraction the small model errs further on the safe side. The hosted model stays the default.
+
 **About the Ollama numbers.** The first Ollama run of the test split was stopped after about 4 cases: the local model looped inside the quote field until the output cap, so every answer failed closed. Two fixes followed, diagnosed and checked on dev cases only: the decoding grammar now bounds every free-text field, and the judge may only quote a real sentence of a retrieved clause (details in [architecture.md](architecture.md#design-decisions)). The test cases and the prompts were not changed; the hosted path was not changed. The numbers above are the first complete Ollama run.
 
 On the dev split, OpenRouter scored 0% false allow, 0% false block and 95% ideal decisions.
 
 **After the rule-checker change for the bank (`6d928b7`),** the frozen airline split was run again on OpenRouter: 0 of 26 false allows, 1 of 14 false blocks (T33 again), 97.5% safe, 95.0% ideal, citation accuracy 100%, p50 4.8 s, 4.4 model calls per answer. The change: an amount that matches a rule parameter in one unit (a "12-month period" matching 12 months) is no longer also counted as a wrong number of days.
+
+</details>
 
 ### Evaluation: the bank fee schedule (second domain)
 
