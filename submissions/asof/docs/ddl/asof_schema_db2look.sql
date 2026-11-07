@@ -2,6 +2,7 @@
 -- SYSCATSPACE and with zero build parameters, so that statement below cannot be replayed as is.
 -- The real definition (WITH DISTANCE COSINE IN ASOF_TS32K COMPRESSED VECTORS IN ASOF_TS32K) is in
 -- src/asof/sql/01_tables.sql, and SYSCAT.INDEXES confirms the index is in ASOF_TS32K.
+-- db2look also prints the external model's API key as KEY 'xxxxxx': Db2 does not reveal it.
 
 -- This CLP file was created using DB2LOOK Version "12.1" 
 -- Timestamp: (removed so the file only changes when the schema does)

@@ -174,7 +174,7 @@ CREATE EXTERNAL MODEL ASOF.EMBEDDER PROVIDER OPENAI
   ID 'sentence-transformers/all-minilm-l6-v2'
   URL 'https://openrouter.ai/api/v1/embeddings'
   TYPE TEXT_EMBEDDING RETURNING VECTOR(384, FLOAT32)
-  KEY '<from .env, never logged>'
+  KEY '...'   -- the API key from .env, checked as a plain literal (no parameter marker is allowed here), never logged
 ```
 
 From then on Db2 calls it with `TO_EMBEDDING(text USING EMBEDDER)`:

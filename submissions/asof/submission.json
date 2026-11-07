@@ -22,7 +22,7 @@
   },
   "ibm_db2": {
     "edition": "IBM Db2 Community Edition 12.1.5.0 (Docker)",
-    "connector": "ibm_db / ibm_db_dbi (parameter markers only), LangChain langchain-db2 (DB2VS), SQLAlchemy with ibm_db_sa",
+    "connector": "ibm_db / ibm_db_dbi (parameter markers only), LangChain langchain-db2 (DB2VS), SQLAlchemy with ibm_db_sa, IBM's db2-sqlglot-dialect (SQLGlot), IBM's ibm-dbt-db2 adapter, the Apache Airflow IBM Db2 provider, IBM's lfx-ibm Langflow bundle",
     "features_used": [
       "Bitemporal tables (BUSINESS_TIME and SYSTEM_TIME periods, history table)",
       "FOR BUSINESS_TIME AS OF and FOR SYSTEM_TIME AS OF queries (as-of lookup and replay)",
