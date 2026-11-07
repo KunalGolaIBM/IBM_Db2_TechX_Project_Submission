@@ -3,6 +3,7 @@
     python -m asof.eval --split dev
     python -m asof.eval --split test                       # frozen 40-case airline split
     python -m asof.eval --split bank-test                  # frozen 26-case bank split
+    python -m asof.eval --split escalation-test            # frozen 33-case split, both domains
     LLM_TIMEOUT_S=180 python -m asof.eval --split test --provider ollama
 
 Runs against its own schema (ASOF_EVAL), with a fresh ledger each run, so evaluation never
@@ -82,8 +83,12 @@ def render_report(results: list[dict]) -> str:
              "found a gap in clause MTF-003's rule data, which was then fixed, so bank runs after `6d928b7` are not blind. "
              "`extractor-test` (10 cases, both documents) holds drafts that try to talk the claim extractor out of a wrong "
              "claim; it was pinned before its first run at `a7bece1`. `bank-test2` (22 new bank cases) restores a blind bank "
-             "measurement: it was pinned before its first run and nothing was changed because of it.", ""]
-    order = {"test": 0, "bank-test2": 1, "bank-test": 2, "extractor-test": 3, "dev": 4, "bank-dev": 5}
+             "measurement: it was pinned before its first run and nothing was changed because of it. "
+             "`escalation-test` (33 new cases, both documents) targets the known causes of holding a draft that could "
+             "have been corrected or passed; it was pinned before its first run and before any change meant to reduce "
+             "those escalations, which were tuned on `escalation-dev` (14 cases) only.", ""]
+    order = {"test": 0, "escalation-test": 1, "bank-test2": 2, "bank-test": 3, "extractor-test": 4, "dev": 5,
+             "bank-dev": 6, "escalation-dev": 7}
     providers = {"openrouter": 0, "openai_compatible": 1, "ollama": 2}  # the default provider first
     newest_first = sorted(results, key=lambda r: r["started_at"], reverse=True)
     for r in sorted(newest_first, key=lambda r: (order.get(r["split"], 9), providers.get(r["provider"], 9), r["model"])):

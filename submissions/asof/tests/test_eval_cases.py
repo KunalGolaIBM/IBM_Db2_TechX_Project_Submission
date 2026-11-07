@@ -21,7 +21,8 @@ def test_every_frozen_split_is_unchanged(split):
 
 def test_split_sizes_and_unique_ids():
     sizes = {s: len(load_cases(s)) for s in SPLITS}
-    assert sizes == {"dev": 20, "test": 40, "bank-dev": 12, "bank-test": 26, "extractor-test": 10, "bank-test2": 22}
+    assert sizes == {"dev": 20, "test": 40, "bank-dev": 12, "bank-test": 26, "extractor-test": 10, "bank-test2": 22,
+                     "escalation-dev": 14, "escalation-test": 33}
     ids = [c.id for s in SPLITS for c in load_cases(s)]
     assert len(ids) == len(set(ids))
 
@@ -33,6 +34,9 @@ def test_debugged_scenarios_are_in_dev_only():
     bank_test = {c.draft for c in load_cases("bank-test")}
     assert not bank_test & {c.draft for c in load_cases("bank-dev")}
     assert not {c.draft for c in load_cases("bank-test2")} & (bank_test | {c.draft for c in load_cases("bank-dev")})
+    # The escalation split is new text throughout: no draft repeats one from another split.
+    others = {c.draft for s in SPLITS if s != "escalation-test" for c in load_cases(s)}
+    assert not {c.draft for c in load_cases("escalation-test")} & others
 
 
 @pytest.mark.parametrize("split", list(SPLITS))
