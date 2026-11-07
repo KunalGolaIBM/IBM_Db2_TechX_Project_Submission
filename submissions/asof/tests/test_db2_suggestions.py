@@ -126,3 +126,17 @@ def test_the_runtime_user_cannot_write_the_suggestion_table_directly(settings, c
     finally:
         app.rollback()
         app.close()
+
+
+def test_a_drafted_correction_can_only_cite_a_check_the_ledger_holds(settings, changed):
+    """FK_SUGGESTION_CHECK: CHECK_LEDGER_ID must be a real ledger row (or NULL when the check left none)."""
+    conn = db.connect(settings, "app")
+    try:
+        with pytest.raises(db.DatabaseError) as err:
+            policy.add_suggestion(conn, "PA-PET-001", "PET-001", DECEMBER, "v2", "The pet fee is $125 each way.", "PASS",
+                                  999_999, [], changed)
+        assert policy.add_suggestion(conn, "PA-PET-001", "PET-001", DECEMBER, "v2", "The pet fee is $125 each way.",
+                                     "ESCALATED", None, [], changed) > 0  # no ledger row: stored as NULL
+    finally:
+        conn.close()
+    assert err.value.sqlstate == "23503"

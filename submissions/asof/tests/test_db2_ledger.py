@@ -40,6 +40,7 @@ def scratch(admin_conn, embeddings, settings):
     name = f"ASOF_T{uuid.uuid4().hex[:6].upper()}"
     try:
         schema.install(admin_conn, name)
+        seed.seed_documents(admin_conn, name)  # each ledger row names its policy document (FK_LEDGER_DOC)
         seed.seed_chain_head(admin_conn, name)
         seed.seed_faq(admin_conn, embeddings, name)  # the grants cover every table, the FAQ store included
         schema.apply_grants(admin_conn, settings.asof_app_user, settings.asof_editor_user, name)
@@ -272,3 +273,11 @@ def test_demo_ledger_reset_recreates_the_tables(admin_conn, embeddings, settings
         assert ledger.verify_chain(app, scratch).status == "OK"
     finally:
         app.close()
+
+
+def test_a_decision_must_name_a_known_policy_document(app_conn, test_schema):
+    """FK_LEDGER_DOC: the ledger cannot record a check against a document Db2 does not hold."""
+    with pytest.raises(db.DatabaseError) as err:
+        ledger.append(app_conn, entry(doc_id="NO-SUCH-DOC"), test_schema)
+    assert err.value.sqlstate == "23503"
+    assert ledger.verify_chain(app_conn, test_schema).status == "OK"  # the refused append left no trace

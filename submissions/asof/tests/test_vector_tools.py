@@ -29,6 +29,7 @@ def test_benchmark_compares_the_same_query_exact_and_approximate():
 
 def test_explain_covers_the_statements_the_app_actually_runs():
     used = {sql for _, _, sql, _ in explain.STATEMENTS}
-    assert {retriever.SQL_AS_OF, retriever.SQL_REPLAY, ledger.SQL_LIST, ledger.SQL_CITATIONS, policy.SQL_HISTORY} <= used
+    assert {retriever.SQL_AS_OF, retriever.SQL_REPLAY, ledger.SQL_LIST, ledger.SQL_LIST_BY_DECISION, ledger.SQL_CITATIONS,
+            policy.SQL_HISTORY} <= used
     for _, _, sql, params in explain.STATEMENTS:
         assert sql.count("?") == len(params)

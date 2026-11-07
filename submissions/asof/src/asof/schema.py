@@ -201,7 +201,8 @@ def drop(conn: ibm_db_dbi.Connection, schema: str) -> None:
         conn.commit()
 
 
-LEDGER_TABLES = ("CLAIM_CITATION", "ANSWER_LEDGER", "CHAIN_HEAD")  # children first
+# Children first. The drafted corrections go too: each cites the ledger row of its check (FK_SUGGESTION_CHECK).
+LEDGER_TABLES = ("ANSWER_SUGGESTION", "CLAIM_CITATION", "ANSWER_LEDGER", "CHAIN_HEAD")
 
 
 def reset_ledger(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> int:
@@ -209,9 +210,10 @@ def reset_ledger(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> int:
 
     The ledger is append-only by design: no user can UPDATE or DELETE its rows. This does
     not work around that. As the owner, it drops the three ledger tables outright (their
-    triggers go with them) and rebuilds them from the same SQL files, then starts a fresh
-    chain. Views, triggers and routines are rebuilt too. Policy clauses, their history and
-    the help-centre answers are untouched.
+    triggers go with them), and the change-impact agent's drafted corrections, which cite
+    ledger rows, and rebuilds them from the same SQL files, then starts a fresh chain.
+    Views, triggers and routines are rebuilt too. Policy clauses, their history and the
+    help-centre answers (including approved corrections) are untouched.
     Returns the number of ledger rows that existed before the reset.
     """
     validate_schema(schema)

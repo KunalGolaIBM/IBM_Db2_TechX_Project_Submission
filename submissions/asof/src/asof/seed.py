@@ -16,6 +16,7 @@ from .embeddings import DIM, clause_embedding_text
 FAQ_TABLE = "FAQ_KB"
 
 # Every statement below is a literal. Names are unqualified: db.use_schema() binds the schema.
+SQL_COUNT_DOCS = "SELECT COUNT(*) FROM POLICY_DOC"
 SQL_COUNT_CLAUSES = "SELECT COUNT(*) FROM POLICY_CLAUSE"
 SQL_COUNT_HEAD = "SELECT COUNT(*) FROM CHAIN_HEAD"
 SQL_COUNT_PUBLISHED = "SELECT COUNT(*) FROM PUBLISHED_ANSWER"
@@ -53,8 +54,7 @@ def seed_policy(conn: ibm_db_dbi.Connection, embeddings: Embeddings, schema: str
     if _count(conn, schema, SQL_COUNT_CLAUSES) > 0:
         return 0
     corpus = load_corpus()
-    for d in corpus.documents:
-        db.execute(conn, SQL_INSERT_DOC, (d.doc_id, d.title, d.owner_team, d.source_note))
+    seed_documents(conn, schema)
     rows = [(c, v) for c in corpus.clauses for v in c.versions]
     texts = [clause_embedding_text(c.title, v.clause_text) for c, v in rows]
     vectors = [db.vector_literal(x) for x in embeddings.embed_documents(texts)] if not in_db else texts
@@ -64,6 +64,16 @@ def seed_policy(conn: ibm_db_dbi.Connection, embeddings: Embeddings, schema: str
                     json.dumps(v.rule, sort_keys=True), vec, "Initial policy load", v.bus_start, v.bus_end))
     conn.commit()
     return len(rows)
+
+
+def seed_documents(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> int:
+    """The policy documents (the parents of every clause, help-centre answer and ledger row). Not committed."""
+    if _count(conn, schema, SQL_COUNT_DOCS) > 0:
+        return 0
+    docs = load_corpus().documents
+    for d in docs:
+        db.execute(conn, SQL_INSERT_DOC, (d.doc_id, d.title, d.owner_team, d.source_note))
+    return len(docs)
 
 
 def seed_chain_head(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> int:

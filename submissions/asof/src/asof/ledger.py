@@ -107,8 +107,13 @@ _CLAUSE_KEYS = ("clause_id", "version_label", "clause_text", "rule_json", "bus_s
 SQL_LIST = ("SELECT LEDGER_ID, REQUEST_ID, CREATED_AT, CHANNEL, DOC_ID, AS_OF_DATE, QUESTION_REDACTED, "
             "DRAFT_REDACTED, FINAL_ANSWER, DECISION, REASON_CODE, MODEL_INFO, PROMPT_VERSION, LATENCY_MS, "
             "VERDICTS_JSON, PREV_HASH, ROW_HASH FROM ANSWER_LEDGER "
-            "WHERE (CAST(? AS VARCHAR(12)) IS NULL OR DECISION = CAST(? AS VARCHAR(12))) "
             "ORDER BY LEDGER_ID DESC OFFSET ? ROWS FETCH FIRST ? ROWS ONLY")
+# A separate statement for the filtered page (not "? IS NULL OR DECISION = ?"), so Db2 can plan it on
+# IX_LEDGER_DECISION instead of one plan that has to serve both shapes.
+SQL_LIST_BY_DECISION = ("SELECT LEDGER_ID, REQUEST_ID, CREATED_AT, CHANNEL, DOC_ID, AS_OF_DATE, QUESTION_REDACTED, "
+                        "DRAFT_REDACTED, FINAL_ANSWER, DECISION, REASON_CODE, MODEL_INFO, PROMPT_VERSION, LATENCY_MS, "
+                        "VERDICTS_JSON, PREV_HASH, ROW_HASH FROM ANSWER_LEDGER WHERE DECISION = ? "
+                        "ORDER BY LEDGER_ID DESC OFFSET ? ROWS FETCH FIRST ? ROWS ONLY")
 SQL_ENTRY = ("SELECT LEDGER_ID, REQUEST_ID, CREATED_AT, CHANNEL, DOC_ID, AS_OF_DATE, QUESTION_REDACTED, "
              "DRAFT_REDACTED, FINAL_ANSWER, DECISION, REASON_CODE, MODEL_INFO, PROMPT_VERSION, LATENCY_MS, "
              "VERDICTS_JSON, PREV_HASH, ROW_HASH FROM ANSWER_LEDGER WHERE LEDGER_ID = ?")
@@ -138,7 +143,8 @@ def list_entries(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA, limit: in
     if decision is not None and decision not in DECISIONS:
         raise ValueError("unknown decision")
     db.use_schema(conn, schema)
-    rows = db.query(conn, SQL_LIST, (decision, decision, offset, limit))
+    rows = (db.query(conn, SQL_LIST_BY_DECISION, (decision, offset, limit)) if decision
+            else db.query(conn, SQL_LIST, (offset, limit)))
     return [_entry(r) for r in rows]
 
 
