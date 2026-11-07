@@ -136,17 +136,22 @@ def unchecked_details(text: str, claim_texts: Sequence[str], context: str = "") 
 
 
 def invented_details(text: str, claim_texts: Sequence[str]) -> list[str]:
-    """Amounts, percentages, durations and counts that a claim states and `text` does not.
+    """Amounts, percentages, durations and counts that a claim states differently from `text`.
 
-    The extractor is told to keep the answer's own numbers and never correct anything. A claim that
-    states a number the answer does not, such as the customer's own "11 kg" in place of the answer's
-    "under 8 kg", is no longer a claim of the answer, so its verdict says nothing about what the answer
-    tells the customer. Deterministic, and only ever a reason to hold the answer for a person.
+    The extractor is told to keep the answer's own numbers and never correct anything. A claim whose
+    number differs from every number of the same kind in the answer, such as the customer's own "11 kg"
+    in place of the answer's "under 8 kg", is no longer a claim of the answer, so its verdict says
+    nothing about what the answer tells the customer. Only numbers of a kind the answer also states are
+    compared: "a pet" written as "one pet", or "thirty days" as "30 days", is a paraphrase, not a change.
+    Deterministic, and only ever a reason to hold the answer for a person.
     """
     said = [f for q in extract_quantities(NOT_A_PRICE.sub(" ", text)) for f in q.forms]
+    kinds = {u for u, _ in said}
     out = []
     for claim in claim_texts:
         for q in extract_quantities(NOT_A_PRICE.sub(" ", claim)):
+            if not any(u in kinds for u, _ in q.forms):
+                continue
             if not any(u == su and same_amount(v, sv, u) for u, v in q.forms for su, sv in said):
                 out.append(f"{q.text} (in a claim, not in the answer)")
     return out
@@ -157,17 +162,28 @@ def invented_details(text: str, claim_texts: Sequence[str]) -> list[str]:
 _PREMISE = re.compile(
     r"\b(?:because(?:\s+of)?|since|given\s+that|now\s+that|seeing\s+that|due\s+to|owing\s+to)\s+(?P<body>[^.;:!?,]+)"
     r"|(?:^|[.!?]\s+|,\s*)as\s+(?P<as_body>(?:you|your|the|this|it|she|he|they)\b[^.;:!?,]+)", re.I)
-# The sentence must be about this customer; "Delays due to weather are not compensated" is a general rule.
+# Who or what the premise is about: the customer, their booking, their account. A claim that keeps the
+# premise keeps this reference; "Delays caused by weather are ..." has dropped it.
 _ABOUT_CUSTOMER = re.compile(r"\b(?:you|your|yours|it|she|he|they|his|her|their)\b"
                              r"|\bthe\s+(?:delay|flight|booking|ticket|trip|bag|pet|cat|dog|account|card|wire|transfer"
                              r"|withdrawal|balance|purchase|cancellation|fare)\b", re.I)
-# "since 1 May", "since then": time, not a premise.
-_NOT_A_PREMISE = re.compile(r"^(?:\d|then\b|last\b|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b)", re.I)
+# A sentence worth judging states something a policy decides: a number or a policy term. "Since you asked,
+# here is what we found" and "As you know, we value your business" do not, and would only be held.
+_POLICY_SUBSTANCE = re.compile(
+    r"\d|\$|%|\b(?:fees?|fares?|charged?|charges|costs?|price|pay|paid|free|refunds?|refunded|compensation|compensated"
+    r"|eligible|ineligible|entitled|qualif\w*|allowed|permitted|accepted|apply|applies|waived?|credits?|vouchers?"
+    r"|cancel\w*|change[sd]?|transfer\w*|cabin|bags?|baggage|luggage|kg|weigh\w*|overdraft|wire|atm|statements?"
+    r"|interest|limit|deadline|within|days?|hours?|months?|business\s+class|economy|bereavement|immediate\s+family"
+    r"|documents?|certificate|control|delay(?:ed|s)?|cancelled|closure|close|balance|maintenance)\b", re.I)
+# "since 1 May", "since May 2026", "since then": time, not a premise. Months only as dates, so "Mark" or
+# "decisions" still start a premise.
+_MONTHS = (r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?"
+           r"|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)")
+_NOT_A_PREMISE = re.compile(rf"^(?:{_MONTHS}\.?\s+\d|\d{{1,2}}(?:st|nd|rd|th)?\s+{_MONTHS}\b|\d{{4}}\b|then\b"
+                            r"|(?:last|this|next)\s+(?:week|month|year|time)\b|yesterday\b|today\b)", re.I)
 _CONTRACTIONS = ((r"\b(you|we|they)'re\b", r"\1 are"), (r"\b(it|that|there|he|she)'s\b", r"\1 is"),
                  (r"\bcan't\b", "cannot"), (r"\bwon't\b", "will not"), (r"n't\b", " not"),
                  (r"\b(you|we|they)'ve\b", r"\1 have"), (r"\b(you|we|they)'ll\b", r"\1 will"))
-MAX_PREMISE_CLAIMS = 2
-MAX_PREMISE_CHARS = 400
 
 
 def _plain(text: str) -> str:
@@ -179,37 +195,40 @@ def _plain(text: str) -> str:
 
 
 def unstated_premises(text: str, claim_texts: Sequence[str]) -> list[str]:
-    """Sentences of `text` holding a premise that no claim states word for word, verbatim from `text`.
+    """Sentences of `text` holding a premise that no claim keeps, each copied whole from `text`.
 
     The extractor is told to keep what the answer says about this customer in the same claim, never as a
     general rule. When it does not ("Delays caused by weather are outside our control" from "Because the
     delay was caused by weather, ..."), the judge never sees the premise and cannot compare it with the
-    question. Each such sentence is then judged as a claim of its own. Deterministic; at worst it adds a
-    claim to judge, never a reason to release.
+    question. Each such sentence is then judged as a claim of its own. A claim keeps a premise when it
+    states the premise's words and still refers to the customer or their case. Every premise found is
+    returned, never a capped few: the caller holds the answer if they will not all fit.
     """
-    claims = [_plain(c) for c in claim_texts]
+    claims = [(_plain(c), bool(_ABOUT_CUSTOMER.search(c))) for c in claim_texts]
     sentences = [s for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s]
     out: list[str] = []
     for sentence in sentences:
-        if not _ABOUT_CUSTOMER.search(sentence):
+        if not _ABOUT_CUSTOMER.search(sentence) or not _POLICY_SUBSTANCE.search(sentence):
             continue
         for m in _PREMISE.finditer(sentence):
             body = (m.group("body") or m.group("as_body") or "").strip()
             if not body or _NOT_A_PREMISE.match(body) or len(body.split()) < 2:
                 continue
-            if any(_plain(body) in c for c in claims):
+            if any(_plain(body) in c and refers for c, refers in claims):
                 continue
             if sentence not in out:
-                out.append(sentence[:MAX_PREMISE_CHARS])
+                out.append(sentence)
             break
-    return out[:MAX_PREMISE_CLAIMS]
+    return out
 
 
 def _premise_claim(sentence: str, extracted: Sequence[Any]) -> Any:
-    """The premise sentence as a claim of the extractor's own type, in the area of the claim it overlaps most."""
+    """The premise sentence as a claim of the extractor's own type, in the area of the claim it overlaps
+    most, or "other" when it overlaps none."""
     words = set(_plain(sentence).split())
     closest = max(extracted, key=lambda c: len(words & set(_plain(c.text).split())))
-    return type(closest)(text=sentence, area=closest.area, claim_type=closest.claim_type)
+    shared = words & set(_plain(closest.text).split())
+    return type(closest)(text=sentence, area=closest.area if shared else "other", claim_type=closest.claim_type)
 
 
 def normalise(text: str) -> str:
@@ -318,12 +337,21 @@ class Gate:
                                         extract_messages(question, text, domain.extract_system)).value.claims
         if len(extracted) > MAX_CLAIMS:
             raise TooManyClaims(f"{len(extracted)} claims")
+        return extracted
+
+    @staticmethod
+    def premise_claims(text: str, extracted) -> list:
+        """Claims for the premise sentences no extracted claim kept (see unstated_premises). Together with the
+        extracted claims they stay within MAX_CLAIMS, so a recorded check can never exceed what APPEND_LEDGER
+        accepts; more than that holds the answer, like too many extracted claims."""
         if not extracted:
-            return extracted
+            return []
         added = unstated_premises(text, [c.text for c in extracted])
+        if len(extracted) + len(added) > MAX_CLAIMS:
+            raise TooManyClaims(f"{len(extracted)} claims and {len(added)} premise sentences")
         if added:
-            log.info("judging %d premise sentence(s) no extracted claim stated", len(added))
-        return list(extracted) + [_premise_claim(sentence, extracted) for sentence in added]
+            log.info("judging %d premise sentence(s) no extracted claim kept", len(added))
+        return [_premise_claim(sentence, extracted) for sentence in added]
 
     def retrieve(self, claims, as_of: date, doc_id: str) -> list[list[RetrievedClause]]:
         """Db2 tool: the clauses in force on the date, nearest first, for each claim."""

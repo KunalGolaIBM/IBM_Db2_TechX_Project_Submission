@@ -76,6 +76,7 @@ class CheckState(TypedDict, total=False):
     investigation: list
     tool_calls_left: int
     unchecked: list  # details in the text that no extracted claim stated
+    n_extracted: int  # claims[:n_extracted] came from the extractor; the rest are premise sentences
 
 
 class _Tools:
@@ -172,7 +173,9 @@ def build(gate: Gate, req: GateRequest, deadline_at: float | None = None):
         return node
 
     def extract(state: CheckState) -> dict[str, Any]:
-        return {"claims": gate.extract(state["question"], state["text"], domain), "per_claim": [], "pool": {},
+        extracted = gate.extract(state["question"], state["text"], domain)
+        added = gate.premise_claims(state["text"], extracted)
+        return {"claims": list(extracted) + added, "n_extracted": len(extracted), "per_claim": [], "pool": {},
                 "outcomes": []}
 
     def retrieve(state: CheckState) -> dict[str, Any]:
@@ -207,9 +210,11 @@ def build(gate: Gate, req: GateRequest, deadline_at: float | None = None):
 
     def decide(state: CheckState) -> dict[str, Any]:
         outcomes = state.get("outcomes", [])
-        claim_texts = [c.text for c in outcomes]
-        unchecked = (unchecked_details(state["text"], claim_texts, state["question"])
-                     + invented_details(state["text"], claim_texts))
+        # Only the extractor's own claims count as stating the draft's numbers: a premise sentence is the draft's
+        # text, so counting it would hide a number the extractor dropped from the deterministic hold.
+        extracted = [c.text for c in outcomes[:state.get("n_extracted", len(outcomes))]]
+        unchecked = (unchecked_details(state["text"], extracted, state["question"])
+                     + invented_details(state["text"], extracted))
         if state["pass_no"] == 1:
             decision, reason, final = gate._decide(outcomes, req.draft_answer, unchecked)
             return {"first": outcomes, "decision": decision, "reason": reason, "final": final, "unchecked": unchecked}
