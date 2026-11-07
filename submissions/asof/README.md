@@ -451,18 +451,20 @@ Integration tests install everything into a throwaway `ASOF_TEST` schema, connec
 
 `python -m asof.eval --split test` runs the gate on 40 labelled cases and writes [docs/eval_results.md](docs/eval_results.md), with every per-case decision recorded in [docs/eval/](docs/eval/). The 40 test cases are new scenarios, none used while building or choosing the model. They were committed (`81b5b69`) before the first run and are frozen: a unit test pins their SHA-256 and the runner refuses to run them if it changes. The 20-case dev split holds the scenarios used while debugging. Each case is labelled with the decision it should get and the clause version its key claim must be checked against.
 
-**Latest runs, on the current check** (commit `a7bece1`, OpenRouter `google/gemini-3.1-flash-lite`, every frozen split):
+**Latest runs, on the current check** (commit `36291ab`, OpenRouter `google/gemini-3.1-flash-lite`, every frozen split, run Fri 6 Nov after the coverage-check, lock-timeout and schema changes):
 
 | Frozen split | Cases | False allow | False block | Safe | Ideal | Citation | p50 |
 |---|---|---|---|---|---|---|---|
-| Airline `test` | 40 | **0 of 26** | 1 of 14 | 97.5% | 92.5% | 94.3% | 4.6 s |
-| Bank `bank-test` (second run; not blind, see below) | 26 | **0 of 16** | 0 of 10 | 100% | 88.5% | 87.5% | 4.3 s |
-| `extractor-test`: drafts that try to talk the claim extractor out of a wrong claim (first run) | 10 | **0 of 8** | 0 of 2 | 100% | 90.0% | 100% | 4.8 s |
-| Bank `bank-test2`: 22 new bank cases, blind (pinned in `bcce2f3`, one run, nothing changed after it) | 22 | **0 of 14** | 0 of 8 | 100% | 95.5% | 100% | 5.5 s |
+| Airline `test` | 40 | **0 of 26** | 1 of 14 | 97.5% | 90.0% | 94.3% | 6.7 s |
+| Bank `bank-test` (not blind, see below) | 26 | **0 of 16** | 0 of 10 | 100% | 84.6% | 87.5% | 5.4 s |
+| `extractor-test`: drafts that try to talk the claim extractor out of a wrong claim | 10 | **0 of 8** | 0 of 2 | 100% | 80.0% | 90.0% | 6.6 s |
+| Bank `bank-test2`: 22 bank cases, blind on their first run (pinned in `bcce2f3`) | 22 | **0 of 14** | 0 of 8 | 100% | 95.5% | 95.0% | 5.5 s |
 
-The first bank split stopped being blind when its run found a gap in MTF-003's rule data that was then fixed, so `bank-test2` is the bank number to quote: written after the fix, pinned before its run, run once. Its one miss, BN21, is the familiar safe one: the judge called a "$15" stop-payment fee contradicted, but its quote failed the verbatim rule, so the draft was held for a person instead of corrected.
+**The run before** (`a7bece1`; `bcce2f3` for `bank-test2`, its one blind run), same cases: airline 0 of 26, 1 of 14, 92.5% ideal; `bank-test` 0 of 16, 0 of 10, 88.5%; `extractor-test` 0 of 8, 0 of 2, 90.0%; `bank-test2` 0 of 14, 0 of 8, 95.5%. Across both runs, none of the 64 wrong drafts was released.
 
-The investigating agent ran in 10 of 40 airline checks and 7 of 26 bank checks and added clauses the first retrieval missed in 6 of each (the per-case records now keep `agent_tool_calls` and `agent_new_clauses`). The new deterministic coverage check, which holds a draft whose amounts or durations no extracted claim states, held none of these 76 drafts: it cost no false blocks. Every miss in these runs was an escalation instead of a correction (the judge's quote failed the verbatim rule, so the claim fell back to "not covered") except T24, where the judge called a correct $75 change fee contradicted, the rule check disagreed, and the rewrite was released.
+What moved, and why: no frozen draft contains a "-free" word, so the coverage-check fix in `d87a552` cannot have changed any of them. The differences are the hosted model's run-to-run variance (it is called without a fixed temperature), and every one is a swap between two safe outcomes, corrected or escalated: for example BT06 was escalated before and corrected now, BT10 and BT12 the other way round. The one false block changed case: before it was T24 (a correct $75 change fee called contradicted, then rewritten); now it is T06, where the extractor dropped "after the first 24 hours" from its claim and the deterministic coverage check held the draft because no claim stated the 24 hours. That is the backstop working as designed, at the cost of one correct answer going to a person. Every other miss in these runs is an escalation instead of a correction, mostly because the judge paraphrased instead of quoting and the verbatim-quote rule downgraded the claim.
+
+The first bank split stopped being blind when its run found a gap in MTF-003's rule data that was then fixed, so `bank-test2`'s first run is the bank number to quote: written after the fix, pinned before its run. The investigating agent ran in 14 of 40 airline checks and 6 of 26 bank checks and added clauses the first retrieval missed in 9 and 4 of them (the per-case records keep `agent_tool_calls` and `agent_new_clauses`).
 
 **History of the airline split** (40 cases: 14 correct drafts, 26 wrong for their date). Same cases in every run; every run's per-case results are in [docs/eval/](docs/eval/):
 

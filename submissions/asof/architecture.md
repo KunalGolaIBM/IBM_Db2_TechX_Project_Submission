@@ -121,7 +121,7 @@ flowchart TD
   - `as_runnable()` for drop-in use in existing chains.
 - **Models:** `google/gemini-3.1-flash-lite` through OpenRouter by default (chosen by a 10-model probe, see Design decisions); `qwen2.5:7b-instruct` through Ollama as the no-key path; any OpenAI-compatible endpoint by configuration. Embeddings are local (`all-MiniLM-L6-v2`, 384 dimensions, CPU).
 - **Prompts** ([prompts.py](src/asof/prompts.py), versioned): extraction, judge and rewrite. Instructions live only in the system message. Questions, drafts, claims and clauses are passed as data blocks with angle brackets escaped, so text cannot close its block or pose as a clause. The rewrite is given the list of claims found wrong, so it does not repeat them.
-- **Calls per answer:** at least two for a PASS (extract, judge) and five for a CORRECTED answer (extract, judge, rewrite, extract, judge), plus up to 3 tool calls and a second judge call when the agent investigates. The frozen airline split averages 4.3 to 4.4 calls per answer.
+- **Calls per answer:** at least two for a PASS (extract, judge) and five for a CORRECTED answer (extract, judge, rewrite, extract, judge), plus up to 3 tool calls and a second judge call when the agent investigates. On the frozen airline split the runs with the agent averaged 4.15 to 4.4 calls per answer (4.38 at `36291ab`).
 - **What the model is not trusted with:**
   - the customer's date (supplied by the caller)
   - which clauses exist (Db2 retrieves them)
