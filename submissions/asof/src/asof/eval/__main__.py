@@ -90,7 +90,7 @@ def render_report(results: list[dict]) -> str:
              "documents) holds drafts whose premise about the customer contradicts or restates what the customer said; it "
              "was written after the change that shows the judge the question, and pinned before its first run.", ""]
     order = {"test": 0, "escalation-test": 1, "situation-test": 2, "bank-test2": 3, "bank-test": 4, "extractor-test": 5,
-             "dev": 6, "bank-dev": 7, "escalation-dev": 8}
+             "dev": 6, "bank-dev": 7, "escalation-dev": 8, "situation-dev": 9}
     providers = {"openrouter": 0, "openai_compatible": 1, "ollama": 2}  # the default provider first
     newest_first = sorted(results, key=lambda r: r["started_at"], reverse=True)
     for r in sorted(newest_first, key=lambda r: (order.get(r["split"], 9), providers.get(r["provider"], 9), r["model"])):

@@ -86,6 +86,11 @@ class ClaimVerdict(_Strict):
         description="Exact text copied character for character from that clause that "
         "decides the verdict. Null only for NOT_COVERED."
     )
+    situation_conflict: bool = Field(
+        description="True if the claim assumes something about this customer (such as their cabin, the cause "
+        "or length of a delay, a weight, an account's age or balance, or how many refunds they have had) that "
+        "the question states differently. False if the question agrees or does not say."
+    )
     reason: str = Field(description="One short sentence explaining the verdict.")
 
 

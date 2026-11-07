@@ -306,3 +306,25 @@ def test_claimed_delay_that_matches_the_customers_passes(world):
                       judge=[judge(verdict(1, "SUPPORTED", "DLY-003", "the passenger is entitled to $400 in compensation"))])
     r = make_gate(llm).check(req(draft=claim, on=JUNE, question="My flight was 10 hours late because of a crew shortage."))
     assert r.decision == "PASS"
+
+
+def test_situation_conflict_turns_supported_into_contradicted(world):
+    """The clause says what the claim says, but for another situation: the customer flies Premium Economy,
+    the draft assumes Business. The judge's situation_conflict flag can only make a verdict stricter."""
+    world["ids"] = ["BRV-005"]
+    claim = "Since you're in Business class, the bereavement fare does not apply to your booking."
+    llm = ScriptedLLM(extract=[claims((claim, "bereavement", "eligibility")), claims()],
+                      judge=[judge(verdict(1, "SUPPORTED", "BRV-005", "Business class is not eligible", conflict=True))],
+                      rewrite=[RewriteResult(answer="Please contact us.")])
+    r = make_gate(llm).check(req(draft=claim, on=MARCH, question="I'm in Premium Economy. Can I get the bereavement fare?"))
+    c = r.claims[0]
+    assert c.llm_verdict == "SUPPORTED" and c.verdict == "CONTRADICTED"
+    assert "situation the question states differently" in c.reason and r.decision != "PASS"
+
+
+def test_situation_conflict_never_lifts_a_not_covered_claim(world):
+    claim = "Students get 15% off."
+    llm = ScriptedLLM(extract=[claims((claim, "other", "amount"))],
+                      judge=[judge(verdict(1, "NOT_COVERED", conflict=True))])
+    r = make_gate(llm).check(req(draft=claim, question="Do students get a discount?"))
+    assert r.claims[0].verdict == "NOT_COVERED" and r.decision == "ESCALATED"

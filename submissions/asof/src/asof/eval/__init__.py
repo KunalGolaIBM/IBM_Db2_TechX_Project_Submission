@@ -35,11 +35,12 @@ SPLITS = {"dev": "cases_dev.jsonl", "test": "cases_test.jsonl",
           "bank-dev": "bank_cases_dev.jsonl", "bank-test": "bank_cases_test.jsonl",
           "extractor-test": "extractor_cases_test.jsonl", "bank-test2": "bank_cases_test2.jsonl",
           "escalation-dev": "escalation_cases_dev.jsonl", "escalation-test": "escalation_cases_test.jsonl",
-          "situation-test": "situation_cases_test.jsonl"}
+          "situation-dev": "situation_cases_dev.jsonl", "situation-test": "situation_cases_test.jsonl"}
 SPLIT_DOC = {"dev": "AURELIA-CSP", "test": "AURELIA-CSP", "bank-dev": "FERNHOLLOW-FEES", "bank-test": "FERNHOLLOW-FEES",
              "extractor-test": "AURELIA-CSP", "bank-test2": "FERNHOLLOW-FEES",
              # both documents; every case names its own doc_id
-             "escalation-dev": "AURELIA-CSP", "escalation-test": "AURELIA-CSP", "situation-test": "AURELIA-CSP"}
+             "escalation-dev": "AURELIA-CSP", "escalation-test": "AURELIA-CSP",
+             "situation-dev": "AURELIA-CSP", "situation-test": "AURELIA-CSP"}
 # Pinned when the test split was committed (81b5b69), before any run.
 FROZEN_TEST_SHA256 = "bfb24f0ac4722bd6925e4e12a4820bc1e498f15958f9701c447161e78cffd5b2"
 # Each frozen split, pinned in the commit that added it and before its first run.

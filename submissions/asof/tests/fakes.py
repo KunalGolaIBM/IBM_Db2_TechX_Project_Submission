@@ -57,8 +57,9 @@ def claims(*items) -> ExtractionResult:
     return ExtractionResult(claims=[ExtractedClaim(text=t, area=a, claim_type=k) for t, a, k in items])
 
 
-def verdict(no, v, clause_id=None, quote=None, reason="r") -> ClaimVerdict:
-    return ClaimVerdict(claim_no=no, verdict=v, clause_id=clause_id, quoted_span=quote, reason=reason)
+def verdict(no, v, clause_id=None, quote=None, reason="r", conflict=False) -> ClaimVerdict:
+    return ClaimVerdict(claim_no=no, verdict=v, clause_id=clause_id, quoted_span=quote, situation_conflict=conflict,
+                        reason=reason)
 
 
 def judge(*vs) -> JudgeResult:

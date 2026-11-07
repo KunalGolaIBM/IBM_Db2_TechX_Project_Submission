@@ -22,9 +22,9 @@ from asof.schemas import BankExtractedClaim, BankExtractionResult, ExtractionRes
 
 # sha256 of the airline prompts, prompt version, output schemas and rendered messages. First taken on
 # 6 Nov 2026 before the bank domain was added (918bcbd), which proved the bank changed nothing for the
-# airline. Re-pinned on 7 Nov 2026 for prompt version 2026-11-07.1 (the escalation changes), so any
+# airline. Re-pinned on 7 Nov 2026 for prompt version 2026-11-07.1 (escalation and situation changes), so any
 # further change to what airline checks send fails here until it is made on purpose.
-AIRLINE_FINGERPRINT = "7c2a61fae928ac93ab3e7118ef6b030961d36a832dec6dde567386c4893efc3e"
+AIRLINE_FINGERPRINT = "1e04b127ba438c8bb7ab2ba0b68b0114df8d93be2d48f0990d381f98eaa241d3"
 
 
 def fingerprint(**system) -> str:

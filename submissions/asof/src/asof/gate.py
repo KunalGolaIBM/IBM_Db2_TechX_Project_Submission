@@ -280,6 +280,10 @@ class Gate:
                                 rule_details=[], clause=None, quoted_span=None, reason="the judge returned no verdict")
         clause = pool.get(v.clause_id) if v.clause_id else None
         verdict, reason, span = v.verdict, v.reason, v.quoted_span
+        if verdict == "SUPPORTED" and v.situation_conflict:
+            # The clause may say what the claim says, but for a different situation than the customer's: the
+            # outcome is wrong for this customer. The flag can only make a verdict stricter, never release.
+            verdict, reason = "CONTRADICTED", f"the claim assumes a situation the question states differently: {reason}"
         if verdict != "NOT_COVERED":
             if clause is None:
                 verdict, reason = "NOT_COVERED", f"cited clause {v.clause_id!r} was not among the clauses in force"
