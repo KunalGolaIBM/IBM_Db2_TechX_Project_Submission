@@ -1,0 +1,16 @@
+{
+  "product": {
+    "code": "PWB-10000",
+    "quote": "The Aster 10K Power Bank, product code PWB-10000, is covered by this notice."
+  },
+  "lots": [
+    {
+      "code": "PB2410A",
+      "quote": "Affected production lots are PB2410A and PB2410B."
+    },
+    {
+      "code": "PB2410B",
+      "quote": "Affected production lots are PB2410A and PB2410B."
+    }
+  ]
+}

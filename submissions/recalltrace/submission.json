@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "RecallTrace",
+    "slug": "recalltrace",
+    "short_description": "Match reviewed product recall notices to affected inventory in IBM Db2, with exact source quotes for each code.",
+    "category": "AI / Data Engineering",
+    "demo_url": "",
+    "video_url": "https://vimeo.com/1244598160?share=copy&fl=sv&fe=ci",
+    "repo_url": ""
+  },
+  "team": {
+    "name": "RecallTrace",
+    "members": [
+      {
+        "name": "onellio",
+        "github": "onellio",
+        "email": "",
+        "role": "Solo developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Podman)",
+    "connector": "ibm_db",
+    "features_used": [
+      "Relational inventory and product tables",
+      "Composite primary key and foreign key",
+      "Parameterized SQL join and exact lot filter",
+      "Transactional sample seed"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "JavaScript",
+      "SQL",
+      "HTML",
+      "CSS"
+    ],
+    "frameworks": [
+      "LangChain"
+    ],
+    "ai_models": [
+      "IBM Granite 3.3 2B via Ollama"
+    ]
+  }
+}

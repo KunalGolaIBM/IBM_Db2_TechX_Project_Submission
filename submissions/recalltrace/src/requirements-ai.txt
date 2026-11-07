@@ -1,0 +1,2 @@
+-r requirements.txt
+langchain-openai==1.7.4
