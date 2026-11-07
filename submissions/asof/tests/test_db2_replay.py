@@ -90,3 +90,11 @@ def test_every_preset_replays_the_change_impact_agent_in_recorded_order(replayed
         assert [(d["answer_id"], d.get("check_decision"), d.get("error")) for d in drafted] == \
             [(d["answer_id"], d["check_decision"], None) for d in rec["drafts"]], preset["label"]
 
+
+def test_analytics_says_how_many_decisions_were_replayed(replayed, settings):
+    with db.connection(settings, "app") as conn:
+        stats = policy.analytics(conn, replayed.schema)
+        db.use_schema(conn, replayed.schema)
+        total = db.query(conn, "SELECT COUNT(*) FROM ANSWER_LEDGER")[0][0]
+    assert stats["replayed_decisions"] == total > 0  # every decision in this schema came from the recording
+    assert sum(d["count"] for d in stats["decisions"]) == total

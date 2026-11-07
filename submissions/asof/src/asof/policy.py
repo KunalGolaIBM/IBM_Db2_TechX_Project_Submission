@@ -251,8 +251,11 @@ SQL_TIMELINE = ("SELECT CLAUSE_ID, DOC_ID, AREA, TITLE, VERSION_LABEL, BUS_START
                 "TRANSFER_ALLOWED, CHANGES_ALLOWED FROM V_POLICY_TIMELINE ORDER BY CLAUSE_ID, BUS_START")
 SQL_HISTORY = ("SELECT VERSION_LABEL, BUS_START, BUS_END, SYS_START, SYS_END, CHANGED_BY, CHANGE_NOTE, CLAUSE_TEXT "
                "FROM POLICY_CLAUSE FOR SYSTEM_TIME FROM ? TO ? WHERE CLAUSE_ID = ? ORDER BY SYS_START, BUS_START")
-SQL_DECISIONS = ("SELECT DECISION, SUM(DECISIONS), INTEGER(AVG(AVG_LATENCY_MS)) FROM V_DECISION_STATS "
-                 "GROUP BY DECISION")
+# Weighted by the number of decisions in each group, not an average of averages.
+SQL_DECISIONS = ("SELECT DECISION, SUM(DECISIONS), INTEGER(SUM(AVG_LATENCY_MS * DECISIONS) / NULLIF(SUM(DECISIONS), 0)) "
+                 "FROM V_DECISION_STATS GROUP BY DECISION")
+# Decisions made in replay mode (no model time in their latency), so the screen can say so.
+SQL_REPLAYED = "SELECT COUNT(*) FROM ANSWER_LEDGER WHERE MODEL_INFO LIKE 'replay:%'"
 SQL_REASONS = "SELECT REASON_CODE, SUM(DECISIONS) FROM V_DECISION_STATS GROUP BY REASON_CODE ORDER BY 2 DESC"
 SQL_AREAS = ("SELECT AREA, SUPPORTED, CONTRADICTED, NOT_COVERED, CLAIMS FROM V_CLAIM_OUTCOMES_BY_AREA "
              "ORDER BY CLAIMS DESC")
@@ -302,7 +305,9 @@ def analytics(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> dict[str,
     reasons = db.query(conn, SQL_REASONS)
     areas = db.query(conn, SQL_AREAS)
     overrides = db.query(conn, SQL_OVERRIDES)
+    replayed = int(db.query(conn, SQL_REPLAYED)[0][0])
     return {
+        "replayed_decisions": replayed,
         "decisions": [{"decision": d.strip(), "count": int(n), "avg_latency_ms": int(lat or 0)} for d, n, lat in decisions],
         "reasons": [{"reason": r.strip(), "count": int(n)} for r, n in reasons],
         "areas": [{"area": a.strip(), "supported": int(s), "contradicted": int(c), "not_covered": int(nc), "claims": int(t)}
