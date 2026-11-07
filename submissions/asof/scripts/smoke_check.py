@@ -9,7 +9,8 @@
    model it must not be released as written; in replay mode (what ./quickstart.sh picks without a key)
    the decision must equal the recorded one, and the ledger row must say "replay:".
 3. Replay mode only: a draft that was never recorded must be held for a specialist (fail closed).
-4. VERIFY_CHAIN over the whole ledger must report OK.
+4. The receipt (row hash) the check returned must match the ledger, and VERIFY_CHAIN over the whole
+   ledger must report OK.
 
 Prints each result and exits non-zero on the first mismatch. CI runs it after ./quickstart.sh.
 """
@@ -65,6 +66,11 @@ def main(base: str) -> int:
             return fail("an unrecorded draft must be held for a specialist in replay mode")
     elif body["decision"] == "PASS":
         return fail("the stale retroactive-refund promise was released as written")
+
+    receipt = client.post("/api/ledger/receipt", json={"ledger_id": body["ledger_id"], "row_hash": body["row_hash"]}).json()
+    print(f"Receipt for #{body['ledger_id']}: {receipt['verdict']}")
+    if receipt["verdict"] != "INTACT":
+        return fail(f"the receipt the check returned does not match the ledger: {receipt}")
 
     chain = client.get("/api/chain/verify").json()
     print(f"VERIFY_CHAIN: {chain['status']} over {chain['rows_checked']} rows")
