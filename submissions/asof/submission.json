@@ -51,7 +51,9 @@
       "Two fictional policy documents (an airline and a bank fee schedule) in the same bitemporal tables, separated by DOC_ID in every as-of query, with a CHECK constraint covering both domains' areas",
       "dbt marts over the ledger with IBM's ibm-dbt-db2 adapter, with audit tests (CORRECTED implies a contradiction, every cited clause version exists in current or history rows, marts add up to the ledger)",
       "Apache Airflow DAG with the IBM Db2 provider: nightly VERIFY_CHAIN, system-time detection of changed clauses, CHANGE_IMPACT per clause as mapped tasks",
-      "SET CURRENT LOCK TIMEOUT (bound parameter) for the runtime users, so a held ledger lock fails a check closed in seconds"
+      "SET CURRENT LOCK TIMEOUT (bound parameter) for the runtime users, so a held ledger lock fails a check closed in seconds",
+      "TLS client connections (SECURITY=SSL, SSLServerCertificate pinning) for a remote Db2, tested against a GSKit-configured TLS listener (SSL_SVR_KEYDB, SSL_SVCENAME, DB2COMM=SSL,TCPIP) locally and in CI",
+      "Per-user API access in an API_USER table holding only SHA-256 token hashes, with role flags and check constraints; the runtime user may only SELECT it"
     ]
   },
   "tech_stack": {

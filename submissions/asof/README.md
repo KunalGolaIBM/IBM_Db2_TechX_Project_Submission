@@ -498,7 +498,7 @@ The runnable takes the assistant's draft and returns the checked answer, and eve
 ## Testing & Verification
 
 ```bash
-pytest -q                                 # 479 tests: 472 run, 7 need an opt-in flag (live LLM, remote endpoint)
+pytest -q                                 # 589 tests: 582 run, 7 need an opt-in flag (live LLM, remote endpoint)
 pytest -q -m "not db2"                    # unit tests only, no database needed
 ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 4 live tests against the configured LLM (spends API calls)
 
@@ -530,30 +530,59 @@ Integration tests install everything into a throwaway `ASOF_TEST` schema, connec
 
 `python -m asof.eval --split test` runs the gate on 40 labelled cases and writes [docs/eval_results.md](docs/eval_results.md), with every per-case decision recorded in [docs/eval/](docs/eval/). The 40 test cases are new scenarios, none used while building or choosing the model. They were committed (`81b5b69`) before the first run and are frozen: a unit test pins their SHA-256 and the runner refuses to run them if it changes. The 20-case dev split holds the scenarios used while debugging. Each case is labelled with the decision it should get and the clause version its key claim must be checked against.
 
-**Latest runs, on the current check** (commit `397c920`, OpenRouter `google/gemini-3.1-flash-lite`, every frozen split, run Sat 7 Nov with the connection pool in place):
+**Latest runs, on the current check** (commit `512ee74`, OpenRouter `google/gemini-3.1-flash-lite`, all seven frozen splits, run Sat 7 Nov after the escalation and situation changes):
 
 | Frozen split | Cases | False allow | False block | Safe | Ideal | Citation | p50 |
 |---|---|---|---|---|---|---|---|
-| Airline `test` | 40 | **0 of 26** | 2 of 14 | 95.0% | 92.5% | 97.1% | 4.6 s |
-| Bank `bank-test` (not blind, see below) | 26 | **0 of 16** | 0 of 10 | 100% | 88.5% | 87.5% | 4.1 s |
-| `extractor-test`: drafts that try to talk the claim extractor out of a wrong claim | 10 | **0 of 8** | 0 of 2 | 100% | 90.0% | 100% | 5.5 s |
-| Bank `bank-test2`: 22 bank cases, blind on their first run (pinned in `bcce2f3`) | 22 | **0 of 14** | 0 of 8 | 100% | 95.5% | 100% | 4.4 s |
+| Airline `test` | 40 | **0 of 26** | 1 of 14 | 97.5% | 95.0% | 100% | 4.8 s |
+| `escalation-test`: aimed at the known causes of needless holds, both domains | 33 | **0 of 22** | 2 of 11 | 93.9% | 87.9% | 96.7% | 5.0 s |
+| `situation-test2`: drafts whose premise about the customer contradicts or restates the question, blind | 12 | **0 of 7** | 0 of 5 | 100% | 83.3% | 91.7% | 5.1 s |
+| `situation-test`: the same kind, not blind (its first run found the gap; see below) | 12 | **0 of 7** | 0 of 5 | 100% | 66.7% | 66.7% | 5.3 s |
+| Bank `bank-test2`: blind on its first run (pinned in `bcce2f3`) | 22 | **0 of 14** | 0 of 8 | 100% | 100% | 100% | 5.0 s |
+| Bank `bank-test` (not blind, see below) | 26 | **0 of 16** | 0 of 10 | 100% | 100% | 100% | 4.6 s |
+| `extractor-test`: drafts that try to talk the claim extractor out of a wrong claim | 10 | **0 of 8** | 0 of 2 | 100% | 100% | 100% | 5.5 s |
+
+Across the seven splits, 0 of 100 wrong drafts were released and 3 of 55 correct drafts were held. The check has not changed in a way that alters decisions since `512ee74`: name redaction changes none of the eval texts (a test proves it), and anchors, TLS and per-user access act after the decision or outside the check.
 
 **The same cases across runs** (false allow, false block, ideal decisions; every run's per-case results are in [docs/eval/](docs/eval/)):
 
-| Frozen split | `a7bece1` (`bcce2f3` for `bank-test2`, its blind run) | `36291ab`, after the audit fixes | `397c920`, after the review fixes |
-|---|---|---|---|
-| Airline `test` | 0 of 26, 1 of 14, 92.5% | 0 of 26, 1 of 14, 90.0% | 0 of 26, 2 of 14, 92.5% |
-| Bank `bank-test` | 0 of 16, 0 of 10, 88.5% | 0 of 16, 0 of 10, 84.6% | 0 of 16, 0 of 10, 88.5% |
-| `extractor-test` | 0 of 8, 0 of 2, 90.0% | 0 of 8, 0 of 2, 80.0% | 0 of 8, 0 of 2, 90.0% |
-| Bank `bank-test2` | 0 of 14, 0 of 8, 95.5% | 0 of 14, 0 of 8, 95.5% | 0 of 14, 0 of 8, 95.5% |
+| Frozen split | `a7bece1` (`bcce2f3` for `bank-test2`, its blind run) | `36291ab`, after the audit fixes | `397c920`, after the review fixes | `4e6687c`, fewer needless holds | `512ee74`, situation check |
+|---|---|---|---|---|---|
+| Airline `test` | 0 of 26, 1 of 14, 92.5% | 0 of 26, 1 of 14, 90.0% | 0 of 26, 2 of 14, 92.5% | 0 of 26, 0 of 14, 100% | 0 of 26, 1 of 14, 95.0% |
+| Bank `bank-test` | 0 of 16, 0 of 10, 88.5% | 0 of 16, 0 of 10, 84.6% | 0 of 16, 0 of 10, 88.5% | 0 of 16, 0 of 10, 100% | 0 of 16, 0 of 10, 100% |
+| `extractor-test` | 0 of 8, 0 of 2, 90.0% | 0 of 8, 0 of 2, 80.0% | 0 of 8, 0 of 2, 90.0% | 0 of 8, 0 of 2, 100% | 0 of 8, 0 of 2, 100% |
+| Bank `bank-test2` | 0 of 14, 0 of 8, 95.5% | 0 of 14, 0 of 8, 95.5% | 0 of 14, 0 of 8, 95.5% | 0 of 14, 0 of 8, 100% | 0 of 14, 0 of 8, 100% |
+| `escalation-test` | | | `8deb079` (baseline): 0 of 22, 2 of 11, 75.8% | 0 of 22, 3 of 11, 87.9% | 0 of 22, 2 of 11, 87.9% |
 
-In three runs, none of the 64 wrong drafts was released. What moved, and why:
+In five runs of the original four splits, none of the 64 wrong drafts was released. What moved, and why (the runs up to `397c920`; the last two columns are explained in [Fewer needless holds](#fewer-needless-holds-measured-on-new-frozen-splits)):
 
 - **T06, held in both runs since the coverage check's fix:** the extractor dropped "after the first 24 hours" from its claim, so no claim stated the 24 hours and the deterministic coverage check held a correct draft. Twice in a row looks systematic for this draft, not chance. It is a frozen test case, so the check was not tuned for it; it stays a reported false block, the cost of the backstop.
 - **T33** is the familiar one from earlier runs: the extractor turned the customer's own situation into a policy claim that no clause covers. **T24** (the earlier false block, a correct $75 fee called contradicted) passed in both later runs.
 - **Everything else** is the hosted model's run-to-run variance (it is called without a fixed temperature) swapping between two safe outcomes, corrected or escalated, mostly when the judge paraphrased instead of quoting and the verbatim-quote rule downgraded the claim. No frozen draft contains a "-free" word, so the coverage-check fix in `d87a552` cannot have changed any of them.
 - **Latency:** the airline split's median fell from 6.7 s to 4.6 s per answer, and the whole split from 78 s to 46 s. Most of that is the connection pool added in between (it removed about 3 s of connection setup and teardown per check on this machine); the hosted model's own latency also varies between runs.
+
+### Fewer needless holds, measured on new frozen splits
+
+Holding a draft for a specialist is safe, but every needless hold is a customer kept waiting. The runs up to `397c920` showed why AsOf held drafts it could have corrected or passed (T06, T12, T20, T31, T33, T36 and similar). Before changing anything, 33 new cases aimed at those causes were written in both domains and pinned (`8deb079`), and a 14-case dev split was written to tune on. The baseline run on the pinned split, with the check unchanged: **0 of 22 wrong drafts released, ideal 75.8%, and 5 of the 8 wrong amounts held instead of corrected.**
+
+The causes, and what changed (in `11ef14c`, tuned on the dev splits only):
+
+- **A contradiction with a short quote was thrown away.** On a wrong amount the judge often quotes only the number (`'$35'`, `'60 days'`). That is exact text from the clause, but shorter than the 12-character minimum, so the claim fell to NOT_COVERED and the draft was held. A CONTRADICTED verdict is now grounded by the clause sentence that holds its exact quote, or, if the quote is not in the clause at all, by the deterministic rule check finding the mismatch in `RULE_JSON`. A contradiction can only lead to a rewrite that must pass a full re-check, or to a hold, so this releases nothing new; a SUPPORTED verdict still needs a verbatim quote of 12 characters or more.
+- **A rule key with its unit inside was not read.** `min_days_before_departure` was ignored, so "booked at least 7 days before departure" was compared, as 168 hours, with the 24-hour window and called a mismatch, which sank correct rewrites (X04). Unit words inside a key are now read.
+- **Extraction lost qualifiers and conditions.** "Incoming wires, domestic or international, are free" became two wrong claims; "after the first 24 hours, $100" lost its condition (T06). The extraction prompt now keeps a rule's qualifiers and conditions in its claim.
+- **Rewrites added advice the clauses do not state** ("you can avoid this fee by choosing electronic statements"), which the re-check could not support (ET27, T20). The rewrite prompt now forbids advice and conclusions the clauses do not state.
+
+After the change (`4e6687c`): ideal decisions on the pinned split rose from **75.8% to 87.9%**, all 8 wrong amounts were corrected, and the four original frozen splits scored 100% ideal with 0 false allows.
+
+**A gap the new work exposed: premises about the customer.** A draft can be right about the policy and wrong about the customer ("since your delay was within our control" when the customer said a snowstorm caused it). The judge had never seen the customer's question, so it could not notice. A 12-case `situation-test` split, written after the first fix and pinned before its first run, showed the size of it: **3 of 7 drafts with a false premise were released** (business class called Economy, an account's age, refunds already used). Put through the code from before that day's changes (a probe, not a recorded run), the same cases released 4 of 7, so the gap was old, not new. The fix (`12e8d93`), tuned on a 9-case `situation-dev` split:
+
+- the judge now sees the customer's question, as delimited data like everything else, and must answer, for every claim, whether the claim assumes something about this customer that the question states differently (`situation_conflict`); a SUPPORTED claim with a conflict becomes CONTRADICTED, so the flag can only make a verdict stricter;
+- a delay the claim states for the customer ("you arrived 10 hours late") is checked deterministically against the delay in the question ("2 hours late"), whatever the judge says;
+- extraction keeps what a draft says about the customer as said about the customer, instead of turning it into a general rule.
+
+A second split, `situation-test2`, was then written from scratch and pinned before its first run, as the blind measure: **0 of 7 false premises released, 0 of 5 correct drafts held.** What it costs: the judge sometimes flags a conflict the question does not support, which can hold or rewrite a correct draft; that is the side to err on.
+
+What is still held, by design: a draft that classifies the customer's situation in a way no clause states ("a mechanical problem is within our control", ET16). The policy lists the causes outside the airline's control but does not say which others are inside it, so a person decides. Two `escalation-test` false blocks in the last run (ET09, ET12) came from a judge quote that was not verbatim on a SUPPORTED verdict; that rule was not relaxed.
 
 The first bank split stopped being blind when its run found a gap in MTF-003's rule data that was then fixed, so `bank-test2`'s first run is the bank number to quote: written after the fix, pinned before its run. In the latest run the investigating agent ran in 10 of 40 airline checks and 8 of 26 bank checks and added clauses the first retrieval missed in 5 and 6 of them (the per-case records keep `agent_tool_calls` and `agent_new_clauses`).
 
@@ -579,7 +608,7 @@ Ollama ran on the MacBook Air (M-series, 16 GB) while Db2 ran under Rosetta on t
 
 What went wrong, from the recorded runs (left unfixed so the numbers stay honest):
 
-- **OpenRouter T33 (false block, all three runs):** the extractor turned the customer's own situation ("the delay was within our control") into a policy claim. No clause covers it, so a correct answer was escalated.
+- **OpenRouter T33 (false block, the three runs up to `397c920`):** the extractor turned the customer's own situation ("the delay was within our control") into a policy claim. No clause covers it, so a correct answer was escalated. It passed at `4e6687c` and `512ee74`, now that extraction keeps such conditions in the claim and the judge sees the question.
 - **OpenRouter T31 and T36 (escalated instead of corrected, first run):** the rewrite was right, but in the re-check the judge paraphrased its quote, the verbatim-quote rule downgraded that claim to NOT_COVERED, and the correction was held back.
 - **Ollama T20 (the false allow):** the draft says a mother-in-law counts as immediate family; the policy's list does not include in-laws. The local judge quoted the real list sentence ("Immediate family means a spouse or common-law partner, parent, ...") and reasoned that "parent" includes a mother-in-law. The quote was genuine, so the verbatim rule could not catch it, and no rule parameter covers family membership. This is the limit of a 7B judge on a semantic question, and the reason the default is a hosted model.
 - **Ollama T33, T38, T40 (false blocks):** the judge marked correct claims (a 1-year claim window, a family of four on one bereavement booking, one pet per passenger) as contradicted or not covered, so good answers were rewritten or escalated.
@@ -650,13 +679,14 @@ Both policy documents run through the same screens: the playground has two bank 
   - All data is synthetic, and the demo is single-node.
   - Under emulation on Apple Silicon, Db2 is slower, and local Ollama models are slow while Db2 is busy.
   - On Apple Silicon under Rosetta, Db2 *fenced* routines crash, so AsOf deliberately uses only built-in SQL, triggers and SQL PL, which run inside the engine.
+- **Done since the Round 1 proposal** (each behind tests): person names are redacted before the LLM and the ledger; the chain head is anchored outside Db2 after every append, so a rebuilt ledger is caught without receipts; optional TLS to a remote Db2; per-user API tokens and roles kept in Db2; fewer needless holds, measured on new frozen splits, plus a check of the premises a draft states about the customer.
 - **Next Steps** (the residual risks in [architecture.md](architecture.md#threat-model), in the order they matter):
-  - Anchor the chain head outside Db2 on a schedule, so rows nobody kept a receipt for are covered too (receipts already catch a rebuilt ledger for the decisions they were issued for).
-  - TLS between AsOf and Db2 (`SECURITY=SSL`), needed for a remote Db2 such as Db2 on Cloud; every documented setup today connects over plain TCP to `127.0.0.1`.
-  - Per-user authentication in front of the API instead of one shared token, and Db2 audit (`db2audit`) on the history table.
-  - Fewer safe-but-slow escalations: when the judge is right but its quote is not verbatim, a contradiction the rule check confirms could still go to a rewrite. To be measured on a new frozen split, not tuned on the existing ones.
-  - Redact names and free-text identifiers, not only emails, phone, card and booking numbers.
+  - Test TLS against Db2 on Cloud itself (tested so far against the local container and in CI).
+  - Db2 audit (`db2audit`) on the policy history table, and the anchor log on write-once storage by default.
+  - A way for the calling system to state facts the policy needs but the customer did not (the cause of a delay, from the operations system), so fewer premises have to go to a person.
+  - Name detection beyond rules and a name list, for languages and formats the rules miss.
   - A larger policy library, where the investigating agent has more to find than in a 64-version corpus.
+  - Contribute the as-of search recipe to IBM's db2-ai-cookbook (below).
 
 ### Contributing back to IBM's Db2 AI Cookbook
 
