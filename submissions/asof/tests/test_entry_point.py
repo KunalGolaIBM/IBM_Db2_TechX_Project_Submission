@@ -26,15 +26,16 @@ def test_the_cookbook_recipe_is_complete_and_holds_no_secrets():
     import json
     import re
 
-    recipe = Path(__file__).resolve().parents[1] / "cookbook" / "09-as-of-search" / "python-local-embeddings"
-    nb = json.loads((recipe / "as-of-search.ipynb").read_text(encoding="utf-8"))
+    recipe = Path(__file__).resolve().parents[1] / "cookbook" / "09-temporal-search" / "python-local-embeddings"
+    nb = json.loads((recipe / "temporal-search.ipynb").read_text(encoding="utf-8"))
     code = [c for c in nb["cells"] if c["cell_type"] == "code"]
     assert code and all(c.get("outputs") for c in code)  # committed as executed, every code cell ran
-    text = (recipe / "as-of-search.ipynb").read_text(encoding="utf-8")
-    assert "DB2_PASSWORD" in text and not re.search(r"PWD=|password\s*=\s*['\"]", text, re.I)
+    text = (recipe / "temporal-search.ipynb").read_text(encoding="utf-8")
+    assert "DB_PASSWORD" in text and not re.search(r"PWD=|password\s*=\s*['\"]", text, re.I)
+    assert "/Users/" not in text and "/tmp/" not in text  # no local paths in the committed outputs
     assert all(re.match(r"^[A-Za-z0-9_.\-]+==\S+$", line) for line in
                (recipe / "requirements.txt").read_text().splitlines() if line and not line.startswith("#"))
-    assert "DB2_PASSWORD=change-me" in (recipe / ".env.example").read_text()
+    assert "DB_PASSWORD=your-db2-password" in (recipe / ".env.example").read_text()
 
 
 def test_the_dbt_project_takes_credentials_only_from_the_environment():

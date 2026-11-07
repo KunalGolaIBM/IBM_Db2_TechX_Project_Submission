@@ -1,0 +1,8 @@
+# Pinned: these stacks bit-rot quickly against current PyPI.
+ibm_db==3.3.0
+sentence-transformers==6.2.0
+torch==2.15.0
+python-dotenv==1.2.4
+# To run the notebook: open it in VS Code or Jupyter, or execute it headless with nbconvert.
+ipykernel==7.1.0
+nbconvert==7.17.1
