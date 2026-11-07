@@ -236,7 +236,7 @@ PASS  Column mask (RCAC) with SECURED triggers: owner reads '[masked]'; predicat
   - Any other OpenAI-compatible endpoint via `LLM_PROVIDER=openai_compatible`.
 - **The check graph** ([src/asof/checkgraph.py](src/asof/checkgraph.py)): `extract -> retrieve -> judge -> [investigate] -> decide -> (rewrite -> back to extract, once) -> record`, with every error routed to `fail_closed`. The edges are fixed and chosen from deterministic state; no model decides whether a check, the re-check or the ledger write happens.
 - **RAG / Tool Calling Workflow** ([src/asof/gate.py](src/asof/gate.py)):
-  1. **Redact** emails, phone numbers, card numbers and booking references from the question and draft.
+  1. **Redact** emails, phone numbers, card numbers, booking references and person names from the question and draft.
   2. **Extract** atomic policy claims (one LLM call, strict schema, at most 8).
   3. **Retrieve**, per claim, the clause versions in force on the customer's date (Db2 query above).
   4. **Judge** all claims in one LLM call. Claims and clauses go in as delimited, escaped data blocks that cannot close their tag or pose as instructions. The model must cite a clause that was retrieved and quote its deciding text **verbatim**, or the verdict drops to NOT_COVERED.

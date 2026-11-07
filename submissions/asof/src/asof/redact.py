@@ -1,15 +1,18 @@
 """Remove personal data before text reaches an LLM provider or the ledger.
 
 Masks email addresses, phone numbers, payment card numbers (Luhn-checked) and any other
-13 to 19 digit number, plus airline booking references. Policy amounts, dates and clause
-IDs never have that shape, so they survive. Names are not detected;
-the ledger stores the redacted question and draft only.
+13 to 19 digit number, airline booking references, and person names (asof/names.py: titles,
+self-introductions, greetings and sign-offs, family terms, name fields and a list of common given
+names). Policy amounts, dates and clause IDs never have those shapes, so they survive. The ledger
+stores the redacted question and draft only. Name detection is rule-based and not exhaustive.
 """
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+
+from .names import find_names
 
 _EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 _CARD = re.compile(r"\b(?:\d[ -]?){12,18}\d\b")
@@ -36,7 +39,7 @@ def _luhn(digits: str) -> bool:
 
 
 def redact(text: str) -> Redaction:
-    counts = {"email": 0, "card": 0, "number": 0, "phone": 0, "booking_ref": 0}
+    counts = {"email": 0, "card": 0, "number": 0, "phone": 0, "booking_ref": 0, "name": 0}
 
     def sub(pattern: re.Pattern, label: str, key: str, s: str, valid=lambda m: True) -> str:
         def repl(m: re.Match) -> str:
@@ -52,4 +55,7 @@ def redact(text: str) -> Redaction:
     out = sub(_CARD, "[NUMBER]", "number", out)
     out = sub(_PHONE, "[PHONE]", "phone", out, lambda m: len(re.sub(r"\D", "", m.group(0))) >= 10)
     out = sub(_BOOKING_REF, "[BOOKING_REF]", "booking_ref", out)
+    for start, end in reversed(find_names(out)):
+        out = out[:start] + "[NAME]" + out[end:]
+        counts["name"] += 1
     return Redaction(out, counts)

@@ -251,7 +251,8 @@ def evidence(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCHEM
                   "detail": chain.detail},
         "receipt": {"ledger_id": ledger_id, "row_hash": entry["row_hash"], "prev_hash": entry["prev_hash"],
                     "check_with": "POST /api/ledger/receipt with the row hash the caller kept"},
-        "notes": ["Questions and drafts were redacted (emails, phone numbers, card and booking numbers) before storage.",
+        "notes": ["Questions and drafts were redacted (emails, phone numbers, card and booking numbers, person names) "
+                  "before storage.",
                   "Clause versions are Db2 business-time periods; replay uses FOR SYSTEM_TIME AS OF the decision time.",
                   "Chain status covers the whole ledger at generation time. A matching receipt also rules out a "
                   "ledger rebuilt consistently after the decision."],
