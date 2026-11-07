@@ -6,6 +6,8 @@ refuses to run it if the file's SHA-256 changes). Bank (Fernhollow Bank, the sec
 `bank-dev` (12) and `bank-test` (26), frozen the same way before its first run. Escalations (both
 domains): `escalation-dev` (14, for iterating) and `escalation-test` (33, frozen before its first run)
 target the known causes of escalating a draft that could have been corrected or passed.
+`situation-test` (12, both domains, frozen before its first run) holds drafts whose premise about the
+customer ("the delay was within our control") contradicts or restates what the customer said.
 
 Metrics:
 - false-allow rate: drafts that are wrong for their date but were released as PASS,
@@ -32,11 +34,12 @@ from pydantic import BaseModel
 SPLITS = {"dev": "cases_dev.jsonl", "test": "cases_test.jsonl",
           "bank-dev": "bank_cases_dev.jsonl", "bank-test": "bank_cases_test.jsonl",
           "extractor-test": "extractor_cases_test.jsonl", "bank-test2": "bank_cases_test2.jsonl",
-          "escalation-dev": "escalation_cases_dev.jsonl", "escalation-test": "escalation_cases_test.jsonl"}
+          "escalation-dev": "escalation_cases_dev.jsonl", "escalation-test": "escalation_cases_test.jsonl",
+          "situation-test": "situation_cases_test.jsonl"}
 SPLIT_DOC = {"dev": "AURELIA-CSP", "test": "AURELIA-CSP", "bank-dev": "FERNHOLLOW-FEES", "bank-test": "FERNHOLLOW-FEES",
              "extractor-test": "AURELIA-CSP", "bank-test2": "FERNHOLLOW-FEES",
              # both documents; every case names its own doc_id
-             "escalation-dev": "AURELIA-CSP", "escalation-test": "AURELIA-CSP"}
+             "escalation-dev": "AURELIA-CSP", "escalation-test": "AURELIA-CSP", "situation-test": "AURELIA-CSP"}
 # Pinned when the test split was committed (81b5b69), before any run.
 FROZEN_TEST_SHA256 = "bfb24f0ac4722bd6925e4e12a4820bc1e498f15958f9701c447161e78cffd5b2"
 # Each frozen split, pinned in the commit that added it and before its first run.
@@ -48,7 +51,11 @@ FROZEN = {"test": FROZEN_TEST_SHA256,
           "bank-test2": "1378b2855e109e114a4c2890ee71f536fc18c9ffac2b2ffd4cea7417baa0870b",
           # New cases (both domains) aimed at the known causes of unnecessary escalations (T06, T12, T20, T31,
           # T33, T36 and similar), pinned before its first run and before any change meant to reduce them.
-          "escalation-test": "fecf9760292348940e921e924d61eee4e2f0648c5de7340f73fa4aa0f0c95510"}
+          "escalation-test": "fecf9760292348940e921e924d61eee4e2f0648c5de7340f73fa4aa0f0c95510",
+          # Drafts whose premise about the customer contradicts what the customer said, and drafts that restate it
+          # correctly. Written after the change that shows the judge the question (11ef14c), from scratch, and
+          # pinned before its first run: a blind measure of that change, not a set it was tuned on.
+          "situation-test": "d0e0ec60d809c7678bf1bcb0a8b93e0a974e3d02f32682ea45fdccf2264a3393"}
 EVAL_SCHEMA = "ASOF_EVAL"
 DECISIONS = ("PASS", "CORRECTED", "ESCALATED")
 

@@ -86,9 +86,11 @@ def render_report(results: list[dict]) -> str:
              "measurement: it was pinned before its first run and nothing was changed because of it. "
              "`escalation-test` (33 new cases, both documents) targets the known causes of holding a draft that could "
              "have been corrected or passed; it was pinned before its first run and before any change meant to reduce "
-             "those escalations, which were tuned on `escalation-dev` (14 cases) only.", ""]
-    order = {"test": 0, "escalation-test": 1, "bank-test2": 2, "bank-test": 3, "extractor-test": 4, "dev": 5,
-             "bank-dev": 6, "escalation-dev": 7}
+             "those escalations, which were tuned on `escalation-dev` (14 cases) only. `situation-test` (12 new cases, both "
+             "documents) holds drafts whose premise about the customer contradicts or restates what the customer said; it "
+             "was written after the change that shows the judge the question, and pinned before its first run.", ""]
+    order = {"test": 0, "escalation-test": 1, "situation-test": 2, "bank-test2": 3, "bank-test": 4, "extractor-test": 5,
+             "dev": 6, "bank-dev": 7, "escalation-dev": 8}
     providers = {"openrouter": 0, "openai_compatible": 1, "ollama": 2}  # the default provider first
     newest_first = sorted(results, key=lambda r: r["started_at"], reverse=True)
     for r in sorted(newest_first, key=lambda r: (order.get(r["split"], 9), providers.get(r["provider"], 9), r["model"])):
