@@ -39,6 +39,8 @@ log = logging.getLogger("asof.api")
 
 MIN_DATE, MAX_DATE = date(2020, 1, 1), date(2035, 12, 31)
 MAX_BODY_BYTES = 64 * 1024
+# GETs that do real work in Db2 share the POST rate limit: VERIFY_CHAIN recomputes every hash in the ledger.
+COSTLY_GETS = frozenset({"/api/chain/verify"})
 UI_DIR = __import__("pathlib").Path(__file__).with_name("ui")
 LOCAL_CLIENTS = {"127.0.0.1", "::1"}
 NO_MODEL = ("No language model is configured: add OPENROUTER_API_KEY to .env, or set LLM_PROVIDER=ollama with Ollama "
@@ -264,7 +266,8 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
             if not token_matches(given, api_token):
                 return JSONResponse({"error": "this AsOf server needs an API token (Authorization: Bearer ...)"},
                                     status_code=401, headers={"WWW-Authenticate": "Bearer"})
-        if request.method == "POST" and not limiter.allow(request.client.host if request.client else "unknown"):
+        costly = request.method == "POST" or request.url.path in COSTLY_GETS
+        if costly and not limiter.allow(request.client.host if request.client else "unknown"):
             return JSONResponse({"error": "too many requests, try again in a minute"}, status_code=429)
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"

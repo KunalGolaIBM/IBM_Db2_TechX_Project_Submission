@@ -73,6 +73,28 @@ def test_rate_limit_applies_to_llm_endpoints():
     assert codes == [200, 200, 429]
 
 
+def test_the_full_chain_verification_shares_the_rate_limit(monkeypatch):
+    from asof import db, ledger
+
+    class Conn:  # what the pool and /healthz need from a connection; verify_chain itself is stubbed
+        def cursor(self):
+            return type("Cursor", (), {"execute": lambda self, sql, params=(): None,
+                                       "fetchall": lambda self: [(1,)], "close": lambda self: None})()
+
+        def rollback(self):
+            pass
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(db, "connect", lambda settings, role="app", autocommit=False: Conn())
+    monkeypatch.setattr(ledger, "verify_chain", lambda conn, schema="ASOF": ledger.ChainStatus("OK", 0, None, ""))
+    c = TestClient(create_app(Settings(_env_file=None), gate=FakeGate(), assistant=FakeAssistant(), rate_limit=2))
+    codes = [c.get("/api/chain/verify").status_code for _ in range(3)]
+    assert codes == [200, 200, 429]
+    assert c.get("/healthz").status_code != 429  # cheap reads stay unlimited
+
+
 def test_unrecorded_decision_is_not_released():
     r = client(FakeGate(released=False)).post("/api/gate", json=OK)
     assert r.status_code == 503 and r.json()["final_answer"] == HOLDING_REPLY and r.json()["released"] is False
