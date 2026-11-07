@@ -11,6 +11,7 @@ import logging
 from datetime import date
 from typing import Annotated, Any
 
+import ibm_db
 import ibm_db_dbi
 from langchain_core.embeddings import Embeddings
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
@@ -130,11 +131,16 @@ def preview_change(conn: ibm_db_dbi.Connection, change: PolicyChange, embeddings
     impact is read from Db2's own view of the changed policy, and afterwards there is no new version,
     no history row and no flagged help-centre answer. The caller's connection must not autocommit.
     """
+    if ibm_db.autocommit(conn.conn_handler):
+        raise ValueError("a preview needs a connection without autocommit, or the change would be saved")
     try:
         applied = apply_change(conn, change, embeddings, schema, commit=False)
         impact = change_impact(conn, change.clause_id, schema)
     finally:
-        conn.rollback()
+        try:
+            conn.rollback()
+        except Exception as exc:  # noqa: BLE001 - closing the connection then rolls the transaction back
+            raise db.wrap_error(exc, "The preview could not be rolled back; close this connection") from None
     return applied | {"impact": impact, "preview": True}
 
 

@@ -165,3 +165,14 @@ def test_a_preview_reports_the_real_impact_and_leaves_nothing_behind(settings, e
     assert preview["published_flagged"] == applied["published_flagged"] == 1
     assert rows(preview["impact"]) == rows(real) and ("PUBLISHED", "PA-PET-001", "NEEDS_REVIEW", "v1, v2") in rows(real)
     assert state() == (2, 1, "NEEDS_REVIEW")  # the real change did land
+
+
+def test_a_preview_refuses_an_autocommit_connection(settings, embeddings, world, admin_conn):
+    editor = db.connect(settings, "editor", autocommit=True)
+    try:
+        with pytest.raises(ValueError, match="autocommit"):
+            policy.preview_change(editor, PET_CHANGE, embeddings, world)
+    finally:
+        editor.close()
+    db.use_schema(admin_conn, world)
+    assert db.query(admin_conn, "SELECT COUNT(*) FROM POLICY_CLAUSE WHERE CLAUSE_ID = ?", ("PET-001",))[0][0] == 1
