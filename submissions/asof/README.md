@@ -458,6 +458,9 @@ Integration tests install everything into a throwaway `ASOF_TEST` schema, connec
 | Airline `test` | 40 | **0 of 26** | 1 of 14 | 97.5% | 92.5% | 94.3% | 4.6 s |
 | Bank `bank-test` (second run; not blind, see below) | 26 | **0 of 16** | 0 of 10 | 100% | 88.5% | 87.5% | 4.3 s |
 | `extractor-test`: drafts that try to talk the claim extractor out of a wrong claim (first run) | 10 | **0 of 8** | 0 of 2 | 100% | 90.0% | 100% | 4.8 s |
+| Bank `bank-test2`: 22 new bank cases, blind (pinned in `bcce2f3`, one run, nothing changed after it) | 22 | **0 of 14** | 0 of 8 | 100% | 95.5% | 100% | 5.5 s |
+
+The first bank split stopped being blind when its run found a gap in MTF-003's rule data that was then fixed, so `bank-test2` is the bank number to quote: written after the fix, pinned before its run, run once. Its one miss, BN21, is the familiar safe one: the judge called a "$15" stop-payment fee contradicted, but its quote failed the verbatim rule, so the draft was held for a person instead of corrected.
 
 The investigating agent ran in 10 of 40 airline checks and 7 of 26 bank checks and added clauses the first retrieval missed in 6 of each (the per-case records now keep `agent_tool_calls` and `agent_new_clauses`). The new deterministic coverage check, which holds a draft whose amounts or durations no extracted claim states, held none of these 76 drafts: it cost no false blocks. Every miss in these runs was an escalation instead of a correction (the judge's quote failed the verbatim rule, so the claim fell back to "not covered") except T24, where the judge called a correct $75 change fee contradicted, the rule check disagreed, and the rewrite was released.
 

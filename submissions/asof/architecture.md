@@ -133,7 +133,7 @@ flowchart TD
 
 ### Evaluation
 
-[docs/eval_results.md](docs/eval_results.md) holds every recorded run. Three frozen splits, each committed and pinned by SHA-256 before its first run: the airline `test` split (40 cases), the bank `bank-test` split (26) and `extractor-test` (10 drafts aimed at the claim extractor). On the current check (`a7bece1`), `gemini-3.1-flash-lite` released none of the 50 drafts that were wrong for their date across the three, held back 1 of 26 correct drafts, and cited the right clause version in 94.3% (airline), 87.5% (bank) and 100% (extractor) of keyed cases. The README has every run, both providers and the misses.
+[docs/eval_results.md](docs/eval_results.md) holds every recorded run. Four frozen splits, each committed and pinned by SHA-256 before its first run: the airline `test` split (40 cases), the bank `bank-test` split (26; no longer blind after its first run found a rule-data gap), `extractor-test` (10 drafts aimed at the claim extractor) and the blind `bank-test2` (22, run once). On the current check, `gemini-3.1-flash-lite` released none of the 64 drafts that were wrong for their date across the four, held back 1 of 34 correct drafts, and cited the right clause version in 94.3% (airline), 87.5% (bank), 100% (extractor) and 100% (blind bank) of keyed cases. The README has every run, both providers and the misses.
 
 ### Design decisions
 
