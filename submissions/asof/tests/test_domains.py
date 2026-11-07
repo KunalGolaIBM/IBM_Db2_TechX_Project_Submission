@@ -21,7 +21,7 @@ from asof.retriever import RetrievedClause
 from asof.schemas import BankExtractedClaim, BankExtractionResult, ExtractionResult, JudgeResult, RewriteResult
 
 # sha256 of the airline prompts, prompt version, output schemas and rendered messages, taken on
-# 6 Nov 2026 before the bank domain was added (commit 3e164f7). Airline checks are byte-identical.
+# 6 Nov 2026 before the bank domain was added (commit 918bcbd). Airline checks are byte-identical.
 AIRLINE_FINGERPRINT = "fd957f31a91f72d213ee39a043a3730c8780250461ba4a7ac595f642a89f6c6a"
 
 

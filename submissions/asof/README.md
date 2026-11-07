@@ -429,7 +429,7 @@ python scripts/audit_deps.py             # pip-audit over all 108 pinned package
 
 `requirements.txt` lists the 23 direct dependencies; `requirements.lock` pins all 108 packages, transitive ones included, at the versions tested. It is used as a pip constraints file, so Linux and Windows still get their platform-only packages. `python scripts/lock_deps.py` regenerates it, and a test fails if the two files disagree. Last audit (6 Nov 2026): no known vulnerabilities.
 
-Checked from a fresh clone of the standalone repo on Fri 6 Nov 2026 (commit `5fcf90d`): `./quickstart.sh --no-serve` against an already running Db2 took 92 s with a warm pip cache, and the clone's own app then answered (52 clauses in two documents, chain verified, the bank's "$35" overdraft draft corrected to $25 from OVD-001 v2). CI's quick-start job does the same from a bare runner, starting Db2 through Compose.
+Checked from a fresh clone of the standalone repo on Fri 6 Nov 2026 (commit `945019e`): `./quickstart.sh --no-serve` against an already running Db2 took 92 s with a warm pip cache, and the clone's own app then answered (52 clauses in two documents, chain verified, the bank's "$35" overdraft draft corrected to $25 from OVD-001 v2). CI's quick-start job does the same from a bare runner, starting Db2 through Compose.
 
 Integration tests install everything into a throwaway `ASOF_TEST` schema, connect as the real least-privilege user, and drop the schema afterwards. They skip automatically when Db2 is unreachable. They cover:
 
@@ -451,7 +451,7 @@ Integration tests install everything into a throwaway `ASOF_TEST` schema, connec
 
 `python -m asof.eval --split test` runs the gate on 40 labelled cases and writes [docs/eval_results.md](docs/eval_results.md), with every per-case decision recorded in [docs/eval/](docs/eval/). The 40 test cases are new scenarios, none used while building or choosing the model. They were committed (`81b5b69`) before the first run and are frozen: a unit test pins their SHA-256 and the runner refuses to run them if it changes. The 20-case dev split holds the scenarios used while debugging. Each case is labelled with the decision it should get and the clause version its key claim must be checked against.
 
-**Latest runs, on the current check** (commit `4f694a6`, OpenRouter `google/gemini-3.1-flash-lite`, every frozen split):
+**Latest runs, on the current check** (commit `a7bece1`, OpenRouter `google/gemini-3.1-flash-lite`, every frozen split):
 
 | Frozen split | Cases | False allow | False block | Safe | Ideal | Citation | p50 |
 |---|---|---|---|---|---|---|---|
@@ -463,7 +463,7 @@ The investigating agent ran in 10 of 40 airline checks and 7 of 26 bank checks a
 
 **History of the airline split** (40 cases: 14 correct drafts, 26 wrong for their date). Same cases in every run; every run's per-case results are in [docs/eval/](docs/eval/):
 
-| Metric | OpenRouter `gemini-3.1-flash-lite`, before the agent (`eefc50c`) | OpenRouter, LangGraph check with the agent, run 1 (`1ccd7a1`) | OpenRouter, agent, run 2 (`861a650`) | Ollama `qwen2.5:7b-instruct`, local, no key, before the agent (run at `4b103fd`, recorded in `a4207d8`) |
+| Metric | OpenRouter `gemini-3.1-flash-lite`, before the agent (`eefc50c`) | OpenRouter, LangGraph check with the agent, run 1 (`b49f60f`) | OpenRouter, agent, run 2 (`1ffe744`) | Ollama `qwen2.5:7b-instruct`, local, no key, before the agent (run at `4b103fd`, recorded in `a4207d8`) |
 |---|---|---|---|---|
 | **False-allow rate** (wrong drafts released as PASS) | **0.0%** (0 of 26) | **0.0%** (0 of 26) | **0.0%** (0 of 26) | **3.8%** (1 of 26) |
 | False-block rate (correct drafts rewritten or escalated) | 7.1% (1 of 14) | 7.1% (1 of 14) | 7.1% (1 of 14) | 21.4% (3 of 14) |
@@ -493,13 +493,13 @@ What went wrong, from the recorded runs (left unfixed so the numbers stay honest
 
 On the dev split, OpenRouter scored 0% false allow, 0% false block and 95% ideal decisions.
 
-**After the rule-checker change for the bank (`ffdf2af`),** the frozen airline split was run again on OpenRouter: 0 of 26 false allows, 1 of 14 false blocks (T33 again), 97.5% safe, 95.0% ideal, citation accuracy 100%, p50 4.8 s, 4.4 model calls per answer. The change: an amount that matches a rule parameter in one unit (a "12-month period" matching 12 months) is no longer also counted as a wrong number of days.
+**After the rule-checker change for the bank (`6d928b7`),** the frozen airline split was run again on OpenRouter: 0 of 26 false allows, 1 of 14 false blocks (T33 again), 97.5% safe, 95.0% ideal, citation accuracy 100%, p50 4.8 s, 4.4 model calls per answer. The change: an amount that matches a rule parameter in one unit (a "12-month period" matching 12 months) is no longer also counted as a wrong number of days.
 
 ### Evaluation: the bank fee schedule (second domain)
 
-`python -m asof.eval --split bank-test` runs 26 new cases against Fernhollow Bank (10 correct drafts, 16 wrong for their date). They were committed and their SHA-256 pinned in `ffdf2af`, before the first run; the 12-case `bank-dev` split is the one used while building. Same model, check and settings as the airline.
+`python -m asof.eval --split bank-test` runs 26 new cases against Fernhollow Bank (10 correct drafts, 16 wrong for their date). They were committed and their SHA-256 pinned in `6d928b7`, before the first run; the 12-case `bank-dev` split is the one used while building. Same model, check and settings as the airline.
 
-| Metric | OpenRouter `gemini-3.1-flash-lite`, first run of the frozen bank split (`ffdf2af`) |
+| Metric | OpenRouter `gemini-3.1-flash-lite`, first run of the frozen bank split (`6d928b7`) |
 |---|---|
 | **False-allow rate** | **0.0%** (0 of 16) |
 | False-block rate | 0.0% (0 of 10) |

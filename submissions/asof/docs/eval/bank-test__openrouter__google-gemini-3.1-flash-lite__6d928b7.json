@@ -3,7 +3,7 @@
  "provider": "openrouter",
  "model": "google/gemini-3.1-flash-lite",
  "started_at": "2026-11-06T22:56:54+00:00",
- "git_commit": "ffdf2af",
+ "git_commit": "6d928b7",
  "prompt_version": "bank-2026-11-06.1",
  "cases_sha256": "ad6907ec5ffdc572a6232f1599c7eddfc65fdb8d5e39ef4837e14e2c3593a3f9",
  "workers": 4,
