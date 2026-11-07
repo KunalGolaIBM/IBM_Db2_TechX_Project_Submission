@@ -13,7 +13,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import AliasChoices, Field, SecretStr, field_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     db2_database: str = Field("TESTDB", pattern=r"^[A-Za-z][A-Za-z0-9_]{0,7}$")
     db2_container: str = Field("asof-db2", pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$")
     db2_connect_timeout_s: int = Field(15, ge=1, le=120)
+    # TLS to Db2 (SECURITY=SSL in the connection string). Needed for a remote Db2 such as Db2 on Cloud. The
+    # local container speaks plain TCP on 50000 unless scripts/enable_db2_tls.sh turned TLS on (port 50001).
+    db2_ssl: bool = False
+    # The server's certificate (or its CA's), PEM/ARM text, pinned by the driver (SSLServerCertificate).
+    # Relative paths are under the project folder. Empty: the driver's own trusted authorities decide.
+    db2_ssl_server_cert: str | None = Field(None, pattern=r"^[A-Za-z0-9_./~ -]{0,400}$")
     # SET CURRENT LOCK TIMEOUT for the runtime users: a ledger append waits at most this long for the
     # CHAIN_HEAD row lock instead of Db2's default of waiting forever, then fails closed.
     db2_lock_timeout_s: int = Field(10, ge=1, le=300)
@@ -123,6 +129,12 @@ class Settings(BaseSettings):
             raise ValueError("tokens must be 16 to 256 printable ASCII characters, no spaces")
         return value
 
+    @model_validator(mode="after")
+    def _tls(self) -> Settings:
+        if self.db2_ssl_server_cert and not self.db2_ssl:
+            raise ValueError("DB2_SSL_SERVER_CERT is set but DB2_SSL is not true: set DB2_SSL=true to use TLS")
+        return self
+
     @field_validator("asof_anchor_key")
     @classmethod
     def _anchor_key(cls, value: SecretStr | None) -> SecretStr | None:
@@ -145,6 +157,17 @@ class Settings(BaseSettings):
                 f"Missing required setting(s): {', '.join(missing)}. "
                 f"Set them in {DEFAULT_ENV_FILE} (copy .env.example to start)."
             )
+
+    @property
+    def db2_ssl_cert_path(self) -> Path | None:
+        if not self.db2_ssl_server_cert:
+            return None
+        path = Path(self.db2_ssl_server_cert).expanduser()
+        return path if path.is_absolute() else PROJECT_ROOT / path
+
+    @property
+    def db2_is_local(self) -> bool:
+        return self.db2_host in ("localhost", "127.0.0.1", "::1")
 
     @property
     def anchor_key(self) -> bytes | None:

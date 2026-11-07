@@ -336,7 +336,8 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         return {"status": "ok" if db_state == "ok" and settings.llm_ready else "degraded", "db2": db_state,
                 "llm": f"{settings.llm_provider}:{settings.llm_model_name}", "llm_ready": settings.llm_ready,
                 "replay": settings.llm_provider == "replay", "replay_model": replay_model(),
-                "anchoring": "on" if anchors is not None else "off", "version": __version__}
+                "anchoring": "on" if anchors is not None else "off", "db2_tls": settings.db2_ssl,
+                "version": __version__}
 
     def respond(result: GateResult) -> JSONResponse:
         body = gate_out(result).model_dump(mode="json")

@@ -17,6 +17,7 @@ Rules this module enforces:
 
 from __future__ import annotations
 
+import logging
 import re
 import threading
 import weakref
@@ -27,7 +28,9 @@ from typing import Any, Literal
 import ibm_db
 import ibm_db_dbi
 
-from .config import Settings
+from .config import ConfigError, Settings
+
+log = logging.getLogger(__name__)
 
 Role = Literal["admin", "app", "editor", "analyst"]
 SCHEMA = "ASOF"
@@ -83,14 +86,36 @@ def _credentials(settings: Settings, role: Role) -> tuple[str, str]:
 
 
 def dsn(settings: Settings) -> str:
-    """Connection string without credentials. Values come from validated settings."""
-    return (
+    """Connection string without credentials. Values come from validated settings.
+
+    With DB2_SSL=true the driver speaks TLS (SECURITY=SSL), and DB2_SSL_SERVER_CERT pins the server's
+    certificate (SSLServerCertificate). The certificate path is checked here: it must exist, and it must not
+    carry a ';' or '=' that could add a keyword to the connection string."""
+    out = (
         f"DATABASE={settings.db2_database};HOSTNAME={settings.db2_host};PORT={settings.db2_port};"
         f"PROTOCOL=TCPIP;CONNECTTIMEOUT={settings.db2_connect_timeout_s};"
     )
+    if settings.db2_ssl:
+        out += "SECURITY=SSL;"
+        cert = settings.db2_ssl_cert_path
+        if cert is not None:
+            if any(ch in str(cert) for ch in ";={}"):
+                raise ConfigError(f"DB2_SSL_SERVER_CERT: the path {cert} contains a character the driver cannot take")
+            if not cert.is_file():
+                raise ConfigError(f"DB2_SSL_SERVER_CERT: no certificate file at {cert}")
+            out += f"SSLServerCertificate={cert};"
+    return out
+
+
+_warned_plain_tcp = False
 
 
 def connect(settings: Settings, role: Role = "app", autocommit: bool = False) -> ibm_db_dbi.Connection:
+    global _warned_plain_tcp
+    if not settings.db2_ssl and not settings.db2_is_local and not _warned_plain_tcp:
+        _warned_plain_tcp = True
+        log.warning("connecting to Db2 at %s over plain TCP: set DB2_SSL=true for a remote database",
+                    settings.db2_host)
     user, password = _credentials(settings, role)
     try:
         conn = ibm_db_dbi.connect(dsn(settings), user, password)

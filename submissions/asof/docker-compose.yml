@@ -22,6 +22,7 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:${DB2_PORT:-50000}:50000" # localhost only: the owner account must not be reachable from the network
+      - "127.0.0.1:${DB2_TLS_PORT:-50001}:50001" # TLS, once scripts/enable_db2_tls.sh has turned it on (optional)
     environment:
       LICENSE: accept
       DB2INSTANCE: db2inst1
