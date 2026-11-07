@@ -29,16 +29,18 @@ from pydantic import BaseModel
 
 SPLITS = {"dev": "cases_dev.jsonl", "test": "cases_test.jsonl",
           "bank-dev": "bank_cases_dev.jsonl", "bank-test": "bank_cases_test.jsonl",
-          "extractor-test": "extractor_cases_test.jsonl"}
+          "extractor-test": "extractor_cases_test.jsonl", "bank-test2": "bank_cases_test2.jsonl"}
 SPLIT_DOC = {"dev": "AURELIA-CSP", "test": "AURELIA-CSP", "bank-dev": "FERNHOLLOW-FEES", "bank-test": "FERNHOLLOW-FEES",
-             "extractor-test": "AURELIA-CSP"}
+             "extractor-test": "AURELIA-CSP", "bank-test2": "FERNHOLLOW-FEES"}
 # Pinned when the test split was committed (81b5b69), before any run.
 FROZEN_TEST_SHA256 = "bfb24f0ac4722bd6925e4e12a4820bc1e498f15958f9701c447161e78cffd5b2"
 # Each frozen split, pinned in the commit that added it and before its first run.
 FROZEN = {"test": FROZEN_TEST_SHA256,
           "bank-test": "ad6907ec5ffdc572a6232f1599c7eddfc65fdb8d5e39ef4837e14e2c3593a3f9",
           # Drafts that try to talk the extractor out of a wrong claim (both domains), pinned before its first run.
-          "extractor-test": "163e48a9e708f19c4697f422a0d615225a41e4223cf1f7b84ec2060239f1454b"}
+          "extractor-test": "163e48a9e708f19c4697f422a0d615225a41e4223cf1f7b84ec2060239f1454b",
+          # A second, blind bank split: the first one stopped being blind when its run found a data gap that was fixed.
+          "bank-test2": "1378b2855e109e114a4c2890ee71f536fc18c9ffac2b2ffd4cea7417baa0870b"}
 EVAL_SCHEMA = "ASOF_EVAL"
 DECISIONS = ("PASS", "CORRECTED", "ESCALATED")
 
