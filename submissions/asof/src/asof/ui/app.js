@@ -539,7 +539,7 @@ async function LedgerEntry(id) {
     <div class="page-head">
       <div><a href="#/ledger">← Ledger</a><h1>Ledger entry #${e.ledger_id}</h1>
         <p>Recorded ${fmtTs(e.created_at)} for a customer date of ${fmtDate(e.as_of_date)} via ${e.channel}. Model <code>${e.model_info}</code>, prompt version <code>${e.prompt_version}</code>, ${(e.latency_ms / 1000).toFixed(1)} s.</p></div>
-      <div class="row">${pill(e.decision)}<button class="btn ghost sm" id="verify">Verify hash chain</button></div>
+      <div class="row">${pill(e.decision)}<button class="btn ghost sm" id="evidence" title="The decision, its claims and clause versions, the replay, the chain check and the receipt, in one JSON file for a dispute">Evidence pack</button><button class="btn ghost sm" id="verify">Verify hash chain</button></div>
     </div>
     <div id="chain"></div>
     <div class="card">
@@ -568,6 +568,17 @@ async function LedgerEntry(id) {
         <td>${pill(c.verdict)}</td><td class="small">${(c.llm_verdict || "").replaceAll("_", " ").toLowerCase()}</td><td class="small">${c.rule_check.replaceAll("_", " ").toLowerCase()}</td>
         <td>${c.clause_id ? html`<code>${c.clause_id}</code> ${c.clause_version}` : html`<span class="muted">none</span>`}</td></tr>`)}</tbody></table></div>`);
   $("#verify").addEventListener("click", verifyChain);
+  $("#evidence").addEventListener("click", async () => {
+    const btn = $("#evidence"); btn.disabled = true;
+    try {
+      const { body } = await api(`/api/ledger/${e.ledger_id}/evidence`);
+      const url = URL.createObjectURL(new Blob([JSON.stringify(body, null, 2)], { type: "application/json" }));
+      const a = Object.assign(document.createElement("a"), { href: url, download: `asof-evidence-${e.ledger_id}.json` });
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) { mount($("#chain"), html`<div class="error-box">${err.message}</div>`); }
+    finally { btn.disabled = false; }
+  });
 }
 
 // ---------- Ask the ledger ----------

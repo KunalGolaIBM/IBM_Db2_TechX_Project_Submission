@@ -9,7 +9,7 @@ from __future__ import annotations
 import hmac
 import json
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 import ibm_db_dbi
@@ -222,3 +222,35 @@ def replay(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCHEMA)
                         "status": "CHANGED_SINCE_DECISION" if changed else "UNCHANGED"})
     return {"ledger_id": ledger_id, "created_at": entry["created_at"], "as_of_date": entry["as_of_date"],
             "decision": entry["decision"], "clauses": clauses}
+
+
+EVIDENCE_FORMAT = 1
+
+
+def evidence(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCHEMA) -> dict[str, Any] | None:
+    """Everything needed to account for one answer in a dispute, in one document.
+
+    The decision as recorded (question and draft redacted, the answer released, every claim with its
+    verdict and the clause version it was checked against), the replay of each cited clause (the row
+    used, what Db2 held at that moment, what applies today), the whole chain's verification, and the
+    row hash to match against the receipt the caller kept. Read as the runtime user, which sees the
+    ledger text unmasked.
+    """
+    entry = get_entry(conn, ledger_id, schema)
+    if entry is None:
+        return None
+    chain = verify_chain(conn, schema)
+    return {
+        "asof_evidence": EVIDENCE_FORMAT,
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "ledger_entry": entry,
+        "replay": replay(conn, ledger_id, schema),
+        "chain": {"status": chain.status, "rows_checked": chain.checked, "first_bad_ledger_id": chain.first_bad,
+                  "detail": chain.detail},
+        "receipt": {"ledger_id": ledger_id, "row_hash": entry["row_hash"], "prev_hash": entry["prev_hash"],
+                    "check_with": "POST /api/ledger/receipt with the row hash the caller kept"},
+        "notes": ["Questions and drafts were redacted (emails, phone numbers, card and booking numbers) before storage.",
+                  "Clause versions are Db2 business-time periods; replay uses FOR SYSTEM_TIME AS OF the decision time.",
+                  "Chain status covers the whole ledger at generation time. A matching receipt also rules out a "
+                  "ledger rebuilt consistently after the decision."],
+    }

@@ -306,3 +306,15 @@ def test_a_receipt_catches_a_ledger_rebuilt_consistently_which_verify_chain_cann
     finally:
         app.close()
     assert (check.found, check.matches, check.verdict) == (True, False, "REWRITTEN")
+
+
+def test_an_evidence_pack_holds_the_decision_its_clauses_the_chain_and_the_receipt(app_conn, test_schema):
+    issued = ledger.append(app_conn, entry(), test_schema)
+    pack = ledger.evidence(app_conn, issued.ledger_id, test_schema)
+    assert pack["asof_evidence"] == 1 and pack["chain"]["status"] == "OK"
+    assert pack["ledger_entry"]["ledger_id"] == issued.ledger_id
+    assert pack["receipt"]["row_hash"] == issued.row_hash == pack["ledger_entry"]["row_hash"]
+    assert [c["clause_id"] for c in pack["ledger_entry"]["citations"] if c["clause_id"]] == ["BRV-002"]
+    assert {c["clause_id"] for c in pack["replay"]["clauses"]} == {"BRV-002"}
+    json.dumps(pack, default=str)  # serialisable as the download is
+    assert ledger.evidence(app_conn, issued.ledger_id + 10_000, test_schema) is None

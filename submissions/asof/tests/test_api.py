@@ -370,3 +370,18 @@ def test_receipt_verdicts(found, matches, chain, verdict):
     from asof import ledger
 
     assert ledger.ReceiptCheck(1, found, matches, ledger.ChainStatus(chain, 1, None, None)).verdict == verdict
+
+
+def test_the_evidence_pack_downloads_as_a_file_and_shares_the_rate_limit(monkeypatch):
+    from asof import ledger
+
+    monkeypatch.setattr(ledger, "evidence", lambda conn, ledger_id, schema="ASOF":
+                        None if ledger_id == 404 else {"asof_evidence": 1, "ledger_entry": {"ledger_id": ledger_id}})
+    monkeypatch.setattr("asof.db.connect", lambda settings, role="app", autocommit=False: type(
+        "C", (), {"rollback": lambda self: None, "close": lambda self: None})())
+    c = client(rate_limit=2)
+    r = c.get("/api/ledger/7/evidence")
+    assert r.status_code == 200 and r.json()["ledger_entry"]["ledger_id"] == 7
+    assert r.headers["content-disposition"] == 'attachment; filename="asof-evidence-7.json"'
+    assert c.get("/api/ledger/404/evidence").status_code == 404
+    assert c.get("/api/ledger/7/evidence").status_code == 429

@@ -22,6 +22,7 @@ from datetime import date
 from typing import Annotated, Any, Literal
 
 from fastapi import FastAPI, Header, HTTPException, Path, Query, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
@@ -41,6 +42,7 @@ MIN_DATE, MAX_DATE = date(2020, 1, 1), date(2035, 12, 31)
 MAX_BODY_BYTES = 64 * 1024
 # GETs that do real work in Db2 share the POST rate limit: VERIFY_CHAIN recomputes every hash in the ledger.
 COSTLY_GETS = frozenset({"/api/chain/verify"})
+COSTLY_GET_SUFFIXES = ("/evidence",)  # evidence packs run VERIFY_CHAIN too
 UI_DIR = __import__("pathlib").Path(__file__).with_name("ui")
 LOCAL_CLIENTS = {"127.0.0.1", "::1"}
 NO_MODEL = ("No language model is configured: add OPENROUTER_API_KEY to .env, or set LLM_PROVIDER=ollama with Ollama "
@@ -274,7 +276,8 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
             if not token_matches(given, api_token):
                 return JSONResponse({"error": "this AsOf server needs an API token (Authorization: Bearer ...)"},
                                     status_code=401, headers={"WWW-Authenticate": "Bearer"})
-        costly = request.method == "POST" or request.url.path in COSTLY_GETS
+        costly = (request.method == "POST" or request.url.path in COSTLY_GETS
+                  or request.url.path.endswith(COSTLY_GET_SUFFIXES))
         if costly and not limiter.allow(request.client.host if request.client else "unknown"):
             return JSONResponse({"error": "too many requests, try again in a minute"}, status_code=429)
         response = await call_next(request)
@@ -386,6 +389,19 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         if out is None:
             raise HTTPException(404, "no such ledger entry")
         return out
+
+    @app.get("/api/ledger/{ledger_id}/evidence")
+    def ledger_evidence(ledger_id: Annotated[int, Path(ge=1)]):
+        """An evidence pack for one decision, as a JSON download (runs VERIFY_CHAIN, so rate-limited)."""
+        conn = app_conn()
+        try:
+            out = ledger.evidence(conn, ledger_id, schema)
+        finally:
+            conn.close()
+        if out is None:
+            raise HTTPException(404, "no such ledger entry")
+        return JSONResponse(jsonable_encoder(out), headers={
+            "Content-Disposition": f'attachment; filename="asof-evidence-{ledger_id}.json"'})
 
     @app.post("/api/ledger/receipt")
     def check_receipt(body: ReceiptIn):
