@@ -29,6 +29,8 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import __version__, db, impactagent, ledger, policy
+from .anchor import AnchorLog
+from .anchor import verify as verify_anchors
 from .askledger import LedgerAsker
 from .assistant import DemoAssistant
 from .config import ConfigError, Settings, get_settings
@@ -42,7 +44,7 @@ log = logging.getLogger("asof.api")
 MIN_DATE, MAX_DATE = date(2020, 1, 1), date(2035, 12, 31)
 MAX_BODY_BYTES = 64 * 1024
 # GETs that do real work in Db2 share the POST rate limit: VERIFY_CHAIN recomputes every hash in the ledger.
-COSTLY_GETS = frozenset({"/api/chain/verify"})
+COSTLY_GETS = frozenset({"/api/chain/verify", "/api/chain/anchors"})
 COSTLY_GET_SUFFIXES = ("/evidence",)  # evidence packs run VERIFY_CHAIN too
 UI_DIR = __import__("pathlib").Path(__file__).with_name("ui")
 LOCAL_CLIENTS = {"127.0.0.1", "::1"}
@@ -229,6 +231,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     # Runtime connections are pooled: on the dev machine opening one costs about 0.2 s and closing it
     # about 0.9 s, and a check uses three (see db.ConnectionPool).
     pool = db.ConnectionPool(settings, "app")
+    anchors = AnchorLog.from_settings(settings, schema)  # None: ASOF_ANCHOR_KEY unset, anchoring off
 
     def app_conn():
         return pool.connect()
@@ -239,7 +242,8 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
                 raise HTTPException(503, NO_MODEL)
             llm = build_llm(settings)
             emb = get_embeddings(settings.embedding_model)
-            state["gate"] = state["gate"] or Gate(llm, emb, app_conn, schema, deadline_s=settings.asof_check_deadline_s)
+            state["gate"] = state["gate"] or Gate(llm, emb, app_conn, schema, deadline_s=settings.asof_check_deadline_s,
+                                                  anchors=anchors)
             state["assistant"] = state["assistant"] or DemoAssistant(llm, emb, app_conn, schema)
         return state["gate"], state["assistant"]
 
@@ -332,7 +336,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         return {"status": "ok" if db_state == "ok" and settings.llm_ready else "degraded", "db2": db_state,
                 "llm": f"{settings.llm_provider}:{settings.llm_model_name}", "llm_ready": settings.llm_ready,
                 "replay": settings.llm_provider == "replay", "replay_model": replay_model(),
-                "version": __version__}
+                "anchoring": "on" if anchors is not None else "off", "version": __version__}
 
     def respond(result: GateResult) -> JSONResponse:
         body = gate_out(result).model_dump(mode="json")
@@ -400,7 +404,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         """An evidence pack for one decision, as a JSON download (runs VERIFY_CHAIN, so rate-limited)."""
         conn = app_conn()
         try:
-            out = ledger.evidence(conn, ledger_id, schema)
+            out = ledger.evidence(conn, ledger_id, schema, anchors=anchors)
         finally:
             conn.close()
         if out is None:
@@ -418,6 +422,17 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
             conn.close()
         return {"ledger_id": r.ledger_id, "verdict": r.verdict, "found": r.found, "matches": r.matches,
                 "chain_status": r.chain.status, "first_bad_ledger_id": r.chain.first_bad}
+
+    @app.get("/api/chain/anchors")
+    def chain_anchors():
+        """Every chain-head anchor kept outside Db2 against the ledger now (catches a consistent rebuild)."""
+        if anchors is None:
+            return {"status": "OFF", "detail": "no ASOF_ANCHOR_KEY: chain-head anchoring is off"}
+        conn = app_conn()
+        try:
+            return verify_anchors(anchors, conn, schema).as_dict()
+        finally:
+            conn.close()
 
     @app.get("/api/chain/verify")
     def chain_verify():

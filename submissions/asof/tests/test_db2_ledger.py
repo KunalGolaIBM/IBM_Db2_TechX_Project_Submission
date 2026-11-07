@@ -318,3 +318,34 @@ def test_an_evidence_pack_holds_the_decision_its_clauses_the_chain_and_the_recei
     assert {c["clause_id"] for c in pack["replay"]["clauses"]} == {"BRV-002"}
     json.dumps(pack, default=str)  # serialisable as the download is
     assert ledger.evidence(app_conn, issued.ledger_id + 10_000, test_schema) is None
+
+
+def test_an_anchor_catches_a_ledger_rebuilt_consistently_with_no_receipt_at_all(admin_conn, settings, scratch,
+                                                                             verifier, tmp_path):
+    """Nobody kept a receipt. The chain-head anchors, kept outside Db2 under a key Db2 never sees, still show
+    that rows 1 and 2 are not the rows that were anchored, while VERIFY_CHAIN finds the rebuilt chain OK."""
+    from asof import anchor
+
+    anchors = anchor.AnchorLog(tmp_path, b"k" * 40, scratch)
+    app = db.connect(settings, "app")
+    try:
+        for answer in ("Bereavement fares must be requested before travel.", "The first bag costs $35."):
+            issued = ledger.append(app, entry(final_answer=answer), scratch)
+            anchors.append(issued.ledger_id, issued.row_hash)
+        ok = anchor.verify(anchors, app, scratch)
+        assert (ok.status, ok.covered_through, ok.unanchored_rows) == ("OK", 2, 0)
+    finally:
+        app.close()
+
+    schema.reset_ledger(admin_conn, scratch)  # the owner throws the ledger away ...
+    seed.seed_chain_head(admin_conn, scratch)
+    schema.apply_grants(admin_conn, settings.asof_app_user, settings.asof_editor_user, scratch)
+    app = db.connect(settings, "app")
+    try:  # ... and writes a different history through the proper procedure
+        for answer in ("You can claim it after you travel.", "The first bag costs $35."):
+            ledger.append(app, entry(final_answer=answer), scratch)
+        assert verifier().status == "OK"  # internally consistent
+        caught = anchor.verify(anchors, app, scratch)
+    finally:
+        app.close()
+    assert (caught.status, caught.first_bad_anchor) == ("MISMATCH", 1)

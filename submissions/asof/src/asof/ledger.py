@@ -229,7 +229,7 @@ def replay(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCHEMA)
 EVIDENCE_FORMAT = 1
 
 
-def evidence(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCHEMA) -> dict[str, Any] | None:
+def evidence(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCHEMA, anchors=None) -> dict[str, Any] | None:
     """Everything needed to account for one answer in a dispute, in one document.
 
     The decision as recorded (question and draft redacted, the answer released, every claim with its
@@ -242,6 +242,12 @@ def evidence(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCHEM
     if entry is None:
         return None
     chain = verify_chain(conn, schema)
+    anchor = None
+    if anchors is not None:
+        from .anchor import verify as verify_anchors
+
+        a = verify_anchors(anchors, conn, schema)
+        anchor = {**a.as_dict(), "covers_this_row": a.status == "OK" and (a.covered_through or 0) >= ledger_id}
     return {
         "asof_evidence": EVIDENCE_FORMAT,
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
@@ -251,9 +257,10 @@ def evidence(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCHEM
                   "detail": chain.detail},
         "receipt": {"ledger_id": ledger_id, "row_hash": entry["row_hash"], "prev_hash": entry["prev_hash"],
                     "check_with": "POST /api/ledger/receipt with the row hash the caller kept"},
+        "anchor": anchor or {"status": "OFF", "detail": "no ASOF_ANCHOR_KEY: chain-head anchoring is off"},
         "notes": ["Questions and drafts were redacted (emails, phone numbers, card and booking numbers, person names) "
                   "before storage.",
                   "Clause versions are Db2 business-time periods; replay uses FOR SYSTEM_TIME AS OF the decision time.",
-                  "Chain status covers the whole ledger at generation time. A matching receipt also rules out a "
-                  "ledger rebuilt consistently after the decision."],
+                  "Chain status covers the whole ledger at generation time. A matching receipt, or an anchor at or "
+                  "after this row, also rules out a ledger rebuilt consistently after the decision."],
     }

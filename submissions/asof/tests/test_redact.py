@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from asof.redact import redact
+from asof.redact import redact, strip_placeholders
 
 
 @pytest.mark.parametrize("text, expected", [
@@ -76,3 +76,12 @@ def test_name_redaction_does_not_touch_any_eval_case_or_built_in_scenario():
     scenarios = json.loads((resources.files("asof") / "ui" / "scenarios.json").read_text(encoding="utf-8"))
     texts = [v for c in scenarios["playground"] for k, v in c.items() if k in ("question", "draft")]
     assert texts and all(redact(t).counts["name"] == 0 for t in texts)
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("Hello [NAME]. The first checked bag costs $40 each way.", "Hello. The first checked bag costs $40 each way."),
+    ("Hi [NAME], we will email [EMAIL] today.", "Hi, we will email today."),
+    ("The first checked bag costs $40 each way.", "The first checked bag costs $40 each way."),
+])
+def test_placeholders_never_reach_the_customer(text, expected):
+    assert strip_placeholders(text) == expected

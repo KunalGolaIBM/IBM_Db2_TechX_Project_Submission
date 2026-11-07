@@ -67,6 +67,12 @@ class Settings(BaseSettings):
     # Optional API token. When set, every /api/ request needs "Authorization: Bearer <token>"
     # (constant-time compare); /healthz and the static UI stay open. Unset: localhost binding only.
     asof_api_token: SecretStr | None = None
+    # Chain-head anchors (asof/anchor.py): after each ledger append the new head is written, with an HMAC
+    # under this key, to a log outside Db2. Setup generates the key; unset means anchoring is off.
+    asof_anchor_key: SecretStr | None = None
+    # Where the anchor logs go. Relative paths are under the project folder. For real use, a place the
+    # database owner cannot write (another host, a write-once bucket mounted here).
+    asof_anchor_dir: str = Field("var/anchors", pattern=r"^[A-Za-z0-9_./~-]{1,400}$")
     # Host headers the API answers to (comma-separated). A browser page on another site cannot reach
     # the localhost API through DNS rebinding, because its Host header is not on this list.
     asof_allowed_hosts: str = "127.0.0.1,localhost,::1"
@@ -117,6 +123,13 @@ class Settings(BaseSettings):
             raise ValueError("tokens must be 16 to 256 printable ASCII characters, no spaces")
         return value
 
+    @field_validator("asof_anchor_key")
+    @classmethod
+    def _anchor_key(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is not None and value.get_secret_value() and len(value.get_secret_value()) < 32:
+            raise ValueError("ASOF_ANCHOR_KEY must be at least 32 characters (python -m asof.setup generates one)")
+        return value
+
     @field_validator("openrouter_base_url", "ollama_base_url", "openai_compat_base_url", "embedding_api_url")
     @classmethod
     def _http_url(cls, value: str | None) -> str | None:
@@ -132,6 +145,15 @@ class Settings(BaseSettings):
                 f"Missing required setting(s): {', '.join(missing)}. "
                 f"Set them in {DEFAULT_ENV_FILE} (copy .env.example to start)."
             )
+
+    @property
+    def anchor_key(self) -> bytes | None:
+        return self.asof_anchor_key.get_secret_value().encode("utf-8") if _is_set(self.asof_anchor_key) else None
+
+    @property
+    def anchor_dir(self) -> Path:
+        path = Path(self.asof_anchor_dir).expanduser()
+        return path if path.is_absolute() else PROJECT_ROOT / path
 
     @property
     def embedding_key(self) -> SecretStr | None:

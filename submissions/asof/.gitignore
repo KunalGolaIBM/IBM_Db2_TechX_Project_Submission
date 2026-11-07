@@ -21,7 +21,8 @@ htmlcov/
 *.safetensors
 *.bin
 
-# Local run artefacts
+# Local run artefacts (var/anchors holds the chain-head anchor logs: runtime state, kept out of git)
+/var/
 *.log
 *.tmp
 .DS_Store

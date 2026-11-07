@@ -46,7 +46,7 @@ from .gate import (
 )
 from .llm import LLMError
 from .prompts import investigate_messages
-from .redact import redact
+from .redact import redact, strip_placeholders
 from .retriever import RetrievedClause, clauses_as_of
 
 log = logging.getLogger(__name__)
@@ -212,7 +212,7 @@ def build(gate: Gate, req: GateRequest, deadline_at: float | None = None):
             return {"first": outcomes, "decision": decision, "reason": reason, "final": final, "unchecked": unchecked}
         if outcomes and all(c.verdict == "SUPPORTED" for c in outcomes) and not unchecked:
             return {"second": outcomes, "decision": "CORRECTED", "reason": "CORRECTED_FROM_CLAUSES",
-                    "final": state["rewrite"] + references(outcomes)}
+                    "final": strip_placeholders(state["rewrite"]) + references(outcomes)}
         return {"second": outcomes, "decision": "ESCALATED", "reason": "CORRECTION_FAILED", "final": HOLDING_REPLY,
                 "unchecked": unchecked}
 

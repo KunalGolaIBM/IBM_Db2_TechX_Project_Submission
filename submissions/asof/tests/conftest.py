@@ -6,6 +6,10 @@ import os
 
 # FastAPI's TestClient sends Host: testserver; the app answers only to listed hosts.
 os.environ.setdefault("ASOF_ALLOWED_HOSTS", "127.0.0.1,localhost,::1,testserver")
+# Tests never write to the real chain-head anchor log (var/anchors): anchors go to a throwaway directory.
+import tempfile  # noqa: E402
+
+os.environ["ASOF_ANCHOR_DIR"] = tempfile.mkdtemp(prefix="asof-test-anchors-")
 
 import pytest
 

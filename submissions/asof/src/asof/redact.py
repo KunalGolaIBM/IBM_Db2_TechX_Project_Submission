@@ -59,3 +59,13 @@ def redact(text: str) -> Redaction:
         out = out[:start] + "[NAME]" + out[end:]
         counts["name"] += 1
     return Redaction(out, counts)
+
+
+_PLACEHOLDER = re.compile(r"[ \t]*\[(?:NAME|EMAIL|PHONE|CARD|NUMBER|BOOKING_REF)\]")
+
+
+def strip_placeholders(text: str) -> str:
+    """A rewrite is written from redacted text, so it may greet "[NAME]". A customer must never see a
+    placeholder: drop it, and the space it leaves before punctuation ("Hello [NAME]." -> "Hello.")."""
+    out = _PLACEHOLDER.sub("", text)
+    return re.sub(r"(\w)[ \t]+([,.!?;:])", r"\1\2", out) if out != text else text

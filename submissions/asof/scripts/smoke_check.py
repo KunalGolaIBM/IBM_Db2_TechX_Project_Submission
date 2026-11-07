@@ -9,8 +9,8 @@
    model it must not be released as written; in replay mode (what ./quickstart.sh picks without a key)
    the decision must equal the recorded one, and the ledger row must say "replay:".
 3. Replay mode only: a draft that was never recorded must be held for a specialist (fail closed).
-4. The receipt (row hash) the check returned must match the ledger, and VERIFY_CHAIN over the whole
-   ledger must report OK.
+4. The receipt (row hash) the check returned must match the ledger, VERIFY_CHAIN over the whole
+   ledger must report OK, and the chain-head anchors kept outside Db2 must match and cover that row.
 
 Prints each result and exits non-zero on the first mismatch. CI runs it after ./quickstart.sh.
 """
@@ -76,6 +76,11 @@ def main(base: str) -> int:
     print(f"VERIFY_CHAIN: {chain['status']} over {chain['rows_checked']} rows")
     if chain["status"] != "OK":
         return fail(f"hash chain broken at #{chain['first_bad_ledger_id']}: {chain['detail']}")
+
+    anchors = client.get("/api/chain/anchors").json()
+    print(f"Chain-head anchors: {anchors['status']}, entries 1 to {anchors.get('covered_through')} covered")
+    if anchors["status"] != "OK" or (anchors.get("covered_through") or 0) < body["ledger_id"]:
+        return fail(f"the chain head was not anchored outside Db2 after the check: {anchors}")
     print("smoke check passed")
     return 0
 

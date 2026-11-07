@@ -341,3 +341,38 @@ def test_situation_conflict_never_lifts_a_not_covered_claim(world):
                       judge=[judge(verdict(1, "NOT_COVERED", conflict=True))])
     r = make_gate(llm).check(req(draft=claim, question="Do students get a discount?"))
     assert r.claims[0].verdict == "NOT_COVERED" and r.decision == "ESCALATED"
+
+
+# ---- chain-head anchors ---------------------------------------------------------------------------
+def test_every_recorded_decision_anchors_the_chain_head(world, tmp_path):
+    from asof.anchor import AnchorLog
+
+    anchors = AnchorLog(tmp_path, b"k" * 40, "ASOF")
+    g = Gate(ScriptedLLM(extract=[claims(), claims()]), ZeroEmbeddings(), connect=FakeConn, anchors=anchors)
+    g.check(req(draft="Thanks for asking!"))
+    g.check(req(draft="Happy to help."))
+    assert [r["ledger_id"] for r in anchors.records()] == [1, 2] and anchors.check_log() == (None, None)
+
+
+def test_a_failed_anchor_write_does_not_withhold_a_recorded_answer(world, caplog):
+    class Broken:
+        def append(self, ledger_id, row_hash):
+            raise OSError("disk full")
+
+    g = Gate(ScriptedLLM(extract=[claims()]), ZeroEmbeddings(), connect=FakeConn, anchors=Broken())
+    r = g.check(req(draft="Thanks for asking!"))
+    assert r.decision == "PASS" and r.released and r.ledger_id == 1
+    assert "chain-head anchor not written" in caplog.text
+
+
+def test_a_released_correction_never_shows_a_redaction_placeholder(world):
+    world["ids"] = ["BAG-001"]
+    fixed = "Hello [NAME]. The first checked bag costs $40 each way on Economy fares."
+    right = "The first checked bag costs $40 each way on Economy fares."
+    llm = ScriptedLLM(extract=[claims((BAG_CLAIM, "baggage", "amount")), claims((right, "baggage", "amount"))],
+                      judge=[judge(verdict(1, "CONTRADICTED", "BAG-001", "$40")),
+                             judge(verdict(1, "SUPPORTED", "BAG-001", right))],
+                      rewrite=[RewriteResult(answer=fixed)])
+    r = make_gate(llm).check(req(draft="Hi Priya, " + BAG_CLAIM, on=JULY, question="My name is Priya. How much is my bag?"))
+    assert r.decision == "CORRECTED" and r.final_answer.startswith("Hello. The first checked bag costs $40")
+    assert "[NAME]" not in r.final_answer

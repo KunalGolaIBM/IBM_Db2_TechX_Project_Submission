@@ -516,10 +516,23 @@ async function verifyChain() {
   mount(box, html`<div class="banner ok"><div class="spinner"></div>Running VERIFY_CHAIN in Db2...</div>`);
   try {
     const s = (await api("/api/chain/verify")).body;
-    mount(box, s.status === "OK"
+    const chain = s.status === "OK"
       ? html`<div class="banner ok"><strong>Chain intact.</strong><span>VERIFY_CHAIN recomputed ${s.rows_checked} row hash${s.rows_checked === 1 ? "" : "es"}: ${s.detail}.</span></div>`
-      : html`<div class="banner bad"><strong>Chain broken at entry #${s.first_bad_ledger_id}.</strong><span>${s.detail}</span></div>`);
+      : html`<div class="banner bad"><strong>Chain broken at entry #${s.first_bad_ledger_id}.</strong><span>${s.detail}</span></div>`;
+    mount(box, chain);
+    const a = (await api("/api/chain/anchors")).body;
+    mount(box, html`${chain}${anchorBanner(a)}`);
   } catch (err) { mount(box, html`<div class="banner bad">${err.message}</div>`); }
+}
+// Chain-head anchors kept outside Db2: they catch a ledger rebuilt consistently, which VERIFY_CHAIN cannot.
+function anchorBanner(a) {
+  if (a.status === "OK" && !a.unanchored_rows)
+    return html`<div class="banner ok"><strong>Anchors match.</strong><span>${a.anchors} chain-head anchor${a.anchors === 1 ? "" : "s"} kept outside Db2 cover entries 1 to ${a.covered_through}, so they were not rebuilt since.</span></div>`;
+  if (a.status === "OK")
+    return html`<div class="banner fix"><strong>Anchors match up to #${a.covered_through}.</strong><span>${a.detail}</span></div>`;
+  if (a.status === "OFF" || a.status === "NO_ANCHORS")
+    return html`<div class="banner fix"><strong>${a.status === "OFF" ? "Anchoring is off." : "No anchors yet."}</strong><span>${a.status === "OFF" ? "Set ASOF_ANCHOR_KEY (setup generates one) to anchor the chain head outside Db2." : "The next recorded check writes the first chain-head anchor."}</span></div>`;
+  return html`<div class="banner bad"><strong>Anchor check: ${a.status.replaceAll("_", " ").toLowerCase()}${a.first_bad_anchor ? ` at anchor ${a.first_bad_anchor}` : ""}.</strong><span>${a.detail}</span></div>`;
 }
 function sqlBlock(createdAt, asOf, clauseId) {
   return raw(`<pre class="sql"><span class="kw">SELECT</span> VERSION_LABEL, CLAUSE_TEXT

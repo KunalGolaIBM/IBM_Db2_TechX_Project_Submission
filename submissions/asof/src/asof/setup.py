@@ -5,7 +5,8 @@
     python -m asof.setup --reset-ledger  # DEMO ONLY: empty the ledger, keep the policy data
 
 Steps:
- 1. Generate passwords for the three least-privilege users if .env has none (never printed).
+ 1. Generate passwords for the three least-privilege users and the chain-head anchor key if .env has
+    none (never printed).
  2. Wait until Db2 accepts connections as the owner.
  3. Create the OS users inside the Db2 container (Db2 authenticates against the OS).
  4. Create tables, history table, indexes, triggers and procedures in schema ASOF.
@@ -29,11 +30,12 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from . import db, indb, schema, seed
+from .anchor import AnchorLog
 from .config import DEFAULT_ENV_FILE, ConfigError, Settings, get_settings
 from .embeddings import get_embeddings
 from .retriever import clauses_as_of
 
-GENERATED_KEYS = ("ASOF_APP_PASSWORD", "ASOF_EDITOR_PASSWORD", "ASOF_ANALYST_PASSWORD")
+GENERATED_KEYS = ("ASOF_APP_PASSWORD", "ASOF_EDITOR_PASSWORD", "ASOF_ANALYST_PASSWORD", "ASOF_ANCHOR_KEY")
 DOCKER_TIMEOUT_S = 60
 
 
@@ -46,7 +48,7 @@ def say(msg: str) -> None:
 
 
 def ensure_generated_passwords(env_path: Path = DEFAULT_ENV_FILE) -> list[str]:
-    """Fill empty ASOF_*_PASSWORD keys in .env with strong random values. Returns the keys filled."""
+    """Fill empty ASOF_*_PASSWORD keys and ASOF_ANCHOR_KEY in .env with strong random values. Returns the keys filled."""
     if not env_path.is_file():
         raise SetupError(f"{env_path} not found. Run: cp .env.example .env  (then set DB2_PASSWORD)")
     lines = env_path.read_text(encoding="utf-8").splitlines()
@@ -58,12 +60,12 @@ def ensure_generated_passwords(env_path: Path = DEFAULT_ENV_FILE) -> list[str]:
         if key in GENERATED_KEYS:
             seen.add(key)
             if not line.split("=", 1)[1].strip():
-                line = f"{key}={secrets.token_urlsafe(24)}"
+                line = f"{key}={secrets.token_urlsafe(32 if key == 'ASOF_ANCHOR_KEY' else 24)}"
                 filled.append(key)
         out.append(line)
     for key in GENERATED_KEYS:
         if key not in seen:
-            out.append(f"{key}={secrets.token_urlsafe(24)}")
+            out.append(f"{key}={secrets.token_urlsafe(32 if key == 'ASOF_ANCHOR_KEY' else 24)}")
             filled.append(key)
     if filled:
         fd, tmp = tempfile.mkstemp(dir=env_path.parent, prefix=".env.")
@@ -244,7 +246,7 @@ def verify_least_privilege(settings: Settings, target: str) -> None:
 
 def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False) -> None:
     schema.validate_schema(target)
-    say("1/9 Passwords for the least-privilege users")
+    say("1/9 Passwords for the least-privilege users, and the chain-head anchor key")
     filled = ensure_generated_passwords()
     say(f"  generated {', '.join(filled)} and saved to .env (not shown)" if filled else "  already set in .env")
     get_settings.cache_clear()
@@ -264,6 +266,11 @@ def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False
         elif reset_ledger and schema.table_exists(conn, target, "ANSWER_LEDGER"):
             removed = schema.reset_ledger(conn, target)
             say(f"  --reset-ledger (demo only): dropped and recreated the ledger tables, {removed} decisions removed")
+        if reset or reset_ledger:  # the old anchors describe the ledger that was just thrown away: keep them aside
+            anchors = AnchorLog.from_settings(settings, target)
+            archived = anchors.rotate() if anchors else None
+            if archived:
+                say(f"  chain-head anchors of the old ledger kept as {archived.name}")
         say(f"4/9 Schema {target}")
         counts = schema.install(conn, target)
         say(f"  {counts['created']} objects created, {counts['skipped']} already present")
