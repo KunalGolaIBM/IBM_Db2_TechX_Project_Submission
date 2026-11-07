@@ -198,3 +198,11 @@ def test_a_price_claim_spelled_word_free_still_reaches_the_claim_check(draft):
     assert unchecked_details(draft, []) == ["free"]
     assert unchecked_details(draft, ["The fee is $0."]) == []  # stated by a claim: nothing unchecked
 
+
+def test_a_check_whose_budget_has_run_out_fails_closed_before_any_model_call(world):
+    llm = ScriptedLLM()  # nothing queued: any model call would raise
+    g = Gate(llm, ZeroEmbeddings(), connect=FakeConn, deadline_s=0.0)
+    result = g.check(GateRequest("Can my dog come in the cabin?", DOGS, ON, "AURELIA-CSP", "api"))
+    assert (result.decision, result.reason_code, result.final_answer) == ("ESCALATED", "ERROR_FAIL_CLOSED", HOLDING_REPLY)
+    assert "budget ran out" in (result.error or "") and llm.calls == []
+    assert len(world["entries"]) == 1  # still recorded in the ledger

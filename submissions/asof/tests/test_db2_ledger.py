@@ -98,6 +98,26 @@ def test_chain_stays_intact_under_concurrent_writers(settings, app_conn, test_sc
     assert status.status == "OK", status
 
 
+def test_a_held_chain_head_lock_makes_the_next_append_fail_in_seconds_not_hang(settings, scratch):
+    """The runtime users run with SET CURRENT LOCK TIMEOUT, so a stuck writer cannot stall every check."""
+    quick = settings.model_copy(update={"db2_lock_timeout_s": 2})
+    blocker = db.connect(quick, "admin")  # the owner, in an open transaction that holds the head row
+    app = db.connect(quick, "app")
+    try:
+        db.use_schema(blocker, scratch)
+        db.execute(blocker, "UPDATE CHAIN_HEAD SET LAST_LEDGER_ID = LAST_LEDGER_ID WHERE HEAD_ID = 1")
+        started = time.monotonic()
+        with pytest.raises(db.DatabaseError) as err:
+            ledger.append(app, entry(), scratch)
+        waited = time.monotonic() - started
+    finally:
+        blocker.rollback()
+        blocker.close()
+        app.close()
+    assert err.value.sqlstate in ("40001", "57033")  # SQL0911N reason 68 (timeout) or SQL0913N
+    assert 1.5 < waited < 10
+
+
 @pytest.mark.parametrize("sql", [
     "INSERT INTO {s}.ANSWER_LEDGER (LEDGER_ID) VALUES (999)",
     "UPDATE {s}.ANSWER_LEDGER SET FINAL_ANSWER = 'x'",

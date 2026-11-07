@@ -39,6 +39,9 @@ _SQLCODE = re.compile(r"SQLCODE=(-?[0-9]+)")
 _SQLMSG = re.compile(r"(SQL[0-9]{4,5}[NWC][^\n]*?)(?:\s+SQLSTATE=|$)")
 
 
+SQL_LOCK_TIMEOUT = "SET CURRENT LOCK TIMEOUT = ?"
+
+
 class DatabaseError(RuntimeError):
     """A Db2 error with its SQLSTATE, safe to log and show."""
 
@@ -94,6 +97,12 @@ def connect(settings: Settings, role: Role = "app", autocommit: bool = False) ->
             exc, f"Cannot connect to Db2 {settings.db2_host}:{settings.db2_port}/{settings.db2_database} as {user}"
         ) from None
     conn.set_autocommit(autocommit)
+    if role != "admin":  # setup (the owner) may wait on its own DDL; the runtime users must not wait forever
+        try:
+            execute(conn, SQL_LOCK_TIMEOUT, (settings.db2_lock_timeout_s,))
+        except DatabaseError:
+            conn.close()
+            raise
     return conn
 
 

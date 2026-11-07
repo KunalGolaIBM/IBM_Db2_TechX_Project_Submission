@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     db2_database: str = Field("TESTDB", pattern=r"^[A-Za-z][A-Za-z0-9_]{0,7}$")
     db2_container: str = Field("asof-db2", pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$")
     db2_connect_timeout_s: int = Field(15, ge=1, le=120)
+    # SET CURRENT LOCK TIMEOUT for the runtime users: a ledger append waits at most this long for the
+    # CHAIN_HEAD row lock instead of Db2's default of waiting forever, then fails closed.
+    db2_lock_timeout_s: int = Field(10, ge=1, le=300)
 
     # Db2 users: owner (setup only), runtime app user, policy editor, read-only analyst.
     # DB2_USER / DB2_PASSWORD are the names the organizers' guide and AI skill use; the older
@@ -79,6 +82,8 @@ class Settings(BaseSettings):
     # ledger); "none" disables it. The local model is slower, hence its own deadline.
     llm_fallback: Literal["ollama", "none"] = "ollama"
     llm_fallback_timeout_s: float = Field(180.0, gt=0, le=600)
+    # Whole-check budget: no step of a check starts after it (the check then fails closed).
+    asof_check_deadline_s: float = Field(300.0, gt=0, le=3600)
 
     openrouter_api_key: SecretStr | None = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"

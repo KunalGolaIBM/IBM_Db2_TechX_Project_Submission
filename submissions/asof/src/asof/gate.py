@@ -179,13 +179,16 @@ def references(claims: list[ClaimOutcome]) -> str:
 
 class Gate:
     def __init__(self, llm: LLMClient, embeddings: Embeddings, connect: Callable[[], ibm_db_dbi.Connection],
-                 schema: str = db.SCHEMA, k: int = 4, investigate: bool = True):
+                 schema: str = db.SCHEMA, k: int = 4, investigate: bool = True, deadline_s: float = 300.0):
         self.llm = llm
         self.embeddings = embeddings
         self.connect = connect
         self.schema = schema
         self.k = k
         self.investigate = investigate  # let the agent look further when a claim matches no clause
+        # Whole-check budget on top of the per-call LLM deadlines: no step starts after it, so a slow
+        # provider (and its fallback) cannot keep one check going indefinitely. Then it fails closed.
+        self.deadline_s = deadline_s
 
     # ---- the steps of one pass (graph nodes call these) ------------------------------------
     @staticmethod

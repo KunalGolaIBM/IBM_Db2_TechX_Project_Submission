@@ -147,12 +147,16 @@ def tool_loop(gate: Gate, messages: list, tools: _Tools, left: int, pass_no: int
     return trace, left
 
 
-def build(gate: Gate, req: GateRequest):
-    """Compile the graph for one request (nodes close over the gate and the request)."""
+def build(gate: Gate, req: GateRequest, deadline_at: float | None = None):
+    """Compile the graph for one request (nodes close over the gate and the request).
+    `deadline_at` (time.monotonic()) is when the check's budget runs out: no node starts after it."""
     domain = gate.domain(req.doc_id)  # from the validated doc_id, never from the model
 
     def guarded(fn):
         def node(state: CheckState) -> dict[str, Any]:
+            if deadline_at is not None and time.monotonic() > deadline_at:
+                log.warning("check failed closed: its %.0f s budget ran out before %s", gate.deadline_s, fn.__name__)
+                return {"error": f"the check's {gate.deadline_s:.0f} s budget ran out", "reason": "ERROR_FAIL_CLOSED"}
             try:
                 return fn(state)
             except TooManyClaims as exc:
@@ -258,7 +262,7 @@ def run_check(gate: Gate, req: GateRequest) -> GateResult:
     state: CheckState = {"question": q.text, "text": d.text, "pass_no": 1, "first": [], "second": [],
                          "rewrite": None, "error": None, "investigation": [], "tool_calls_left": MAX_TOOL_CALLS}
     try:
-        state = build(gate, req).invoke(state, {"recursion_limit": 25})
+        state = build(gate, req, started + gate.deadline_s).invoke(state, {"recursion_limit": 25})
     except Exception as exc:  # noqa: BLE001 - the graph itself failing must still fail closed
         log.exception("check graph failed")
         state = {**state, "decision": "ESCALATED", "reason": "ERROR_FAIL_CLOSED", "final": HOLDING_REPLY,

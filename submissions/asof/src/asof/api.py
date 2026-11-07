@@ -222,7 +222,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
                 raise HTTPException(503, NO_MODEL)
             llm = build_llm(settings)
             emb = get_embeddings(settings.embedding_model)
-            state["gate"] = state["gate"] or Gate(llm, emb, app_conn, schema)
+            state["gate"] = state["gate"] or Gate(llm, emb, app_conn, schema, deadline_s=settings.asof_check_deadline_s)
             state["assistant"] = state["assistant"] or DemoAssistant(llm, emb, app_conn, schema)
         return state["gate"], state["assistant"]
 
