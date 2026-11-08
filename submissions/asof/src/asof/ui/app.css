@@ -411,3 +411,4 @@ tr.click.on td { background: var(--brand-soft); }
 .rule-diff { font-size: 12.5px; }
 .rule-diff tr.changed td, .rule-diff tr.added td, .rule-diff tr.removed td { background: var(--fix-bg); }
 .rule-diff tr.changed td:last-child, .rule-diff tr.added td:last-child { font-weight: 600; }
+.bar i.reviewed { background: var(--brand); }

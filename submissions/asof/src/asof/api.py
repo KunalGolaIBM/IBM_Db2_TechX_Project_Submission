@@ -907,7 +907,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
             status = notices.REFUSALS.get(exc.sqlstate or "")
             if status is None:
                 raise
-            raise HTTPException(status, str(exc).split(": ", 1)[-1]) from None
+            raise HTTPException(status, db.refusal_text(exc, "Db2 refused the decision.")) from None
         finally:
             conn.close()
         return {"notice_id": notice_id, "status": "SENT" if body.approve else "REJECTED"}

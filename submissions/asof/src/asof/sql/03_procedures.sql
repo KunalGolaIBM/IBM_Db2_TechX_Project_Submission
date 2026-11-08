@@ -643,7 +643,8 @@ END
 -- procedure: CHANGE_IMPACT
 -- Everything that relied on a clause, judged against the policy as it stands now.
 --   ANSWER rows: released decisions (PASS, the re-checked rewrite of a CORRECTED one, or a
---     specialist's checked reply, REVIEWED) that cited the clause. HISTORICALLY_VALID if the version in force for the customer's
+--     specialist's checked reply, REVIEWED) that cited the clause. An agent's check of its own draft
+--     (channel 'agent') told no customer anything, so it is not one. HISTORICALLY_VALID if the version in force for the customer's
 --     date is still the one cited; STALE if that date now falls under a different version.
 --   PUBLISHED rows: help-centre answers citing the clause. NEEDS_REVIEW if any other version
 --     now applies within the dates they cover, from STALE_FROM; otherwise STILL_VALID.
@@ -657,7 +658,7 @@ BEGIN
       SELECT DISTINCT L.LEDGER_ID, L.AS_OF_DATE, L.DECISION, L.CREATED_AT, C.CLAUSE_VERSION, C.CLAUSE_BUS_START
       FROM ASOF.ANSWER_LEDGER L
       JOIN ASOF.CLAIM_CITATION C ON C.LEDGER_ID = L.LEDGER_ID
-      WHERE C.CLAUSE_ID = P_CLAUSE_ID AND C.VERDICT = 'SUPPORTED'
+      WHERE C.CLAUSE_ID = P_CLAUSE_ID AND C.VERDICT = 'SUPPORTED' AND L.CHANNEL <> 'agent'
         AND ((L.DECISION IN ('PASS', 'REVIEWED') AND C.PASS_NO = 1)
              OR (L.DECISION = 'CORRECTED' AND C.PASS_NO = 2))
     )
@@ -1014,7 +1015,9 @@ END
 --   75054 a specialist answering a check they submitted themselves (with API users),
 --   75055 a reply whose check found a contradiction, an unchecked detail or anything but a clean result,
 --   75056 a reply the policy does not cover without the specialist's note (their judgment, on record),
---   75057 verdicts that do not match what is being recorded, 75030 a caller who cannot read ledger text.
+--   75057 verdicts that do not match what is being recorded (the reason given, the customer's date, the held
+--   decision), 75058 a supported claim citing a version no longer in force for that date, 75030 a caller who
+--   cannot read ledger text.
 -- The caller commits.
 CREATE OR REPLACE PROCEDURE ASOF.RESOLVE_ESCALATION (
     IN  P_ESCALATED_ID   BIGINT,
@@ -1049,6 +1052,7 @@ BEGIN
   DECLARE V_UNCOVERED INTEGER;
   DECLARE V_NOTE VARCHAR(1000);
   DECLARE V_REVIEWER VARCHAR(40);
+  DECLARE V_STALE INTEGER;
 
   IF VERIFY_ROLE_FOR_USER(SESSION_USER, 'ASOF_TEXT_READER') <> 1 THEN
     SIGNAL SQLSTATE '75030' SET MESSAGE_TEXT = 'RESOLVE_ESCALATION needs role ASOF_TEXT_READER: it copies the held question';
@@ -1084,15 +1088,33 @@ BEGIN
          COALESCE(SUM(CASE WHEN J.VERDICT = 'NOT_COVERED' THEN 1 ELSE 0 END), 0)
     INTO V_CLAIMS, V_CONTRADICTED, V_UNCOVERED
     FROM TABLE(ASOF.CLAIMS_FROM_JSON(P_VERDICTS)) AS J;
-  IF EXISTS (SELECT 1 FROM TABLE(ASOF.CLAIMS_FROM_JSON(P_VERDICTS)) AS J WHERE J.PASS_NO <> 1)
+  IF P_CHECK_REASON IS NULL
+     OR COALESCE(JSON_VALUE(P_VERDICTS, '$.review.check_reason' RETURNING VARCHAR(40)), '') <> P_CHECK_REASON
+     OR COALESCE(JSON_VALUE(P_VERDICTS, '$.as_of' RETURNING VARCHAR(10)), '') <> CHAR(V_AS_OF, ISO)
+     OR EXISTS (SELECT 1 FROM TABLE(ASOF.CLAIMS_FROM_JSON(P_VERDICTS)) AS J WHERE J.PASS_NO <> 1)
      OR COALESCE(JSON_VALUE(P_VERDICTS, '$.review.of_ledger_id' RETURNING BIGINT), 0) <> P_ESCALATED_ID
      OR (P_CHECK_REASON = 'ALL_SUPPORTED' AND (V_CLAIMS = 0 OR V_UNCOVERED > 0))
      OR (P_CHECK_REASON = 'NO_POLICY_CLAIMS' AND V_CLAIMS > 0)
      OR (P_CHECK_REASON = 'NOT_COVERED' AND V_UNCOVERED = 0) THEN
     SIGNAL SQLSTATE '75057' SET MESSAGE_TEXT = 'The verdicts do not match the reply check being recorded';
   END IF;
-  IF V_CONTRADICTED > 0 OR P_CHECK_REASON NOT IN ('ALL_SUPPORTED', 'NO_POLICY_CLAIMS', 'NOT_COVERED') THEN
+  IF V_CONTRADICTED > 0 OR P_CHECK_REASON NOT IN ('ALL_SUPPORTED', 'NO_POLICY_CLAIMS', 'NOT_COVERED')
+     OR JSON_EXISTS(P_VERDICTS, '$.unchecked[0]')
+     OR JSON_VALUE(P_VERDICTS, '$.error' RETURNING VARCHAR(300)) IS NOT NULL THEN
     SIGNAL SQLSTATE '75055' SET MESSAGE_TEXT = 'The reply did not pass the check against the policy in force on the customer''s date: revise it';
+  END IF;
+  -- Every supported claim must cite the version in force on the customer's date now: a policy change committed
+  -- while the reply was being checked would otherwise record an answer that is stale the moment it is written.
+  -- Read stability (WITH RS) keeps the rows read locked until commit, so a change cannot slip in before the append.
+  SELECT COUNT(*) INTO V_STALE
+    FROM TABLE(ASOF.CLAIMS_FROM_JSON(P_VERDICTS)) AS J
+    WHERE J.VERDICT = 'SUPPORTED'
+      AND NOT EXISTS (SELECT 1 FROM ASOF.POLICY_CLAUSE FOR BUSINESS_TIME AS OF V_AS_OF AS P
+                      WHERE P.CLAUSE_ID = J.CLAUSE_ID AND P.BUS_START = J.CLAUSE_BUS_START
+                        AND P.VERSION_LABEL = J.CLAUSE_VERSION)
+    WITH RS;
+  IF V_STALE > 0 THEN
+    SIGNAL SQLSTATE '75058' SET MESSAGE_TEXT = 'The policy for the customer''s date changed while the reply was checked: check it again';
   END IF;
   SET V_NOTE = NULLIF(TRIM(COALESCE(P_NOTE, '')), '');
   IF V_UNCOVERED > 0 AND LENGTH(COALESCE(V_NOTE, '')) < 10 THEN
@@ -1122,7 +1144,8 @@ END
 --   75060 the answer is not a released decision (PASS, CORRECTED or REVIEWED) that cited this clause version,
 --   75061 the version now in force for the customer's date is not CURRENT_VERSION (so the answer is not stale),
 --   75062 the check named is not a ledger row for the same customer date and policy document, or its decision is
---         not the one claimed, or (for a released check) none of its released claims is supported by the new version,
+--         not the one claimed, or (for a released check) the correction is not the text it released, or none of
+--         its released claims is supported by the new version,
 --   23505 an open notice for this answer and version already exists (UX_NOTICE_OPEN).
 CREATE OR REPLACE PROCEDURE ASOF.ADD_NOTICE (
     IN  P_LEDGER_ID       BIGINT,
@@ -1168,6 +1191,10 @@ BEGIN
     IF V_CHECK_DECISION IS NULL OR V_CHECK_DECISION <> P_CHECK_DECISION OR V_CHECK_AS_OF <> V_AS_OF
        OR V_CHECK_DOC <> V_DOC THEN
       SIGNAL SQLSTATE '75062' SET MESSAGE_TEXT = 'The check named is not this correction''s check';
+    END IF;
+    IF P_CHECK_DECISION IN ('PASS', 'CORRECTED') AND COALESCE((SELECT FINAL_ANSWER FROM ASOF.ANSWER_LEDGER
+                                                               WHERE LEDGER_ID = P_CHECK_LEDGER_ID), '') <> P_CORRECTION THEN
+      SIGNAL SQLSTATE '75062' SET MESSAGE_TEXT = 'The correction is not the text its check released';
     END IF;
     IF P_CHECK_DECISION IN ('PASS', 'CORRECTED') AND NOT EXISTS (
          SELECT 1 FROM ASOF.CLAIM_CITATION C
@@ -1216,7 +1243,9 @@ BEGIN
     IF V_DECISION NOT IN ('PASS', 'CORRECTED') THEN
       SIGNAL SQLSTATE '75064' SET MESSAGE_TEXT = 'Only a notice whose correction the check released can be sent';
     END IF;
-    SET V_IN_FORCE = (SELECT VERSION_LABEL FROM ASOF.POLICY_CLAUSE FOR BUSINESS_TIME AS OF V_AS_OF WHERE CLAUSE_ID = V_CLAUSE);
+    -- Read stability keeps the row read locked until commit: a policy change cannot land before the approval.
+    SELECT VERSION_LABEL INTO V_IN_FORCE FROM ASOF.POLICY_CLAUSE FOR BUSINESS_TIME AS OF V_AS_OF
+      WHERE CLAUSE_ID = V_CLAUSE WITH RS;
     IF V_IN_FORCE IS NULL OR V_IN_FORCE <> V_VERSION THEN
       SIGNAL SQLSTATE '75065' SET MESSAGE_TEXT = 'The policy for the customer''s date changed again since this notice was drafted: draft it again';
     END IF;

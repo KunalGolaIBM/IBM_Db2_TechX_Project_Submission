@@ -14,6 +14,7 @@ sent, so the ledger holds what the customer was told, not every draft the specia
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import re
 import uuid
@@ -26,9 +27,10 @@ import ibm_db_dbi
 from langchain_core.embeddings import Embeddings
 
 from . import db, ledger
-from .gate import Gate, GateRequest, GateResult, policy_terms, references
+from .gate import HOLDING_REPLY, Decision, Gate, GateRequest, GateResult, _plain, policy_terms, references
 from .redact import redact
 from .retriever import clauses_as_of
+from .schemas import MAX_CLAIMS
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +55,7 @@ SQL_REVIEWED_FOR = ("SELECT ESCALATED_LEDGER_ID, OUTCOME, REVIEWER, NOTE, CREATE
 
 # Db2's refusals in RESOLVE_ESCALATION, as HTTP statuses for the API.
 REFUSALS = {"75050": 404, "75051": 409, "75052": 409, "75053": 422, "75054": 403, "75055": 409, "75056": 422,
-            "75057": 422, "75030": 403, "23505": 409}
+            "75057": 422, "75058": 409, "75030": 403, "23505": 409}
 
 
 class ReviewError(Exception):
@@ -185,18 +187,67 @@ def policy_sentences(text: str) -> list[str]:
     return [x for x in sentences if policy_terms(x)]
 
 
+_FILLER = frozenset("a an the is are was were be been you your yours we our us i it its this that these those to of for "
+                    "and or but so if as at by in on with from will would can could may might must do does did not no "
+                    "yes please".split())
+COVERED = 0.5  # share of a sentence's words a claim must carry for the sentence to count as judged
+
+
+def _words(text: str) -> set[str]:
+    return {w for w in _plain(text).split() if w not in _FILLER}
+
+
+def uncovered_sentences(text: str, claim_texts: list[str]) -> list[str]:
+    """Policy sentences of `text` that no extracted claim carries: at least half of a sentence's words (filler aside)
+    must be in one claim for it to count as covered."""
+    claims = [_words(c) for c in claim_texts]
+    out = []
+    for sentence in policy_sentences(text):
+        words = _words(sentence)
+        if words and not any(len(words & c) / len(words) >= COVERED for c in claims):
+            out.append(sentence)
+    return out
+
+
 def assess(gate: Gate, req: GateRequest) -> GateResult:
-    """The reply's check: the full check graph, once, recording nothing. If extraction found no claim in a reply that
-    talks policy, its policy sentences are judged as claims of their own (Gate.assess_sentences), so a contradiction
-    the extractor missed is still refused, not merely sent on a note."""
+    """The reply's check: the full check graph, once, recording nothing; then every policy sentence that no extracted
+    claim carries is judged as a claim of its own (Gate.assess_sentences). So a contradiction the extractor missed,
+    in a reply with no claims or beside claims it did find, is refused, not merely sent on a note."""
     result = gate.assess(req)
-    if result.reason_code == "NO_POLICY_CLAIMS" and policy_terms(req.draft_answer):
-        sentences = policy_sentences(req.draft_answer)
-        if sentences:
-            log.info("extraction found no claim in a reply that talks policy; judging %d sentence(s) as written",
-                     len(sentences))
-            return gate.assess_sentences(req, sentences)
-    return result
+    if result.reason_code not in SENDABLE:
+        return result  # refused or failed already
+    missed = uncovered_sentences(req.draft_answer, [c.text for c in result.claims])
+    if not missed:
+        return result
+    log.info("judging %d policy sentence(s) of a reply that no extracted claim carried", len(missed))
+    return merge(result, gate.assess_sentences(req, missed))
+
+
+def merge(first: GateResult, extra: GateResult) -> GateResult:
+    """The reply's check and the check of its uncovered sentences, as one result: claims numbered on, the strictest
+    outcome wins (a failure, then a contradiction, then an uncovered claim)."""
+    if extra.reason_code in ("ERROR_FAIL_CLOSED", "TOO_MANY_CLAIMS"):
+        return extra
+    claims = list(first.claims) + [dataclasses.replace(c, claim_no=len(first.claims) + i)
+                                   for i, c in enumerate(extra.claims, start=1)]
+    if len(claims) > MAX_CLAIMS:
+        reason = "TOO_MANY_CLAIMS"
+    elif any(c.verdict == "CONTRADICTED" for c in claims):
+        reason = "CONTRADICTED"
+    elif any(c.verdict == "NOT_COVERED" for c in claims):
+        reason = "NOT_COVERED"
+    else:
+        reason = "ALL_SUPPORTED" if claims else "NO_POLICY_CLAIMS"
+    decision: Decision = "PASS" if reason in ("ALL_SUPPORTED", "NO_POLICY_CLAIMS") else "ESCALATED"
+    out = dataclasses.replace(first, decision=decision, reason_code=reason, claims=claims if len(claims) <= MAX_CLAIMS
+                              else first.claims, latency_ms=first.latency_ms + extra.latency_ms,
+                              final_answer=first.final_answer if decision == "PASS" else HOLDING_REPLY, released=False)
+    return out
+
+
+def _fit(text: str, max_bytes: int = 4000) -> str:
+    """At most `max_bytes` of UTF-8 (Db2 VARCHAR lengths are bytes), never cutting a character in half."""
+    return text.encode("utf-8")[:max_bytes].decode("utf-8", errors="ignore")
 
 
 def final_text(reply: str, result: GateResult) -> str:
@@ -217,7 +268,7 @@ def resolve(gate: Gate, ledger_id: int, reply: str, note: str | None = None, doc
         conn.close()
     doc = doc_id or entry["doc_id"].strip()
     reply = _validate(reply, doc, entry)
-    note = (note or "").strip()[:1000] or None
+    note = _fit(redact((note or "").strip()).text, 1000) or None  # hashed into the ledger: personal data never goes in
     req = _request(entry, reply, doc, reviewer)
     result = assess(gate, req)
     if result.reason_code not in SENDABLE:
@@ -229,7 +280,7 @@ def resolve(gate: Gate, ledger_id: int, reply: str, note: str | None = None, doc
     verdicts["review"] = {"of_ledger_id": ledger_id, "reviewer": reviewer, "note": note,
                           "check_reason": result.reason_code, "on_judgment": needs_note(result, reply)}
     final = final_text(reply, result)
-    params = (ledger_id, str(uuid.uuid4()), doc, redact(reply).text[:4000], redact(final).text[:4000],
+    params = (ledger_id, str(uuid.uuid4()), doc, _fit(redact(reply).text), _fit(redact(final).text),
               result.reason_code, note or "", reviewer or "", result.model_info[:200], gate.domain(doc).prompt_version,
               int(result.latency_ms), ledger.verdicts_json(verdicts), 0, " " * 64, " " * 40)
     conn = gate.connect()
@@ -245,7 +296,9 @@ def resolve(gate: Gate, ledger_id: int, reply: str, note: str | None = None, doc
             status = REFUSALS.get(err.sqlstate or "")
             if status is None:
                 raise err from None
-            raise ReviewError(status, str(err).split(": ", 1)[-1], result) from None
+            fallback = ("A specialist has already answered this decision." if err.sqlstate == "23505"
+                        else "Db2 refused the reply.")
+            raise ReviewError(status, db.refusal_text(err, fallback), result) from None
         finally:
             cur.close()
     finally:

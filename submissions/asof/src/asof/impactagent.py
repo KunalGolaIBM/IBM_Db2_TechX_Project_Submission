@@ -29,11 +29,15 @@ from .checkgraph import MAX_TOOL_CALLS, _Tools, tool_loop
 from .gate import Gate, GateRequest
 from .llm import LLMError
 from .prompts import impact_messages, notice_messages
+from .redact import redact
 from .retriever import RetrievedClause
 
 log = logging.getLogger(__name__)
 
 MAX_ANSWERS = 10  # per run: each costs a draft plus a full check
+# An agent's check of its own draft is recorded like any check, on this channel, so CHANGE_IMPACT and the specialist
+# inbox never mistake it for an answer a customer received.
+AGENT_CHANNEL = "agent"
 MAX_NOTICES = 10
 SQL_IN_FORCE = ("SELECT CLAUSE_ID, AREA, TITLE, VERSION_LABEL, CLAUSE_TEXT, RULE_JSON, BUS_START, BUS_END, SYS_START "
                 "FROM POLICY_CLAUSE FOR BUSINESS_TIME AS OF ? WHERE CLAUSE_ID = ?")
@@ -96,7 +100,7 @@ def draft_fixes(gate: Gate, clause_id: str) -> list[dict[str, Any]]:
                          f"{stale_from.isoformat()}")]
             draft = gate._rewrite_from(answer["question"], answer["answer_text"], stale_from, context, problems, domain)
             # 3. The full check, on the date the answer must hold from. It records its own ledger row.
-            checked = gate.check(GateRequest(answer["question"], draft, stale_from, answer["doc_id"], "faq"))
+            checked = gate.check(GateRequest(answer["question"], draft, stale_from, answer["doc_id"], AGENT_CHANNEL))
             text = checked.final_answer if checked.decision in ("PASS", "CORRECTED") else draft
             # 4. Store as a pending suggestion; only the policy editor can publish it.
             conn = gate.connect()
@@ -182,8 +186,10 @@ def draft_notices(gate: Gate, clause_id: str, requested_by: str | None = None) -
             problems = [(answered[:300], "STALE", f"answered from {clause_id} {cited}; {changed.version_label} applies "
                                                   f"to {as_of.isoformat()} now")]
             draft = gate._rewrite_from(question, answered, as_of, context, problems, domain)
-            checked = gate.check(GateRequest(question, draft, as_of, doc_id, "email", requested_by))
-            correction = checked.final_answer if checked.decision in ("PASS", "CORRECTED") else draft
+            checked = gate.check(GateRequest(question, draft, as_of, doc_id, AGENT_CHANNEL, requested_by))
+            # Released: exactly the text the check recorded (ADD_NOTICE compares it with the ledger row).
+            correction = (redact(checked.final_answer).text[:4000] if checked.decision in ("PASS", "CORRECTED")
+                          else draft)
             notice = notices.compose(answered_at=entry["created_at"], as_of=as_of, question=question, clause_id=clause_id,
                                      clause_title=changed.title, cited=cited, current=changed.version_label,
                                      current_from=changed.bus_start, correction=correction)

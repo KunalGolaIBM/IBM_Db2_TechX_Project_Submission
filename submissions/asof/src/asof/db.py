@@ -56,6 +56,16 @@ class DatabaseError(RuntimeError):
         self.sqlcode = sqlcode
 
 
+_DIAGNOSTIC = re.compile(r'diagnostic text: "([^"]+)"')
+
+
+def refusal_text(exc: DatabaseError, fallback: str) -> str:
+    """What a SQL PL procedure said when it refused (its SIGNAL message), without Db2's message frame or any object
+    names; `fallback` when it was not a SIGNAL (a unique key, say)."""
+    m = _DIAGNOSTIC.search(str(exc))
+    return m.group(1).strip().rstrip(".") + "." if m else fallback
+
+
 def wrap_error(exc: BaseException, context: str) -> DatabaseError:
     text = str(exc)
     state = _SQLSTATE.search(text)

@@ -1312,7 +1312,7 @@ async function Analytics() {
     ${total ? "" : html`<div class="empty"><h3>No decisions yet</h3><p>Check a few answers in the <a href="#/playground">Playground</a>.</p></div>`}
     <div class="cols-2">
       <div class="card"><div class="card-head"><h2>Decisions</h2><span class="sub">${total} recorded</span></div><div class="bars">
-        ${["PASS", "CORRECTED", "ESCALATED"].map((k) => { const d = a.decisions.find((x) => x.decision === k) || { count: 0, avg_latency_ms: 0 };
+        ${["PASS", "CORRECTED", "ESCALATED", "REVIEWED"].map((k) => { const d = a.decisions.find((x) => x.decision === k) || { count: 0, avg_latency_ms: 0 };
           return html`<div class="bar-row"><span>${pill(k)}</span><div class="bar"><i class="${lower(k)}" data-width="${pct(d.count, total)}"></i></div><span class="num">${d.count}</span></div>`; })}
       </div>${a.replayed_decisions ? html`<p class="small muted">${a.replayed_decisions} of these ${total} decisions were made in replay mode, from recorded model outputs, so their latency leaves out model time.</p>` : ""}<div class="sep"></div><table><thead><tr><th>Reason</th><th class="num">Decisions</th></tr></thead><tbody>
         ${a.reasons.map((r) => html`<tr><td>${r.reason.replaceAll("_", " ").toLowerCase()}</td><td class="num">${r.count}</td></tr>`)}</tbody></table></div>

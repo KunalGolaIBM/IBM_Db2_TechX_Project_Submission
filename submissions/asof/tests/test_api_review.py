@@ -128,9 +128,12 @@ def test_notice_endpoints_validate_and_map_db2_refusals(local, monkeypatch):
     assert local.post("/api/notices/1/decision", json={"approve": True, "extra": 1}).status_code == 422
 
     def refuse(conn, notice_id, approve, user, schema):
-        raise db.DatabaseError("DECIDE_NOTICE refused: The policy for the customer's date changed again", "75065", -438)
+        raise db.DatabaseError('DECIDE_NOTICE refused: SQL0438N  Application raised error or warning with diagnostic text: '
+                               '"The policy for the customer\'s date changed again since this notice was drafted: draft '
+                               'it again".  SQLSTATE=75065', "75065", -438)
     monkeypatch.setattr(notices, "decide", refuse)
     r = local.post("/api/notices/1/decision", json={"approve": True})
-    assert r.status_code == 409 and "changed again" in r.json()["detail"]
+    assert r.status_code == 409 and r.json()["detail"].startswith("The policy for the customer's date changed again")
+    assert "SQL0438N" not in r.json()["detail"]  # Db2's message frame stays in the server log
     monkeypatch.setattr(notices, "decide", lambda conn, notice_id, approve, user, schema: None)
     assert local.post("/api/notices/1/decision", json={"approve": False}).json() == {"notice_id": 1, "status": "REJECTED"}

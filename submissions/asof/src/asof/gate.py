@@ -527,6 +527,9 @@ class Gate:
             decision, reason, final, error = "ESCALATED", "TOO_MANY_CLAIMS", HOLDING_REPLY, str(exc)
         except (LLMError, db.DatabaseError) as exc:
             decision, reason, final, error = "ESCALATED", "ERROR_FAIL_CLOSED", HOLDING_REPLY, str(exc)[:300]
+        except Exception as exc:  # noqa: BLE001 - anything unexpected must still fail closed
+            log.exception("sentence check failed closed on an unexpected error")
+            decision, reason, final, error = "ESCALATED", "ERROR_FAIL_CLOSED", HOLDING_REPLY, type(exc).__name__
         result = GateResult(str(uuid.uuid4()), cast(Decision, decision), reason, final, outcomes, [], None,
                             int((time.monotonic() - started) * 1000), self.llm.info, released=False, error=error)
         result.redactions = {"question": q.counts, "draft": d.counts}

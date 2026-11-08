@@ -150,7 +150,8 @@ class Router:
         def first_vote(state: _State) -> Route:
             best: dict[str, float] = {}
             for n in state["nearest"]:
-                best.setdefault(n.doc_id, n.distance)
+                if n.doc_id in DOMAINS:  # a document AsOf has no prompts for is never a route
+                    best.setdefault(n.doc_id, n.distance)
             for doc in DOMAINS:
                 best.setdefault(doc, 2.0)  # a document with no clause in force on the date is as far as can be
             ranked = sorted(best, key=lambda d: best[d])
@@ -160,7 +161,8 @@ class Router:
 
         def decide(state: _State) -> dict[str, Any]:
             r = first_vote(state)
-            nearest_leader, runner_up = r.distances[r.leader], max(r.distances.values())
+            nearest_leader = r.distances[r.leader]
+            runner_up = nearest_leader + r.margin  # the second document's best clause
             if nearest_leader > FAR:
                 r.reason = f"no clause of either document is close (nearest {nearest_leader:.2f})"
             elif r.margin >= CLEAR_MARGIN and runner_up > NEAR:

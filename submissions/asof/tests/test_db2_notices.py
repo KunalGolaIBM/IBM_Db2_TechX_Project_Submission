@@ -87,7 +87,7 @@ def test_the_agent_drafts_a_checked_notice_only_for_the_answer_that_went_stale(s
         [n] = notices.list_notices(conn, "PET-001", None, name)
         assert (n["status"], n["requested_by"], n["check_ledger_id"]) == ("PENDING", "rita", d["check_ledger_id"])
         check = ledger.get_entry(conn, d["check_ledger_id"], name)
-        assert (check["channel"], check["as_of_date"], check["decision"]) == ("email", DECEMBER, "PASS")
+        assert (check["channel"], check["as_of_date"], check["decision"]) == ("agent", DECEMBER, "PASS")
         assert [c["clause_version"] for c in check["citations"]] == ["v2", "v2"]  # checked against the new version
 
     # A second run finds nothing to do: the stale answer already has an open notice.
@@ -102,9 +102,13 @@ def test_the_agent_drafts_a_checked_notice_only_for_the_answer_that_went_stale(s
         assert again.value.sqlstate == "75063"
 
 
-def _add(conn, name, ledger_id, *, cited="v1", current="v2", decision="PASS", check=0):
-    return notices.add(conn, ledger_id=ledger_id, clause_id="PET-001", cited=cited, current=current, correction="c",
-                       notice="n", check_decision=decision, check_ledger_id=check, trace=[], requested_by=None, schema=name)
+V2_FINAL = "The pet fee is $125 each way.\n\nPolicy references: PET-001 v2."  # what _answer records as released
+
+
+def _add(conn, name, ledger_id, *, cited="v1", current="v2", decision="PASS", check=0, correction=V2_FINAL):
+    return notices.add(conn, ledger_id=ledger_id, clause_id="PET-001", cited=cited, current=current,
+                       correction=correction, notice="n", check_decision=decision, check_ledger_id=check, trace=[],
+                       requested_by=None, schema=name)
 
 
 def test_db2_checks_every_claim_made_about_a_notice(settings, stale):
@@ -118,6 +122,7 @@ def test_db2_checks_every_claim_made_about_a_notice(settings, stale):
             ({"check": other_date}, ids["december"], "75062"),             # a check for another customer date
             ({"check": good_check, "decision": "CORRECTED"}, ids["december"], "75062"),  # not that check's decision
             ({"check": 0, "decision": "PASS"}, ids["december"], "75062"),  # a released check must name its row
+            ({"check": good_check, "correction": "The pet fee is $99."}, ids["december"], "75062"),  # not its text
         ]:
             with pytest.raises(db.DatabaseError) as refused:
                 _add(conn, name, ledger_id, **kwargs)
@@ -187,3 +192,29 @@ def test_the_notice_wording_states_no_policy_of_its_own():
     assert "$" not in fixed.split("What applies to your date now:")[0]  # no amount outside the checked correction
     assert text.startswith("A correction to our reply of 8 November 2026") and "15 December 2026" in text
     assert notices.without_references("Yes.\n\nPolicy references: PET-001 v1 (in effect from 2026-01-01).") == "Yes."
+
+
+def test_an_agents_own_check_is_never_taken_for_a_customer_answer(settings, embeddings, stale):
+    """The review's case: after a second change to the clause, the notice agent must not draft a notice for the check
+    it ran on its first notice, which no customer ever received."""
+    name, ids = stale
+    first = impactagent.draft_notices(_checked_correction(settings, embeddings, name), "PET-001")
+    assert [d["ledger_id"] for d in first] == [ids["december"]]
+    time.sleep(1.1)
+    with db.connection(settings, "editor") as editor:
+        policy.apply_change(editor, PET_V3, embeddings, name)
+    with db.connection(settings, "app") as conn:
+        answers = {r["ref_id"] for r in policy.change_impact(conn, "PET-001", name) if r["kind"] == "ANSWER"}
+        assert answers == {str(ids["november"]), str(ids["december"])}  # the agent's check row is not listed
+        assert review_queue_ids(conn, name) == []
+    from asof.llm import LLMError
+
+    second = impactagent.draft_notices(_gate(settings, embeddings, name, rewrite=[LLMError("stop after find")]),
+                                       "PET-001")
+    assert [d["ledger_id"] for d in second] == [ids["december"]]  # only the customer's answer, now under v3
+
+
+def review_queue_ids(conn, name):
+    from asof import review
+
+    return [i["ledger_id"] for i in review.queue(conn, name)["open"]]
