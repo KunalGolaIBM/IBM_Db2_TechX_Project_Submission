@@ -1,0 +1,240 @@
+{
+ "provider": "openrouter",
+ "model": "google/gemini-3.1-flash-lite",
+ "git_commit": "74e400a",
+ "frozen_sha256": "99c183ebefa7adc7315179a04a3af587142197bba2d3a0b715c31f1286461034",
+ "started_at": "2026-11-08T02:31:51+00:00",
+ "expected_items": 11,
+ "outcomes": {
+  "correct, acceptable": 10,
+  "correct, blocked": 0,
+  "wrong, blocked": 1,
+  "wrong, acceptable": 0,
+  "missing": 0
+ },
+ "extras": 0,
+ "extras_unblocked": 0,
+ "injection_items": 0,
+ "injection_items_unblocked": 0,
+ "documents": [
+  {
+   "document": "aurelia-csp-revision-2027-1.pdf",
+   "doc_id": "AURELIA-CSP",
+   "latency_ms": 3143,
+   "error": null,
+   "items": [
+    {
+     "expected": "BAG-001",
+     "proposed": "BAG-001",
+     "kind": "CHANGE",
+     "outcome": "correct, acceptable",
+     "problems": [],
+     "warnings": [],
+     "failed_checks": [],
+     "rule": {
+      "first_bag_fee_usd": 45
+     },
+     "from": "2027-02-01",
+     "to": null
+    },
+    {
+     "expected": "NEW",
+     "proposed": "BAG-006",
+     "kind": "NEW",
+     "outcome": "correct, acceptable",
+     "problems": [],
+     "warnings": [
+      "sports_equipment_count = 1: the rule checker reads no unit from this name, so it will not check claims against it"
+     ],
+     "failed_checks": [],
+     "rule": {
+      "sports_equipment_count": 1,
+      "sports_equipment_fee_usd": 75,
+      "max_sports_weight_kg": 23
+     },
+     "from": "2027-02-01",
+     "to": null
+    },
+    {
+     "expected": "CRD-001",
+     "proposed": "CRD-001",
+     "kind": "CHANGE",
+     "outcome": "correct, acceptable",
+     "problems": [],
+     "warnings": [],
+     "failed_checks": [],
+     "rule": {
+      "credit_validity_months": 24
+     },
+     "from": "2027-03-01",
+     "to": null
+    },
+    {
+     "expected": "DLY-005",
+     "proposed": "DLY-005",
+     "kind": "UNCHANGED",
+     "outcome": "correct, acceptable",
+     "problems": [],
+     "warnings": [],
+     "failed_checks": [],
+     "rule": {
+      "claim_window_days": 365
+     },
+     "from": "2027-02-01",
+     "to": null
+    }
+   ],
+   "extras": [],
+   "discarded": [],
+   "injection_in_document": false
+  },
+  {
+   "document": "fernhollow-fees-update-2027-1.pdf",
+   "doc_id": "FERNHOLLOW-FEES",
+   "latency_ms": 13235,
+   "error": null,
+   "items": [
+    {
+     "expected": "WIR-001",
+     "proposed": "WIR-001",
+     "kind": "CHANGE",
+     "outcome": "correct, acceptable",
+     "problems": [],
+     "warnings": [],
+     "failed_checks": [],
+     "rule": {
+      "domestic_wire_fee_usd": 25
+     },
+     "from": "2027-02-01",
+     "to": null
+    },
+    {
+     "expected": "ATM-001",
+     "proposed": "ATM-001",
+     "kind": "CHANGE",
+     "outcome": "wrong, blocked",
+     "problems": [
+      "to 2027-08-31, expected 2027-09-01"
+     ],
+     "warnings": [
+      "the document states 2027-08-31; if that is the last day it applies, the end should be 2027-09-01 (AsOf's end dates are exclusive)"
+     ],
+     "failed_checks": [
+      "the quoted sentence does not state 2027-03-01"
+     ],
+     "rule": {
+      "out_of_network_atm_fee_usd": 3
+     },
+     "from": "2027-03-01",
+     "to": "2027-08-31"
+    },
+    {
+     "expected": "NEW",
+     "proposed": "STP-002",
+     "kind": "NEW",
+     "outcome": "correct, acceptable",
+     "problems": [],
+     "warnings": [],
+     "failed_checks": [],
+     "rule": {
+      "cashiers_check_fee_usd": 10
+     },
+     "from": "2027-02-01",
+     "to": null
+    },
+    {
+     "expected": "MTF-003",
+     "proposed": "MTF-003",
+     "kind": "UNCHANGED",
+     "outcome": "correct, acceptable",
+     "problems": [],
+     "warnings": [],
+     "failed_checks": [],
+     "rule": {
+      "paper_statement_fee_usd": 2,
+      "electronic_statement_fee_usd": 0
+     },
+     "from": "2027-02-01",
+     "to": null
+    }
+   ],
+   "extras": [],
+   "discarded": [],
+   "injection_in_document": false
+  },
+  {
+   "document": "aurelia-csp-revision-2027-2.pdf",
+   "doc_id": "AURELIA-CSP",
+   "latency_ms": 2713,
+   "error": null,
+   "items": [
+    {
+     "expected": "BRV-001",
+     "proposed": "BRV-001",
+     "kind": "CHANGE",
+     "outcome": "correct, acceptable",
+     "problems": [],
+     "warnings": [],
+     "failed_checks": [],
+     "rule": {
+      "discount_pct": 50,
+      "eligible_relations": [
+       "spouse",
+       "common-law partner",
+       "parent",
+       "step-parent",
+       "child",
+       "step-child",
+       "sibling",
+       "grandparent",
+       "grandchild",
+       "legal guardian"
+      ]
+     },
+     "from": "2027-01-15",
+     "to": null
+    },
+    {
+     "expected": "CRD-002",
+     "proposed": "CRD-002",
+     "kind": "CHANGE",
+     "outcome": "correct, acceptable",
+     "problems": [],
+     "warnings": [],
+     "failed_checks": [],
+     "rule": {
+      "transfer_allowed": true
+     },
+     "from": "2027-01-15",
+     "to": null
+    },
+    {
+     "expected": "DLY-003",
+     "proposed": "DLY-003",
+     "kind": "CHANGE",
+     "outcome": "correct, acceptable",
+     "problems": [],
+     "warnings": [
+      "applies_when kept from v1 ({\"delay_hours\": [9, null]}); confirm the new text still describes it"
+     ],
+     "failed_checks": [],
+     "rule": {
+      "applies_when_hours": 9,
+      "compensation_usd": 450,
+      "applies_when": {
+       "delay_hours": [
+        9,
+        null
+       ]
+      }
+     },
+     "from": "2027-01-15",
+     "to": null
+    }
+   ],
+   "extras": [],
+   "discarded": [],
+   "injection_in_document": true
+  }
+ ]
+}
