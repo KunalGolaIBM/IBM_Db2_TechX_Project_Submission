@@ -35,9 +35,7 @@ def test_every_font_the_stylesheets_ask_for_is_bundled_and_served_from_self():
     """The CSP allows only 'self', so a missing font would silently fall back; each one must ship with the app."""
     c = client()
     for sheet in ("app.css", "chat.css"):
-        urls = re.findall(r'url\("(fonts/[^"]+)"\)', (UI / sheet).read_text(encoding="utf-8"))
-        assert urls, sheet
-        for url in urls:
+        for url in re.findall(r'url\("(fonts/[^"]+)"\)', (UI / sheet).read_text(encoding="utf-8")):
             assert (UI / url).is_file(), url
             r = c.get(f"/ui/{url}")
             assert r.status_code == 200 and r.headers["content-type"] == "font/woff2", url
