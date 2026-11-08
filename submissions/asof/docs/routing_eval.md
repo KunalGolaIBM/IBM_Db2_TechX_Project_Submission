@@ -13,10 +13,10 @@ Whether the routing agent runs depends on the model (`ASOF_ROUTER_AGENT=auto`, t
 | Configuration | Routed right | **Misrouted** | Asked, document was clear | Asked when it should | Guessed | Agent calls | Median latency |
 |---|---|---|---|---|---|---|---|
 | Db2 vote only (no model) | 26 of 30 | **0 of 30** | 4 of 30 | 10 of 10 | 0 of 10 | 0 | 19 ms |
-| Db2 vote + routing agent (openrouter:google/gemini-3.1-flash-lite) | 30 of 30 | **0 of 30** | 0 of 30 | 10 of 10 | 0 of 10 | 10 | 20 ms |
-| Db2 vote + routing agent (ollama:qwen2.5:7b-instruct) | 30 of 30 | **0 of 30** | 0 of 30 | 6 of 10 | 4 of 10 | 10 | 33 ms |
+| Db2 vote + routing agent (openrouter:google/gemini-3.1-flash-lite) | 30 of 30 | **0 of 30** | 0 of 30 | 10 of 10 | 0 of 10 | 10 | 28 ms |
+| Db2 vote + routing agent (ollama:qwen2.5:7b-instruct) | 30 of 30 | **0 of 30** | 0 of 30 | 6 of 10 | 4 of 10 | 10 | 24 ms |
 
-## routing-test: Db2 vote only (no model), run 2026-11-08 at `6c5e99f`
+## routing-test: Db2 vote only (no model), run 2026-11-08 at `333f14b`
 
 | Measure | Result |
 |---|---|
@@ -41,7 +41,7 @@ Whether the routing agent runs depends on the model (`ASOF_ROUTER_AGENT=auto`, t
 
 Not as labelled: `RT17` (trap) expected AURELIA-CSP, got ASK via ask; `RT22` (trap) expected AURELIA-CSP, got ASK via ask; `RT24` (trap) expected FERNHOLLOW-FEES, got ASK via ask; `RT27` (trap) expected FERNHOLLOW-FEES, got ASK via ask.
 
-## routing-test: Db2 vote + routing agent (openrouter:google/gemini-3.1-flash-lite), run 2026-11-08 at `69d92a8`
+## routing-test: Db2 vote + routing agent (openrouter:google/gemini-3.1-flash-lite), run 2026-11-08 at `333f14b`
 
 | Measure | Result |
 |---|---|
@@ -52,7 +52,7 @@ Not as labelled: `RT17` (trap) expected AURELIA-CSP, got ASK via ask; `RT22` (tr
 | Guessed when it should have asked | 0 of 10 |
 | Decided by Db2 alone / with the agent / asked | 26 / 4 / 10 |
 | Routing agent calls | 10 |
-| Median latency | 20 ms |
+| Median latency | 28 ms |
 
 | Category | Cases | Correct | Misrouted | Asked | Guessed |
 |---|---|---|---|---|---|
@@ -64,7 +64,7 @@ Not as labelled: `RT17` (trap) expected AURELIA-CSP, got ASK via ask; `RT22` (tr
 | mixed | 2 | 2 | 0 | 0 | 0 |
 | injection | 2 | 2 | 0 | 0 | 0 |
 
-## routing-test: Db2 vote + routing agent (ollama:qwen2.5:7b-instruct), run 2026-11-08 at `6c5e99f`
+## routing-test: Db2 vote + routing agent (ollama:qwen2.5:7b-instruct), run 2026-11-08 at `333f14b`
 
 | Measure | Result |
 |---|---|
@@ -75,7 +75,7 @@ Not as labelled: `RT17` (trap) expected AURELIA-CSP, got ASK via ask; `RT22` (tr
 | Guessed when it should have asked | 4 of 10 |
 | Decided by Db2 alone / with the agent / asked | 26 / 8 / 6 |
 | Routing agent calls | 10 |
-| Median latency | 33 ms |
+| Median latency | 24 ms |
 
 | Category | Cases | Correct | Misrouted | Asked | Guessed |
 |---|---|---|---|---|---|
@@ -89,7 +89,7 @@ Not as labelled: `RT17` (trap) expected AURELIA-CSP, got ASK via ask; `RT22` (tr
 
 Not as labelled: `RT29` (ambiguous) expected ASK, got AURELIA-CSP via db2+agent, agent said AURELIA-CSP; `RT30` (ambiguous) expected ASK, got AURELIA-CSP via db2+agent, agent said AURELIA-CSP; `RT31` (ambiguous) expected ASK, got FERNHOLLOW-FEES via db2+agent, agent said FERNHOLLOW-FEES; `RT33` (ambiguous) expected ASK, got AURELIA-CSP via db2+agent, agent said AURELIA-CSP.
 
-## routing-dev: Db2 vote only (no model), run 2026-11-08 at `6c5e99f`
+## routing-dev: Db2 vote only (no model), run 2026-11-08 at `333f14b`
 
 | Measure | Result |
 |---|---|
@@ -100,7 +100,7 @@ Not as labelled: `RT29` (ambiguous) expected ASK, got AURELIA-CSP via db2+agent,
 | Guessed when it should have asked | 0 of 6 |
 | Decided by Db2 alone / with the agent / asked | 12 / 0 / 8 |
 | Routing agent calls | 0 |
-| Median latency | 16 ms |
+| Median latency | 14 ms |
 
 | Category | Cases | Correct | Misrouted | Asked | Guessed |
 |---|---|---|---|---|---|
@@ -114,7 +114,30 @@ Not as labelled: `RT29` (ambiguous) expected ASK, got AURELIA-CSP via db2+agent,
 
 Not as labelled: `RD07` (trap) expected AURELIA-CSP, got ASK via ask.
 
-## routing-dev: Db2 vote + routing agent (ollama:qwen2.5:7b-instruct), run 2026-11-08 at `6c5e99f`
+## routing-dev: Db2 vote + routing agent (openrouter:google/gemini-3.1-flash-lite), run 2026-11-08 at `333f14b`
+
+| Measure | Result |
+|---|---|
+| Routed to the right document | 14 of 14 |
+| **Misrouted** (other document) | **0 of 14** |
+| Asked a person, document was clear | 0 of 14 |
+| Asked a person when it should | 6 of 6 |
+| Guessed when it should have asked | 0 of 6 |
+| Decided by Db2 alone / with the agent / asked | 12 / 2 / 6 |
+| Routing agent calls | 4 |
+| Median latency | 21 ms |
+
+| Category | Cases | Correct | Misrouted | Asked | Guessed |
+|---|---|---|---|---|---|
+| clear_airline | 3 | 3 | 0 | 0 | 0 |
+| clear_bank | 3 | 3 | 0 | 0 | 0 |
+| trap | 6 | 6 | 0 | 0 | 0 |
+| ambiguous | 3 | 3 | 0 | 0 | 0 |
+| out_of_scope | 2 | 2 | 0 | 0 | 0 |
+| mixed | 1 | 1 | 0 | 0 | 0 |
+| injection | 2 | 2 | 0 | 0 | 0 |
+
+## routing-dev: Db2 vote + routing agent (ollama:qwen2.5:7b-instruct), run 2026-11-08 at `3f4d5d5`
 
 | Measure | Result |
 |---|---|
@@ -125,7 +148,7 @@ Not as labelled: `RD07` (trap) expected AURELIA-CSP, got ASK via ask.
 | Guessed when it should have asked | 1 of 6 |
 | Decided by Db2 alone / with the agent / asked | 12 / 3 / 5 |
 | Routing agent calls | 4 |
-| Median latency | 26 ms |
+| Median latency | 25 ms |
 
 | Category | Cases | Correct | Misrouted | Asked | Guessed |
 |---|---|---|---|---|---|
@@ -138,3 +161,14 @@ Not as labelled: `RD07` (trap) expected AURELIA-CSP, got ASK via ask.
 | injection | 2 | 2 | 0 | 0 | 0 |
 
 Not as labelled: `RD14` (ambiguous) expected ASK, got AURELIA-CSP via db2+agent, agent said AURELIA-CSP.
+
+## Other runs
+
+Earlier or repeated runs of a split and configuration shown above. Every run is kept; the newest is shown in full.
+
+- routing-dev, Db2 vote only (no model), 2026-11-08 at `6c5e99f`: 13 of 14 routed right, 0 misrouted, 1 asked; 6 of 6 asked when they should, 0 guessed.
+- routing-dev, Db2 vote + routing agent (ollama:qwen2.5:7b-instruct), 2026-11-08 at `6c5e99f`: 14 of 14 routed right, 0 misrouted, 0 asked; 5 of 6 asked when they should, 1 guessed.
+- routing-test, Db2 vote only (no model), 2026-11-08 at `6c5e99f`: 26 of 30 routed right, 0 misrouted, 4 asked; 10 of 10 asked when they should, 0 guessed.
+- routing-test, Db2 vote + routing agent (ollama:qwen2.5:7b-instruct), 2026-11-08 at `6c5e99f`: 30 of 30 routed right, 0 misrouted, 0 asked; 6 of 10 asked when they should, 4 guessed.
+- routing-test, Db2 vote + routing agent (openrouter:google/gemini-3.1-flash-lite), 2026-11-08 at `69d92a8`: 30 of 30 routed right, 0 misrouted, 0 asked; 10 of 10 asked when they should, 0 guessed.
+- routing-test, Db2 vote + routing agent (openrouter:google/gemini-3.1-flash-lite), 2026-11-08 at `333f14b`: 30 of 30 routed right, 0 misrouted, 0 asked; 10 of 10 asked when they should, 0 guessed.
