@@ -454,6 +454,39 @@ def check_mqt_over_masked_table(c: Ctx) -> str:
     return "0 rows visible until a row permission is created, then 2 (why AsOf defines P_MQT_DECISION_STATS_ALL_ROWS)"
 
 
+def check_one_open_row_per_key(c: Ctx) -> str:
+    # CORRECTION_NOTICE's rule: at most one open (PENDING or SENT) notice per answer and version, any number of
+    # rejected ones. A generated column is non-null only while open; the unique index skips the null keys.
+    c.x("CREATE TABLE NOTICE (ID BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY, ANSWER BIGINT NOT NULL, "
+        "STATUS VARCHAR(12) NOT NULL DEFAULT 'PENDING', OPEN_KEY VARCHAR(40) GENERATED ALWAYS AS "
+        "(CASE WHEN STATUS IN ('PENDING', 'SENT') THEN RTRIM(CHAR(ANSWER)) END))")
+    c.x("CREATE UNIQUE INDEX UX_NOTICE ON NOTICE (OPEN_KEY) EXCLUDE NULL KEYS")
+    c.conn.commit()
+    c.x("INSERT INTO NOTICE (ANSWER) VALUES (7)")
+    refused = c.expect_sqlstate("INSERT INTO NOTICE (ANSWER) VALUES (7)", (), ("23505",))
+    c.conn.rollback()
+    c.x("INSERT INTO NOTICE (ANSWER) VALUES (7)")
+    c.x("UPDATE NOTICE SET STATUS = 'REJECTED' WHERE ANSWER = 7")
+    c.x("INSERT INTO NOTICE (ANSWER) VALUES (7)")  # a rejected one makes way
+    c.x("UPDATE NOTICE SET STATUS = 'REJECTED' WHERE ANSWER = 7 AND STATUS = 'PENDING'")
+    c.x("INSERT INTO NOTICE (ANSWER) VALUES (7)")
+    rows = c.q("SELECT STATUS, COUNT(*) FROM NOTICE GROUP BY STATUS ORDER BY STATUS")
+    c.conn.commit()
+    assert [(r[0].strip(), r[1]) for r in rows] == [("PENDING", 1), ("REJECTED", 2)], rows
+    return f"a second open row {refused}; two rejected rows and one open row coexist (CORRECTION_NOTICE's rule)"
+
+
+def check_nearest_per_group(c: Ctx) -> str:
+    # The router's vote: ROW_NUMBER() OVER (PARTITION BY ...) over the as-of + vector query, in one statement.
+    rows = c.q("SELECT R.GRP, R.CLAUSE_ID FROM (SELECT D.GRP, D.CLAUSE_ID, ROW_NUMBER() OVER (PARTITION BY D.GRP "
+               "ORDER BY D.DIST) AS RN FROM (SELECT SUBSTR(c.CLAUSE_ID, 1, 3) AS GRP, c.CLAUSE_ID, "
+               "VECTOR_DISTANCE(c.EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE) AS DIST "
+               "FROM CLAUSE FOR BUSINESS_TIME AS OF ? AS c) D) R WHERE R.RN = 1 ORDER BY R.GRP",
+               (_vec(1), date(2026, 3, 10)))
+    assert rows and all(r[1].startswith(r[0]) for r in rows), rows
+    return f"nearest clause per group, as of 2026-03-10, in one statement ({len(rows)} group{'s' if len(rows) != 1 else ''})"
+
+
 CHECKS: list[tuple[str, Callable[[Ctx], str]]] = [
     ("Db2 version supports VECTOR", check_version),
     ("Bitemporal table with VECTOR column", check_create_clause),
@@ -487,9 +520,12 @@ CHECKS: list[tuple[str, Callable[[Ctx], str]]] = [
     ("Monthly range partitions", check_range_partitions),
     ("REFRESH IMMEDIATE materialized query table", check_mqt_refresh_immediate),
     ("MQT over a masked table needs a row permission", check_mqt_over_masked_table),
+    ("One open row per key (generated column, EXCLUDE NULL KEYS)", check_one_open_row_per_key),
+    ("Nearest row per group with a window function over the as-of + vector query", check_nearest_per_group),
 ]
 
 CLEANUP = [
+    "DROP TABLE NOTICE",
     "DROP TABLE LSTATS",
     "DROP TABLE PSTATS",
     "DROP TABLE PLEDGER",

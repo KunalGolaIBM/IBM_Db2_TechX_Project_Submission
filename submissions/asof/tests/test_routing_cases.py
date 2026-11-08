@@ -28,3 +28,33 @@ def test_the_test_split_covers_both_documents_and_the_ask_cases():
     assert len(cases) == 40
     by = {e: sum(c.expected == e for c in cases) for e in (*DOC_IDS, rc.ASK)}
     assert by == {"AURELIA-CSP": 15, "FERNHOLLOW-FEES": 15, rc.ASK: 10}
+
+
+def test_routing_outcomes_separate_the_dangerous_error_from_the_safe_one():
+    from asof.eval.routing import outcome
+
+    A, B, ASK = "AURELIA-CSP", "FERNHOLLOW-FEES", rc.ASK
+    assert outcome(A, (A,), A) == "correct"
+    assert outcome(A, (A,), B) == "misrouted"   # checked against the other company's policy
+    assert outcome(A, (A,), ASK) == "asked"     # safe, costs a person's time
+    assert outcome(ASK, (ASK,), B) == "guessed"
+    assert outcome(A, (A, ASK), ASK) == "correct"  # an injection case accepts a person too
+
+
+def test_the_routing_summary_and_report_count_what_happened():
+    from asof.eval.routing import render, summarize
+
+    rows = [{"id": "R1", "category": "clear_airline", "expected": "AURELIA-CSP", "got": "AURELIA-CSP", "outcome": "correct",
+             "method": "db2", "agent": None, "latency_ms": 10},
+            {"id": "R2", "category": "trap", "expected": "FERNHOLLOW-FEES", "got": rc.ASK, "outcome": "asked",
+             "method": "ask", "agent": None, "latency_ms": 30},
+            {"id": "R3", "category": "ambiguous", "expected": rc.ASK, "got": "AURELIA-CSP", "outcome": "guessed",
+             "method": "db2+agent", "agent": {"document": "AURELIA-CSP"}, "latency_ms": 900}]
+    s = summarize(rows)
+    assert (s["routable"], s["routed_right"], s["misrouted"], s["asked"]) == (2, 1, 0, 1)
+    assert (s["ask_cases"], s["ask_cases_asked"], s["guessed"], s["agent_calls"]) == (1, 0, 1, 1)
+    assert s["methods"] == {"db2": 1, "db2+agent": 1, "ask": 1} and s["latency_ms_p50"] == 30
+    report = render([{"split": "routing-test", "label": "test run", "started_at": "2026-11-08T12:00:00", "git_commit": "abc1234",
+                      "summary": s, "rows": rows}])
+    assert "| **Misrouted** (other document) | **0 of 2** |" in report
+    assert "`R3` (ambiguous) expected ASK, got AURELIA-CSP via db2+agent, agent said AURELIA-CSP" in report
