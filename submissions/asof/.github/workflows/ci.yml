@@ -130,15 +130,13 @@ jobs:
         run: python -m asof.setup
       - name: Turn on TLS in Db2 (self-signed, port 50001), so the TLS tests run too
         run: DB2_CONTAINER=db2server scripts/enable_db2_tls.sh
-      - name: All tests, including Db2 integration and TLS
+      - name: All tests, including Db2 integration, TLS and the backup drill (online BACKUP, RESTORE into a new database)
         run: |
           set -o pipefail
-          pytest -q -rs --cov=asof --cov-report=term --cov-fail-under=74 | tee /tmp/pytest.log
+          ASOF_RUN_BACKUP_TESTS=1 pytest -q -rs --cov=asof --cov-report=term --cov-fail-under=74 | tee /tmp/pytest.log
           if grep -q "TLS not enabled" /tmp/pytest.log; then echo "TLS tests were skipped"; exit 1; fi
       - name: Access plans for the hot queries
         run: python -m asof.explain
-      - name: Backup drill (online BACKUP while writing, RESTORE into a new database, ledger checks on the copy)
-        run: python -m asof.backup drill
       - name: dbt marts and their audit tests (own virtualenv; ibm-dbt-db2 pins ibm_db 3.2.8)
         run: |
           python -m venv /tmp/dbt-venv

@@ -27,6 +27,7 @@ import time
 import uuid
 from dataclasses import replace
 from datetime import UTC, date, datetime
+from pathlib import Path
 from typing import Any
 
 import ibm_db_dbi
@@ -193,18 +194,18 @@ def _admin_query(settings: Settings, sql: str, params: tuple[Any, ...]) -> list[
         return db.query(conn, sql, params)
 
 
-def _time(conn: ibm_db_dbi.Connection, sql: str, params: tuple[Any, ...], runs: int = 5) -> tuple[float, int]:
-    db.query(conn, sql, params)  # warm-up
-    times, n = [], 0
+def _time(conn: ibm_db_dbi.Connection, sql: str, params: tuple[Any, ...], runs: int = 5) -> tuple[float, list[Any]]:
+    rows = db.query(conn, sql, params)  # warm-up
+    times = []
     for _ in range(runs):
         started = time.perf_counter()
-        n = len(db.query(conn, sql, params))
+        rows = db.query(conn, sql, params)
         times.append((time.perf_counter() - started) * 1000)
-    return statistics.median(times), n
+    return statistics.median(times), rows
 
 
 def _plan(conn: ibm_db_dbi.Connection, settings: Settings, container: str, target: str, name: str, sql: str,
-          params: tuple[Any, ...]) -> dict[str, Any]:
+          params: tuple[Any, ...], plans_dir: Path) -> dict[str, Any]:
     db.use_schema(conn, target)
     explain._explain(conn, sql, params)
     db.use_schema(conn, db.ident(settings.db2_admin_user))  # explain tables live in the owner's schema
@@ -212,8 +213,8 @@ def _plan(conn: ibm_db_dbi.Connection, settings: Settings, container: str, targe
     db.use_schema(conn, target)
     text = explain._exfmt(settings, container)
     if text:
-        OUT_DIR.mkdir(parents=True, exist_ok=True)
-        (OUT_DIR / f"{name}__{target.lower()}.txt").write_text(explain._plan_graph(text), encoding="utf-8")
+        plans_dir.mkdir(parents=True, exist_ok=True)
+        (plans_dir / f"{name}__{target.lower()}.txt").write_text(explain._plan_graph(text), encoding="utf-8")
     return {"cost": round(ops[0][1], 2) if ops else None, "operators": sorted({o for o, _ in ops}), "objects": objects}
 
 
@@ -234,7 +235,7 @@ def _appends(settings: Settings, target: str, n: int = 100) -> float:
     return statistics.median(times)
 
 
-def run(settings: Settings, rows: int, keep: bool = False) -> dict[str, Any]:
+def run(settings: Settings, rows: int, keep: bool = False, plans_dir: Path = OUT_DIR) -> dict[str, Any]:
     container = find_db2_container(settings.db2_container)
     if container is None:
         raise SystemExit("the benchmark collects statistics and plans with Db2's own tools: a Db2 container is needed")
@@ -249,11 +250,14 @@ def run(settings: Settings, rows: int, keep: bool = False) -> dict[str, Any]:
             _runstats(settings, container, target)
         for name, what, sql, params in QUERIES:
             entry: dict[str, Any] = {"what": what}
+            answers = []
             for target in (FLAT, PART):
                 db.use_schema(conn, target)
-                ms, n = _time(conn, sql, params)
-                entry[target] = {"median_ms": round(ms, 1), "rows": n, **_plan(conn, settings, container, target, name,
-                                                                                sql, params)}
+                ms, rows_out = _time(conn, sql, params)
+                answers.append(sorted(map(repr, rows_out)))
+                entry[target] = {"median_ms": round(ms, 1), "rows": len(rows_out),
+                                 **_plan(conn, settings, container, target, name, sql, params, plans_dir)}
+            entry["same_rows"] = answers[0] == answers[1]  # both designs must give the same answer
             result["queries"][name] = entry
             print(f"  {name}: {entry[FLAT]['median_ms']} ms -> {entry[PART]['median_ms']} ms", flush=True)
     for target in (FLAT, PART):
@@ -292,6 +296,9 @@ def report(r: dict[str, Any]) -> str:
     lines += ["", f"Loading (`NOT LOGGED INITIALLY`, {BATCH:,} rows a batch) took {r['load_s'][FLAT]} s before and "
               f"{r['load_s'][PART]} s after, where the MQTs are maintained on every insert. One logged append through "
               f"APPEND_LEDGER, median of 100: {r['append_ms'][FLAT]} ms before, {r['append_ms'][PART]} ms after.", "",
+              "", ("Both designs returned identical rows for every query." if all(q["same_rows"] for q in r["queries"].values())
+                   else "WARNING: the designs returned different rows for: "
+                   + ", ".join(n for n, q in r["queries"].items() if not q["same_rows"])), "",
               "## What each plan reads", ""]
     for name, q in r["queries"].items():
         lines.append(f"- **{name}**: before {', '.join(q[FLAT]['objects']) or 'no table'}; "
