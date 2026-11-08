@@ -13,8 +13,9 @@ Anything else raises ReplayMiss, which is an LLMError, so the check fails closed
 for a specialist. Recorded outputs are validated by the same Pydantic schemas as live ones, and every
 decision made this way says "replay:" in the ledger's MODEL_INFO.
 
-The built-in scenarios are the playground chips, change-impact presets and Ask-the-ledger examples in
-ui/scenarios.json (the UI loads the same file), plus the decisions `python -m asof.demo` records.
+The built-in scenarios are the playground chips, change-impact presets, Ask-the-ledger examples and the
+specialist inbox's suggested replies in ui/scenarios.json (the UI loads the same file), plus the decisions
+`python -m asof.demo` records.
 """
 
 from __future__ import annotations
@@ -268,7 +269,7 @@ def load_scenarios(path: Path = SCENARIOS_PATH) -> dict[str, Any]:
 
 def check_scenarios() -> list[dict[str, Any]]:
     """Every built-in check: the playground chips, then the demo's decisions not already among them."""
-    from .demo import BANK_DRAFTS, SCENARIOS
+    from .demo import BANK_DRAFTS, HELD_DRAFTS, SCENARIOS
     from .domains import AIRLINE, BANK
 
     items = [{"label": s["label"], "doc_id": s["doc"], "question": s["question"], "as_of": s["as_of"],
@@ -279,6 +280,8 @@ def check_scenarios() -> list[dict[str, Any]]:
               for q, t, d in BANK_DRAFTS]
     items += [{"label": f"chat {b['ref']}: {q}", "doc_id": AIRLINE.doc_id, "question": q, "as_of": b["booked"], "draft": None}
               for b in load_scenarios().get("chat", {}).get("bookings", []) for q in b["questions"]]
+    items += [{"label": f"held: {q}", "doc_id": doc, "question": q, "as_of": d.isoformat(), "draft": t}
+              for doc, q, t, d in HELD_DRAFTS]
     seen, unique = set(), []
     for it in items:
         k = (it["doc_id"], it["question"], it["as_of"], it["draft"])
@@ -286,6 +289,37 @@ def check_scenarios() -> list[dict[str, Any]]:
             seen.add(k)
             unique.append(it)
     return unique
+
+
+def review_scenarios() -> list[dict[str, Any]]:
+    """The specialist inbox's built-in replies (scenarios.json "reviews"), each with the held draft it answers."""
+    from .demo import HELD_DRAFTS
+
+    held = {q: (doc, t, d) for doc, q, t, d in HELD_DRAFTS}
+    out = []
+    for r in load_scenarios().get("reviews", []):
+        doc, draft, on = held[r["question"]]
+        out.append({"doc_id": doc, "question": r["question"], "draft": draft, "as_of": on.isoformat(),
+                    "reply": r["reply"], "note": r.get("note")})
+    return out
+
+
+def run_reviews(gate) -> list[dict[str, Any]]:
+    """Hold each built-in draft, then send the built-in reply through the inbox (the reply's check is what records)."""
+    from . import review
+    from .gate import GateRequest
+
+    out = []
+    for sc in review_scenarios():
+        held = gate.check(GateRequest(sc["question"], sc["draft"], date.fromisoformat(sc["as_of"]), sc["doc_id"], "chat"))
+        rec = {"question": sc["question"], "held": held.reason_code, "outcome": None, "refused": None}
+        try:
+            rec["outcome"] = review.resolve(gate, held.ledger_id, sc["reply"], sc["note"]).outcome
+        except review.ReviewError as exc:
+            rec["refused"] = str(exc)
+        out.append(rec)
+        print(f"  review {rec['outcome'] or 'REFUSED':<20} {sc['question']}", flush=True)
+    return out
 
 
 def next_version(timeline: list[dict[str, Any]], clause_id: str) -> str:
@@ -325,6 +359,9 @@ def record(settings) -> int:
         checks.append(sc | {"draft_checked": draft, "decision": r.decision, "reason_code": r.reason_code})
         print(f"  {r.decision:<9} {r.reason_code:<24} {sc['label']}", flush=True)
 
+    reviews = run_reviews(gate)
+    failed += sum(1 for r in reviews if r["refused"])
+
     asks = []
     asker = LedgerAsker(rec, settings, REPLAY_SCHEMA)
     for q in load_scenarios()["ask_examples"]:
@@ -354,7 +391,7 @@ def record(settings) -> int:
     if failed:
         print(f"{failed} scenario(s) failed closed on a live-model error; nothing saved. Run it again.")
         return 1
-    recording.scenarios = {"checks": checks, "ask": asks, "impact": impacts, "intake": intake_summary}
+    recording.scenarios = {"checks": checks, "ask": asks, "impact": impacts, "intake": intake_summary, "reviews": reviews}
     recording.save()
     print(f"Saved {len(recording.entries)} outputs ({rec.live_calls} live calls) to {RECORDING_PATH.name} "
           f"in {time.monotonic() - started:.0f} s")
@@ -441,6 +478,35 @@ def record_only_chat(settings) -> int:
     return 0
 
 
+def record_only_reviews(settings) -> int:
+    """Add the held drafts and the inbox's replies to the shipped recording, leaving every other output as it is."""
+    from . import db
+    from .embeddings import get_embeddings
+    from .gate import Gate
+    from .llm import build_llm
+
+    recording = Recording.load()
+    live = build_llm(settings, fallback=False)
+    if live.info != recording.model:
+        print(f"The shipped recording is from {recording.model}; set that model to add to it (now: {live.info}).")
+        return 2
+    emb = get_embeddings(settings.embedding_model)
+    _fresh_schema(settings, emb)
+    recorder = Recorder(live, recording)
+    have = {(c["doc_id"], c["question"], c["as_of"], c["draft"]) for c in recording.scenarios.get("checks", [])}
+    todo = [c for c in check_scenarios() if c["label"].startswith("held: ")
+            and (c["doc_id"], c["question"], c["as_of"], c["draft"]) not in have]
+    done = _run_checks(settings, recorder, todo)
+    reviews = run_reviews(Gate(recorder, emb, db.ConnectionPool(settings, "app").connect, REPLAY_SCHEMA))
+    if any(c["reason_code"] == "ERROR_FAIL_CLOSED" for c in done) or any(r["refused"] for r in reviews):
+        print("A check failed closed or a reply was refused; nothing saved. Run it again.")
+        return 1
+    recording.scenarios.setdefault("checks", []).extend(done)
+    recording.scenarios["reviews"] = reviews
+    recording.save()
+    return 0
+
+
 def record_only_intake(settings) -> int:
     """Add the intake recording to the shipped one without re-recording (and so changing) any other scenario."""
     from .embeddings import get_embeddings
@@ -463,7 +529,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m asof.replay", description=__doc__.split("\n\n")[0])
     parser.add_argument("command", choices=["record", "show"], help="record: re-record with the live model; "
                         "show: list what the shipped recording covers")
-    parser.add_argument("--only", choices=["intake", "chat"], help="record only these scenarios and add them to the "
+    parser.add_argument("--only", choices=["intake", "chat", "reviews"], help="record only these scenarios and add them to the "
                         "shipped recording, leaving every other recorded output as it is")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.WARNING)
@@ -481,6 +547,8 @@ def main(argv: list[str] | None = None) -> int:
             return record_only_intake(get_settings())
         if args.only == "chat":
             return record_only_chat(get_settings())
+        if args.only == "reviews":
+            return record_only_reviews(get_settings())
         return record(get_settings())
     except (ConfigError, LLMError, db.DatabaseError) as exc:
         print(f"Recording failed: {exc}")

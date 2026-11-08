@@ -75,6 +75,28 @@ def test_every_built_in_check_replays_to_its_recorded_decision(replayed):
     assert got == want
 
 
+def test_every_built_in_specialist_reply_replays_to_its_recorded_outcome(replayed, settings):
+    """The inbox scenarios: each held draft is held again, and the suggested reply goes out through
+    RESOLVE_ESCALATION with the outcome it had against the live model."""
+    from asof import review
+
+    recorded = RECORDING.scenarios.get("reviews")
+    if not recorded:
+        pytest.skip("this recording has no specialist replies (python -m asof.replay record --only reviews)")
+    got = []
+    for sc in replay.review_scenarios():
+        held = replayed.gate.check(GateRequest(sc["question"], sc["draft"], date.fromisoformat(sc["as_of"]),
+                                               sc["doc_id"], "chat"))
+        out = review.resolve(replayed.gate, held.ledger_id, sc["reply"], sc["note"], reviewer="specialist-1")
+        got.append({"question": sc["question"], "held": held.reason_code, "outcome": out.outcome, "refused": None})
+    assert got == recorded
+    conn = db.connect(settings, "app")
+    try:
+        assert ledger.verify_chain(conn, replayed.schema).status == "OK"
+    finally:
+        conn.close()
+
+
 def test_an_unrecorded_draft_is_held_and_still_recorded(replayed, settings):
     r = replayed.gate.check(GateRequest("Can I bring my bike?", "Yes, bikes fly free on every Aurelia Air flight.",
                                         date(2026, 5, 5), "AURELIA-CSP", "api"))

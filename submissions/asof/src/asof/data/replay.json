@@ -49,6 +49,22 @@
     ]
    }
   },
+  "0aa07049753d716c7bfe1ef0c763c837db88a00e75faf851daa5a218619563f9": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no clause in the provided schedule that mentions fees for safe deposit boxes.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
+  },
   "0b18293ebdd8e2b3ac3396cb68ae3c85e680ecd5f6184e3d04b6705ccc637610": {
    "kind": "structured",
    "name": "ExtractionResult",
@@ -94,6 +110,37 @@
       "reason": "Since transfers are not allowed, there is no name change fee for this purpose.",
       "situation_conflict": false,
       "verdict": "CONTRADICTED"
+     }
+    ]
+   }
+  },
+  "129e38b6a39b26b00bc4805267f0ba8fc14d7454b53b2899b8334bfba2916932": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "bereavement",
+      "claim_type": "deadline",
+      "text": "bereavement fares must be requested before travel begins"
+     }
+    ]
+   }
+  },
+  "14dc302e75c43a3836ac190c6a1851441d5d3845297dfd8f25ad74fb7e37251c": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "other",
+      "claim_type": "eligibility",
+      "text": "Children aged 12 can fly alone with our escort service"
+     },
+     {
+      "area": "other",
+      "claim_type": "amount",
+      "text": "Children aged 12 can fly alone with our escort service for $150 each way"
      }
     ]
    }
@@ -190,6 +237,22 @@
        "query": "What documentation is required for a bereavement fare?"
       },
       "id": "call_1695615138705487241",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
+  "2c59c19b847f479ec12943aa005b9cb0039e62276e339622901e810d410027f6": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "fee for bereavement fare request processing"
+      },
+      "id": "call_13541039804453091671",
       "name": "search_policy"
      }
     ]
@@ -322,6 +385,54 @@
     ]
    }
   },
+  "3a4b55d1885a17021a18f3ccd145a20c90f2bc874f04c1aa54e8ecfce4fab5ff": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There are no clauses addressing unaccompanied minors or escort services.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There are no clauses addressing unaccompanied minors, escort services, or fees associated with them.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
+  },
+  "40ad2512b00e1f1aef7bb8a3dfb1ca50f28712ec45d1b93b20859cebc6a7ff25": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no clause mentioning unaccompanied minor or escort services.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no clause defining age restrictions or requirements for flying with an adult.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
+  },
   "43d0f515ff384bf88d989bb9a142118477fa5aa80dbdd4677251742362efe970": {
    "kind": "structured",
    "name": "RewriteResult",
@@ -353,6 +464,38 @@
       "area": "refund",
       "claim_type": "procedure",
       "text": "We will refund the fare difference for you if you provide the required documentation"
+     }
+    ]
+   }
+  },
+  "46f1d7bbfdb6dd12af5a499c2027379950469a7fa072c0853f6574189dfdcc6b": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "service fee bereavement fare"
+      },
+      "id": "call_13388308752297279482",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
+  "47419ceb371a1deb7b1477a1518be6248193b511b71f5cbe6e6d5c9300454f53": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "annual rental fee for safe deposit box"
+      },
+      "id": "call_9270480733073616651",
+      "name": "search_policy"
      }
     ]
    }
@@ -439,6 +582,22 @@
       "area": "overdraft",
       "claim_type": "amount",
       "text": "An overdraft fee of $25 is charged for each item we pay when the account does not have enough available funds."
+     }
+    ]
+   }
+  },
+  "50e67ad4bd798544734941b9be258c4dc7a71766f61469c811be530861e15243": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "children travelling alone unaccompanied minor service age limit fee"
+      },
+      "id": "call_19282542162391579",
+      "name": "search_policy"
      }
     ]
    }
@@ -540,6 +699,22 @@
       "area": "fee_refund",
       "claim_type": "deadline",
       "text": "You can ask for a courtesy refund within 60 days of the date the fee was charged."
+     }
+    ]
+   }
+  },
+  "57d1b8beb37e9e2a59b9b1f11106b622625c2a692b649168c12588f2033953ea": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "unaccompanied minor travel policy"
+      },
+      "id": "call_10164353934737549873",
+      "name": "search_policy"
      }
     ]
    }
@@ -723,6 +898,22 @@
     "claims": []
    }
   },
+  "6c7b25ff9e1d5c9d77009ca65329fac43b6c934ef5f8d767c077ebe6676172e4": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "The provided clauses do not mention any fees related to safe deposit boxes.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
+  },
   "6ce41820957e5d514b36d97a1bb8fa421c91272a1266762885caba4fcb82b95c": {
    "kind": "structured",
    "name": "IntakeResult",
@@ -857,6 +1048,22 @@
     ]
    }
   },
+  "758c2e3c1a32808edf4dfa9b86a0c266d44473bbb19076a2a063a9136a54854a": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "safe deposit box rental annual fee"
+      },
+      "id": "call_11875470600564309392",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
   "77d0acd5cfa10033d44f8aa3fda2795b86ac18eb2ecd6fd171814a9da537c9ea": {
    "kind": "structured",
    "name": "RewriteResult",
@@ -956,6 +1163,22 @@
     ]
    }
   },
+  "917907f092aad1cce5962b84d40e17c75596ed104d4b615452227d23f25e46da": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "BRV-002",
+      "quoted_span": "Bereavement fares must be requested before travel begins.",
+      "reason": "The claim directly restates the policy requirement for requesting bereavement fares.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
   "951eac1d11a39dcb1db95191cfe7a03b46225da83f7795a22bab697f2a967ba0": {
    "kind": "structured",
    "name": "LedgerSql",
@@ -1030,11 +1253,69 @@
     "sql": "SELECT DISTINCT ledger_id, claim_no, claim_text, clause_id, clause_version FROM v_audit_claims WHERE rule_check = 'MISMATCH'"
    }
   },
+  "a1cd351103897f692d914727d1eaa9e911df6b1b07c3e3a659ec1b1175d84a7f": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "child travelling alone requirements"
+      },
+      "id": "call_10035350340699659947",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
   "a216753f2918f798a7d3c51f6723c9cce1d07ec32727e0d9835ed9c8b064b65c": {
    "kind": "structured",
    "name": "RewriteResult",
    "output": {
     "answer": "I am very sorry for your loss. According to our policy, bereavement fares must be requested before travel begins. A bereavement fare cannot be applied retroactively once any part of the journey has been flown, and no refund of the fare difference is available after travel has taken place."
+   }
+  },
+  "a3126bc2e112c08646764fe536b88de15a89ee401fb5d2b64b0b1ea565204f75": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There are no clauses in the policy addressing unaccompanied minors or escort services.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There are no clauses in the policy addressing unaccompanied minors or associated fees.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
+  },
+  "a786b6118b3a3e6e9e38c3bde047ee63cffbd3b35306adca2a450c21a4d72f22": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "bereavement",
+      "claim_type": "procedure",
+      "text": "You can request the bereavement fare before you travel."
+     },
+     {
+      "area": "bereavement",
+      "claim_type": "amount",
+      "text": "There is a $25 processing fee for bereavement requests."
+     }
+    ]
    }
   },
   "a8e8bad2d4f3834bb8b72257c01ea906a0d06a23abd3541de5d0e72b38b149a0": {
@@ -1056,6 +1337,46 @@
       "reason": "The clause explicitly states the fee for the first checked bag on Economy fares.",
       "situation_conflict": false,
       "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "ad5afcdce54f2f52743b74e272a902ecdae05bf69107b76ca688187e8f0f35e1": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "BRV-002",
+      "quoted_span": "Bereavement fares must be requested before travel begins.",
+      "reason": "The clause explicitly states bereavement fares must be requested before travel begins.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no mention of a processing fee in the provided clauses.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
+  },
+  "af226c7b3c03af394a33f961bca611144d9cfff56631b7c7828c3a9202a969e1": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "unaccompanied minor escort service age requirements fees"
+      },
+      "id": "call_2711814770339682439",
+      "name": "search_policy"
      }
     ]
    }
@@ -1191,6 +1512,19 @@
    "name": "chat",
    "output": "Yes, you can certainly transfer your ticket to a friend! We simply charge a $50 name change fee to process the update for you."
   },
+  "cddf73b6c0353024c909bde94c440d10deeda29d8f0ca62c53bc48041dd2cadf": {
+   "kind": "structured",
+   "name": "BankExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "other",
+      "claim_type": "amount",
+      "text": "a small safe deposit box costs $60 a year"
+     }
+    ]
+   }
+  },
   "d02f9cc571c49574bc59e743c27a2f04e95591ddaea9a98461fb05a00625d56b": {
    "kind": "structured",
    "name": "LedgerAnswer",
@@ -1266,6 +1600,24 @@
       "reason": "The clause sets the 60-day window for requesting a courtesy refund.",
       "situation_conflict": false,
       "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "d789ed67963c9c26a1d6cfc50e649809673541e6e6d2799e26ad3af2f7c6a410": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "other",
+      "claim_type": "eligibility",
+      "text": "We do not offer an escort service for children flying alone"
+     },
+     {
+      "area": "other",
+      "claim_type": "eligibility",
+      "text": "a 12-year-old needs to travel with an adult"
      }
     ]
    }
@@ -1511,6 +1863,30 @@
      }
     ]
    }
+  },
+  "ff62f82623a82a3e14f57d731c55f10e10c74ec6cc4dc8f3283bbb1d7152f898": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no clause in the provided text regarding unaccompanied minor services.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no clause in the provided text regarding travel requirements for children.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
   }
  },
  "format": 2,
@@ -1685,6 +2061,36 @@
     "label": "chat AUR-4C9N: Can I use my travel credit to pay for seat upgrades and lounge access?",
     "question": "Can I use my travel credit to pay for seat upgrades and lounge access?",
     "reason_code": "NOT_COVERED"
+   },
+   {
+    "as_of": "2026-03-12",
+    "decision": "ESCALATED",
+    "doc_id": "AURELIA-CSP",
+    "draft": "Yes. Children aged 12 can fly alone with our escort service for $150 each way.",
+    "draft_checked": "Yes. Children aged 12 can fly alone with our escort service for $150 each way.",
+    "label": "held: Can my 12-year-old fly alone to her grandmother's funeral?",
+    "question": "Can my 12-year-old fly alone to her grandmother's funeral?",
+    "reason_code": "NOT_COVERED"
+   },
+   {
+    "as_of": "2026-03-20",
+    "decision": "ESCALATED",
+    "doc_id": "AURELIA-CSP",
+    "draft": "Yes. Request it before you travel. There is a $25 processing fee for bereavement requests.",
+    "draft_checked": "Yes. Request it before you travel. There is a $25 processing fee for bereavement requests.",
+    "label": "held: My father died last week and I fly tomorrow. Can I still get the bereavement fare?",
+    "question": "My father died last week and I fly tomorrow. Can I still get the bereavement fare?",
+    "reason_code": "NOT_COVERED"
+   },
+   {
+    "as_of": "2026-09-01",
+    "decision": "ESCALATED",
+    "doc_id": "FERNHOLLOW-FEES",
+    "draft": "Yes, a small safe deposit box costs $60 a year.",
+    "draft_checked": "Yes, a small safe deposit box costs $60 a year.",
+    "label": "held: Is there a fee for a safe deposit box?",
+    "question": "Is there a fee for a safe deposit box?",
+    "reason_code": "NOT_COVERED"
    }
   ],
   "impact": [
@@ -1772,6 +2178,20 @@
    ],
    "live_calls": 1,
    "sha256": "f2b41e117554093e3e3dceac0166ad28717fa6720a73b5372b21ab336ae681b4"
-  }
+  },
+  "reviews": [
+   {
+    "held": "NOT_COVERED",
+    "outcome": "SPECIALIST_JUDGMENT",
+    "question": "Can my 12-year-old fly alone to her grandmother's funeral?",
+    "refused": null
+   },
+   {
+    "held": "NOT_COVERED",
+    "outcome": "SPECIALIST_CHECKED",
+    "question": "My father died last week and I fly tomorrow. Can I still get the bereavement fare?",
+    "refused": null
+   }
+  ]
  }
 }

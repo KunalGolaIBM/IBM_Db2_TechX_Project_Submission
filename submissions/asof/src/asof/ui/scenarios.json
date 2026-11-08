@@ -1,5 +1,5 @@
 {
-  "note": "Built-in scenarios: the playground chips, the change-impact presets and the Ask the ledger examples. The UI loads this file; replay mode has recorded model outputs for exactly these (python -m asof.replay record). The customer chat page (chat.html) uses the chat bookings: the booking date is what the booking system would send as the as-of date.",
+  "note": "Built-in scenarios: the playground chips, the change-impact presets and the Ask the ledger examples. The UI loads this file; replay mode has recorded model outputs for exactly these (python -m asof.replay record). The customer chat page (chat.html) uses the chat bookings: the booking date is what the booking system would send as the as-of date. The reviews are suggested specialist replies for two of the demo's held drafts (asof.demo.HELD_DRAFTS), for the specialist inbox.",
   "playground": [
     {
       "label": "Moffatt: March booking",
@@ -172,5 +172,17 @@
         ]
       }
     ]
-  }
+  },
+  "reviews": [
+    {
+      "question": "Can my 12-year-old fly alone to her grandmother's funeral?",
+      "reply": "We do not offer an escort service for children flying alone, so a 12-year-old needs to travel with an adult.",
+      "note": "No clause covers unaccompanied minors. Operations confirmed Aurelia Air has no escort service."
+    },
+    {
+      "question": "My father died last week and I fly tomorrow. Can I still get the bereavement fare?",
+      "reply": "Yes, as long as you ask before you fly: bereavement fares must be requested before travel begins.",
+      "note": null
+    }
+  ]
 }

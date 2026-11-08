@@ -6,7 +6,8 @@ Asks the naive demo assistant each question below for the given customer date, c
 draft with the gate (real LLM, real Db2), and records the decision in the ASOF ledger. The
 two pet questions (November and December trips) are what the change-impact screen uses
 after the "pet fee to $125 from 1 Dec 2026" preset. The bank drafts below are checked as written
-(the demo assistant only knows the airline), against Fernhollow Bank's fee schedule.
+(the demo assistant only knows the airline), against Fernhollow Bank's fee schedule. The held
+drafts are ones no clause fully covers, so they wait in the specialist inbox.
 """
 
 from __future__ import annotations
@@ -40,6 +41,16 @@ BANK_DRAFTS = [  # (question, a bank assistant's draft, customer date)
              "overdraft fees in any 12-month period, within 60 days of the date the fee was charged.", date(2026, 9, 10)),
     ("How much is the overdraft fee?", "The overdraft fee is $35 for each item we pay.", date(2026, 8, 3)),
 ]
+# Drafts the check holds for a person: they land in the specialist inbox (scenarios.json has a suggested reply for
+# the two airline ones). (doc_id, question, draft, customer date)
+HELD_DRAFTS = [
+    ("AURELIA-CSP", "Can my 12-year-old fly alone to her grandmother's funeral?",
+     "Yes. Children aged 12 can fly alone with our escort service for $150 each way.", date(2026, 3, 12)),
+    ("AURELIA-CSP", "My father died last week and I fly tomorrow. Can I still get the bereavement fare?",
+     "Yes. Request it before you travel. There is a $25 processing fee for bereavement requests.", date(2026, 3, 20)),
+    ("FERNHOLLOW-FEES", "Is there a fee for a safe deposit box?", "Yes, a small safe deposit box costs $60 a year.",
+     date(2026, 9, 1)),
+]
 
 
 def main() -> int:
@@ -57,6 +68,9 @@ def main() -> int:
         for question, draft_text, as_of in BANK_DRAFTS:
             r = gate.check(GateRequest(question, draft_text, as_of, "FERNHOLLOW-FEES", "demo"))
             print(f"#{r.ledger_id}  {as_of}  {r.decision:<9} {r.reason_code:<24} {question} (bank)")
+        for doc_id, question, draft_text, as_of in HELD_DRAFTS:
+            r = gate.check(GateRequest(question, draft_text, as_of, doc_id, "chat"))
+            print(f"#{r.ledger_id}  {as_of}  {r.decision:<9} {r.reason_code:<24} {question} (for the specialist inbox)")
     except (ConfigError, LLMError, db.DatabaseError) as exc:
         print(f"Demo failed: {exc}")
         return 1
