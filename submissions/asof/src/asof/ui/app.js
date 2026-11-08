@@ -735,7 +735,8 @@ async function renderReview() {
     </div>
     <div class="card"><div class="card-head"><h2>Why the check held it</h2><span class="sub">each claim of the draft and the clause version it was checked against</span></div>
       ${first.length ? html`<div class="claims">${first.map(reviewClaim)}</div>` : html`<p class="muted">No claims were judged before the check stopped.</p>`}</div>
-    ${d.answered ? html`<div class="banner ok"><strong>Answered.</strong><span>Ledger entry <a href="#/ledger/${d.answered.review_ledger_id}">#${d.answered.review_ledger_id}</a> holds the reply${d.answered.reviewer ? ` from ${d.answered.reviewer}` : ""}, sent ${fmtTs(d.answered.answered_at)}. ${d.answered.note ? `Note: ${d.answered.note}` : ""}</span></div>`
+    ${d.answered && inb.sent && inb.sent.ledger_id === d.answered.review_ledger_id ? html`<div class="card" id="reply-result">${sentView(inb.sent)}</div>`
+      : d.answered ? html`<div class="banner ok"><strong>Answered.</strong><span>Ledger entry <a href="#/ledger/${d.answered.review_ledger_id}">#${d.answered.review_ledger_id}</a> holds the reply${d.answered.reviewer ? ` from ${d.answered.reviewer}` : ""}, sent ${fmtTs(d.answered.answered_at)}. ${d.answered.note ? `Note: ${d.answered.note}` : ""}</span></div>`
       : html`<form class="card" id="reply-form" autocomplete="off">
       <div class="card-head"><h2>Reply to the customer</h2><span class="sub">checked against the policy in force on ${fmtDate(d.as_of_date)} before it is sent</span></div>
       ${suggested ? html`<div class="field"><div class="chips"><button type="button" class="chip" id="use-suggested">Use the suggested reply for this scenario</button></div></div>` : ""}
@@ -753,7 +754,10 @@ async function renderReview() {
   const form = $("#reply-form");
   if (!form) return;
   const sync = () => { inb.reply = $("#reply").value; inb.note = $("#note").value; inb.doc = $("#reply-doc") ? $("#reply-doc").value : null; };
-  if (suggested) $("#use-suggested").addEventListener("click", () => { inb.reply = suggested.reply; inb.note = suggested.note || ""; renderReview(); });
+  if (suggested) $("#use-suggested").addEventListener("click", () => {  // fill in place: a re-render could race a quick send
+    inb.reply = suggested.reply; inb.note = suggested.note || "";
+    $("#reply").value = inb.reply; $("#note").value = inb.note; $("#reply").focus();
+  });
   const run = async (send) => {
     sync();
     inb.busy = true;
