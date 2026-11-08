@@ -55,11 +55,11 @@ def test_every_relative_link_and_anchor_resolves(doc):
     assert broken == []
 
 
-def test_every_api_route_is_in_the_readme():
-    """The README's endpoint table names every route the API serves (path parameters written as {id}), each as the
-    whole path inside a code span, so /api/ledger does not count for /api/ledger/{id}."""
+def test_every_api_route_is_in_the_api_docs():
+    """The endpoint table in docs/api.md (linked from the README) names every route the API serves (path parameters
+    written as {id}), each as the whole path inside a code span, so /api/ledger does not count for /api/ledger/{id}."""
     api = (ROOT / "src" / "asof" / "api.py").read_text(encoding="utf-8")
-    readme = re.sub(r"\{[a-z_]+\}", "{id}", (ROOT / "README.md").read_text(encoding="utf-8"))
+    readme = re.sub(r"\{[a-z_]+\}", "{id}", (ROOT / "docs" / "api.md").read_text(encoding="utf-8"))
     routes = [re.sub(r"\{[a-z_]+\}", "{id}", p) for p in re.findall(r'@app\.(?:get|post|put|delete)\("(/[^"]*)"', api)
               if p.startswith(("/api/", "/healthz"))]
     assert len(routes) > 30

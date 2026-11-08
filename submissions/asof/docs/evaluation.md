@@ -1,6 +1,6 @@
 # Evaluation
 
-How AsOf's check is measured, with every run kept. The [README](../README.md#evaluation-the-frozen-test-split) has the latest numbers; this page has the method, the earlier runs and what changed between them. Every per-case decision is in [eval/](eval/), and [eval_results.md](eval_results.md) is rebuilt from those files after each run.
+How AsOf's check is measured, with every run kept. The [README](../README.md#testing--verification) has the latest numbers; this page has the method, the earlier runs and what changed between them. Every per-case decision is in [eval/](eval/), and [eval_results.md](eval_results.md) is rebuilt from those files after each run.
 
 - [The frozen test splits](#the-frozen-test-splits): how the cases were written and frozen, every run of the nine splits, and the one run that released a wrong draft
 - [On IBM watsonx.ai](#on-ibm-watsonxai): the airline split on `ibm/granite-4-h-small`

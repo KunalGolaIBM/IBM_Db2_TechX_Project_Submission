@@ -1,6 +1,62 @@
 # API walkthrough
 
-The API is JSON over HTTP on http://127.0.0.1:8000, the same server as the web UI. Every route is listed in the [README](../README.md#the-api); FastAPI also serves an interactive schema at `/docs` and the OpenAPI document at `/openapi.json`. Without `ASOF_AUTH=users` the API answers on localhost only; with it, every `/api/` call needs a personal token with the route's role ([per-user API access](../README.md#per-user-api-access)).
+The API is JSON over HTTP on http://127.0.0.1:8000, the same server as the web UI. Every route is listed [below](#the-api); FastAPI also serves an interactive schema at `/docs` and the OpenAPI document at `/openapi.json`. Without `ASOF_AUTH=users` the API answers on localhost only; with it, every `/api/` call needs a personal token with the route's role ([per-user API access](setup.md#per-user-api-access)).
+
+## Running it
+
+```bash
+python -m asof.db2check      # verify the Db2 features AsOf needs (owner account)
+python -m asof.setup         # schema, users, seed data, grants, self-check
+python src/main.py           # web UI at http://127.0.0.1:8000, API docs at /docs (same as python -m asof.api)
+python -m asof.demo          # optional: thirteen sample decisions (seven airline, three bank, three held for the inbox) so every screen has history
+```
+
+- **The customer's side:** http://127.0.0.1:8000/chat is a fictional airline's help page with a chat widget. Pick a booking (its date is what the booking system sends as the as-of date) and ask. Each reply shows whether AsOf released the draft as written, corrected it from the clause (with the clause versions as sources), or passed it to a specialist; **Behind the scenes** shows the assistant's draft, the claim verdicts and the ledger receipt. Every suggested question replays without a key; the five bookings cover all three outcomes.
+- **Policy intake:** in the console, **Policy intake**, then **Use the sample**: a fictional Aurelia Air revision that raises the first bag fee from 1 February 2027, adds a sports equipment clause, extends travel credits from 1 March 2027 and restates one clause unchanged. Preview its impact, approve it, and see the new versions on the timeline.
+- **Agents:** [mcp_server/README.md](../mcp_server/README.md) runs AsOf as an MCP server for any agent that speaks the Model Context Protocol.
+
+### The API
+
+Every route, below, is JSON over HTTP; [docs/api.md](api.md) walks through the Moffatt scenario with `curl` (the March and June bookings, with the decisions a real run returned) and shows how to reset the demo ledger. FastAPI serves the interactive schema at `/docs`.
+
+**API**
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/gate` | Check a draft: `question`, `draft_answer`, `as_of_date`, optional `doc_id` (`AURELIA-CSP`, the default, `FERNHOLLOW-FEES`, or `auto` to [route](db2.md#routing-which-policy-a-draft-is-about) it) and `channel`. Returns the decision, final answer, and per-claim verdicts with clause versions and quotes; with `auto`, also the route. |
+| `POST /api/assistant/ask` | Ask the naive demo assistant, then check its draft |
+| `GET /api/ledger`, `GET /api/ledger/{id}` | Recorded decisions and their claim citations |
+| `GET /api/ledger/{id}/replay` | The clause rows a decision used, what Db2 held at that moment, and what applies today |
+| `POST /api/ledger/ask` | "Ask the ledger": a plain-English question about the audit trail, answered as the read-only analyst `asofread`. Returns the answer, the checked SQL that ran and the rows. |
+| `GET /api/ledger/{id}/evidence` | An evidence pack for a dispute, as a JSON download: the decision with redacted question and draft, the released answer, every claim with its verdict and clause version, the replay of each clause, the chain check and the receipt hash (the **Evidence pack** button on a ledger entry) |
+| `POST /api/ledger/receipt` | Check a receipt: `ledger_id` and the `row_hash` that the check's response carried. Answers `INTACT`, `MISMATCH` (the row with that ID is not the one issued: rewritten, as after an owner rebuilt the ledger consistently, which `VERIFY_CHAIN` alone cannot see, or reset, or the receipt is from another ledger), `MISSING` or `CHAIN_BROKEN` |
+| `GET /api/chain/verify` | Run `VERIFY_CHAIN` over the whole ledger |
+| `GET /api/whoami` | Which auth mode the server runs and, with `ASOF_AUTH=users`, the caller's user name and roles |
+| `GET /api/chain/anchors` | Check every chain-head anchor kept outside Db2 against the ledger now: `OK` (with the last entry covered and any unanchored rows), `MISMATCH` or `MISSING_ROW` (the ledger was rebuilt or cut up to that anchor, even if `VERIFY_CHAIN` passes), `LOG_TAMPERED`, `CHAIN_BROKEN`, `NO_ANCHORS` or `OFF`. Also `python -m asof.anchor verify` |
+| `POST /api/policy/change` | Apply a new clause version through `APPLY_POLICY_CHANGE` as the editor user. Accepted only from localhost, unless `ASOF_EDITOR_TOKEN` is set, in which case the `X-AsOf-Editor-Token` header must match. |
+| `POST /api/policy/preview` | The same change as a preview: `APPLY_POLICY_CHANGE` and `CHANGE_IMPACT` run in one transaction that is then rolled back, so the response shows what would split, be flagged and go stale, and nothing is saved (editor action: localhost or token) |
+| `GET /api/impact/{clause_id}` | `CHANGE_IMPACT`: stale and historically valid answers, help-centre answers to review |
+| `POST /api/impact/{clause_id}/suggestions` | Run the change-impact agent: draft a correction for each help-centre answer that needs review, run the full check on it for the date it must hold from, store it as pending (editor action: localhost or token) |
+| `GET /api/suggestions`, `POST /api/suggestions/{id}/decision` | List drafted corrections; approve (publish) or reject one as `asofedit` (`DECIDE_SUGGESTION`) |
+| `GET /api/policy/timeline`, `GET /api/policy/clauses/{id}/history` | Business-time versions with rule parameters (optionally for one `doc_id`); every system-time row for a clause |
+| `GET /api/policy/clauses/{id}/diff?a=&b=` | Two rows Db2 has held for a clause, current or in the history table, compared: the text word by word, `RULE_JSON` key by key, and the embedding distance between them |
+| `POST /api/policy/drafts`, `GET /api/policy/drafts`, `GET /api/policy/drafts/{id}`, `GET /api/policy/drafts/{id}/source`, `POST /api/policy/drafts/{id}/decision`, `GET /api/policy/intake/sample` | [Policy intake](db2.md#policy-intake-a-pdf-into-the-bitemporal-table): upload a PDF as the editor, read the checked proposals and the stored file, approve, reject or preview; the built-in sample revision |
+| `GET /api/reviews`, `GET /api/reviews/{id}`, `POST /api/reviews/{id}/check`, `POST /api/reviews/{id}/resolve` | [The specialist inbox](db2.md#the-specialist-inbox-and-correction-notices) (`reviewer` role): the queue, a held decision with its claims and the policy in force, a reply checked with nothing recorded, and a reply sent through `RESOLVE_ESCALATION` |
+| `GET /api/notices`, `POST /api/notices/draft`, `POST /api/notices/{id}/decision` | Correction notices (`reviewer` role): list them, have the change-impact agent draft a checked notice for each answer a policy change made stale (`ADD_NOTICE`), approve or reject one (`DECIDE_NOTICE`) |
+| `GET /api/analytics` | Decision, area and override statistics from the Db2 views |
+| `GET /healthz` | Db2 connectivity and the configured model |
+
+**Drop it into an existing LangChain app**
+
+```python
+from langchain_core.runnables import RunnablePassthrough
+from asof import as_runnable
+
+chain = RunnablePassthrough.assign(draft=assistant_prompt | llm | StrOutputParser()) | as_runnable()
+answer = chain.invoke({"question": "Can I get a bereavement fare after I travel?", "as_of": booking_date})
+```
+
+One chain serves every customer: the assistant's draft joins the input, and the question and the customer's date travel with each call (the check tests the draft's premises against the question). A call with no date is refused, never guessed. The runnable returns the checked answer, and every decision lands in the Db2 ledger.
 
 ## The Moffatt scenario through the API
 

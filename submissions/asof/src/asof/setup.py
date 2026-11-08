@@ -5,7 +5,7 @@
     python -m asof.setup --reset-ledger  # DEMO ONLY: empty the ledger, keep the policy data
 
 Steps:
- 1. Generate passwords for the four least-privilege users and the chain-head anchor key if .env has
+ 1. Generate passwords for the five least-privilege users and the chain-head anchor key if .env has
     none (never printed).
  2. Wait until Db2 accepts connections as the owner.
  3. Create the OS users inside the Db2 container (Db2 authenticates against the OS).
