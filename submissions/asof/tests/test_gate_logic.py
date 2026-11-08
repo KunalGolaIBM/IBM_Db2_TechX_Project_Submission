@@ -17,6 +17,7 @@ MARCH, JUNE, JULY = date(2026, 3, 10), date(2026, 6, 2), date(2026, 7, 15)
 RETRO = "You can apply for the bereavement discount retroactively within 90 days of ticket issue."
 V1_QUOTE = "A bereavement fare cannot be applied retroactively once any part of the journey has been flown"
 V2_QUOTE = "A retroactive request must be submitted within 90 days of the date the original ticket was issued"
+BEFORE_TRAVEL = "Bereavement fares must be requested before travel begins"
 
 
 @pytest.fixture
@@ -138,6 +139,42 @@ def test_no_policy_claims_passes_unchanged(world):
     assert (r.decision, r.reason_code, r.final_answer) == ("PASS", "NO_POLICY_CLAIMS", "You're welcome, have a good trip!")
 
 
+MOFFATT_SENTENCE = "Yes, you can claim the bereavement fare after you travel."
+
+
+def test_a_policy_draft_with_no_extracted_claim_is_judged_as_written(world):
+    """The extractor finds nothing (the local model did this with the Moffatt sentence): each policy sentence is
+    judged as a claim of its own, so the contradiction is caught and the draft never passes as NO_POLICY_CLAIMS."""
+    rewrite = "Bereavement fares must be requested before travel begins."
+    llm = ScriptedLLM(extract=[claims(), claims((rewrite, "bereavement", "procedure"))],
+                      judge=[judge(verdict(1, "CONTRADICTED", "BRV-002", V1_QUOTE)),
+                             judge(verdict(1, "SUPPORTED", "BRV-002", BEFORE_TRAVEL))],
+                      rewrite=[RewriteResult(answer=rewrite)])
+    r = make_gate(llm).check(req(draft=MOFFATT_SENTENCE))
+    assert (r.decision, r.reason_code) == ("CORRECTED", "CORRECTED_FROM_CLAUSES")
+    assert [c.text for c in r.claims] == [MOFFATT_SENTENCE] and r.claims[0].verdict == "CONTRADICTED"
+    assert world["entries"][0].verdicts["claims"][0]["text"] == MOFFATT_SENTENCE  # the ledger shows what was judged
+
+
+def test_a_policy_sentence_no_clause_covers_is_held_when_nothing_was_extracted(world):
+    llm = ScriptedLLM(extract=[claims()], judge=[judge(verdict(1, "NOT_COVERED"))])
+    r = make_gate(llm).check(req(draft="Lounge access is included with every bereavement fare."))
+    assert (r.decision, r.reason_code, r.final_answer) == ("ESCALATED", "NOT_COVERED", HOLDING_REPLY)
+
+
+def test_a_supported_policy_sentence_passes_with_its_reference_when_nothing_was_extracted(world):
+    draft = "Bereavement fares must be requested before travel begins."
+    llm = ScriptedLLM(extract=[claims()], judge=[judge(verdict(1, "SUPPORTED", "BRV-002", draft.rstrip(".")))])
+    r = make_gate(llm).check(req(draft=draft, question="When do I ask for the bereavement fare?"))
+    assert (r.decision, r.reason_code) == ("PASS", "ALL_SUPPORTED") and "BRV-002 v1" in r.final_answer
+
+
+def test_chit_chat_and_bare_numbers_are_not_judged_as_policy_sentences():
+    assert gate_mod.policy_word_sentences("You're welcome, have a good trip!") == []
+    assert gate_mod.policy_word_sentences("Thanks! Your 2 o'clock call is booked.") == []  # numbers: the coverage hold
+    assert gate_mod.policy_word_sentences(f"Sorry for your loss. {MOFFATT_SENTENCE}") == [MOFFATT_SENTENCE]
+
+
 def test_too_many_claims_escalates(world):
     llm = ScriptedLLM(extract=[claims(*[(f"Claim {i}.", "other", "other") for i in range(9)])])
     r = make_gate(llm).check(req())
@@ -187,26 +224,29 @@ def test_delay_tier_override_cites_the_right_clause(world):
 
 def test_personal_data_is_redacted_before_the_llm_and_the_ledger(world):
     draft = "Email jane@example.com and we will refund card 4111 1111 1111 1111."
-    llm = ScriptedLLM(extract=[claims()])
+    # Nothing extracted, so the policy sentence is judged as written: it reaches the judge redacted too.
+    llm = ScriptedLLM(extract=[claims()], judge=[judge(verdict(1, "SUPPORTED", "BRV-002", BEFORE_TRAVEL))])
     r = make_gate(llm).check(req(draft=draft, question="I'm jane@example.com, call +1 514 555 0199"))
-    sent = llm.calls[0][1][1][1]
-    assert "jane@example.com" not in sent and "4111" not in sent and "[EMAIL]" in sent
+    for _, messages in llm.calls:  # the extractor and the judge
+        sent = messages[1][1]
+        assert "jane@example.com" not in sent and "4111" not in sent and "[EMAIL]" in sent
     entry = world["entries"][0]
-    assert "jane@example.com" not in entry.question_redacted + entry.draft_redacted + entry.final_answer
-    assert r.final_answer == draft  # the caller still gets the answer as written
+    assert "jane@example.com" not in entry.question_redacted + entry.draft_redacted + entry.final_answer + str(entry.verdicts)
+    assert r.final_answer.startswith(draft)  # the caller still gets the answer as written
 
 
 def test_names_never_reach_the_llm_or_the_ledger(world):
     draft = "Hi Priya, since your grandmother Eleanor Price passed away, you can request the bereavement fare."
-    llm = ScriptedLLM(extract=[claims()])
+    llm = ScriptedLLM(extract=[claims()], judge=[judge(verdict(1, "SUPPORTED", "BRV-002", BEFORE_TRAVEL))])
     r = make_gate(llm).check(req(draft=draft, question="My name is Priya Sharma. My grandmother Eleanor Price died."))
     sent = llm.calls[0][1][1][1]
     assert not any(n in sent for n in ("Priya", "Sharma", "Eleanor", "Price")) and sent.count("[NAME]") == 4
+    assert not any(n in llm.calls[1][1][1][1] for n in ("Priya", "Sharma", "Eleanor", "Price"))  # the judged sentence
     entry = world["entries"][0]
     stored = entry.question_redacted + entry.draft_redacted + entry.final_answer + str(entry.verdicts)
     assert not any(n in stored for n in ("Priya", "Sharma", "Eleanor", "Price"))
     assert entry.verdicts["redactions"]["question"]["name"] == 2
-    assert r.final_answer == draft  # the caller still gets the answer as written
+    assert r.final_answer.startswith(draft)  # the caller still gets the answer as written
 
 
 def test_injection_in_draft_reaches_the_llm_only_as_escaped_data(world):

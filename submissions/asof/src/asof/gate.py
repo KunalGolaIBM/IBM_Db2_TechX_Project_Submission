@@ -181,6 +181,13 @@ _POLICY_SUBSTANCE = re.compile(
     r"|documents?|certificate|control|delay(?:ed|s)?|cancelled|closure|close|balance|maintenance)\b", re.I)
 
 
+def policy_word_sentences(text: str) -> list[str]:
+    """The sentences of `text` that name something a policy decides in words (a fee, a refund, eligibility, a
+    deadline). A number alone does not count here: the coverage check already holds any number no claim states."""
+    sentences = [x.strip() for x in re.split(r"(?<=[.!?])\s+", text.strip()) if x.strip()]
+    return [x for x in sentences if any(t != "amounts" for t in policy_terms(x))]
+
+
 def policy_terms(text: str) -> list[str]:
     """What in `text` a policy decides (fees, refunds, eligibility, deadlines), lower-cased; "amounts" for any number,
     "$" or "%". Empty when the text states nothing a policy decides."""
@@ -369,6 +376,20 @@ class Gate:
         if added:
             log.info("judging %d premise sentence(s) no extracted claim kept", len(added))
         return [_premise_claim(sentence, extracted) for sentence in added]
+
+    @staticmethod
+    def sentence_claims(text: str, domain: Domain) -> list[ExtractedClaim]:
+        """When extraction finds no claim in a draft that talks policy, each sentence naming something a policy decides
+        becomes a claim of its own, judged as written: a model that extracts nothing (as the local model once did from
+        "Yes, you can claim the bereavement fare after you travel") must not turn a policy statement into PASS with no
+        policy claims. More sentences than a check may judge hold the answer, like too many extracted claims."""
+        sentences = policy_word_sentences(text)
+        if len(sentences) > MAX_CLAIMS:
+            raise TooManyClaims(f"no claim extracted and {len(sentences)} policy sentences")
+        if sentences:
+            log.info("no claim extracted; judging %d policy sentence(s) as written", len(sentences))
+        return list(domain.extraction_schema.model_validate(
+            {"claims": [{"text": x, "area": "other", "claim_type": "procedure"} for x in sentences]}).claims)
 
     def retrieve(self, claims: Sequence[ExtractedClaim], as_of: date, doc_id: str) -> list[list[RetrievedClause]]:
         """Db2 tool: the clauses in force on the date, nearest first, for each claim."""

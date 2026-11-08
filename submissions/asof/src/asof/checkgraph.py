@@ -178,6 +178,8 @@ def build(gate: Gate, req: GateRequest, deadline_at: float | None = None, rewrit
     def extract(state: CheckState) -> dict[str, Any]:
         extracted = gate.extract(state["question"], state["text"], domain)
         added = gate.premise_claims(state["text"], extracted)
+        if not extracted and state["pass_no"] == 1:  # nothing extracted from a draft that may still talk policy
+            added = gate.sentence_claims(state["text"], domain)
         return {"claims": list(extracted) + added, "n_extracted": len(extracted), "per_claim": [], "pool": {},
                 "outcomes": []}
 

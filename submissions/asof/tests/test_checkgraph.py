@@ -152,7 +152,10 @@ def test_unchecked_details_lists_numbers_no_claim_states_unless_the_customer_sai
 
 def test_an_extractor_that_finds_nothing_cannot_wave_a_priced_draft_through(world):
     draft = "No worries, the pet fee is only $20 each way."
-    result = check(ScriptedLLM(extract=[claims()]), draft=draft)
+    # The sentence is judged as written; even a judge that wrongly supports it cannot release the $20, because only
+    # extracted claims count as stating a number.
+    result = check(ScriptedLLM(extract=[claims()], judge=[judge(verdict(1, "SUPPORTED", "PET-001", PET_QUOTE))]),
+                   draft=draft, investigate=False)
     assert (result.decision, result.reason_code, result.final_answer) == ("ESCALATED", "UNCHECKED_DETAILS", HOLDING_REPLY)
     assert result.unchecked == ["$20"]
     assert world["entries"][0].verdicts["unchecked"] == ["$20"]
