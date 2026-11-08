@@ -203,7 +203,7 @@ Each line is a choice and the reason for it. Findings marked "spike" were verifi
 | Decision | Why | Where |
 |---|---|---|
 | Policy versions live in Db2 temporal tables, and one query filters by date and ranks by meaning | The version in force on the customer's date is a database fact, with its history kept by Db2, not by application code | [retriever.py](src/asof/retriever.py), [01_tables.sql](src/asof/sql/01_tables.sql) |
-| A deterministic rule check on `RULE_JSON` overrides the model judge | Wrong numbers, permissions and list memberships are where an answer costs money; it flagged 66 of the 100 wrong drafts on its own in the latest run (63 or 64 in the three before), and once overruled a correct judge (ET09) | [rules.py](src/asof/rules.py) |
+| A deterministic rule check on `RULE_JSON` overrides the model judge | Wrong numbers, permissions and list memberships are where an answer costs money; it flagged 65 of the 100 wrong drafts on its own in the latest run (63 to 66 in the four before), and overruled a correct judge on ET09 in two runs | [rules.py](src/asof/rules.py) |
 | A SUPPORTED verdict needs a verbatim quote from a retrieved clause | A judge cannot release a claim with grounding it made up | [gate.py](src/asof/gate.py) |
 | Fail closed, and no record means no release | Any error, timeout or ledger outage holds the answer for a person | [checkgraph.py](src/asof/checkgraph.py) |
 | The ledger is written only by `APPEND_LEDGER`, hash-chained with SHA-256 in SQL | The runtime user cannot write a ledger row any other way, and every row commits to all before it | [03_procedures.sql](src/asof/sql/03_procedures.sql) |
