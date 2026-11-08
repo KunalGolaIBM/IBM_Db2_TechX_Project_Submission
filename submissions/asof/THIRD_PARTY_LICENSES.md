@@ -34,7 +34,7 @@ It uses the following third-party software. No third-party code is copied into t
 | pydantic | 2.14.3 | MIT |
 | pydantic-settings | 2.16.2 | MIT |
 | python-dotenv | 1.2.4 | BSD-3-Clause |
-| jinja2 | 3.1.6 | BSD-3-Clause |
+| jinja2 | 3.1.6 | BSD-3-Clause (installed by PyTorch) |
 | httpx | 0.28.1 | BSD-3-Clause |
 | pypdf (policy intake: text from uploaded PDFs) | 6.21.4 | BSD-3-Clause |
 | langchain-ibm (optional, [requirements-watsonx.txt](requirements-watsonx.txt): IBM watsonx.ai as the model) | 1.1.2 | MIT |
