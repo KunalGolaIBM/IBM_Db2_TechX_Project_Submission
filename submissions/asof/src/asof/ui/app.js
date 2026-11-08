@@ -889,8 +889,9 @@ function itemCard(item, decided) {
       <span class="pill ${item.kind === "NEW" ? "pass" : item.kind === "CHANGE" ? "corrected" : "neutral"}">${KIND_LABEL[item.kind]}</span>
       <b class="mono">${item.clause_id}</b><span class="itk-title">${item.title}</span>
       <span class="when">from ${fmtDate(item.effective_from)}${item.effective_to ? ` until ${fmtDate(item.effective_to)}` : ", open-ended"}${item.source_page ? ` · page ${item.source_page}` : ""}</span>
-      ${decided ? pill(item.status) : item.blocked ? html`<span class="pill escalated">blocked: ${fails} check${fails === 1 ? "" : "s"} failed</span>` : ""}
-      ${item.applied_version ? html`<span class="pill pass">in force as ${item.applied_version}</span>` : ""}
+      ${item.applied_version ? html`<span class="pill pass">in force as ${item.applied_version}</span>`
+        : decided ? html`<span class="pill rejected">not applied</span>`
+        : item.blocked ? html`<span class="pill escalated">blocked: ${fails} check${fails === 1 ? "" : "s"} failed</span>` : ""}
     </div>
     ${item.kind === "CHANGE" && item.current ? html`<div class="itk-diff"><div class="eyebrow">Text: ${item.current.version} in force on that date → proposed</div><p class="diff">${wordDiff(item.current.text, item.clause_text)}</p></div>`
       : html`<div class="itk-diff"><div class="eyebrow">${item.kind === "NEW" ? "Proposed text" : `Same text as ${item.current ? item.current.version : "the version in force"}`}</div><p class="diff">${item.clause_text}</p></div>`}

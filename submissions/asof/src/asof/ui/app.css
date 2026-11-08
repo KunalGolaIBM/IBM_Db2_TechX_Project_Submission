@@ -66,15 +66,15 @@ p { margin: 0; }
   backdrop-filter: saturate(1.4) blur(10px);
   border-bottom: 1px solid var(--line);
 }
-.brand { display: flex; align-items: center; gap: 10px; color: var(--ink); }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--ink); flex: none; }
 .brand:hover { text-decoration: none; }
 .logo svg { width: 30px; height: 30px; display: block; }
 .logo rect { fill: var(--brand); }
 .logo path { stroke: #fff; stroke-width: 2.6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .brand-text { display: flex; flex-direction: column; line-height: 1.1; }
 .brand-text strong { font-size: 17px; letter-spacing: -.01em; }
-.brand-text span { font-size: 11.5px; color: var(--muted); }
-.tabs { display: flex; gap: 2px; flex: 1; }
+.brand-text span { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.tabs { display: flex; gap: 2px; flex: 1; min-width: 0; }
 .tabs a {
   padding: 7px 10px; border-radius: 8px; color: var(--ink-2); font-weight: 500; font-size: 14px; white-space: nowrap;
 }
