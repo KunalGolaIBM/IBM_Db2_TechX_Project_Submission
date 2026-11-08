@@ -51,10 +51,10 @@ def _latest_plan(conn: ibm_db_dbi.Connection) -> tuple[list[tuple[str, float]], 
     ops = db.query(conn, "SELECT OPERATOR_TYPE, TOTAL_COST FROM EXPLAIN_OPERATOR WHERE EXPLAIN_TIME = "
                          "(SELECT MAX(EXPLAIN_TIME) FROM EXPLAIN_OPERATOR) ORDER BY OPERATOR_ID")
     objs = db.query(conn, "SELECT OBJECT_NAME, OBJECT_TYPE FROM EXPLAIN_OBJECT WHERE EXPLAIN_TIME = "
-                          "(SELECT MAX(EXPLAIN_TIME) FROM EXPLAIN_OBJECT) AND OBJECT_TYPE IN ('IX', 'TA') "
+                          "(SELECT MAX(EXPLAIN_TIME) FROM EXPLAIN_OBJECT) AND OBJECT_TYPE IN ('IX', 'TA', 'DP') "
                           "ORDER BY OBJECT_TYPE DESC, OBJECT_NAME")
-    return ([(o[0].strip(), float(o[1])) for o in ops],
-            [f"{n.strip()} ({'index' if t.strip() == 'IX' else 'table'})" for n, t in objs])
+    kinds = {"IX": "index", "TA": "table", "DP": "partitioned table"}
+    return ([(o[0].strip(), float(o[1])) for o in ops], [f"{n.strip()} ({kinds[t.strip()]})" for n, t in objs])
 
 
 def _explain(conn: ibm_db_dbi.Connection, sql: str, params: tuple[Any, ...]) -> None:

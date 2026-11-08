@@ -18,7 +18,13 @@ ALL_TABLES = ("POLICY_DOC", "POLICY_CLAUSE", "POLICY_CLAUSE_HIST", "ANSWER_LEDGE
 def test_every_asof_table_lives_in_the_32k_tablespace(admin_conn, test_schema):
     rows = dict(db.query(admin_conn, "SELECT TABNAME, TBSPACE FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'T'",
                          (test_schema,)))
-    assert {t: rows.get(t, "").strip() for t in ALL_TABLES} == {t: "ASOF_TS32K" for t in ALL_TABLES}
+    # A range-partitioned table (ANSWER_LEDGER) has no table-level tablespace; each partition names its own.
+    parts = db.query(admin_conn, "SELECT D.TABNAME, T.TBSPACE FROM SYSCAT.DATAPARTITIONS D JOIN SYSCAT.TABLESPACES T "
+                                 "ON T.TBSPACEID = D.TBSPACEID WHERE D.TABSCHEMA = ? AND D.TABNAME = 'ANSWER_LEDGER'",
+                     (test_schema,))
+    assert rows["ANSWER_LEDGER"] is None and len(parts) == 26 and {ts.strip() for _, ts in parts} == {"ASOF_TS32K"}
+    rows["ANSWER_LEDGER"] = "ASOF_TS32K"
+    assert {t: (rows.get(t) or "").strip() for t in ALL_TABLES} == {t: "ASOF_TS32K" for t in ALL_TABLES}
     page = db.query(admin_conn, "SELECT PAGESIZE FROM SYSCAT.TABLESPACES WHERE TBSPACE = 'ASOF_TS32K'")[0][0]
     assert page == 32768
 

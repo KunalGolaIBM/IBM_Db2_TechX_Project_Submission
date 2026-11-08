@@ -107,8 +107,7 @@ def faq_store(conn: ibm_db_dbi.Connection, embeddings: Embeddings, schema: str =
     DB2VS creates its table on first use, which only the owner can do, so setup builds it
     with the admin connection and the app user gets SELECT on it.
     """
-    from langchain_community.vectorstores.utils import DistanceStrategy
-    from langchain_db2.db2vs import DB2VS  # as in the organizers' LangChain + Db2 pattern
+    from langchain_db2.db2vs import DB2VS, DistanceStrategy  # type: ignore[attr-defined]  # as in the organizers' LangChain + Db2 pattern
 
     # DB2VS builds its own SQL from this table name, so it must be a validated identifier pair.
     return DB2VS(embedding_function=embeddings, table_name=db.validate_schema(schema) + "." + db.ident(FAQ_TABLE), client=conn,

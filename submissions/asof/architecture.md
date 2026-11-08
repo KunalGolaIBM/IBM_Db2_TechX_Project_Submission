@@ -196,6 +196,8 @@ Each line is a choice and the reason for it. Findings marked "spike" were verifi
 
 #### Db2: storage, queries and schema
 
+- **The ledger is range-partitioned by month, and never shrunk by detaching.** Partition elimination limits an audit of a period to that period, and per-partition maintenance keeps a large ledger manageable. Detaching a partition would remove rows without the DELETE trigger, so it is not a retention mechanism here, and `VERIFY_CHAIN` would report the gap. Rows outside 2026 and 2027 fall into open-ended partitions, so an insert never fails for want of one.
+- **REFRESH IMMEDIATE MQTs behind the analytics views, same columns as before.** Db2 maintains them in the insert's own transaction, so they are never stale, and no refresh job is needed. Db2 refuses MIN and MAX in such an MQT (SQL20058N, reason 8), so the first and last time of each group come from the ends of a four-column index. The views kept their exact columns, types and values, so "Ask the ledger" shows the model the same schema, and its recorded examples still replay.
 - **Recovery is tested by restoring, and judged by the ledger's checks.** The drill restores an online backup into a database that did not exist and requires `VERIFY_CHAIN`, the anchors and the source's head hash to agree. A backup that was never restored proves nothing.
 - **The drill uses scratch databases.** An online backup needs archive logging. Switching `TESTDB` to it would put the judge's database into backup-pending state until an offline backup, which needs every connection closed. The drill never runs `FORCE APPLICATION ALL`, which would cut off every user of the instance.
 - **A new name for every restored copy.** With `DIR_CACHE=YES`, `RESTORE ... INTO` a database name dropped earlier in the instance's life failed with SQL30061N here, while a fresh name always worked. The directory cache is the most likely cause; the fix does not depend on knowing.
@@ -405,6 +407,8 @@ Db2 Community Edition 12.1.5.0, database `TESTDB`, schema `ASOF`. Full DDL: [00_
 | Tablespace `ASOF_TS32K` | `PAGESIZE 32K MANAGED BY AUTOMATIC STORAGE` | Holds every AsOf table. A 384-dim vector index key needs more than a 4K page allows, and a ledger row fits in one page |
 | `IX_CLAUSE_EMBEDDING` | `CREATE VECTOR INDEX ... ON POLICY_CLAUSE (EMBEDDING) WITH DISTANCE COSINE` (type `VANN`) | Approximate nearest-neighbour search at scale; the temporal query stays exact (see [vector benchmark](docs/vector_benchmark.md)) |
 | `ANSWER_LEDGER`, `CLAIM_CITATION` | `COMPRESS YES ADAPTIVE` | Append-only, repetitive rows |
+| `ANSWER_LEDGER` partitions | `PARTITION BY RANGE (CREATED_AT)`: one partition per month of 2026 and 2027, plus open-ended partitions before and after | An audit of a period reads only that period (partition elimination); each month can be reorganised or have statistics collected alone. Unique indexes are global; the others are partitioned |
+| `MQT_DECISION_STATS`, `MQT_CLAIM_OUTCOMES` | `REFRESH IMMEDIATE ENABLE QUERY OPTIMIZATION` materialized query tables | The analytics views read one row per group instead of scanning the ledger; Db2 maintains them in every insert's transaction ([benchmark](docs/ledger_benchmark.md)) |
 | Statistics | `RUNSTATS ... WITH DISTRIBUTION AND SAMPLED DETAILED INDEXES ALL` in setup | Plans costed from real cardinalities; [access plans](docs/explain/README.md) |
 
 ### Backup and restore
@@ -488,7 +492,9 @@ All routines are `LANGUAGE SQL`. They run inside the engine and execute with the
 | `CLAIMS_FROM_JSON` | SQL table function | Up to 16 claims out of the verdict JSON with `JSON_TABLE`. |
 | `*_NO_UPDATE`, `*_NO_DELETE` | Triggers (`SECURED`) | Reject every UPDATE or DELETE on `ANSWER_LEDGER` and `CLAIM_CITATION`, and DELETE on `CHAIN_HEAD`, with SQLSTATE 75001. |
 | `V_POLICY_TIMELINE` | View | Every version with key `RULE_JSON` parameters as columns, through `JSON_TABLE`. |
-| `V_DECISION_STATS`, `V_CLAIM_OUTCOMES_BY_AREA`, `V_RULE_OVERRIDES` | Views | Analytics. |
+| `V_DECISION_STATS`, `V_CLAIM_OUTCOMES_BY_AREA`, `V_RULE_OVERRIDES` | Views | Analytics. The first two read the MQTs; `V_DECISION_STATS` takes each group's first and last time from the ends of `IX_LEDGER_GROUP_CREATED`. Same columns and values as the GROUP BY over the base tables they replaced (tested). |
+| `MQT_DECISION_STATS`, `MQT_CLAIM_OUTCOMES` | Materialized query tables (`REFRESH IMMEDIATE`) | Counts and latency sums per channel, decision and reason; verdict counts per pass and area. Setup refreshes a new or pending one at once: until then Db2 refuses inserts into the base table. |
+| `P_MQT_DECISION_STATS_ALL_ROWS` | Row permission (RCAC) | Column access control on `ANSWER_LEDGER` makes Db2 activate row access control on every MQT over it, with no permission: every row hidden. This MQT holds no masked text, so all its rows are readable. |
 | `V_AUDIT_DECISIONS`, `V_AUDIT_CLAIMS` | Views | One row per decision (with claim counts) and one per checked claim with the clause version cited. With the views above, the only objects the analyst may read. |
 | `M_LEDGER_QUESTION`, `M_LEDGER_DRAFT`, `M_LEDGER_FINAL`, `M_LEDGER_VERDICTS` | Column masks (RCAC) | `[masked]` for anyone without `ASOF_TEXT_READER`. Column access control is active on `ANSWER_LEDGER`. |
 

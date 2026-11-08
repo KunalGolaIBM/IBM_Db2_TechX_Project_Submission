@@ -22,7 +22,7 @@ SCHEMA_RE = db.SCHEMA_RE
 USER_RE = re.compile(r"^[a-z][a-z0-9]{0,7}$")
 GRANTS_PREFIX = "90_"
 NOT_HELD = "42504"  # REVOKE of a privilege that is not held
-_MARKER = re.compile(r"^--\s*(bufferpool|tablespace|table|index|versioning|trigger|procedure|function|view|mask|role"
+_MARKER = re.compile(r"^--\s*(bufferpool|tablespace|table|mqt|index|versioning|trigger|procedure|function|view|mask|role"
                      r"|grant|other):"
                      r"\s*([A-Z0-9_]+)\s*$", re.M)
 _SCHEMA_TOKEN = re.compile(r"\bASOF\.")
@@ -62,7 +62,7 @@ def load_statements(schema: str = db.SCHEMA, grants: bool = False) -> list[State
 
 
 def _exists(conn: ibm_db_dbi.Connection, schema: str, st: Statement) -> bool:
-    if st.kind == "table":
+    if st.kind in ("table", "mqt"):
         sql = "SELECT 1 FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TABNAME = ?"
     elif st.kind == "index":
         sql = "SELECT 1 FROM SYSCAT.INDEXES WHERE INDSCHEMA = ? AND INDNAME = ?"
@@ -81,11 +81,13 @@ def table_exists(conn: ibm_db_dbi.Connection, schema: str, table: str) -> bool:
     return bool(db.query(conn, "SELECT 1 FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TABNAME = ?", (schema, table)))
 
 
-def install(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> dict[str, int]:
-    """Create missing objects and replace routines. Returns counts of created and skipped."""
+def install(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA,
+            statements: list[Statement] | None = None) -> dict[str, int]:
+    """Create missing objects and replace routines. Returns counts of created and skipped. `statements` replaces
+    the shipped object files (the ledger benchmark installs the design before partitioning that way)."""
     validate_schema(schema)
     counts = {"created": 0, "skipped": 0}
-    for st in load_statements(schema):
+    for st in load_statements(schema) if statements is None else statements:
         if _exists(conn, schema, st):
             counts["skipped"] += 1
             continue
@@ -96,7 +98,21 @@ def install(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> dict[str, i
             conn.rollback()
             raise db.DatabaseError(f"{st.source} {st.kind} {st.name}: {exc}", exc.sqlstate, exc.sqlcode) from None
         counts["created"] += 1
+    refresh_pending_mqts(conn, schema)
     return counts
+
+
+SQL_PENDING_MQTS = "SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'S' AND STATUS = 'C'"
+
+
+def refresh_pending_mqts(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> list[str]:
+    """REFRESH TABLE every materialized query table still in set-integrity-pending state. A new REFRESH IMMEDIATE
+    MQT starts in that state, and while it is, Db2 refuses inserts into its base table: APPEND_LEDGER would fail."""
+    names = [r[0].strip() for r in db.query(conn, SQL_PENDING_MQTS, (validate_schema(schema),))]
+    for name in names:
+        db.execute(conn, f"REFRESH TABLE {db.ident(schema)}.{db.ident(name)}")
+        conn.commit()
+    return names
 
 
 DEFAULT_ANALYST_USER = "asofread"
@@ -193,6 +209,7 @@ def drop(conn: ibm_db_dbi.Connection, schema: str) -> None:
     for name in q("SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TEMPORALTYPE IN ('S', 'B')"):
         db.execute(conn, f"ALTER TABLE {db.ident(schema)}.{db.ident(name)} DROP VERSIONING")
     conn.commit()
+    _drop_mqts(conn, schema)
     # Tables in dependency order: children first. Retry passes handle foreign keys.
     remaining = q("SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'T'")
     for _ in range(len(remaining) + 1):
@@ -213,6 +230,12 @@ def drop(conn: ibm_db_dbi.Connection, schema: str) -> None:
         db.execute(conn, f"DROP SCHEMA {db.ident(schema)} RESTRICT")
         conn.commit()
     _drop_marts(conn, schema)
+
+
+def _drop_mqts(conn: ibm_db_dbi.Connection, schema: str) -> None:
+    for (name,) in db.query(conn, "SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'S'", (schema,)):
+        db.execute(conn, f"DROP TABLE {db.ident(schema)}.{db.ident(name.strip())}")
+    conn.commit()
 
 
 def _drop_marts(conn: ibm_db_dbi.Connection, schema: str) -> None:
@@ -248,6 +271,7 @@ def reset_ledger(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> int:
     db.use_schema(conn, schema)
     before = int(db.query(conn, "SELECT COUNT(*) FROM ANSWER_LEDGER")[0][0])
     _drop_code_objects(conn, schema)  # views, triggers and routines are rebuilt by install()
+    _drop_mqts(conn, schema)  # built over the ledger; install() recreates and refreshes them
     for table in LEDGER_TABLES:
         db.execute(conn, f"DROP TABLE {db.ident(schema)}.{db.ident(table)}")
     conn.commit()

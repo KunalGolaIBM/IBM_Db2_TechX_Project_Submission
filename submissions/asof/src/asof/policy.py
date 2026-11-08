@@ -254,8 +254,10 @@ SQL_TIMELINE = ("SELECT CLAUSE_ID, DOC_ID, AREA, TITLE, VERSION_LABEL, BUS_START
                 "TRANSFER_ALLOWED, CHANGES_ALLOWED FROM V_POLICY_TIMELINE ORDER BY CLAUSE_ID, BUS_START")
 SQL_HISTORY = ("SELECT VERSION_LABEL, BUS_START, BUS_END, SYS_START, SYS_END, CHANGED_BY, CHANGE_NOTE, CLAUSE_TEXT "
                "FROM POLICY_CLAUSE FOR SYSTEM_TIME FROM ? TO ? WHERE CLAUSE_ID = ? ORDER BY SYS_START, BUS_START")
-# Weighted by the number of decisions in each group, not an average of averages.
-SQL_DECISIONS = ("SELECT DECISION, SUM(DECISIONS), INTEGER(SUM(AVG_LATENCY_MS * DECISIONS) / NULLIF(SUM(DECISIONS), 0)) "
+# Weighted by the number of decisions in each group, not an average of averages. BIGINT: as INTEGER, the product
+# overflowed (SQL0802N) once one decision type passed about 450,000 rows, found by asof.ledgerbench at 1,000,000.
+SQL_DECISIONS = ("SELECT DECISION, SUM(DECISIONS), "
+                 "INTEGER(SUM(BIGINT(AVG_LATENCY_MS) * DECISIONS) / NULLIF(SUM(DECISIONS), 0)) "
                  "FROM V_DECISION_STATS GROUP BY DECISION")
 # Decisions made in replay mode (no model time in their latency), so the screen can say so.
 SQL_REPLAYED = "SELECT COUNT(*) FROM ANSWER_LEDGER WHERE MODEL_INFO LIKE 'replay:%'"

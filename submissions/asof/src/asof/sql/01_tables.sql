@@ -82,6 +82,11 @@ CREATE VECTOR INDEX ASOF.IX_CLAUSE_EMBEDDING ON ASOF.POLICY_CLAUSE (EMBEDDING) W
 -- LEDGER_ID is assigned by APPEND_LEDGER under the CHAIN_HEAD lock (1, 2, 3, ... with no
 -- gaps), so a missing row is visible as a gap, not just as a broken hash.
 -- Append-only and repetitive (JSON verdicts, model names, decisions), so it uses adaptive row compression.
+-- Range-partitioned by month of CREATED_AT, so an audit of a period reads only that period's partitions
+-- (partition elimination) and each month can be reorganised or have statistics collected on its own. Rows
+-- before 2026 or after 2027 land in the two open-ended partitions, so an insert never fails for want of one;
+-- ALTER TABLE ... ADD PARTITION extends the monthly range. Partitions are never detached: that would remove
+-- rows without the DELETE trigger, and VERIFY_CHAIN would report the gap.
 CREATE TABLE ASOF.ANSWER_LEDGER (
   LEDGER_ID         BIGINT        NOT NULL,
   REQUEST_ID        CHAR(36)      NOT NULL,
@@ -109,7 +114,12 @@ CREATE TABLE ASOF.ANSWER_LEDGER (
   CONSTRAINT CK_LEDGER_LATENCY CHECK (LATENCY_MS >= 0),
   CONSTRAINT CK_LEDGER_ID CHECK (LEDGER_ID >= 1),
   CONSTRAINT CK_LEDGER_VERDICTS CHECK (JSON_EXISTS(VERDICTS_JSON, '$'))
-) IN ASOF_TS32K COMPRESS YES ADAPTIVE
+) IN ASOF_TS32K
+  PARTITION BY RANGE (CREATED_AT) (
+    PARTITION P_BEFORE_2026 STARTING MINVALUE ENDING '2026-01-01-00.00.00' EXCLUSIVE,
+    STARTING '2026-01-01-00.00.00' ENDING '2028-01-01-00.00.00' EXCLUSIVE EVERY 1 MONTH,
+    PARTITION P_FROM_2028 STARTING '2028-01-01-00.00.00' ENDING MAXVALUE)
+  COMPRESS YES ADAPTIVE
 @
 
 -- index: IX_LEDGER_CREATED
@@ -119,6 +129,13 @@ CREATE INDEX ASOF.IX_LEDGER_CREATED ON ASOF.ANSWER_LEDGER (CREATED_AT)
 -- index: IX_LEDGER_DECISION
 -- The ledger page filtered by decision: WHERE DECISION = ? ORDER BY LEDGER_ID DESC (a reverse scan).
 CREATE INDEX ASOF.IX_LEDGER_DECISION ON ASOF.ANSWER_LEDGER (DECISION, LEDGER_ID)
+@
+
+-- index: IX_LEDGER_GROUP_CREATED
+-- V_DECISION_STATS: the first and last decision of each (channel, decision, reason) group, read from the
+-- ends of this index instead of a scan (a materialized query table maintained on every insert cannot hold
+-- MIN or MAX in Db2).
+CREATE INDEX ASOF.IX_LEDGER_GROUP_CREATED ON ASOF.ANSWER_LEDGER (CHANNEL, DECISION, REASON_CODE, CREATED_AT)
 @
 
 -- table: CLAIM_CITATION

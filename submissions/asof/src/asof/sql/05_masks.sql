@@ -42,3 +42,12 @@ CREATE OR REPLACE MASK ASOF.M_LEDGER_VERDICTS ON ASOF.ANSWER_LEDGER FOR COLUMN V
 -- other: ACTIVATE_LEDGER_COLUMN_ACCESS
 ALTER TABLE ASOF.ANSWER_LEDGER ACTIVATE COLUMN ACCESS CONTROL
 @
+
+-- mask: P_MQT_DECISION_STATS_ALL_ROWS
+-- Activating column access control on ANSWER_LEDGER makes Db2 activate row access control on every
+-- materialized query table built over it, with no permission defined: every row hidden, from everyone.
+-- MQT_DECISION_STATS holds only counts and latency sums per channel, decision and reason, none of the
+-- masked text, so every user who can read it (through V_DECISION_STATS) may see every row.
+CREATE OR REPLACE PERMISSION ASOF.P_MQT_DECISION_STATS_ALL_ROWS ON ASOF.MQT_DECISION_STATS
+  FOR ROWS WHERE 1 = 1 ENFORCED FOR ALL ACCESS ENABLE
+@

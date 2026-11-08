@@ -394,6 +394,66 @@ def check_column_mask(c: Ctx) -> str:
     return "owner reads '[masked]'; predicates still see the real value (why Ask the ledger refuses them)"
 
 
+DDL_PARTITIONED = """
+CREATE TABLE PLEDGER (
+  ID         BIGINT        NOT NULL PRIMARY KEY,
+  CREATED_AT TIMESTAMP(12) NOT NULL,
+  DECISION   VARCHAR(12)   NOT NULL,
+  LATENCY_MS INTEGER       NOT NULL
+) PARTITION BY RANGE (CREATED_AT) (
+    PARTITION P_BEFORE STARTING MINVALUE ENDING '2026-01-01-00.00.00' EXCLUSIVE,
+    STARTING '2026-01-01-00.00.00' ENDING '2027-01-01-00.00.00' EXCLUSIVE EVERY 1 MONTH,
+    PARTITION P_AFTER STARTING '2027-01-01-00.00.00' ENDING MAXVALUE)"""
+DDL_MQT = """
+CREATE TABLE PSTATS AS (SELECT DECISION, COUNT(*) AS DECISIONS, SUM(BIGINT(LATENCY_MS)) AS LATENCY_SUM
+                        FROM PLEDGER GROUP BY DECISION)
+  DATA INITIALLY DEFERRED REFRESH IMMEDIATE ENABLE QUERY OPTIMIZATION MAINTAINED BY SYSTEM"""
+
+
+def check_range_partitions(c: Ctx) -> str:
+    c.x(DDL_PARTITIONED)
+    rows = [(1, "2025-06-01-00.00.00", "PASS", 40), (2, "2026-03-15-12.00.00", "PASS", 60),
+            (3, "2026-03-20-08.00.00", "ESCALATED", 7), (4, "2031-01-01-00.00.00", "PASS", 5)]
+    for r in rows:
+        c.x("INSERT INTO PLEDGER (ID, CREATED_AT, DECISION, LATENCY_MS) VALUES (?, ?, ?, ?)", r)
+    c.conn.commit()
+    parts = c.q("SELECT COUNT(*) FROM SYSCAT.DATAPARTITIONS WHERE TABSCHEMA = CURRENT SCHEMA AND TABNAME = 'PLEDGER'")[0][0]
+    assert parts == 14, parts
+    where = c.q("SELECT ID, DATAPARTITIONNUM(CREATED_AT) FROM PLEDGER ORDER BY ID")
+    assert where[1][1] == where[2][1] and len({p for _, p in where}) == 3, where
+    return "12 monthly partitions plus two open-ended ones; March rows share a partition, 2025 and 2031 have their own"
+
+
+def check_mqt_refresh_immediate(c: Ctx) -> str:
+    c.x(DDL_MQT)
+    c.conn.commit()
+    c.expect_sqlstate("INSERT INTO PLEDGER (ID, CREATED_AT, DECISION, LATENCY_MS) VALUES (?, ?, ?, ?)",
+                      (5, "2026-04-01-00.00.00", "PASS", 1), ("57007",))  # pending until refreshed
+    c.conn.rollback()
+    c.x("REFRESH TABLE PSTATS")
+    c.conn.commit()
+    c.x("INSERT INTO PLEDGER (ID, CREATED_AT, DECISION, LATENCY_MS) VALUES (?, ?, ?, ?)", (5, "2026-04-01-00.00.00", "PASS", 1))
+    c.conn.commit()
+    got = c.q("SELECT DECISION, DECISIONS, LATENCY_SUM FROM PSTATS ORDER BY DECISION")
+    assert [tuple(r) for r in got] == [("ESCALATED", 1, 7), ("PASS", 4, 106)], got
+    return "inserts refused until REFRESH TABLE (SQL0668N); then Db2 updates the MQT in the insert's own transaction"
+
+
+def check_mqt_over_masked_table(c: Ctx) -> str:
+    # LEDGER has column access control (check_column_mask): an MQT over it gets row access control with no
+    # permission, so it hides every row until one is created.
+    c.x("CREATE TABLE LSTATS AS (SELECT DECISION, COUNT(*) AS N FROM LEDGER GROUP BY DECISION) "
+        "DATA INITIALLY DEFERRED REFRESH IMMEDIATE")
+    c.x("REFRESH TABLE LSTATS")
+    c.conn.commit()
+    hidden = c.q("SELECT COUNT(*) FROM LSTATS")[0][0]
+    c.x("CREATE OR REPLACE PERMISSION P_LSTATS ON LSTATS FOR ROWS WHERE 1 = 1 ENFORCED FOR ALL ACCESS ENABLE")
+    c.conn.commit()
+    shown = c.q("SELECT COUNT(*) FROM LSTATS")[0][0]
+    assert hidden == 0 and shown == 2, (hidden, shown)
+    return "0 rows visible until a row permission is created, then 2 (why AsOf defines P_MQT_DECISION_STATS_ALL_ROWS)"
+
+
 CHECKS: list[tuple[str, Callable[[Ctx], str]]] = [
     ("Db2 version supports VECTOR", check_version),
     ("Bitemporal table with VECTOR column", check_create_clause),
@@ -424,9 +484,15 @@ CHECKS: list[tuple[str, Callable[[Ctx], str]]] = [
     ("In-database AI functions (12.1.5)", check_indb_ai_functions),
     ("SQL injection stored as text", check_injection_text),
     ("Column mask (RCAC) with SECURED triggers", check_column_mask),
+    ("Monthly range partitions", check_range_partitions),
+    ("REFRESH IMMEDIATE materialized query table", check_mqt_refresh_immediate),
+    ("MQT over a masked table needs a row permission", check_mqt_over_masked_table),
 ]
 
 CLEANUP = [
+    "DROP TABLE LSTATS",
+    "DROP TABLE PSTATS",
+    "DROP TABLE PLEDGER",
     "DROP TABLE VEC",
     "DROP PROCEDURE APPEND",
     "DROP PROCEDURE LIST_LEDGER",
