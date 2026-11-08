@@ -36,7 +36,7 @@ from .config import PROJECT_ROOT, Settings, get_settings
 from .setup import find_db2_container
 
 FLAT, PART = "LBFLAT", "LBPART"
-BATCH = 10_000
+BATCH = 5_000  # rows per committed batch: TESTDB's circular log is 100 MB, and LBPART also logs MQT upkeep
 OUT_DIR = PROJECT_ROOT / "docs" / "ledgerbench"
 REPORT = PROJECT_ROOT / "docs" / "ledger_benchmark.md"
 YEAR_SECONDS = 365 * 24 * 3600
@@ -61,7 +61,7 @@ OLD_VIEWS = {
 NEW_ONLY = {"IX_LEDGER_GROUP_CREATED", "P_MQT_DECISION_STATS_ALL_ROWS"}
 PARTITION_CLAUSE = re.compile(r"\n\s*PARTITION BY RANGE \(CREATED_AT\) \(.*?MAXVALUE\)", re.S)
 
-# One batch of synthetic decisions: ledger IDs ? + 0 .. ? + 9999, one every ? seconds from 1 Jan 2026.
+# One batch of synthetic decisions: ledger IDs from ? up to ?, one every ? microseconds from 1 Jan 2026.
 SQL_LOAD_LEDGER = """INSERT INTO ANSWER_LEDGER (LEDGER_ID, REQUEST_ID, CREATED_AT, CHANNEL, DOC_ID, AS_OF_DATE,
   QUESTION_REDACTED, DRAFT_REDACTED, FINAL_ANSWER, DECISION, REASON_CODE, MODEL_INFO, PROMPT_VERSION, LATENCY_MS,
   VERDICTS_JSON, PREV_HASH, ROW_HASH)
@@ -158,11 +158,16 @@ def _load(conn: ibm_db_dbi.Connection, target: str, rows: int) -> float:
     step = YEAR_SECONDS * 1_000_000 // rows  # microseconds between decisions, so the rows span one year
     started = time.monotonic()
     for base in range(1, rows + 1, BATCH):
-        db.execute(conn, SQL_LOAD_LEDGER, (base, step, rows))
-        db.execute(conn, SQL_LOAD_CITATIONS, (base, rows))
+        last = min(base + BATCH - 1, rows)  # the generator yields 10,000 IDs from `base`; keep one batch of them
+        db.execute(conn, SQL_LOAD_LEDGER, (base, step, last))
+        db.execute(conn, SQL_LOAD_CITATIONS, (base, last))
         conn.commit()
     db.execute(conn, SQL_SET_HEAD, (rows, rows))
     conn.commit()
+    loaded = (db.query(conn, "SELECT COUNT(*) FROM ANSWER_LEDGER")[0][0],
+              db.query(conn, "SELECT COUNT(*) FROM CLAIM_CITATION")[0][0])
+    if loaded != (rows, 2 * rows):
+        raise RuntimeError(f"{target}: loaded {loaded[0]} decisions and {loaded[1]} citations, expected {rows} and {2 * rows}")
     return time.monotonic() - started
 
 

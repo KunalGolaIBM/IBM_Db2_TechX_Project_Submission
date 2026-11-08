@@ -99,6 +99,22 @@ def test_rows_land_in_their_month_and_never_outside_a_partition(admin_conn, scra
     assert parts == 26  # 24 months of 2026 and 2027, plus the two open-ended partitions
 
 
+def test_db2_refuses_to_detach_a_ledger_partition(settings, admin_conn, scratch):
+    """DETACH PARTITION would remove rows without the DELETE trigger. Db2 refuses it while CLAIM_CITATION's foreign
+    key references the ledger (SQL0270N reason 92), so even the owner must first drop that constraint."""
+    with db.connection(settings, "app") as conn:
+        ledger.append(conn, entry(), scratch)
+    db.use_schema(admin_conn, scratch)
+    part = db.query(admin_conn, SQL_PARTITION_OF, (1,))[0][0].strip()
+    assert part.startswith("PART")  # this month's partition
+    with pytest.raises(db.DatabaseError) as refused:
+        db.execute(admin_conn, f"ALTER TABLE {db.ident(scratch)}.ANSWER_LEDGER DETACH PARTITION {db.ident(part)} "
+                               f"INTO {db.ident(scratch)}.DETACHED_ROWS")
+    admin_conn.rollback()
+    assert refused.value.sqlstate == "42997" and 'Reason code = "92"' in str(refused.value)
+    assert db.query(admin_conn, "SELECT COUNT(*) FROM ANSWER_LEDGER")[0][0] == 1
+
+
 def test_a_pending_mqt_is_refreshed_so_appends_never_fail(settings, admin_conn, scratch):
     db.execute(admin_conn, f"SET INTEGRITY FOR {db.ident(scratch)}.MQT_DECISION_STATS OFF")
     admin_conn.commit()

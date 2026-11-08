@@ -86,7 +86,7 @@ CREATE VECTOR INDEX ASOF.IX_CLAUSE_EMBEDDING ON ASOF.POLICY_CLAUSE (EMBEDDING) W
 -- (partition elimination) and each month can be reorganised or have statistics collected on its own. Rows
 -- before 2026 or after 2027 land in the two open-ended partitions, so an insert never fails for want of one;
 -- ALTER TABLE ... ADD PARTITION extends the monthly range. Partitions are never detached: that would remove
--- rows without the DELETE trigger, and VERIFY_CHAIN would report the gap.
+-- rows without the DELETE trigger. Db2 refuses it anyway while CLAIM_CITATION's foreign key references this table.
 CREATE TABLE ASOF.ANSWER_LEDGER (
   LEDGER_ID         BIGINT        NOT NULL,
   REQUEST_ID        CHAR(36)      NOT NULL,

@@ -18,7 +18,7 @@
 | **The date decides** | On the 25 frozen cases whose key clause changed between the customer's date and 7 Nov 2026, the same check run as of 7 Nov 2026 released 6 of 16 wrong drafts and rewrote 8 of 9 correct ones to a policy that did not apply; with the customer's date, 0 and 1 ([measured](#why-the-date-matters-measured): one run each at the same commit, paired exact McNemar p ≈ 0.03 and 0.02; 7 of 16 in each of two earlier pairs of runs). |
 | **Safety** | Latest run (`0be4f60`): 0 of 121 wrong drafts released across nine frozen splits, each pinned before its first run (95% upper bound under 3%), and 1 of 70 correct drafts held. Two splits were pinned before the change each one measures: premises (2 of 12 released on the unchanged check, 0 after) and lists (local Ollama released 1 of 9 before the list check, 0 after). An earlier run released one draft, a premise the claim extractor dropped, which is now judged as written ([results and the fixes](#evaluation-the-frozen-test-split)). |
 | **A deterministic backstop** | The rule check on `RULE_JSON` found the mismatch itself in 66 of the 100 wrong drafts in the seven original splits ([rules.py](src/asof/rules.py)), now including who counts as family and which documents are accepted. It errs too: in an earlier run it overruled a correct judge once (ET09) and a correct draft was rewritten. |
-| **Db2 does the work** | Bitemporal tables queried `FOR BUSINESS_TIME AS OF` with `VECTOR_DISTANCE` in the same statement ([retriever.py](src/asof/retriever.py)), a SQL PL ledger with SHA-256 computed in SQL ([03_procedures.sql](src/asof/sql/03_procedures.sql)), `JSON_TABLE`, column masks ([05_masks.sql](src/asof/sql/05_masks.sql)) and `CREATE EXTERNAL MODEL`; `python -m asof.db2check` runs 29 of 29 feature checks. |
+| **Db2 does the work** | Bitemporal tables queried `FOR BUSINESS_TIME AS OF` with `VECTOR_DISTANCE` in the same statement ([retriever.py](src/asof/retriever.py)), a SQL PL ledger with SHA-256 computed in SQL ([03_procedures.sql](src/asof/sql/03_procedures.sql)), `JSON_TABLE`, column masks ([05_masks.sql](src/asof/sql/05_masks.sql)) and `CREATE EXTERNAL MODEL`; `python -m asof.db2check` runs 32 of 32 feature checks. |
 | **Tamper evidence** | Triggers stop even the owner; `VERIFY_CHAIN` finds an edited row; receipts and chain-head anchors kept outside Db2 catch a ledger its owner rebuilt ([anchor.py](src/asof/anchor.py)). |
 | **Policy intake** | Upload a policy PDF and the model proposes clause versions; code checks each one against the document (the text word for word, the effective date quoted, every rule value stated), Db2 stores the file with a SHA-256 it computes itself, and an editor approves what goes into force through `DECIDE_POLICY_DRAFT` and `APPLY_POLICY_CHANGE`. On a frozen 11-item evaluation: 10 proposed correctly, the 1 wrong proposal blocked, nothing taken from an injected instruction ([details](#policy-intake-a-pdf-into-the-bitemporal-table)). |
 | **Where it plugs in** | The HTTP API, a LangChain runnable, a customer chat page whose every reply AsOf checks, an MCP server any agent can call ([mcp_server/](mcp_server/)), and a Langflow component. IBM watsonx.ai can be the model (`LLM_PROVIDER=watsonx`) or Db2's own embedder (`CREATE EXTERNAL MODEL ... PROVIDER WATSONX`), both run on a real account: on the airline split IBM Granite released 1 of 26 wrong drafts, against 0 for the default model ([watsonx.ai results](#on-ibm-watsonxai)). |
@@ -33,7 +33,7 @@
 source .venv/bin/activate
 python src/main.py &                # the UI and API on http://127.0.0.1:8000
 python scripts/smoke_check.py       # a real check through the API: the Moffatt question, recorded in the Db2 ledger
-python -m asof.db2check             # 29 checks of the Db2 features AsOf relies on
+python -m asof.db2check             # 32 checks of the Db2 features AsOf relies on
 pytest -q                           # unit tests plus Db2 integration tests in throwaway schemas
 ```
 
@@ -293,8 +293,11 @@ PASS  Hash chain via stored procedure: each row hash covers the previous row has
 PASS  Trigger blocks UPDATE: UPDATE rejected with SQLSTATE 75001
 ...
 PASS  Column mask (RCAC) with SECURED triggers: owner reads '[masked]'; predicates still see the real value (why Ask the ledger refuses them)
+PASS  Monthly range partitions: 12 monthly partitions plus two open-ended ones; March rows share a partition, 2025 and 2031 have their own
+PASS  REFRESH IMMEDIATE materialized query table: inserts refused until REFRESH TABLE (SQL0668N); then Db2 updates the MQT in the insert's own transaction
+PASS  MQT over a masked table needs a row permission: 0 rows visible until a row permission is created, then 2 (why AsOf defines P_MQT_DECISION_STATS_ALL_ROWS)
 
-29/29 Db2 feature checks passed. Schema ASOF_CHECK was removed.
+32/32 Db2 feature checks passed. Schema ASOF_CHECK was removed.
 ```
 
 ---
