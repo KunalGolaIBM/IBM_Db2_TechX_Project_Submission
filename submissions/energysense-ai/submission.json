@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "EnergySense AI: Db2-Powered Appliance Runtime Intelligence and Anomaly Investigation",
+    "slug": "energysense-ai",
+    "short_description": "An ESP32/Wokwi appliance-monitoring extension that stores telemetry in IBM Db2, detects appliance-specific operating deviations and supports explainable maintenance investigation with a LangChain tool-calling assistant.",
+    "category": "IoT / AI / Data Engineering / Anomaly Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": ""
+  },
+  "team": {
+    "name": "Manuneethi Cholan D (Individual Submission)",
+    "members": [
+      {
+        "name": "Manuneethi Cholan D",
+        "github": "ModMonish",
+        "email": "",
+        "role": "Individual project developer: ECE prototype, API, Db2 integration and AI workflow"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 for LUW (participant-configured instance; exact edition/version to be recorded after live verification)",
+    "connector": "ibm-db / ibm_db_dbi for relational operations; langchain-db2 DB2VS for optional vector retrieval",
+    "features_used": [
+      "Relational equipment, telemetry and anomaly-event tables",
+      "Indexed appliance/time history queries",
+      "Parameterised insert and read operations",
+      "Db2 vector search for maintenance knowledge (requires supported Db2 vector-search version)"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "C++/Arduino (ESP32 integration example; adaptation required)"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "Streamlit",
+      "LangChain",
+      "scikit-learn"
+    ],
+    "ai_models": [
+      "Isolation Forest (unsupervised anomaly detector)",
+      "sentence-transformers/all-MiniLM-L6-v2 (optional local semantic embeddings)",
+      "Optional ChatOpenAI model configured by the participant"
+    ]
+  },
+  "implementation_status": "36 automated software tests and a 6-check SQLite API smoke test pass locally; synthetic demo replay detects and explains an anomaly. Live Db2 relational/vector operations, Streamlit runtime, sentence-transformer download, remote LLM and physical ESP32 validation remain unverified and require the participant's environment and credentials.",
+  "safety_note": "The AI and server layers are advisory/read-only. Relay actuation remains with deterministic local ESP32 logic. Wokwi inputs and configured thresholds are simulation settings, not certified protection limits."
+}

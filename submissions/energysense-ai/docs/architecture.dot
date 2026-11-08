@@ -1,0 +1,51 @@
+digraph EnergySense {
+  graph [rankdir=LR, bgcolor="white", pad="0.35", nodesep="0.42", ranksep="0.65", fontname="Arial", fontsize=18, labelloc="t", label="EnergySense AI — Db2-backed appliance runtime intelligence"];
+  node [shape=box, style="rounded,filled", fontname="Arial", fontsize=10, color="#2B4C7E", fillcolor="#EDF4FC", fontcolor="#18324F", margin="0.16,0.10"];
+  edge [fontname="Arial", fontsize=9, color="#52677F", arrowsize=0.75];
+
+  subgraph cluster_device {
+    label="Acquisition + local safety"; color="#A8C6E8"; style="rounded"; fontname="Arial"; fontsize=11;
+    sensors [label="ESP32 / Wokwi\nvoltage • current • runtime", fillcolor="#EAF4FF"];
+    protection [label="Local threshold logic\nrelay • buzzer • LCD", fillcolor="#E8F6EF", color="#3C8D68"];
+    sensors -> protection [label="local measurements", color="#3C8D68"];
+  }
+
+  api [label="FastAPI ingestion\nPydantic validation\nsource provenance", fillcolor="#FFF5E6", color="#BD8432"];
+
+  subgraph cluster_db {
+    label="IBM Db2 for LUW"; color="#A8C6E8"; style="rounded"; fontname="Arial"; fontsize=11;
+    relational [label="Relational tables\nESAI_EQUIPMENT\nESAI_TELEMETRY\nESAI_EVENTS", fillcolor="#EDF4FC"];
+    vector [label="Vector knowledge store\nESAI_KNOWLEDGE\nlangchain-db2 DB2VS", fillcolor="#F2EDFC", color="#7B63A9"];
+  }
+
+  subgraph cluster_analytics {
+    label="Explainable analytics pipeline"; color="#A9D4BD"; style="rounded"; fontname="Arial"; fontsize=11;
+    monitor [label="Monitoring\nper-appliance history"];
+    anomaly [label="Anomaly detection\nz-score + Isolation Forest"];
+    diagnose [label="Diagnosis + recommendation\nreviewable advisory"];
+    event [label="Auditable event\nseverity + baseline + action", fillcolor="#FDF0EF", color="#B35A56"];
+    monitor -> anomaly -> diagnose -> event;
+  }
+
+  subgraph cluster_agent {
+    label="Optional Agentic AI"; color="#C8B8E8"; style="rounded"; fontname="Arial"; fontsize=11;
+    tools [label="Read-only LangChain tools\nreadings • analysis • events\nDb2 maintenance retrieval", fillcolor="#F2EDFC", color="#7B63A9"];
+    agent [label="LangChain create_agent\nconfigurable LLM", fillcolor="#F2EDFC", color="#7B63A9"];
+    tools -> agent;
+  }
+
+  dashboard [label="Streamlit dashboard\ntrends • alerts • assistant", fillcolor="#EAF6F7", color="#368B91"];
+  sensors -> api [label="HTTP JSON telemetry"];
+  api -> relational [label="bound SQL writes"];
+  relational -> monitor [label="historical readings"];
+  event -> relational [label="persist event"];
+  relational -> tools [label="telemetry + events"];
+  vector -> tools [label="similarity retrieval"];
+  diagnose -> dashboard;
+  agent -> dashboard [label="grounded response"];
+  relational -> dashboard [label="trends"];
+
+  relay [label="Relay output", shape=ellipse, fillcolor="#E8F6EF", color="#3C8D68"];
+  protection -> relay [label="only local control", color="#3C8D68", penwidth=1.6];
+  agent -> relay [style=dashed, color="#C0392B", arrowhead=tee, label="no control path"];
+}

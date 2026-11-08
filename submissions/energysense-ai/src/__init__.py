@@ -1,0 +1,1 @@
+"""EnergySense AI application package."""
