@@ -101,7 +101,7 @@ def render_report(results: list[dict]) -> str:
     order = {"test": 0, "escalation-test": 1, "situation-test3": 2, "situation-test2": 3, "situation-test": 4,
              "bank-test2": 5, "bank-test": 6, "extractor-test": 7, "dev": 8, "bank-dev": 9, "escalation-dev": 10,
              "situation-dev": 11}
-    providers = {"openrouter": 0, "openai_compatible": 1, "ollama": 2}  # the default provider first
+    providers = {"openrouter": 0, "openai_compatible": 1, "ollama": 2, "watsonx": 3}  # the default provider first
     newest_first = sorted(results, key=lambda r: r["started_at"], reverse=True)
     for r in sorted(newest_first, key=lambda r: (order.get(r["split"], 9), providers.get(r["provider"], 9), r["model"])):
         summary = summarize(r["records"])  # recomputed from the per-case records, not the stored rounding
@@ -147,7 +147,7 @@ ABLATION_DATE = date(2026, 11, 7)
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m asof.eval")
     p.add_argument("--split", choices=list(SPLITS), required=True)
-    p.add_argument("--provider", choices=["openrouter", "ollama", "openai_compatible"])
+    p.add_argument("--provider", choices=["openrouter", "ollama", "openai_compatible", "watsonx"])
     p.add_argument("--model")
     p.add_argument("--workers", type=int, help="parallel cases (default 4 hosted, 1 for ollama)")
     p.add_argument("--limit", type=int, help="run only the first N cases (smoke test; not written)")

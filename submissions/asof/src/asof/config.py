@@ -21,7 +21,8 @@ DEFAULT_ENV_FILE = PROJECT_ROOT / ".env"
 REPLAY_FILE = Path(__file__).with_name("data") / "replay.json"  # LLM_PROVIDER=replay
 
 # "replay" answers the built-in scenarios from recorded model outputs, with no model at all (asof/replay.py).
-LLMProvider = Literal["openrouter", "openai_compatible", "ollama", "replay"]
+# "watsonx" is IBM watsonx.ai through langchain-ibm (optional: pip install -r requirements-watsonx.txt).
+LLMProvider = Literal["openrouter", "openai_compatible", "ollama", "watsonx", "replay"]
 
 
 class ConfigError(RuntimeError):
@@ -127,6 +128,17 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "qwen2.5:7b-instruct"
 
+    # IBM watsonx.ai (LLM_PROVIDER=watsonx, and/or ASOF_INDB_PROVIDER=watsonx for Db2's own embeddings).
+    # An IBM Cloud API key, the regional endpoint, and the project (or deployment space) the watsonx.ai
+    # Runtime service is associated with.
+    watsonx_api_key: SecretStr | None = Field(None, validation_alias=AliasChoices("WATSONX_API_KEY", "WATSONX_APIKEY"))
+    watsonx_url: str = Field("https://us-south.ml.cloud.ibm.com",
+                             pattern=r"^https://[a-z0-9.-]+\.(?:ml\.cloud\.ibm\.com|wxai\.ibm\.com)/?$")
+    watsonx_project_id: str | None = Field(None, pattern=r"^(?:[0-9a-fA-F-]{32,36})?$")  # empty in .env = unset
+    watsonx_space_id: str | None = Field(None, pattern=r"^(?:[0-9a-fA-F-]{32,36})?$")
+    watsonx_model: str = Field("ibm/granite-4-h-small", pattern=r"^[A-Za-z0-9._/-]{3,120}$")
+    watsonx_embedding_model: str = Field("sentence-transformers/all-minilm-l6-v2", pattern=r"^[A-Za-z0-9._/-]{3,120}$")
+
     # Embeddings (local, CPU): claims are embedded here, and clauses too unless Db2 does it
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
 
@@ -138,6 +150,9 @@ class Settings(BaseSettings):
     embedding_api_url: str = "https://openrouter.ai/api/v1/embeddings"
     embedding_api_model: str = "sentence-transformers/all-minilm-l6-v2"
     embedding_api_key: SecretStr | None = None  # falls back to OPENROUTER_API_KEY
+    # Which provider Db2's EMBEDDER model calls: "openai" (any OpenAI-compatible endpoint, above) or "watsonx"
+    # (CREATE EXTERNAL MODEL ... PROVIDER WATSONX, with the watsonx settings above).
+    asof_indb_provider: Literal["openai", "watsonx"] = "openai"
 
     @field_validator("asof_api_token", "asof_editor_token")
     @classmethod
@@ -225,7 +240,13 @@ class Settings(BaseSettings):
     def indb_embeddings_wanted(self) -> bool:
         if self.asof_indb_embeddings == "off":
             return False
+        if self.asof_indb_provider == "watsonx":
+            return self.asof_indb_embeddings == "on" or self.watsonx_ready
         return self.asof_indb_embeddings == "on" or _is_set(self.embedding_key)
+
+    @property
+    def watsonx_ready(self) -> bool:
+        return _is_set(self.watsonx_api_key) and (_is_set(self.watsonx_project_id) or _is_set(self.watsonx_space_id))
 
     @property
     def llm_ready(self) -> bool:
@@ -238,6 +259,8 @@ class Settings(BaseSettings):
         if self.llm_provider == "openai_compatible":
             return (_is_set(self.openai_compat_base_url) and _is_set(self.openai_compat_model)
                     and _is_set(self.openai_compat_api_key))
+        if self.llm_provider == "watsonx":
+            return self.watsonx_ready
         return True
 
     @property
@@ -246,11 +269,12 @@ class Settings(BaseSettings):
             "openrouter": self.openrouter_model,
             "openai_compatible": self.openai_compat_model or "",
             "ollama": self.ollama_model,
+            "watsonx": self.watsonx_model,
             "replay": "recorded outputs",
         }[self.llm_provider]
 
 
-ENV_NAMES = {"db2_admin_user": "DB2_USER", "db2_admin_password": "DB2_PASSWORD"}
+ENV_NAMES = {"db2_admin_user": "DB2_USER", "db2_admin_password": "DB2_PASSWORD", "watsonx_api_key": "WATSONX_API_KEY"}
 
 
 # Values copied from .env.example without being filled in count as missing, so a judge without a

@@ -296,14 +296,16 @@ def ident(name: str) -> str:
     return upper
 
 
-LITERAL_RE = re.compile(r"^[A-Za-z0-9_\-.:/]{1,500}$")
+# ? = & are for a URL's query string (watsonx.ai needs ?version=...): inside a quoted literal they are plain
+# characters, and none of them can end the literal or start a comment.
+LITERAL_RE = re.compile(r"^[A-Za-z0-9_\-.:/?=&]{1,500}$")
 
 
 def string_literal(value: str) -> str:
     """A quoted SQL string constant, for the few DDL clauses that accept no parameter marker.
 
     CREATE EXTERNAL MODEL takes its model ID, URL and API key only as string literals. This
-    accepts letters, digits and `_ - . : /` and nothing else (no quote, space, semicolon or
+    accepts letters, digits and `_ - . : / ? = &` and nothing else (no quote, space, semicolon or
     comment marker can pass), so the value can never end the literal. The caller is
     responsible for never logging the statement when it carries a key.
     """

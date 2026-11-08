@@ -52,6 +52,15 @@ jobs:
         run: python scripts/audit_deps.py
       - name: Unit tests (no database)
         run: pytest -q -m "not db2"
+      - name: watsonx.ai packages (optional extra) install cleanly, pass pip check and pip-audit, and match the API AsOf calls
+        run: |
+          python -m venv /tmp/wx-venv
+          /tmp/wx-venv/bin/pip install -q torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
+          /tmp/wx-venv/bin/pip install -q -r requirements.txt -r requirements-watsonx.txt -c requirements.lock -r requirements-dev.txt
+          /tmp/wx-venv/bin/pip install -q -e . --no-deps
+          /tmp/wx-venv/bin/pip check
+          /tmp/wx-venv/bin/pip freeze > /tmp/wx-freeze.txt && /tmp/wx-venv/bin/pip-audit -r /tmp/wx-freeze.txt --progress-spinner off
+          /tmp/wx-venv/bin/python -m pytest -q tests/test_watsonx.py -m "not db2" -p no:cacheprovider
 
   db2:
     name: Db2 integration on x86 Linux (IBM's stock image, README path B)

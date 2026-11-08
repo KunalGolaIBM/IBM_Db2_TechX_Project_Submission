@@ -6,6 +6,8 @@ when a new clause version arrives without a vector. Claims are still embedded lo
 app (no network round trip per claim). Both sides use all-MiniLM-L6-v2, and setup proves the
 two vectors agree before it relies on the database path.
 
+Two providers: PROVIDER OPENAI (any OpenAI-compatible endpoint; OpenRouter by default) and PROVIDER WATSONX
+(IBM watsonx.ai, ASOF_INDB_PROVIDER=watsonx), where Db2 itself exchanges the IBM Cloud API key for a token.
 IBM documents CREATE EXTERNAL MODEL URLs as HTTPS. The documented path here is OpenRouter's
 OpenAI-compatible embeddings endpoint over HTTPS. A plain-HTTP endpoint (for example a local
 Ollama serving all-minilm) also worked in our tests, but that is undocumented behaviour, so it
@@ -66,6 +68,8 @@ def register(conn: ibm_db_dbi.Connection, settings: Settings, schema: str = db.S
     through db.string_literal, which rejects anything that could end the literal. The statement
     is never logged. Db2 does not expose the key in any catalog view.
     """
+    if settings.asof_indb_provider == "watsonx":
+        return _register_watsonx(conn, settings, schema)
     key = settings.embedding_key
     if key is None or not key.get_secret_value():
         raise InDbError("no API key for the embedding endpoint (EMBEDDING_API_KEY or OPENROUTER_API_KEY)")
@@ -80,6 +84,42 @@ def register(conn: ibm_db_dbi.Connection, settings: Settings, schema: str = db.S
                          f"KEY {db.string_literal(key.get_secret_value())}")
     except ValueError:
         raise InDbError("the embedding model ID, URL or key contains characters Db2 DDL cannot take safely") from None
+    db.execute(conn, f"GRANT USAGE ON EXTERNAL MODEL {db.ident(schema)}.{db.ident(MODEL_NAME)} "
+                     f"TO USER {db.ident(settings.asof_editor_user)}")
+    conn.commit()
+    return endpoint
+
+
+WATSONX_EMBEDDINGS_PATH = "/ml/v1/text/embeddings?version=2023-10-25"  # watsonx.ai rejects calls without a version
+
+
+def watsonx_embeddings_url(settings: Settings) -> str:
+    return settings.watsonx_url.rstrip("/") + WATSONX_EMBEDDINGS_PATH
+
+
+def _register_watsonx(conn: ibm_db_dbi.Connection, settings: Settings, schema: str) -> Endpoint:
+    """CREATE EXTERNAL MODEL ... PROVIDER WATSONX: Db2 exchanges the IBM Cloud API key for an IAM token and calls
+    watsonx.ai itself. Same model as the local one (all-MiniLM-L6-v2, 384 dimensions), so probe() can prove the
+    vectors agree. Db2 checks no credentials at CREATE time; probe() is the first call."""
+    if not settings.watsonx_ready:
+        raise InDbError("ASOF_INDB_PROVIDER=watsonx needs WATSONX_API_KEY and WATSONX_PROJECT_ID (or WATSONX_SPACE_ID)")
+    endpoint = check_endpoint(watsonx_embeddings_url(settings))
+    if model_exists(conn, schema):
+        db.execute(conn, f"DROP EXTERNAL MODEL {db.ident(schema)}.{db.ident(MODEL_NAME)}")
+    key = settings.watsonx_api_key.get_secret_value()
+    try:
+        if settings.watsonx_project_id:
+            db.execute(conn, f"CREATE EXTERNAL MODEL {db.ident(schema)}.{db.ident(MODEL_NAME)} PROVIDER WATSONX "
+                             f"ID {db.string_literal(settings.watsonx_embedding_model)} URL {db.string_literal(endpoint.url)} "
+                             f"TYPE TEXT_EMBEDDING RETURNING VECTOR(384, FLOAT32) KEY {db.string_literal(key)} "
+                             f"PROJECT_ID {db.string_literal(settings.watsonx_project_id)}")
+        else:
+            db.execute(conn, f"CREATE EXTERNAL MODEL {db.ident(schema)}.{db.ident(MODEL_NAME)} PROVIDER WATSONX "
+                             f"ID {db.string_literal(settings.watsonx_embedding_model)} URL {db.string_literal(endpoint.url)} "
+                             f"TYPE TEXT_EMBEDDING RETURNING VECTOR(384, FLOAT32) KEY {db.string_literal(key)} "
+                             f"SPACE_ID {db.string_literal(settings.watsonx_space_id)}")
+    except ValueError:
+        raise InDbError("the watsonx model ID, URL, key or project ID contains characters Db2 DDL cannot take safely") from None
     db.execute(conn, f"GRANT USAGE ON EXTERNAL MODEL {db.ident(schema)}.{db.ident(MODEL_NAME)} "
                      f"TO USER {db.ident(settings.asof_editor_user)}")
     conn.commit()

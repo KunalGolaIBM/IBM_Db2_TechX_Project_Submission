@@ -1,9 +1,10 @@
 """LLM provider selection and schema-validated calls.
 
-Three providers sit behind one interface:
+Four providers sit behind one interface:
 - openrouter: any model on OpenRouter through its OpenAI-compatible API (default for dev).
 - openai_compatible: any other OpenAI-compatible endpoint (OpenAI, Gemini, vLLM, ...).
 - ollama: a local model, so the project runs with no API key at all.
+- watsonx: IBM watsonx.ai through langchain-ibm (optional dependency, requirements-watsonx.txt).
 
 Every call returns a Pydantic object or raises LLMError. Callers treat LLMError as a
 reason to fail closed; nothing downstream ever sees unvalidated model output.
@@ -79,6 +80,10 @@ class LLMClient:
         self.model_name = model_name
         self._attempts = max(1, attempts)
         self._deadline_s = deadline_s
+        # How structured output is requested. OpenAI-compatible endpoints take a strict JSON schema; for
+        # watsonx.ai, tool calling is what its chat models support across the catalogue. Either way the
+        # reply is parsed into the same Pydantic schema, and anything that does not fit is rejected.
+        self.structured_method = "function_calling" if provider == "watsonx" else "json_schema"
 
     @property
     def info(self) -> str:
@@ -111,9 +116,11 @@ class LLMClient:
         """
         if self.provider == "ollama":
             runnable = _bounded_ollama_runnable(self.chat_model, schema, choices, max_chars or MAX_STRING_CHARS)
-        else:
+        elif self.structured_method == "json_schema":
             runnable = self.chat_model.with_structured_output(
                 schema, method="json_schema", include_raw=True, strict=True)
+        else:
+            runnable = self.chat_model.with_structured_output(schema, method=self.structured_method, include_raw=True)
 
         last_error: Exception | None = None
         started = time.monotonic()
@@ -360,6 +367,10 @@ def _build_one(settings: Settings, provider: str | None, model: str | None, dead
         )
         return LLMClient(chat, provider, name, attempts, deadline)
 
+    if provider == "watsonx":
+        return LLMClient(_watsonx_chat(settings, model or settings.watsonx_model, deadline, max_out), provider,
+                         model or settings.watsonx_model, attempts, deadline)
+
     from langchain_openai import ChatOpenAI
 
     if provider == "openrouter":
@@ -397,3 +408,36 @@ def _build_one(settings: Settings, provider: str | None, model: str | None, dead
         return LLMClient(chat, provider, name, attempts, deadline)
 
     raise ConfigError(f"Unknown LLM_PROVIDER {provider!r}")
+
+
+WATSONX_PACKAGES = "pip install -r requirements-watsonx.txt"
+
+
+def _watsonx_chat(settings: Settings, name: str, deadline: float, max_out: int) -> BaseChatModel:
+    """ChatWatsonx with AsOf's limits instead of the SDK's defaults (a 1800 s read timeout and ten retries).
+
+    The client authenticates with IBM Cloud IAM when it is built, so a wrong key or an unreachable region
+    is a ConfigError here, at startup, not a surprise on the first check.
+    """
+    settings.require("watsonx_api_key")
+    if not (settings.watsonx_project_id or settings.watsonx_space_id):
+        raise ConfigError("LLM_PROVIDER=watsonx needs WATSONX_PROJECT_ID (or WATSONX_SPACE_ID) in .env")
+    try:
+        import httpx
+        from ibm_watsonx_ai import APIClient, Credentials
+        from ibm_watsonx_ai.foundation_models import ModelInference
+        from ibm_watsonx_ai.utils.utils import HttpClientConfig
+        from langchain_ibm import ChatWatsonx
+    except ImportError:
+        raise ConfigError(f"LLM_PROVIDER=watsonx needs IBM's watsonx.ai packages: {WATSONX_PACKAGES}") from None
+    timeout = HttpClientConfig(timeout=httpx.Timeout(deadline, connect=10.0))
+    project, space = settings.watsonx_project_id or None, settings.watsonx_space_id or None
+    try:
+        client = APIClient(credentials=Credentials(url=settings.watsonx_url, api_key=settings.watsonx_api_key.get_secret_value()),
+                           project_id=project, space_id=space, httpx_client=timeout, async_httpx_client=timeout)
+        inference = ModelInference(model_id=name, api_client=client, project_id=project, space_id=space,
+                                   max_retries=settings.llm_max_retries)
+        return ChatWatsonx(watsonx_model=inference, max_tokens=max_out, temperature=settings.llm_temperature)
+    except Exception as exc:  # noqa: BLE001 - the SDK raises its own types; none may carry the key out
+        raise ConfigError(f"watsonx.ai refused the configuration or could not be reached ({type(exc).__name__}); "
+                          "check WATSONX_API_KEY, WATSONX_URL and WATSONX_PROJECT_ID") from None

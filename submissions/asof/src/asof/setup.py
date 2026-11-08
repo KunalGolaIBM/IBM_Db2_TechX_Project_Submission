@@ -222,7 +222,8 @@ def register_embedder(conn, settings: Settings, embeddings, target: str) -> bool
         say(f"  WARNING: {exc}. The app embeds clauses itself instead.")
         return False
     host = urlparse(endpoint.url).hostname
-    say(f"  {target}.{indb.MODEL_NAME}: {settings.embedding_api_model} at {host}; Db2's vector matches the local one "
+    model = settings.watsonx_embedding_model if settings.asof_indb_provider == "watsonx" else settings.embedding_api_model
+    say(f"  {target}.{indb.MODEL_NAME}: {model} at {host}; Db2's vector matches the local one "
         f"(cosine {result.agreement}), {result.latency_ms} ms per call")
     if not endpoint.documented:
         say("  note: plain HTTP to a local endpoint works but is undocumented by IBM (HTTPS is); development use only")

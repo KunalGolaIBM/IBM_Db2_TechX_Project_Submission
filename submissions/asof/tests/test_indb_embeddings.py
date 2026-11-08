@@ -29,7 +29,8 @@ def test_remote_plain_http_and_other_schemes_are_refused(url):
         indb.check_endpoint(url)
 
 
-@pytest.mark.parametrize("bad", ["sk-or-v1-abc'; DROP TABLE X; --", "a b", "x\\ny", "", "'", "a;b", 'a"b'])
+@pytest.mark.parametrize("bad", ["sk-or-v1-abc'; DROP TABLE X; --", "a b", "x\\ny", "", "'", "a;b", 'a"b',
+                                 "x?v=1'||'", "a/*b", "u?x=1 --"])
 def test_values_that_could_end_a_ddl_literal_are_refused(bad):
     with pytest.raises(ValueError):
         db.string_literal(bad)
@@ -39,6 +40,7 @@ def test_a_normal_key_url_and_model_id_pass_as_literals():
     assert db.string_literal("sk-or-v1-0123abcd") == "'sk-or-v1-0123abcd'"
     assert db.string_literal("https://openrouter.ai/api/v1/embeddings").startswith("'https://")
     assert db.string_literal("sentence-transformers/all-minilm-l6-v2")
+    assert db.string_literal("https://us-south.ml.cloud.ibm.com/ml/v1/text/embeddings?version=2023-10-25")
 
 
 def test_auto_mode_turns_on_only_with_a_key():
