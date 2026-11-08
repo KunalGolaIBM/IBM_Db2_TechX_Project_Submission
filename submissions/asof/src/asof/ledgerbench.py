@@ -159,6 +159,10 @@ def _load(conn: ibm_db_dbi.Connection, target: str, rows: int) -> float:
     started = time.monotonic()
     for base in range(1, rows + 1, BATCH):
         last = min(base + BATCH - 1, rows)  # the generator yields 10,000 IDs from `base`; keep one batch of them
+        # Synthetic rows, not logged: on TESTDB's circular log a fast bulk insert can fill it (SQL0964C) before
+        # the page cleaners let Db2 reuse it. Logging resumes at the commit; the timed appends below are logged.
+        db.execute(conn, "ALTER TABLE ANSWER_LEDGER ACTIVATE NOT LOGGED INITIALLY")
+        db.execute(conn, "ALTER TABLE CLAIM_CITATION ACTIVATE NOT LOGGED INITIALLY")
         db.execute(conn, SQL_LOAD_LEDGER, (base, step, last))
         db.execute(conn, SQL_LOAD_CITATIONS, (base, last))
         conn.commit()
@@ -278,9 +282,10 @@ def report(r: dict[str, Any]) -> str:
         plans = f"[before]({OUT_DIR.name}/{name}__{FLAT.lower()}.txt), [after]({OUT_DIR.name}/{name}__{PART.lower()}.txt)"
         lines.append(f"| {q['what']} ({plans}) | {f['median_ms']} ms, cost {f['cost']} | "
                      f"**{p['median_ms']} ms**, cost {p['cost']} | {p['rows']} |")
-    lines += ["", f"Loading took {r['load_s'][FLAT]} s before and {r['load_s'][PART]} s after (the MQTs are maintained on "
-              f"every insert). One append through APPEND_LEDGER, median of 100: {r['append_ms'][FLAT]} ms before, "
-              f"{r['append_ms'][PART]} ms after.", "", "## What each plan reads", ""]
+    lines += ["", f"Loading (`NOT LOGGED INITIALLY`, {BATCH:,} rows a batch) took {r['load_s'][FLAT]} s before and "
+              f"{r['load_s'][PART]} s after, where the MQTs are maintained on every insert. One logged append through "
+              f"APPEND_LEDGER, median of 100: {r['append_ms'][FLAT]} ms before, {r['append_ms'][PART]} ms after.", "",
+              "## What each plan reads", ""]
     for name, q in r["queries"].items():
         lines.append(f"- **{name}**: before {', '.join(q[FLAT]['objects']) or 'no table'}; "
                      f"after {', '.join(q[PART]['objects']) or 'no table'}.")
