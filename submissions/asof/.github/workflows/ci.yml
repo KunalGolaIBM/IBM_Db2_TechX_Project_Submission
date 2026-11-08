@@ -124,11 +124,16 @@ jobs:
           done
           docker logs db2server | tail -80
           exit 1
-      # IBM's entrypoint turns on archive logging with 13 primary and 12 secondary log files. The suite installs and
-      # drops about a hundred throwaway schemas, and twice a burst of them filled the active log (SQL0964C) in a run
-      # that passed on the next commit. More secondary files, allocated only when a burst needs them:
-      - name: Give testdb's transaction log room for the suite's throwaway schemas
-        run: docker exec db2server su - db2inst1 -c "db2 connect to testdb > /dev/null && db2 update db cfg for testdb using LOGSECOND 100 && db2 terminate > /dev/null"
+      # The suite installs and drops about a hundred throwaway schemas. Under IBM's archive logging the active log
+      # filled three times (SQL0964C), and Db2 said why: ADM1822W, the log held by dirty pages not yet written, which
+      # Db2 lets age up to PAGE_AGE_TRGT_MCR (240 s) before the page cleaners must write them. A 30 s target keeps the
+      # log moving, and more secondary files absorb a burst; the page target applies after a reactivation, done here
+      # before anything connects. (CLP exit 2 is a warning: SQL1363W, applied at the next activation.)
+      - name: Keep testdb's transaction log moving under the suite's throwaway schemas
+        run: |
+          docker exec db2server su - db2inst1 -c "db2 connect to testdb > /dev/null; db2 update db cfg for testdb using LOGSECOND 100 PAGE_AGE_TRGT_MCR 30; rc=\$?; db2 terminate > /dev/null; [ \$rc -le 2 ]"
+          docker exec db2server su - db2inst1 -c "db2 deactivate db testdb; db2 activate db testdb; rc=\$?; [ \$rc -le 2 ]"
+          docker exec db2server su - db2inst1 -c "db2 get db cfg for testdb | grep -E 'LOGSECOND|PAGE_AGE_TRGT_MCR'"
       - name: Db2 feature check
         run: python -m asof.db2check
       - name: Setup (schema, users in the container, seed, grants, self-check)
