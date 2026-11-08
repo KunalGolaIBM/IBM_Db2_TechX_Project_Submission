@@ -176,3 +176,34 @@ def test_a_preview_refuses_an_autocommit_connection(settings, embeddings, world,
         editor.close()
     db.use_schema(admin_conn, world)
     assert db.query(admin_conn, "SELECT COUNT(*) FROM POLICY_CLAUSE WHERE CLAUSE_ID = ?", ("PET-001",))[0][0] == 1
+
+
+def test_any_two_rows_of_a_clause_compare_from_the_history_table(settings, embeddings, world):
+    """The version diff: v1 (now split, its pre-change row only in POLICY_CLAUSE_HIST) against v2, in one query."""
+    time.sleep(1.1)
+    editor = db.connect(settings, "editor")
+    try:
+        policy.apply_change(editor, PET_CHANGE, embeddings, world)
+    finally:
+        editor.close()
+    app = db.connect(settings, "app")
+    try:
+        rows = policy.history(app, "PET-001", world)
+        superseded = next(r for r in rows if r["version"] == "v1" and not r["current"])  # the open-ended v1, replaced
+        v2 = next(r for r in rows if r["version"] == "v2")
+        d = policy.diff(app, "PET-001", (superseded["from"], superseded["recorded_at"]), (v2["from"], v2["recorded_at"]),
+                        world)
+        assert d is not None and (d["before"]["version"], d["after"]["version"]) == ("v1", "v2")
+        assert d["before"]["current"] is False and d["after"]["current"] is True
+        assert {(c["key"], c["before"], c["after"], c["status"]) for c in d["rule"]} == {
+            ("max_pet_weight_kg", 8, 8, "same"), ("pet_fee_usd", 100, 125, "changed")}
+        assert [x for x in d["text"] if x["op"] != "equal"] == [{"op": "delete", "text": "$100 "},
+                                                                {"op": "insert", "text": "$125 "}]
+        assert d["summary"]["text_changed"] and d["summary"]["rules_changed"] == 1
+        assert 0 < d["summary"]["embedding_distance"] < 0.2  # one number changed: the meaning barely moved
+        same = policy.diff(app, "PET-001", (v2["from"], v2["recorded_at"]), (v2["from"], v2["recorded_at"]), world)
+        assert same["summary"] == {"text_changed": False, "rules_changed": 0, "period_changed": False,
+                                   "embedding_distance": 0.0}
+        assert policy.diff(app, "PET-002", (v2["from"], v2["recorded_at"]), (v2["from"], v2["recorded_at"]), world) is None
+    finally:
+        app.close()

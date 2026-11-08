@@ -400,3 +400,12 @@ tr.click.on td { background: var(--brand-soft); }
 .inbox-item .trunc { margin: 4px 0 2px; }
 #inbox-detail > * + * { margin-top: 14px; }
 
+/* Version diff */
+.compare > * + * { margin-top: 10px; }
+.compare-pick { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: center; }
+.compare-pick select { min-width: 0; font-size: 12.5px; }
+.answer.diff ins { background: var(--pass-bg); color: var(--pass); text-decoration: none; border-radius: 3px; padding: 0 2px; }
+.answer.diff del { background: var(--hold-bg); color: var(--hold); border-radius: 3px; padding: 0 2px; }
+.rule-diff { font-size: 12.5px; }
+.rule-diff tr.changed td, .rule-diff tr.added td, .rule-diff tr.removed td { background: var(--fix-bg); }
+.rule-diff tr.changed td:last-child, .rule-diff tr.added td:last-child { font-weight: 600; }

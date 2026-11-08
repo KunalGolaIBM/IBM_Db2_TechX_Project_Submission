@@ -18,7 +18,7 @@ import time
 from collections import defaultdict, deque
 from collections.abc import Callable
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import FastAPI, Header, HTTPException, Path, Query, Request
@@ -233,6 +233,18 @@ class RateLimiter:
                 return False
             q.append(now)
             return True
+
+
+ROW_REF = r"^\d{4}-\d{2}-\d{2}_\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?$"
+
+
+def row_ref(value: str) -> tuple[date, datetime]:
+    """`2026-05-01_2026-11-06T04:00:00.123456`: a clause row's business start and the time Db2 recorded it."""
+    start, recorded = value.split("_", 1)
+    try:
+        return date.fromisoformat(start), datetime.fromisoformat(recorded)
+    except ValueError:
+        raise HTTPException(422, "a row is named <business start>_<recorded at>, both ISO 8601") from None
 
 
 class LedgerQuestionIn(_In):
@@ -559,6 +571,20 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         if not rows:
             raise HTTPException(404, "no such clause")
         return rows
+
+    @app.get("/api/policy/clauses/{clause_id}/diff")
+    def clause_diff(clause_id: Annotated[str, Path(pattern=r"^[A-Z]{3}-[0-9]{3}$")],
+                    a: Annotated[str, Query(pattern=ROW_REF)], b: Annotated[str, Query(pattern=ROW_REF)]):
+        """Two rows of a clause from its system-time history, compared: text word by word, RULE_JSON key by key.
+        Each row is named `<business start>_<recorded at>`, the `from` and `recorded_at` of /history."""
+        conn = app_conn()
+        try:
+            out = policy.diff(conn, clause_id, row_ref(a), row_ref(b), schema)
+        finally:
+            conn.close()
+        if out is None:
+            raise HTTPException(404, "no such clause version")
+        return out
 
     @app.get("/api/impact/{clause_id}")
     def impact(clause_id: Annotated[str, Path(pattern=r"^[A-Z]{3}-[0-9]{3}$")]):

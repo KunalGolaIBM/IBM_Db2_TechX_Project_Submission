@@ -303,8 +303,105 @@ def history(conn: ibm_db_dbi.Connection, clause_id: str, schema: str = db.SCHEMA
         d = dict(zip(keys, r, strict=True))
         d["changed_by"] = d["changed_by"].strip()
         d["current"] = d["superseded_at"].year >= 9999
+        d["ref"] = f"{d['from'].isoformat()}_{d['recorded_at'].isoformat()}"  # names the row for diff()
         out.append(d)
     return out
+
+
+# Two rows of one clause, from anywhere in its system-time history (current table or POLICY_CLAUSE_HIST), side by
+# side, with how far apart their embeddings are: one statement, so both come from the same read of Db2.
+SQL_DIFF = ("SELECT A.VERSION_LABEL, A.BUS_START, A.BUS_END, A.SYS_START, A.SYS_END, A.CHANGED_BY, A.CHANGE_NOTE, "
+            "A.CLAUSE_TEXT, A.RULE_JSON, B.VERSION_LABEL, B.BUS_START, B.BUS_END, B.SYS_START, B.SYS_END, B.CHANGED_BY, "
+            "B.CHANGE_NOTE, B.CLAUSE_TEXT, B.RULE_JSON, VECTOR_DISTANCE(A.EMBEDDING, B.EMBEDDING, COSINE) "
+            "FROM POLICY_CLAUSE FOR SYSTEM_TIME FROM '0001-01-01' TO '9999-12-30' AS A, "
+            "POLICY_CLAUSE FOR SYSTEM_TIME FROM '0001-01-01' TO '9999-12-30' AS B "
+            "WHERE A.CLAUSE_ID = ? AND A.BUS_START = ? AND A.SYS_START = ? "
+            "AND B.CLAUSE_ID = A.CLAUSE_ID AND B.BUS_START = ? AND B.SYS_START = ?")
+_DIFF_SIDE = ("version", "from", "to", "recorded_at", "superseded_at", "changed_by", "change_note", "text", "rule")
+_WORDS = __import__("re").compile(r"^\s+|\S+\s*")  # a word with the spacing after it (and any leading spacing)
+SHORT_EQUAL = 2  # words: an unchanged run this short between two changes is folded into them, so a rewrite reads whole
+
+
+def text_diff(before: str, after: str) -> list[dict[str, str]]:
+    """A word-level diff: runs of equal, deleted and inserted text that rebuild both sides exactly.
+
+    Like a semantic cleanup in other diff tools, an unchanged run of one or two words between two changes ("the",
+    "be requested") is shown as deleted and re-inserted, so a sentence that was rewritten reads as one change
+    instead of alternating fragments. Within a change, the deleted text comes before the inserted text."""
+    import difflib
+
+    a, b = _WORDS.findall(before), _WORDS.findall(after)
+    runs: list[tuple[str, list[str], list[str]]] = []  # (op, words before, words after)
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes():
+        runs.append(("equal" if tag == "equal" else "change", a[i1:i2], b[j1:j2]))
+    for i in range(1, len(runs) - 1):
+        op, old, _ = runs[i]
+        if op == "equal" and len(old) <= SHORT_EQUAL and runs[i - 1][0] == runs[i + 1][0] == "change":
+            runs[i] = ("change", old, old)
+    out: list[dict[str, str]] = []
+    pending_del: list[str] = []
+    pending_ins: list[str] = []
+
+    def flush() -> None:
+        for op, words in (("delete", pending_del), ("insert", pending_ins)):
+            if words:
+                out.append({"op": op, "text": "".join(words)})
+        pending_del.clear()
+        pending_ins.clear()
+
+    for op, old, new_words in runs:
+        if op == "change":
+            pending_del.extend(old)
+            pending_ins.extend(new_words)
+            continue
+        flush()
+        if out and out[-1]["op"] == "equal":
+            out[-1]["text"] += "".join(old)
+        elif old:
+            out.append({"op": "equal", "text": "".join(old)})
+    flush()
+    return out
+
+
+def rule_diff(before: dict[str, Any], after: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every RULE_JSON parameter of either version: unchanged, changed, added or removed."""
+    rows = []
+    for key in sorted(set(before) | set(after)):
+        if key not in before:
+            status = "added"
+        elif key not in after:
+            status = "removed"
+        else:
+            status = "same" if before[key] == after[key] else "changed"
+        rows.append({"key": key, "before": before.get(key), "after": after.get(key), "status": status})
+    return rows
+
+
+def diff(conn: ibm_db_dbi.Connection, clause_id: str, a: tuple[date, Any], b: tuple[date, Any],
+         schema: str = db.SCHEMA) -> dict[str, Any] | None:
+    """Compare two rows of a clause, each named by its business start and the time Db2 recorded it (the
+    `from` and `recorded_at` of history()). None if either row does not exist."""
+    db.use_schema(conn, schema)
+    rows = db.query(conn, SQL_DIFF, (clause_id, a[0], a[1], b[0], b[1]))
+    if not rows:
+        return None
+    r = rows[0]
+
+    def side(values: tuple[Any, ...]) -> dict[str, Any]:
+        d = dict(zip(_DIFF_SIDE, values, strict=True))
+        d["rule"] = json.loads(d["rule"])
+        d["changed_by"] = d["changed_by"].strip()
+        d["current"] = d["superseded_at"].year >= 9999
+        return d
+
+    before, after = side(r[0:9]), side(r[9:18])
+    changes = rule_diff(before["rule"], after["rule"])
+    return {"clause_id": clause_id, "before": before, "after": after,
+            "text": text_diff(before["text"], after["text"]), "rule": changes,
+            "summary": {"text_changed": before["text"] != after["text"],
+                        "rules_changed": sum(c["status"] != "same" for c in changes),
+                        "period_changed": (before["from"], before["to"]) != (after["from"], after["to"]),
+                        "embedding_distance": round(float(r[18]), 6)}}
 
 
 def analytics(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> dict[str, Any]:

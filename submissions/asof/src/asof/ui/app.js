@@ -450,7 +450,8 @@ async function renderDrawer() {
       ${v.change_note ? html`<dt>Note</dt><dd>${v.change_note}</dd>` : ""}
     </dl>
     <div><div class="eyebrow">RULE_JSON (checked deterministically)</div><pre class="json">${JSON.stringify(v.rule, null, 2)}</pre></div>
-    <div><div class="eyebrow">System-time history in Db2</div><div class="hist" id="tl-hist"><div class="muted small">Loading...</div></div></div>`);
+    <div><div class="eyebrow">System-time history in Db2</div><div class="hist" id="tl-hist"><div class="muted small">Loading...</div></div></div>
+    <div class="compare" id="tl-compare"></div>`);
   box.classList.add("stack");
   // Remember which panel this request is for: a slower response for a clause selected
   // earlier must not overwrite the panel of the clause selected now.
@@ -463,7 +464,44 @@ async function renderDrawer() {
         <div class="row"><strong>${h.version}</strong><span class="muted">${period(h.from, h.to)}</span>${h.current ? pill("current", "ok") : pill("superseded", "neutral")}</div>
         <div class="muted">held ${fmtTs(h.recorded_at)} → ${h.current ? "now" : fmtTs(h.superseded_at)} · by <code>${h.changed_by}</code></div>
       </div>`));
+    renderCompare(c.clause_id, v, hist);
   } catch (err) { if (target.isConnected) mount(target, html`<div class="error-box">${err.message}</div>`); }
+}
+// ---------- Version diff: any two rows Db2 ever held for a clause ----------
+function histLabel(h) { return `${h.version} from ${fmtDate(h.from)}${h.current ? "" : ", superseded"}`; }
+function renderCompare(clauseId, v, hist) {
+  const box = $("#tl-compare");
+  if (!box || hist.length < 2) { if (box) mount(box, ""); return; }
+  // Default: the selected version as Db2 holds it now, against the row before it in time.
+  const after = hist.find((h) => h.current && h.version === v.version && h.from === v.from) || hist[hist.length - 1];
+  const before = [...hist].reverse().find((h) => h.ref !== after.ref && (h.version !== after.version || !h.current)) || hist[0];
+  mount(box, html`<div class="eyebrow">Compare two versions</div>
+    <div class="compare-pick"><select id="cmp-a" aria-label="Older row">${hist.map((h) => html`<option value="${h.ref}" ${h.ref === before.ref ? raw("selected") : ""}>${histLabel(h)}</option>`)}</select>
+      <span class="muted">→</span>
+      <select id="cmp-b" aria-label="Newer row">${hist.map((h) => html`<option value="${h.ref}" ${h.ref === after.ref ? raw("selected") : ""}>${histLabel(h)}</option>`)}</select></div>
+    <div id="cmp-out"><div class="muted small">Loading...</div></div>`);
+  const load = async () => {
+    const out = $("#cmp-out");
+    try {
+      const d = (await api(`/api/policy/clauses/${encodeURIComponent(clauseId)}/diff?a=${encodeURIComponent($("#cmp-a").value)}&b=${encodeURIComponent($("#cmp-b").value)}`)).body;
+      if (out.isConnected) mount(out, diffView(d));
+    } catch (err) { if (out.isConnected) mount(out, html`<div class="error-box">${err.message}</div>`); }
+  };
+  $("#cmp-a").addEventListener("change", load);
+  $("#cmp-b").addEventListener("change", load);
+  load();
+}
+function diffView(d) {
+  const sm = d.summary;
+  const fmtVal = (x) => (x === null || x === undefined ? "none" : typeof x === "object" ? JSON.stringify(x) : String(x));
+  return html`
+    <div class="row wrap small">${pill(sm.text_changed ? "text changed" : "same text", sm.text_changed ? "corrected" : "neutral")}
+      ${pill(`${sm.rules_changed} rule value${sm.rules_changed === 1 ? "" : "s"} changed`, sm.rules_changed ? "corrected" : "neutral")}
+      ${sm.period_changed ? pill("period changed", "corrected") : ""}
+      <span class="muted" title="VECTOR_DISTANCE(A.EMBEDDING, B.EMBEDDING, COSINE), computed in the same Db2 query">embedding distance ${sm.embedding_distance.toFixed(4)}</span></div>
+    <p class="answer diff">${d.text.map((x) => (x.op === "equal" ? x.text : x.op === "insert" ? html`<ins>${x.text}</ins>` : html`<del>${x.text}</del>`))}</p>
+    <table class="rule-diff"><thead><tr><th>RULE_JSON</th><th>${d.before.version}</th><th>${d.after.version}</th></tr></thead>
+      <tbody>${d.rule.map((r) => html`<tr class="${r.status}"><td><code>${r.key}</code></td><td>${fmtVal(r.before)}</td><td>${fmtVal(r.after)}</td></tr>`)}</tbody></table>`;
 }
 
 // ---------- Ledger & replay ----------
