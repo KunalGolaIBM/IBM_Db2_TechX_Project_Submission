@@ -1115,3 +1115,120 @@ BEGIN
     VALUES (P_ESCALATED_ID, P_LEDGER_ID, P_OUTCOME, V_REVIEWER, V_NOTE);
 END
 @
+
+-- procedure: ADD_NOTICE
+-- The change-impact agent stores a drafted correction notice (runtime user, EXECUTE only). Db2 checks the claims
+-- the caller makes instead of taking them on trust:
+--   75060 the answer is not a released decision (PASS, CORRECTED or REVIEWED) that cited this clause version,
+--   75061 the version now in force for the customer's date is not CURRENT_VERSION (so the answer is not stale),
+--   75062 the check named is not a ledger row for the same customer date and policy document, or its decision is
+--         not the one claimed, or (for a released check) none of its released claims is supported by the new version,
+--   23505 an open notice for this answer and version already exists (UX_NOTICE_OPEN).
+CREATE OR REPLACE PROCEDURE ASOF.ADD_NOTICE (
+    IN  P_LEDGER_ID       BIGINT,
+    IN  P_CLAUSE_ID       VARCHAR(32),
+    IN  P_CITED_VERSION   VARCHAR(20),
+    IN  P_CURRENT_VERSION VARCHAR(20),
+    IN  P_CORRECTION      VARCHAR(4000),
+    IN  P_NOTICE          VARCHAR(6000),
+    IN  P_CHECK_DECISION  VARCHAR(12),
+    IN  P_CHECK_LEDGER_ID BIGINT,        -- 0 when the check left no ledger row
+    IN  P_TRACE           VARCHAR(8000),
+    IN  P_REQUESTED_BY    VARCHAR(40),   -- '' when no API user is named
+    OUT P_NOTICE_ID       BIGINT)
+  LANGUAGE SQL
+  MODIFIES SQL DATA
+BEGIN
+  DECLARE V_AS_OF DATE;
+  DECLARE V_DOC VARCHAR(32);
+  DECLARE V_IN_FORCE VARCHAR(20);
+  DECLARE V_CHECK_DECISION VARCHAR(12);
+  DECLARE V_CHECK_AS_OF DATE;
+  DECLARE V_CHECK_DOC VARCHAR(32);
+
+  SELECT L.AS_OF_DATE, L.DOC_ID INTO V_AS_OF, V_DOC
+    FROM ASOF.ANSWER_LEDGER L
+    WHERE L.LEDGER_ID = P_LEDGER_ID
+      AND EXISTS (SELECT 1 FROM ASOF.CLAIM_CITATION C
+                  WHERE C.LEDGER_ID = L.LEDGER_ID AND C.CLAUSE_ID = P_CLAUSE_ID AND C.CLAUSE_VERSION = P_CITED_VERSION
+                    AND C.VERDICT = 'SUPPORTED'
+                    AND ((L.DECISION IN ('PASS', 'REVIEWED') AND C.PASS_NO = 1)
+                         OR (L.DECISION = 'CORRECTED' AND C.PASS_NO = 2)));
+  IF V_AS_OF IS NULL THEN
+    SIGNAL SQLSTATE '75060' SET MESSAGE_TEXT = 'That answer is not a released decision citing this clause version';
+  END IF;
+  SET V_IN_FORCE = (SELECT VERSION_LABEL FROM ASOF.POLICY_CLAUSE FOR BUSINESS_TIME AS OF V_AS_OF
+                    WHERE CLAUSE_ID = P_CLAUSE_ID);
+  IF V_IN_FORCE IS NULL OR V_IN_FORCE <> P_CURRENT_VERSION OR V_IN_FORCE = P_CITED_VERSION THEN
+    SIGNAL SQLSTATE '75061' SET MESSAGE_TEXT = 'The version in force for the customer''s date is not the one named: the answer is not stale';
+  END IF;
+  IF P_CHECK_LEDGER_ID <> 0 THEN
+    SELECT DECISION, AS_OF_DATE, DOC_ID INTO V_CHECK_DECISION, V_CHECK_AS_OF, V_CHECK_DOC
+      FROM ASOF.ANSWER_LEDGER WHERE LEDGER_ID = P_CHECK_LEDGER_ID;
+    IF V_CHECK_DECISION IS NULL OR V_CHECK_DECISION <> P_CHECK_DECISION OR V_CHECK_AS_OF <> V_AS_OF
+       OR V_CHECK_DOC <> V_DOC THEN
+      SIGNAL SQLSTATE '75062' SET MESSAGE_TEXT = 'The check named is not this correction''s check';
+    END IF;
+    IF P_CHECK_DECISION IN ('PASS', 'CORRECTED') AND NOT EXISTS (
+         SELECT 1 FROM ASOF.CLAIM_CITATION C
+         WHERE C.LEDGER_ID = P_CHECK_LEDGER_ID AND C.CLAUSE_ID = P_CLAUSE_ID AND C.CLAUSE_VERSION = P_CURRENT_VERSION
+           AND C.VERDICT = 'SUPPORTED' AND C.PASS_NO = CASE WHEN P_CHECK_DECISION = 'CORRECTED' THEN 2 ELSE 1 END) THEN
+      SIGNAL SQLSTATE '75062' SET MESSAGE_TEXT = 'The correction''s check found no claim supported by the version now in force';
+    END IF;
+  ELSEIF P_CHECK_DECISION <> 'ESCALATED' THEN
+    SIGNAL SQLSTATE '75062' SET MESSAGE_TEXT = 'A released check must name its ledger row';
+  END IF;
+  INSERT INTO ASOF.CORRECTION_NOTICE (LEDGER_ID, CLAUSE_ID, CITED_VERSION, CURRENT_VERSION, AS_OF_DATE, CORRECTION_TEXT,
+                                      NOTICE_TEXT, CHECK_DECISION, CHECK_LEDGER_ID, AGENT_TRACE, REQUESTED_BY)
+    VALUES (P_LEDGER_ID, P_CLAUSE_ID, P_CITED_VERSION, P_CURRENT_VERSION, V_AS_OF, P_CORRECTION, P_NOTICE,
+            P_CHECK_DECISION, NULLIF(P_CHECK_LEDGER_ID, 0), P_TRACE, NULLIF(TRIM(COALESCE(P_REQUESTED_BY, '')), ''));
+  SET P_NOTICE_ID = IDENTITY_VAL_LOCAL();
+END
+@
+
+-- procedure: DECIDE_NOTICE
+-- A specialist approves a notice for sending (STATUS SENT) or rejects it. Exactly one decision per notice (75063
+-- otherwise, the claim below is atomic). Approval needs a draft the check released (75064), and the policy for the
+-- customer's date must not have changed again since the draft: if the version in force is no longer the one the
+-- correction was checked against, it is refused (75065) and the agent drafts again.
+CREATE OR REPLACE PROCEDURE ASOF.DECIDE_NOTICE (
+    IN  P_NOTICE_ID BIGINT,
+    IN  P_APPROVE   SMALLINT,
+    IN  P_USER      VARCHAR(40))     -- '' when no API user is named
+  LANGUAGE SQL
+  MODIFIES SQL DATA
+BEGIN
+  DECLARE V_STATUS VARCHAR(12);
+  DECLARE V_DECISION VARCHAR(12);
+  DECLARE V_CLAUSE VARCHAR(32);
+  DECLARE V_VERSION VARCHAR(20);
+  DECLARE V_AS_OF DATE;
+  DECLARE V_IN_FORCE VARCHAR(20);
+  DECLARE V_CLAIMED INTEGER;
+
+  SELECT STATUS, CHECK_DECISION, CLAUSE_ID, CURRENT_VERSION, AS_OF_DATE
+    INTO V_STATUS, V_DECISION, V_CLAUSE, V_VERSION, V_AS_OF
+    FROM ASOF.CORRECTION_NOTICE WHERE NOTICE_ID = P_NOTICE_ID;
+  IF V_STATUS IS NULL THEN
+    SIGNAL SQLSTATE '75066' SET MESSAGE_TEXT = 'Unknown correction notice';
+  END IF;
+  IF P_APPROVE <> 0 THEN
+    IF V_DECISION NOT IN ('PASS', 'CORRECTED') THEN
+      SIGNAL SQLSTATE '75064' SET MESSAGE_TEXT = 'Only a notice whose correction the check released can be sent';
+    END IF;
+    SET V_IN_FORCE = (SELECT VERSION_LABEL FROM ASOF.POLICY_CLAUSE FOR BUSINESS_TIME AS OF V_AS_OF WHERE CLAUSE_ID = V_CLAUSE);
+    IF V_IN_FORCE IS NULL OR V_IN_FORCE <> V_VERSION THEN
+      SIGNAL SQLSTATE '75065' SET MESSAGE_TEXT = 'The policy for the customer''s date changed again since this notice was drafted: draft it again';
+    END IF;
+  END IF;
+  UPDATE ASOF.CORRECTION_NOTICE
+    SET STATUS = CASE WHEN P_APPROVE <> 0 THEN 'SENT' ELSE 'REJECTED' END,
+        DECIDED_AT = CURRENT TIMESTAMP, DECIDED_BY = SESSION_USER,
+        DECIDED_BY_USER = NULLIF(TRIM(COALESCE(P_USER, '')), '')
+    WHERE NOTICE_ID = P_NOTICE_ID AND STATUS = 'PENDING';
+  GET DIAGNOSTICS V_CLAIMED = ROW_COUNT;
+  IF V_CLAIMED = 0 THEN
+    SIGNAL SQLSTATE '75063' SET MESSAGE_TEXT = 'That notice was already decided';
+  END IF;
+END
+@

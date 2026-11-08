@@ -149,6 +149,18 @@ GRANT SELECT ON TABLE ASOF.V_REVIEW_QUEUE TO USER ASOF_APP_USER
 GRANT EXECUTE ON PROCEDURE ASOF.RESOLVE_ESCALATION TO USER ASOF_APP_USER
 @
 
+-- Correction notices: the runtime user stores the agent's drafts and records a specialist's decision, only
+-- through the two procedures; it holds no INSERT or UPDATE on the table.
+-- grant: APP_SELECT_CORRECTION_NOTICE
+GRANT SELECT ON TABLE ASOF.CORRECTION_NOTICE TO USER ASOF_APP_USER
+@
+-- grant: APP_EXECUTE_ADD_NOTICE
+GRANT EXECUTE ON PROCEDURE ASOF.ADD_NOTICE TO USER ASOF_APP_USER
+@
+-- grant: APP_EXECUTE_DECIDE_NOTICE
+GRANT EXECUTE ON PROCEDURE ASOF.DECIDE_NOTICE TO USER ASOF_APP_USER
+@
+
 -- Roles (database-wide, shared by every AsOf schema). Created if missing; need SECADM.
 -- ASOF_TEXT_READER: may read the ledger's free text (see the masks in 05_masks.sql).
 -- role: ASOF_TEXT_READER

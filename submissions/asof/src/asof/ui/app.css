@@ -399,6 +399,8 @@ tr.click.on td { background: var(--brand-soft); }
 .inbox-item.on { border-color: var(--brand); box-shadow: inset 3px 0 0 var(--brand); }
 .inbox-item .trunc { margin: 4px 0 2px; }
 #inbox-detail > * + * { margin-top: 14px; }
+.inbox-notices:not(:empty) { margin-top: 20px; }
+.inbox-notices > * + * { margin-top: 14px; }
 
 /* Version diff */
 .compare > * + * { margin-top: 10px; }

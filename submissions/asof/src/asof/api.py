@@ -29,7 +29,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from . import __version__, db, impactagent, intake, ledger, policy, review
+from . import __version__, db, impactagent, intake, ledger, notices, policy, review
 from .anchor import AnchorLog
 from .anchor import verify as verify_anchors
 from .askledger import LedgerAsker
@@ -265,6 +265,15 @@ class DraftDecision(BaseModel):
 
 
 class SuggestionDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    approve: bool
+
+
+class NoticeDraftIn(_In):
+    clause_id: Annotated[str, Field(pattern=r"^[A-Z]{3}-[0-9]{3}$")]
+
+
+class NoticeDecision(BaseModel):
     model_config = ConfigDict(extra="forbid")
     approve: bool
 
@@ -850,6 +859,41 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         return jsonable_encoder({"escalated_ledger_id": ledger_id, "ledger_id": done.ledger_id, "row_hash": done.row_hash,
                                  "outcome": done.outcome, "final_answer": done.final_answer,
                                  "check": review.check_out(done.check, held_date(ledger_id), body.reply)})
+
+    # ---------- correction notices for stale answers (asof/notices.py) ----------
+    @app.get("/api/notices")
+    def notice_list(clause_id: Annotated[str | None, Query(pattern=r"^[A-Z]{3}-[0-9]{3}$")] = None,
+                    status: Literal["PENDING", "SENT", "REJECTED"] | None = None):
+        conn = app_conn()
+        try:
+            return notices.list_notices(conn, clause_id, status, schema)
+        finally:
+            conn.close()
+
+    @app.post("/api/notices/draft")
+    def notice_draft(body: NoticeDraftIn, request: Request):
+        """Run the change-impact agent: a checked correction notice for every answer now stale for its date."""
+        drafted = impactagent.draft_notices(components()[0], body.clause_id, requested_by(request))
+        conn = app_conn()
+        try:
+            return jsonable_encoder({"drafted": drafted, "notices": notices.list_notices(conn, body.clause_id, None, schema)})
+        finally:
+            conn.close()
+
+    @app.post("/api/notices/{notice_id}/decision")
+    def notice_decision(notice_id: Annotated[int, Path(ge=1, le=10**12)], body: NoticeDecision, request: Request):
+        """A specialist approves a notice for sending (it is marked SENT; AsOf sends nothing itself) or rejects it."""
+        conn = app_conn()
+        try:
+            notices.decide(conn, notice_id, body.approve, requested_by(request), schema)
+        except db.DatabaseError as exc:
+            status = notices.REFUSALS.get(exc.sqlstate or "")
+            if status is None:
+                raise
+            raise HTTPException(status, str(exc).split(": ", 1)[-1]) from None
+        finally:
+            conn.close()
+        return {"notice_id": notice_id, "status": "SENT" if body.approve else "REJECTED"}
 
     @app.get("/", include_in_schema=False)
     def root():

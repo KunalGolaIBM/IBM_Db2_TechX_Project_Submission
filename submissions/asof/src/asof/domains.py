@@ -27,6 +27,7 @@ class Domain:
     impact_system: str
     prompt_version: str
     extraction_schema: type[ExtractionResult]
+    notice_system: str = prompts.NOTICE_SYSTEM  # the change-impact agent's look-up before a correction notice
 
 
 AIRLINE = Domain("airline", "Aurelia Air", "AURELIA-CSP", prompts.EXTRACT_SYSTEM, prompts.JUDGE_SYSTEM,
@@ -34,7 +35,7 @@ AIRLINE = Domain("airline", "Aurelia Air", "AURELIA-CSP", prompts.EXTRACT_SYSTEM
                  ExtractionResult)
 BANK = Domain("bank", "Fernhollow Bank", "FERNHOLLOW-FEES", prompts.BANK_EXTRACT_SYSTEM, prompts.BANK_JUDGE_SYSTEM,
               prompts.BANK_REWRITE_SYSTEM, prompts.BANK_INVESTIGATE_SYSTEM, prompts.BANK_IMPACT_SYSTEM,
-              prompts.BANK_PROMPT_VERSION, BankExtractionResult)
+              prompts.BANK_PROMPT_VERSION, BankExtractionResult, prompts.BANK_NOTICE_SYSTEM)
 DOMAINS = {d.doc_id: d for d in (AIRLINE, BANK)}
 DOC_IDS = tuple(DOMAINS)
 

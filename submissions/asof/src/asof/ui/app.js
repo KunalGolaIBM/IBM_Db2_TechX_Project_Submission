@@ -668,7 +668,8 @@ async function Inbox(id) {
       <section id="inbox-list"><div class="loading"><div class="spinner"></div>Loading the queue from Db2...</div></section>
       <section id="inbox-detail">${inb.id ? html`<div class="loading"><div class="spinner"></div>Loading held decision #${inb.id}...</div>`
         : html`<div class="empty"><h3>Pick a held answer</h3><p>The oldest is at the top. Held answers come from the playground, the customer chat and the API whenever a check could not release a draft.</p></div>`}</section>
-    </div>`);
+    </div>
+    <section id="inbox-notices" class="inbox-notices"></section>`);
   const { body: q } = await api("/api/reviews");
   mount($("#inbox-list"), html`
     <div class="card">
@@ -678,7 +679,17 @@ async function Inbox(id) {
     </div>
     ${q.answered.length ? html`<div class="card"><div class="card-head"><h2>Answered</h2><span class="sub">latest first</span></div>
       <div class="inbox-items">${q.answered.slice(0, 12).map((i) => inboxItem(i, true))}</div></div>` : ""}`);
+  loadInboxNotices();
   if (inb.id) await renderReview();
+}
+async function loadInboxNotices(message) {
+  const el = $("#inbox-notices");
+  if (!el) return;
+  let list;
+  try { list = (await api("/api/notices?status=PENDING")).body || []; } catch (err) { mount(el, html`<div class="error-box">${err.message}</div>`); return; }
+  if (!list.length && !message) { mount(el, ""); return; }
+  mount(el, html`${message ? html`<div class="banner ok"><span>${message}</span></div>` : ""}<div class="card"><div class="card-head"><h2>Correction notices to approve</h2><span class="sub">drafted after a policy change; <a href="#/impact">Change impact</a> drafts them</span></div>
+    ${list.length ? list.map(noticeCard) : html`<p class="muted">No notice is waiting.</p>`}</div>`);
 }
 function inboxItem(i, done) {
   return html`<a class="inbox-item ${inb.id === i.ledger_id ? "on" : ""}" href="#/inbox/${i.ledger_id}">
@@ -937,12 +948,74 @@ function impactView(rows, applied) {
         ${pubs.map((r) => html`<tr><td><code>${r.ref_id}</code></td><td>${period(r.for_from, r.for_to)}</td><td>${r.cited_version}</td><td>${r.current_version}</td>
           <td>${pill(r.status)}${r.stale_from ? html`<div class="small muted">wrong from ${fmtDate(r.stale_from)}</div>` : ""}</td></tr>`)}
       </tbody></table>` : html`<p class="muted">No help-centre answer cites ${imp.clause}.</p>`}</div>
+    <section id="imp-notices"></section>
     <section id="imp-sugg"></section>`;
 }
+
+// Correction notices: for each released answer now stale for its customer's date, the agent drafts a correction,
+// the full check runs on that date, and a specialist approves it for sending (AsOf sends nothing itself).
+const ntc = { list: [] };
+async function loadNotices() {
+  const el = $("#imp-notices");
+  if (!el) return;
+  try { ntc.list = (await api(`/api/notices?clause_id=${imp.clause}`)).body || []; } catch (err) { mount(el, html`<div class="error-box">${err.message}</div>`); return; }
+  mount(el, noticesView());
+}
+function noticesView() {
+  const open = new Set(ntc.list.filter((n) => n.status !== "REJECTED").map((n) => `${n.ledger_id}/${n.current_version}`));
+  const stale = (imp.result || []).filter((r) => r.kind === "ANSWER" && r.status === "STALE" && !open.has(`${r.ref_id}/${r.current_version}`));
+  return html`<div class="card"><div class="card-head"><h2>Correction notices for customers</h2><span class="sub">change-impact agent · a specialist approves each one before it counts as sent</span></div>
+    ${stale.length ? html`<p class="muted">${stale.length} released answer${stale.length === 1 ? " is" : "s are"} now wrong for the customer's date. For each, the agent looks up what else the answer relied on, drafts a correction from the clause text now in force for that date, and runs the full check on it. Db2's <code>ADD_NOTICE</code> verifies the claims made about each notice before storing it.</p>
+      <button class="btn" id="notice-run" type="button">Draft correction notices with the agent</button>` : ""}
+    ${ntc.list.length ? ntc.list.map(noticeCard) : stale.length ? "" : html`<p class="muted">No answer citing ${imp.clause} is stale for its customer's date, so no customer needs a correction.</p>`}
+  </div>`;
+}
+function noticeCard(n) {
+  const released = n.check_decision === "PASS" || n.check_decision === "CORRECTED";
+  const looked = (n.agent_trace || []).filter((t) => t.tool).map((t) => `${t.tool}(${Object.values(t.args || {}).join(", ")})`);
+  return html`<div class="sugg notice">
+    <div class="sugg-head"><a href="#/ledger/${n.ledger_id}">answer #${n.ledger_id}</a><span class="when">customer date ${fmtDate(n.as_of_date)}, ${n.clause_id} ${n.cited_version} → ${n.current_version}</span>
+      ${pill(n.check_decision)}${pill(n.status)}${n.check_ledger_id ? html`<a class="small" href="#/ledger/${n.check_ledger_id}">check #${n.check_ledger_id} →</a>` : ""}</div>
+    <p class="sugg-text">${n.notice}</p>
+    ${looked.length ? html`<div class="small muted">Agent looked up: ${looked.join(" · ")}</div>` : ""}
+    ${n.status === "PENDING" ? html`<div class="row"><button class="btn" type="button" data-notice-approve="${n.notice_id}" ${released ? "" : raw("disabled")}>Approve and mark sent</button>
+      <button class="btn ghost" type="button" data-notice-reject="${n.notice_id}">Reject</button>${released ? "" : html`<span class="small muted">The check did not release this correction, so it cannot be sent.</span>`}</div>`
+      : html`<div class="small muted">${n.status === "SENT" ? "approved for sending" : "rejected"}${n.decided_by_user ? ` by ${n.decided_by_user}` : ""} at ${fmtTs(n.decided_at)}</div>`}
+  </div>`;
+}
+document.addEventListener("click", async (e) => {
+  const run = e.target.closest("#notice-run");
+  const approve = e.target.closest("[data-notice-approve]");
+  const reject = e.target.closest("[data-notice-reject]");
+  if (!run && !approve && !reject) return;
+  const btn = run || approve || reject;
+  btn.disabled = true;
+  const done = async (message) => {
+    if ($("#imp-notices")) { await loadNotices(); mount($("#imp-notices"), html`<div class="banner ok"><span>${message}</span></div>${noticesView()}`); }
+    else if ($("#inbox-notices")) { await loadInboxNotices(message); }
+  };
+  try {
+    if (run) {
+      btn.textContent = "Drafting and checking...";
+      const { body } = await post("/api/notices/draft", { clause_id: imp.clause });
+      const ok = body.drafted.filter((d) => !d.error).length;
+      const failed = body.drafted.length - ok;
+      await done(`The agent drafted ${ok} notice${ok === 1 ? "" : "s"}; each correction went through the full check on its customer's date.${failed ? ` ${failed} could not be drafted (see the server log).` : ""}`);
+    } else {
+      const id = (approve || reject).dataset.noticeApprove || (approve || reject).dataset.noticeReject;
+      await post(`/api/notices/${id}/decision`, { approve: Boolean(approve) });
+      await done(approve ? "Approved: the notice is marked sent. AsOf records the decision; your messaging system delivers it." : "Notice rejected; the agent can draft a new one.");
+    }
+  } catch (err) {
+    const el = $("#imp-notices") || $("#inbox-notices");
+    if (el) mount(el, html`<div class="error-box">${err.message}</div>`);
+  }
+});
 
 // Drafted corrections: the change-impact agent drafts, the check runs on each, the editor decides.
 const sug = { list: [] };
 async function loadSuggestions() {
+  loadNotices();
   const el = $("#imp-sugg");
   if (!el) return;
   sug.list = (await api(`/api/suggestions?clause_id=${imp.clause}`)).body || [];

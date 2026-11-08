@@ -252,9 +252,10 @@ def _drop_marts(conn: ibm_db_dbi.Connection, schema: str) -> None:
     conn.commit()
 
 
-# Children first. The drafted corrections go too: each cites the ledger row of its check (FK_SUGGESTION_CHECK), and
-# the specialist inbox's links point at ledger rows on both ends.
-LEDGER_TABLES = ("ESCALATION_REVIEW", "ANSWER_SUGGESTION", "CLAIM_CITATION", "ANSWER_LEDGER", "CHAIN_HEAD")
+# Children first. The drafted corrections go too: each cites the ledger row of its check (FK_SUGGESTION_CHECK), the
+# specialist inbox's links point at ledger rows on both ends, and correction notices at the answer and its check.
+LEDGER_TABLES = ("CORRECTION_NOTICE", "ESCALATION_REVIEW", "ANSWER_SUGGESTION", "CLAIM_CITATION", "ANSWER_LEDGER",
+                 "CHAIN_HEAD")
 
 
 def reset_ledger(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> int:

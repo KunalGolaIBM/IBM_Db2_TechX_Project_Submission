@@ -116,3 +116,21 @@ def test_policy_terms_drive_the_note_requirement():
     assert review.needs_note(r, "The fee is waived.") and not review.needs_note(r, "Thanks, and sorry for the wait.")
     out = review.check_out(r, MARCH, "The fee is waived.")
     assert out["sendable"] and out["needs_note"] and "fee" in out["note_reason"]
+
+
+def test_notice_endpoints_validate_and_map_db2_refusals(local, monkeypatch):
+    from asof import db, notices
+
+    monkeypatch.setattr(notices, "list_notices", lambda conn, clause_id, status, schema: [{"notice_id": 1, "status": status}])
+    assert local.get("/api/notices?status=PENDING").json() == [{"notice_id": 1, "status": "PENDING"}]
+    assert local.get("/api/notices?status=MAYBE").status_code == 422
+    assert local.post("/api/notices/draft", json={"clause_id": "pet-001"}).status_code == 422
+    assert local.post("/api/notices/1/decision", json={"approve": True, "extra": 1}).status_code == 422
+
+    def refuse(conn, notice_id, approve, user, schema):
+        raise db.DatabaseError("DECIDE_NOTICE refused: The policy for the customer's date changed again", "75065", -438)
+    monkeypatch.setattr(notices, "decide", refuse)
+    r = local.post("/api/notices/1/decision", json={"approve": True})
+    assert r.status_code == 409 and "changed again" in r.json()["detail"]
+    monkeypatch.setattr(notices, "decide", lambda conn, notice_id, approve, user, schema: None)
+    assert local.post("/api/notices/1/decision", json={"approve": False}).json() == {"notice_id": 1, "status": "REJECTED"}
