@@ -650,7 +650,7 @@ python -m asof.setup --reset-ledger      # asks you to type "reset"; add --yes t
 
 | Endpoint | Purpose |
 |---|---|
-| `POST /api/gate` | Check a draft: `question`, `draft_answer`, `as_of_date`, optional `doc_id` (`AURELIA-CSP`, the default, or `FERNHOLLOW-FEES`) and `channel`. Returns the decision, final answer, and per-claim verdicts with clause versions and quotes. |
+| `POST /api/gate` | Check a draft: `question`, `draft_answer`, `as_of_date`, optional `doc_id` (`AURELIA-CSP`, the default, `FERNHOLLOW-FEES`, or `auto` to [route](#routing-which-policy-a-draft-is-about) it) and `channel`. Returns the decision, final answer, and per-claim verdicts with clause versions and quotes; with `auto`, also the route. |
 | `POST /api/assistant/ask` | Ask the naive demo assistant, then check its draft |
 | `GET /api/ledger`, `GET /api/ledger/{id}` | Recorded decisions and their claim citations |
 | `GET /api/ledger/{id}/replay` | The clause rows a decision used, what Db2 held at that moment, and what applies today |
@@ -666,6 +666,10 @@ python -m asof.setup --reset-ledger      # asks you to type "reset"; add --yes t
 | `POST /api/impact/{clause_id}/suggestions` | Run the change-impact agent: draft a correction for each help-centre answer that needs review, run the full check on it for the date it must hold from, store it as pending (editor action: localhost or token) |
 | `GET /api/suggestions`, `POST /api/suggestions/{id}/decision` | List drafted corrections; approve (publish) or reject one as `asofedit` (`DECIDE_SUGGESTION`) |
 | `GET /api/policy/timeline`, `GET /api/policy/clauses/{id}/history` | Business-time versions with rule parameters (optionally for one `doc_id`); every system-time row for a clause |
+| `GET /api/policy/clauses/{id}/diff?a=&b=` | Two rows Db2 has held for a clause, current or in the history table, compared: the text word by word, `RULE_JSON` key by key, and the embedding distance between them |
+| `POST /api/policy/drafts`, `GET /api/policy/drafts`, `GET /api/policy/drafts/{id}`, `GET /api/policy/drafts/{id}/source`, `POST /api/policy/drafts/{id}/decision`, `GET /api/policy/intake/sample` | [Policy intake](#policy-intake-a-pdf-into-the-bitemporal-table): upload a PDF as the editor, read the checked proposals and the stored file, approve, reject or preview; the built-in sample revision |
+| `GET /api/reviews`, `GET /api/reviews/{id}`, `POST /api/reviews/{id}/check`, `POST /api/reviews/{id}/resolve` | [The specialist inbox](#the-specialist-inbox-and-correction-notices) (`reviewer` role): the queue, a held decision with its claims and the policy in force, a reply checked with nothing recorded, and a reply sent through `RESOLVE_ESCALATION` |
+| `GET /api/notices`, `POST /api/notices/draft`, `POST /api/notices/{id}/decision` | Correction notices (`reviewer` role): list them, have the change-impact agent draft a checked notice for each answer a policy change made stale (`ADD_NOTICE`), approve or reject one (`DECIDE_NOTICE`) |
 | `GET /api/analytics` | Decision, area and override statistics from the Db2 views |
 | `GET /healthz` | Db2 connectivity and the configured model |
 

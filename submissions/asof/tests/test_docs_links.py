@@ -53,3 +53,14 @@ def test_every_relative_link_and_anchor_resolves(doc):
         elif anchor and dest.suffix == ".md" and anchor not in anchors(dest.read_text(encoding="utf-8")):
             broken.append(target)
     assert broken == []
+
+
+def test_every_api_route_is_in_the_readme():
+    """The README's endpoint table names every route the API serves (path parameters written as {id}), each as the
+    whole path inside a code span, so /api/ledger does not count for /api/ledger/{id}."""
+    api = (ROOT / "src" / "asof" / "api.py").read_text(encoding="utf-8")
+    readme = re.sub(r"\{[a-z_]+\}", "{id}", (ROOT / "README.md").read_text(encoding="utf-8"))
+    routes = [re.sub(r"\{[a-z_]+\}", "{id}", p) for p in re.findall(r'@app\.(?:get|post|put|delete)\("(/[^"]*)"', api)
+              if p.startswith(("/api/", "/healthz"))]
+    assert len(routes) > 30
+    assert [p for p in routes if not re.search(rf"(GET|POST|PUT|DELETE) {re.escape(p)}[`?]", readme)] == []
