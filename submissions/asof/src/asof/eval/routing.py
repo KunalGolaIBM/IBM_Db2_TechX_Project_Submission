@@ -110,7 +110,11 @@ def render(results: list[dict[str, Any]]) -> str:
              "SHA-256 pinned in `6f3a15e`, before the router existed, and is never tuned on.", "",
              "**Misrouted** is the dangerous error: a draft checked against the other company's policy. **Asked** costs "
              "a specialist's time but is safe. **Guessed**: a question that needs a person (ambiguous, out of scope, or "
-             "needing both documents) routed to one document anyway.", ""]
+             "needing both documents) routed to one document anyway.", "",
+             "The routing agent is off by default (`ASOF_ROUTER_AGENT=false`): on the test split it recovered every "
+             "shared-vocabulary case Db2 alone sent to a person, but with the local model it also guessed on ambiguous "
+             "questions, and asking is the safe failure. A deployment can turn it on after measuring its own model with "
+             "`python -m asof.eval.routing --split routing-test`.", ""]
     for r in sorted(results, key=lambda x: (x["split"] != "routing-test", x["started_at"])):
         s = r["summary"]
         lines += [f"## {r['split']}: {r['label']}, run {r['started_at'][:10]} at `{r['git_commit']}`", "",
