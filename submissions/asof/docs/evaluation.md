@@ -15,7 +15,25 @@ Routing and policy intake have evaluations of their own: [routing_eval.md](routi
 
 `python -m asof.eval --split test` runs the check on the 40 airline cases and writes [eval_results.md](eval_results.md), with every per-case decision recorded in [eval/](eval/). Dates on this page are Eastern time; the results file stamps each run in UTC, so a run late on 7 Nov appears there as 8 Nov. The 40 test cases are new scenarios, none used while building or choosing the model. They were committed (`81b5b69`) before the first run and are frozen: a unit test pins their SHA-256 and the runner refuses to run them if it changes. The 20-case dev split holds the scenarios used while debugging. Each case is labelled with the decision it should get and the clause version its key claim must be checked against.
 
-**Latest run** (Sun 8 Nov, OpenRouter `google/gemini-3.1-flash-lite`, all nine frozen splits, commits `333f14b` to `8058e85`). Since `0be4f60` the check has not changed: the commits between added the specialist inbox, correction notices and routing, which run only when asked for, and type annotations. It measures the check as submitted:
+**Latest run** (Sun 8 Nov, OpenRouter `google/gemini-3.1-flash-lite`, all nine frozen splits, at `19a3e28`). It adds one change to the check: when extraction finds no claim, each sentence of the draft that names something a policy decides is judged as a claim of its own (an independent review found that a model which extracts nothing released such a draft as `NO_POLICY_CLAIMS`). The five dev splits were run first and released nothing.
+
+| Frozen split | Cases | False allow | False block | Safe | Ideal | Citation | p50 |
+|---|---|---|---|---|---|---|---|
+| Airline `test` | 40 | **0 of 26** | 0 of 14 | 100% | 100% | 100% | 5.8 s |
+| `escalation-test`: aimed at the known causes of needless holds, both domains | 33 | **0 of 22** | 0 of 11 | 100% | 97.0% | 100% | 6.1 s |
+| `situation-test3`: premise drafts, pinned before the premise change | 20 | **0 of 12** | 0 of 8 | 100% | 95.0% | 95.0% | 5.7 s |
+| `list-test`: relations and documents a clause's list leaves out, pinned before the list check | 16 | **0 of 9** | 1 of 7 | 93.8% | 87.5% | 100% | 5.2 s |
+| `situation-test2`: drafts whose premise about the customer contradicts or restates the question | 12 | **0 of 7** | 0 of 5 | 100% | 83.3% | 91.7% | 6.1 s |
+| `situation-test`: the same kind, not blind | 12 | **0 of 7** | 0 of 5 | 100% | 83.3% | 75.0% | 6.0 s |
+| Bank `bank-test2`: blind on its first run | 22 | **0 of 14** | 0 of 8 | 100% | 100% | 100% | 5.9 s |
+| Bank `bank-test` (not blind) | 26 | **0 of 16** | 0 of 10 | 100% | 96.2% | 100% | 5.5 s |
+| `extractor-test`: drafts that try to talk the claim extractor out of a wrong claim | 10 | **0 of 8** | 0 of 2 | 100% | 100% | 100% | 6.0 s |
+
+0 of 121 wrong drafts released; 1 of 70 correct drafts held (L10, as in every run).
+
+**Which splits are blind.** Every split was pinned before its first run, but four later motivated a fix: `bank-test` (its first run found missing rule data), `situation-test` and `situation-test2` (the premise gap, then SU01), and the airline `test` split (T20, misread on watsonx.ai, led to the list check; T06, T12 and T33 led to the needless-hold work). Their results show the check holding up after fixes, not a blind rate. Five never motivated one: `bank-test2` (written after the bank fix), `escalation-test` (its own holds, such as ET09 and ET12, were reported and not tuned away), `extractor-test` (committed with the coverage check it measures), and `situation-test3` and `list-test` (each pinned before the change it measures, which was developed on dev cases). Together they hold 65 wrong drafts, and no run since the changes they measure released one: a 95% upper bound of about 4.6% on the false-allow rate, by the rule of three. The caveat: the rules' author wrote every split, and three of the five were written to measure a specific change, so they show the checks work on the phrasings their author anticipated, not how far they generalise.
+
+**The run before, without the backstop** (Sun 8 Nov, commits `333f14b` to `8058e85`). Since `0be4f60` the check has not changed: the commits between added the specialist inbox, correction notices and routing, which run only when asked for, and type annotations. It measures the check as submitted:
 
 | Frozen split | Cases | False allow | False block | Safe | Ideal | Citation | p50 |
 |---|---|---|---|---|---|---|---|
