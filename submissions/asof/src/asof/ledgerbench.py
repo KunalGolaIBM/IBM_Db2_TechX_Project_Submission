@@ -139,6 +139,8 @@ def flat_statements(target: str) -> list[schema.Statement]:
             if n != 1:
                 raise RuntimeError("the ANSWER_LEDGER DDL no longer has the partition clause this benchmark removes")
             st = replace(st, sql=sql)
+        if st.kind == "index" and st.sql.rstrip().endswith(" NOT PARTITIONED"):  # only valid on a partitioned table
+            st = replace(st, sql=st.sql.rstrip()[: -len(" NOT PARTITIONED")])
         if st.kind == "view" and st.name in OLD_VIEWS:
             st = replace(st, sql=OLD_VIEWS[st.name].replace("ASOF.", f"{target}."))
         out.append(st)
