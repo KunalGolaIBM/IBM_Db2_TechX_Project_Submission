@@ -116,10 +116,11 @@ class Settings(BaseSettings):
     asof_intake_timeout_s: float = Field(150.0, gt=0, le=600)
     # Whole-check budget: no step of a check starts after it (the check then fails closed).
     asof_check_deadline_s: float = Field(300.0, gt=0, le=3600)
-    # Routing (doc_id "auto", asof/router.py): Db2's vote decides clear cases. With the agent on, the model looks at
-    # close calls and may confirm Db2's leader; off, a close call goes to a person. Off by default: on the frozen
-    # routing test split the agent guessed on ambiguous questions (docs/routing_eval.md).
-    asof_router_agent: bool = False
+    # Routing (doc_id "auto", asof/router.py): Db2's vote decides clear cases; the routing agent may look at close
+    # calls and confirm Db2's leader, otherwise a close call goes to a person. auto (the default): the agent runs only
+    # with a model in router.MEASURED, whose run on the pinned routing test split misrouted and guessed on nothing
+    # (docs/routing_eval.md); the local 7B model guessed, so with it close calls go to a person. on: any model. off: never.
+    asof_router_agent: Literal["auto", "on", "off"] = "auto"
 
     openrouter_api_key: SecretStr | None = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
@@ -170,6 +171,16 @@ class Settings(BaseSettings):
         if self.db2_ssl_server_cert and not self.db2_ssl:
             raise ValueError("DB2_SSL_SERVER_CERT is set but DB2_SSL is not true: set DB2_SSL=true to use TLS")
         return self
+
+    @field_validator("asof_router_agent", mode="before")
+    @classmethod
+    def _router_agent(cls, value: object) -> object:
+        """true/false from older .env files mean on/off."""
+        if isinstance(value, bool):
+            return "on" if value else "off"
+        if isinstance(value, str) and value.strip().lower() in {"true", "1", "yes", "false", "0", "no"}:
+            return "on" if value.strip().lower() in {"true", "1", "yes"} else "off"
+        return value.strip().lower() if isinstance(value, str) else value
 
     @field_validator("asof_anchor_key")
     @classmethod

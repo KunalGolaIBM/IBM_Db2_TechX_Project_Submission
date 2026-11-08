@@ -9,7 +9,8 @@ A LangGraph graph. Db2 casts the first vote: one statement ranks the clauses of 
 customer's date by VECTOR_DISTANCE to the question and draft, and keeps each document's nearest three with
 ROW_NUMBER() OVER (PARTITION BY DOC_ID). A clear lead routes with no model call. A close call goes to the routing
 agent, a structured model call that sees the nearest clauses of both documents; it can only confirm Db2's leader or
-hand the question to a person, never overrule Db2. Below the confidence the thresholds encode, AsOf asks instead of
+hand the question to a person, never overrule Db2. It runs only with a model measured on the pinned split (MEASURED),
+unless ASOF_ROUTER_AGENT says otherwise. Below the confidence the thresholds encode, AsOf asks instead of
 guessing: the held decision goes to the specialist inbox (reason ROUTE_UNCERTAIN), where the specialist picks the
 document. Routing is used only when the caller asks for it (doc_id "auto"); a caller that knows the document names it.
 
@@ -42,6 +43,10 @@ log = logging.getLogger(__name__)
 # Cosine distances, all-MiniLM-L6-v2.
 CLEAR_MARGIN, NEAR, FAR, AGENT_MARGIN = 0.30, 0.45, 0.65, 0.12
 NEAREST = 3
+# Models whose run on the pinned routing test split misrouted nothing and guessed on none of the questions that need a
+# person (docs/routing/routing-test__*.json; tests/test_routing_cases.py holds this set to those files). With
+# ASOF_ROUTER_AGENT=auto, only these run the routing agent; with any other model a close call goes to a person.
+MEASURED = frozenset({"openrouter:google/gemini-3.1-flash-lite"})
 DOC_SUMMARY = {
     "AURELIA-CSP": "Aurelia Air's customer service plan: bereavement fares, 24-hour cancellation, change fees, "
                    "checked and carry-on baggage, ticket refunds, delay compensation, travel credits, pets in the cabin.",
@@ -206,6 +211,11 @@ class Router:
         out = g.compile().invoke({}, {"recursion_limit": 8})
         route: Route = out["route"]
         return route
+
+
+def agent_runs(mode: str, model_info: str) -> bool:
+    """ASOF_ROUTER_AGENT: does the routing agent run with this model? auto: only a measured one."""
+    return mode == "on" or (mode == "auto" and model_info in MEASURED)
 
 
 def describe(route: Route) -> dict[str, Any]:

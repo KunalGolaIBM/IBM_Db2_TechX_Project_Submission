@@ -433,3 +433,37 @@ def test_auto_routing_checks_the_routed_document_or_holds_for_a_person(monkeypat
         assert gate.seen[0].doc_id == "FERNHOLLOW-FEES" and gate.seen[0].route["method"] in ("db2", "ask")
         assert r.json()["route"]["leader"] == "FERNHOLLOW-FEES"
     assert client().post("/api/gate", json={**OK, "doc_id": "AUTO"}).status_code == 422
+
+
+@pytest.mark.parametrize(("mode", "model", "agent"), [("auto", "openrouter:google/gemini-3.1-flash-lite", True),
+                                                      ("auto", "ollama:qwen2.5:7b-instruct", False),
+                                                      ("on", "ollama:qwen2.5:7b-instruct", True),
+                                                      ("off", "openrouter:google/gemini-3.1-flash-lite", False)])
+def test_the_router_gets_a_model_without_fallback_only_when_its_agent_may_run(monkeypatch, mode, model, agent):
+    from asof import router as router_mod
+    from asof.router import Route
+
+    built, given = [], []
+
+    class Client:
+        info = model
+
+    def fake_build(settings, **kw):
+        built.append(kw)
+        return Client()
+
+    class FakeRouter:
+        def __init__(self, embeddings, connect, schema, llm=None):
+            given.append(llm)
+
+        def route(self, question, draft, as_of):
+            return Route("AURELIA-CSP", "db2", "r", "AURELIA-CSP", {"AURELIA-CSP": 0.2, "FERNHOLLOW-FEES": 0.7}, 0.5)
+
+    monkeypatch.setattr("asof.api.build_llm", fake_build)
+    monkeypatch.setattr(router_mod, "Router", FakeRouter)
+    monkeypatch.setattr("asof.api.get_embeddings", lambda name: object())
+    settings = Settings(_env_file=None, llm_provider="ollama", asof_router_agent=mode)
+    app = create_app(settings, gate=FakeGate(), assistant=FakeAssistant())
+    assert TestClient(app).post("/api/gate", json={**OK, "doc_id": "auto"}).status_code == 200
+    assert (given[0] is not None) is agent
+    assert all(kw.get("fallback") is False for kw in built)  # a failed routing call asks a person, never another model

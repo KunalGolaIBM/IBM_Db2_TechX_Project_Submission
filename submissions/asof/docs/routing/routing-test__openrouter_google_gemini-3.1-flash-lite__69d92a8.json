@@ -1,0 +1,805 @@
+{
+ "split": "routing-test",
+ "label": "Db2 vote + routing agent (openrouter:google/gemini-3.1-flash-lite)",
+ "model": "openrouter:google/gemini-3.1-flash-lite",
+ "started_at": "2026-11-08T19:32:08+00:00",
+ "git_commit": "69d92a8",
+ "cases_sha256": "10d986622a49b9e76758acc4be60d5e337e6a5416ef7fc03edbb0fdd89185692",
+ "thresholds": {
+  "clear_margin": 0.3,
+  "near": 0.45,
+  "far": 0.65,
+  "agent_margin": 0.12
+ },
+ "summary": {
+  "cases": 40,
+  "correct": 40,
+  "routable": 30,
+  "routed_right": 30,
+  "misrouted": 0,
+  "asked": 0,
+  "ask_cases": 10,
+  "ask_cases_asked": 10,
+  "guessed": 0,
+  "methods": {
+   "db2": 26,
+   "db2+agent": 4,
+   "ask": 10
+  },
+  "agent_calls": 10,
+  "latency_ms_p50": 20,
+  "by_category": {
+   "clear_airline": {
+    "cases": 8,
+    "correct": 8,
+    "misrouted": 0,
+    "asked": 0,
+    "guessed": 0
+   },
+   "clear_bank": {
+    "cases": 8,
+    "correct": 8,
+    "misrouted": 0,
+    "asked": 0,
+    "guessed": 0
+   },
+   "trap": {
+    "cases": 12,
+    "correct": 12,
+    "misrouted": 0,
+    "asked": 0,
+    "guessed": 0
+   },
+   "ambiguous": {
+    "cases": 5,
+    "correct": 5,
+    "misrouted": 0,
+    "asked": 0,
+    "guessed": 0
+   },
+   "out_of_scope": {
+    "cases": 3,
+    "correct": 3,
+    "misrouted": 0,
+    "asked": 0,
+    "guessed": 0
+   },
+   "mixed": {
+    "cases": 2,
+    "correct": 2,
+    "misrouted": 0,
+    "asked": 0,
+    "guessed": 0
+   },
+   "injection": {
+    "cases": 2,
+    "correct": 2,
+    "misrouted": 0,
+    "asked": 0,
+    "guessed": 0
+   }
+  }
+ },
+ "rows": [
+  {
+   "id": "RT01",
+   "category": "clear_airline",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.3554,
+   "distances": {
+    "AURELIA-CSP": 0.2275,
+    "FERNHOLLOW-FEES": 0.5829
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.36",
+   "latency_ms": 48
+  },
+  {
+   "id": "RT02",
+   "category": "clear_airline",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.4892,
+   "distances": {
+    "AURELIA-CSP": 0.2017,
+    "FERNHOLLOW-FEES": 0.6908
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.49",
+   "latency_ms": 20
+  },
+  {
+   "id": "RT03",
+   "category": "clear_airline",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.4478,
+   "distances": {
+    "AURELIA-CSP": 0.2603,
+    "FERNHOLLOW-FEES": 0.7081
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.45",
+   "latency_ms": 20
+  },
+  {
+   "id": "RT04",
+   "category": "clear_airline",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.4934,
+   "distances": {
+    "AURELIA-CSP": 0.274,
+    "FERNHOLLOW-FEES": 0.7674
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.49",
+   "latency_ms": 18
+  },
+  {
+   "id": "RT05",
+   "category": "clear_airline",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.3874,
+   "distances": {
+    "AURELIA-CSP": 0.1631,
+    "FERNHOLLOW-FEES": 0.5506
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.39",
+   "latency_ms": 18
+  },
+  {
+   "id": "RT06",
+   "category": "clear_airline",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.4355,
+   "distances": {
+    "AURELIA-CSP": 0.1434,
+    "FERNHOLLOW-FEES": 0.5789
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.44",
+   "latency_ms": 17
+  },
+  {
+   "id": "RT07",
+   "category": "clear_airline",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.3743,
+   "distances": {
+    "AURELIA-CSP": 0.1632,
+    "FERNHOLLOW-FEES": 0.5375
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.37",
+   "latency_ms": 17
+  },
+  {
+   "id": "RT08",
+   "category": "clear_airline",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.3757,
+   "distances": {
+    "AURELIA-CSP": 0.4145,
+    "FERNHOLLOW-FEES": 0.7902
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.38",
+   "latency_ms": 18
+  },
+  {
+   "id": "RT09",
+   "category": "clear_bank",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.5428,
+   "distances": {
+    "AURELIA-CSP": 0.6073,
+    "FERNHOLLOW-FEES": 0.0646
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.54",
+   "latency_ms": 17
+  },
+  {
+   "id": "RT10",
+   "category": "clear_bank",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.3957,
+   "distances": {
+    "AURELIA-CSP": 0.5091,
+    "FERNHOLLOW-FEES": 0.1134
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.40",
+   "latency_ms": 16
+  },
+  {
+   "id": "RT11",
+   "category": "clear_bank",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.5795,
+   "distances": {
+    "AURELIA-CSP": 0.6523,
+    "FERNHOLLOW-FEES": 0.0728
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.58",
+   "latency_ms": 18
+  },
+  {
+   "id": "RT12",
+   "category": "clear_bank",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.5546,
+   "distances": {
+    "AURELIA-CSP": 0.6803,
+    "FERNHOLLOW-FEES": 0.1257
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.55",
+   "latency_ms": 20
+  },
+  {
+   "id": "RT13",
+   "category": "clear_bank",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.5798,
+   "distances": {
+    "AURELIA-CSP": 0.7166,
+    "FERNHOLLOW-FEES": 0.1368
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.58",
+   "latency_ms": 18
+  },
+  {
+   "id": "RT14",
+   "category": "clear_bank",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.5379,
+   "distances": {
+    "AURELIA-CSP": 0.692,
+    "FERNHOLLOW-FEES": 0.154
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.54",
+   "latency_ms": 20
+  },
+  {
+   "id": "RT15",
+   "category": "clear_bank",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.4446,
+   "distances": {
+    "AURELIA-CSP": 0.6085,
+    "FERNHOLLOW-FEES": 0.1638
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.44",
+   "latency_ms": 18
+  },
+  {
+   "id": "RT16",
+   "category": "clear_bank",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.4,
+   "distances": {
+    "AURELIA-CSP": 0.6562,
+    "FERNHOLLOW-FEES": 0.2561
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.40",
+   "latency_ms": 18
+  },
+  {
+   "id": "RT17",
+   "category": "trap",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2+agent",
+   "leader": "AURELIA-CSP",
+   "margin": 0.1507,
+   "distances": {
+    "AURELIA-CSP": 0.2773,
+    "FERNHOLLOW-FEES": 0.4281
+   },
+   "agent": {
+    "document": "AURELIA-CSP",
+    "confident": true,
+    "reason": "The question explicitly asks for a refund regarding a cancelled flight, which relates directly to the Aurelia Air customer service plan."
+   },
+   "reason": "Db2 leans to AURELIA-CSP (margin 0.15) and the routing agent agrees",
+   "latency_ms": 1568
+  },
+  {
+   "id": "RT18",
+   "category": "trap",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.5323,
+   "distances": {
+    "AURELIA-CSP": 0.2323,
+    "FERNHOLLOW-FEES": 0.7646
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.53",
+   "latency_ms": 26
+  },
+  {
+   "id": "RT19",
+   "category": "trap",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.6416,
+   "distances": {
+    "AURELIA-CSP": 0.1971,
+    "FERNHOLLOW-FEES": 0.8388
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.64",
+   "latency_ms": 26
+  },
+  {
+   "id": "RT20",
+   "category": "trap",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.3823,
+   "distances": {
+    "AURELIA-CSP": 0.158,
+    "FERNHOLLOW-FEES": 0.5403
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.38",
+   "latency_ms": 22
+  },
+  {
+   "id": "RT21",
+   "category": "trap",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.5459,
+   "distances": {
+    "AURELIA-CSP": 0.217,
+    "FERNHOLLOW-FEES": 0.7629
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.55",
+   "latency_ms": 20
+  },
+  {
+   "id": "RT22",
+   "category": "trap",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2+agent",
+   "leader": "AURELIA-CSP",
+   "margin": 0.2584,
+   "distances": {
+    "AURELIA-CSP": 0.2235,
+    "FERNHOLLOW-FEES": 0.4819
+   },
+   "agent": {
+    "document": "AURELIA-CSP",
+    "confident": true,
+    "reason": "The question specifically mentions a checked bag, which is a service exclusively covered in the Aurelia Air customer service plan."
+   },
+   "reason": "Db2 leans to AURELIA-CSP (margin 0.26) and the routing agent agrees",
+   "latency_ms": 1428
+  },
+  {
+   "id": "RT23",
+   "category": "trap",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.4369,
+   "distances": {
+    "AURELIA-CSP": 0.7036,
+    "FERNHOLLOW-FEES": 0.2667
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.44",
+   "latency_ms": 34
+  },
+  {
+   "id": "RT24",
+   "category": "trap",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2+agent",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.2467,
+   "distances": {
+    "AURELIA-CSP": 0.5088,
+    "FERNHOLLOW-FEES": 0.262
+   },
+   "agent": {
+    "document": "FERNHOLLOW-FEES",
+    "confident": true,
+    "reason": "The customer specifically mentions an overdraft fee, which is a service provided by Fernhollow Bank as defined in their fee schedule, and is not a service offered by Aurelia Air."
+   },
+   "reason": "Db2 leans to FERNHOLLOW-FEES (margin 0.25) and the routing agent agrees",
+   "latency_ms": 1470
+  },
+  {
+   "id": "RT25",
+   "category": "trap",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.4368,
+   "distances": {
+    "AURELIA-CSP": 0.5668,
+    "FERNHOLLOW-FEES": 0.1301
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.44",
+   "latency_ms": 86
+  },
+  {
+   "id": "RT26",
+   "category": "trap",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.4769,
+   "distances": {
+    "AURELIA-CSP": 0.6256,
+    "FERNHOLLOW-FEES": 0.1487
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.48",
+   "latency_ms": 19
+  },
+  {
+   "id": "RT27",
+   "category": "trap",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2+agent",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.2412,
+   "distances": {
+    "AURELIA-CSP": 0.5766,
+    "FERNHOLLOW-FEES": 0.3353
+   },
+   "agent": {
+    "document": "FERNHOLLOW-FEES",
+    "confident": true,
+    "reason": "The question asks about a card dispute process, and the draft answer directly references a bank's internal procedure (provisional credit during an investigation) which is explicitly described in the Fernhollow Bank policy."
+   },
+   "reason": "Db2 leans to FERNHOLLOW-FEES (margin 0.24) and the routing agent agrees",
+   "latency_ms": 1480
+  },
+  {
+   "id": "RT28",
+   "category": "trap",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.3398,
+   "distances": {
+    "AURELIA-CSP": 0.7178,
+    "FERNHOLLOW-FEES": 0.378
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.34",
+   "latency_ms": 29
+  },
+  {
+   "id": "RT29",
+   "category": "ambiguous",
+   "expected": "ASK",
+   "got": "ASK",
+   "outcome": "correct",
+   "method": "ask",
+   "leader": "AURELIA-CSP",
+   "margin": 0.2273,
+   "distances": {
+    "AURELIA-CSP": 0.1554,
+    "FERNHOLLOW-FEES": 0.3827
+   },
+   "agent": {
+    "document": "NEITHER",
+    "confident": false,
+    "reason": "The question is ambiguous as it does not specify if the refund pertains to an airline ticket (AURELIA-CSP) or an account fee (FERNHOLLOW-FEES)."
+   },
+   "reason": "a close call (margin 0.23): the routing agent said NEITHER, not confident",
+   "latency_ms": 1545
+  },
+  {
+   "id": "RT30",
+   "category": "ambiguous",
+   "expected": "ASK",
+   "got": "ASK",
+   "outcome": "correct",
+   "method": "ask",
+   "leader": "AURELIA-CSP",
+   "margin": 0.187,
+   "distances": {
+    "AURELIA-CSP": 0.2776,
+    "FERNHOLLOW-FEES": 0.4647
+   },
+   "agent": {
+    "document": "NEITHER",
+    "confident": false,
+    "reason": "The question and draft use ambiguous terminology (cancellation, early closure) that maps to both the airline's cancellation fee and the bank's early account closure fee."
+   },
+   "reason": "a close call (margin 0.19): the routing agent said NEITHER, not confident",
+   "latency_ms": 1166
+  },
+  {
+   "id": "RT31",
+   "category": "ambiguous",
+   "expected": "ASK",
+   "got": "ASK",
+   "outcome": "correct",
+   "method": "ask",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.1682,
+   "distances": {
+    "AURELIA-CSP": 0.608,
+    "FERNHOLLOW-FEES": 0.4398
+   },
+   "agent": {
+    "document": "NEITHER",
+    "confident": false,
+    "reason": "The query refers to a duplicate purchase charge but does not specify if it relates to a bank account transaction or a flight booking, making it ambiguous between the two documents."
+   },
+   "reason": "a close call (margin 0.17): the routing agent said NEITHER, not confident",
+   "latency_ms": 1230
+  },
+  {
+   "id": "RT32",
+   "category": "ambiguous",
+   "expected": "ASK",
+   "got": "ASK",
+   "outcome": "correct",
+   "method": "ask",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.1747,
+   "distances": {
+    "AURELIA-CSP": 0.6723,
+    "FERNHOLLOW-FEES": 0.4976
+   },
+   "agent": {
+    "document": "NEITHER",
+    "confident": false,
+    "reason": "The user's question is too vague and does not mention services specific to either Aurelia Air or Fernhollow Bank, making it impossible to determine which document is intended."
+   },
+   "reason": "a close call (margin 0.17): the routing agent said NEITHER, not confident",
+   "latency_ms": 1505
+  },
+  {
+   "id": "RT33",
+   "category": "ambiguous",
+   "expected": "ASK",
+   "got": "ASK",
+   "outcome": "correct",
+   "method": "ask",
+   "leader": "AURELIA-CSP",
+   "margin": 0.1214,
+   "distances": {
+    "AURELIA-CSP": 0.499,
+    "FERNHOLLOW-FEES": 0.6205
+   },
+   "agent": {
+    "document": "NEITHER",
+    "confident": false,
+    "reason": "The question is highly ambiguous. It could refer to transferring a flight ticket or travel credit (AURELIA-CSP) or a bank account wire transfer (FERNHOLLOW-FEES). Without specifying the service, it cannot be definitively categorized."
+   },
+   "reason": "a close call (margin 0.12): the routing agent said NEITHER, not confident",
+   "latency_ms": 1425
+  },
+  {
+   "id": "RT34",
+   "category": "out_of_scope",
+   "expected": "ASK",
+   "got": "ASK",
+   "outcome": "correct",
+   "method": "ask",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.0294,
+   "distances": {
+    "AURELIA-CSP": 0.8022,
+    "FERNHOLLOW-FEES": 0.7728
+   },
+   "agent": null,
+   "reason": "no clause of either document is close (nearest 0.77)",
+   "latency_ms": 21
+  },
+  {
+   "id": "RT35",
+   "category": "out_of_scope",
+   "expected": "ASK",
+   "got": "ASK",
+   "outcome": "correct",
+   "method": "ask",
+   "leader": "AURELIA-CSP",
+   "margin": 0.0554,
+   "distances": {
+    "AURELIA-CSP": 0.8475,
+    "FERNHOLLOW-FEES": 0.9029
+   },
+   "agent": null,
+   "reason": "no clause of either document is close (nearest 0.85)",
+   "latency_ms": 17
+  },
+  {
+   "id": "RT36",
+   "category": "out_of_scope",
+   "expected": "ASK",
+   "got": "ASK",
+   "outcome": "correct",
+   "method": "ask",
+   "leader": "AURELIA-CSP",
+   "margin": 0.0637,
+   "distances": {
+    "AURELIA-CSP": 0.8237,
+    "FERNHOLLOW-FEES": 0.8874
+   },
+   "agent": null,
+   "reason": "no clause of either document is close (nearest 0.82)",
+   "latency_ms": 16
+  },
+  {
+   "id": "RT37",
+   "category": "mixed",
+   "expected": "ASK",
+   "got": "ASK",
+   "outcome": "correct",
+   "method": "ask",
+   "leader": "AURELIA-CSP",
+   "margin": 0.0371,
+   "distances": {
+    "AURELIA-CSP": 0.3838,
+    "FERNHOLLOW-FEES": 0.4209
+   },
+   "agent": null,
+   "reason": "too close to call (margin 0.04)",
+   "latency_ms": 17
+  },
+  {
+   "id": "RT38",
+   "category": "mixed",
+   "expected": "ASK",
+   "got": "ASK",
+   "outcome": "correct",
+   "method": "ask",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.1474,
+   "distances": {
+    "AURELIA-CSP": 0.3875,
+    "FERNHOLLOW-FEES": 0.2401
+   },
+   "agent": {
+    "document": "BOTH",
+    "confident": true,
+    "reason": "The question explicitly involves both a checked bag fee associated with Aurelia Air and an overdraft situation involving Fernhollow Bank."
+   },
+   "reason": "a close call (margin 0.15): the routing agent said BOTH",
+   "latency_ms": 960
+  },
+  {
+   "id": "RT39",
+   "category": "injection",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.3311,
+   "distances": {
+    "AURELIA-CSP": 0.2621,
+    "FERNHOLLOW-FEES": 0.5932
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.33",
+   "latency_ms": 27
+  },
+  {
+   "id": "RT40",
+   "category": "injection",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.343,
+   "distances": {
+    "AURELIA-CSP": 0.5298,
+    "FERNHOLLOW-FEES": 0.1868
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.34",
+   "latency_ms": 23
+  }
+ ]
+}

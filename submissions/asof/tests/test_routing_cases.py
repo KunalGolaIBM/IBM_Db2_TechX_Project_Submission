@@ -58,3 +58,21 @@ def test_the_routing_summary_and_report_count_what_happened():
                       "summary": s, "rows": rows}])
     assert "| **Misrouted** (other document) | **0 of 2** |" in report
     assert "`R3` (ambiguous) expected ASK, got AURELIA-CSP via db2+agent, agent said AURELIA-CSP" in report
+
+
+def test_every_model_allowed_to_route_has_a_clean_run_on_the_pinned_split():
+    """ASOF_ROUTER_AGENT=auto lets only router.MEASURED models run the routing agent: each must have a shipped run on
+    the frozen test split, at its pinned SHA-256, that misrouted nothing and guessed on nothing."""
+    import json
+    from pathlib import Path
+
+    from asof.router import MEASURED
+
+    runs = [json.loads(f.read_text()) for f in (Path(__file__).resolve().parents[1] / "docs" / "routing").glob("*.json")]
+    clean = {r["model"] for r in runs if r["split"] == "routing-test" and r["model"]
+             and r["cases_sha256"] == rc.FROZEN["routing-test"]
+             and r["summary"]["misrouted"] == 0 and r["summary"]["guessed"] == 0}
+    assert MEASURED and MEASURED <= clean
+    measured_badly = {r["model"] for r in runs if r["split"] == "routing-test" and r["model"]
+                      and (r["summary"]["misrouted"] or r["summary"]["guessed"])}
+    assert not MEASURED & measured_badly  # a model with any unclean run is not allowed

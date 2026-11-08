@@ -11,7 +11,8 @@ Scored per case against the label (asof/eval/routing_cases.py):
     asked        a question about one document handed to a person: safe, costs a specialist's time
     guessed      a case that needs a person (ambiguous, out of scope, mixed) routed to a document anyway
 
-Each run writes docs/routing/<split>__<label>__<commit>.json, and docs/routing_eval.md is rebuilt from every run file.
+Each run writes docs/routing/<split>__<label>__<commit>__<time>.json, and docs/routing_eval.md is rebuilt from every
+run file: the newest run of each configuration in full, the others listed.
 Runs in a scratch schema, ASOF_ROUTE, seeded from the corpus, so the dev database's policy changes never move a result.
 """
 
@@ -111,11 +112,32 @@ def render(results: list[dict[str, Any]]) -> str:
              "**Misrouted** is the dangerous error: a draft checked against the other company's policy. **Asked** costs "
              "a specialist's time but is safe. **Guessed**: a question that needs a person (ambiguous, out of scope, or "
              "needing both documents) routed to one document anyway.", "",
-             "The routing agent is off by default (`ASOF_ROUTER_AGENT=false`): on the test split it recovered every "
-             "shared-vocabulary case Db2 alone sent to a person, but with the local model it also guessed on ambiguous "
-             "questions, and asking is the safe failure. A deployment can turn it on after measuring its own model with "
-             "`python -m asof.eval.routing --split routing-test`.", ""]
-    for r in sorted(results, key=lambda x: (x["split"] != "routing-test", x["started_at"])):
+             "Whether the routing agent runs depends on the model (`ASOF_ROUTER_AGENT=auto`, the default): only a model "
+             "whose run on the pinned test split misrouted nothing and guessed on none of the questions that need a "
+             "person (`router.MEASURED`, held to these run files by a test). The default hosted model qualifies. The "
+             "local 7B model recovered the same shared-vocabulary cases but guessed on ambiguous questions, so with it "
+             "close calls go to a person, the safe failure. The agent's model client has no local fallback, so a "
+             "failed routing call also asks a person. A deployment measures its own model with "
+             "`python -m asof.eval.routing --split routing-test --provider ...`.", ""]
+    latest: dict[tuple[str, str], dict[str, Any]] = {}
+    for r in sorted(results, key=lambda x: x["started_at"]):
+        latest[(r["split"], r["label"])] = r  # the newest run of each split and configuration is shown in full
+    earlier = [r for r in results if latest[(r["split"], r["label"])] is not r]
+    test = sorted((r for r in latest.values() if r["split"] == "routing-test"),
+                  key=lambda x: (x.get("model") is not None, "ollama" in (x.get("model") or "")))
+    if test:
+        lines += ["## The test split, side by side", "",
+                  "| Configuration | Routed right | **Misrouted** | Asked, document was clear | Asked when it should "
+                  "| Guessed | Agent calls | Median latency |", "|---|---|---|---|---|---|---|---|"]
+        for r in test:
+            t = r["summary"]
+            lines.append(f"| {r['label']} | {_rate(t['routed_right'], t['routable'])} | "
+                         f"**{_rate(t['misrouted'], t['routable'])}** | {_rate(t['asked'], t['routable'])} | "
+                         f"{_rate(t['ask_cases_asked'], t['ask_cases'])} | {_rate(t['guessed'], t['ask_cases'])} | "
+                         f"{t['agent_calls']} | {t['latency_ms_p50']} ms |")
+        lines.append("")
+    for r in sorted(latest.values(), key=lambda x: (x["split"] != "routing-test", x.get("model") is not None,
+                                                     "ollama" in (x.get("model") or ""), x["started_at"])):
         s = r["summary"]
         lines += [f"## {r['split']}: {r['label']}, run {r['started_at'][:10]} at `{r['git_commit']}`", "",
                   "| Measure | Result |", "|---|---|",
@@ -136,6 +158,16 @@ def render(results: list[dict[str, Any]]) -> str:
             lines += ["", "Not as labelled: " + "; ".join(
                 f"`{x['id']}` ({x['category']}) expected {x['expected']}, got {x['got']} via {x['method']}"
                 + (f", agent said {x['agent']['document']}" if x["agent"] else "") for x in wrong) + "."]
+        lines.append("")
+    if earlier:
+        lines += ["## Other runs", "", "Earlier or repeated runs of a split and configuration shown above. Every run "
+                  "is kept; the newest is shown in full.", ""]
+        for r in sorted(earlier, key=lambda x: (x["split"], x["started_at"])):
+            s = r["summary"]
+            lines.append(f"- {r['split']}, {r['label']}, {r['started_at'][:10]} at `{r['git_commit']}`: "
+                         f"{_rate(s['routed_right'], s['routable'])} routed right, {s['misrouted']} misrouted, "
+                         f"{s['asked']} asked; {_rate(s['ask_cases_asked'], s['ask_cases'])} asked when they should, "
+                         f"{s['guessed']} guessed.")
         lines.append("")
     return "\n".join(lines)
 
@@ -176,7 +208,9 @@ def main(argv: list[str] | None = None) -> int:
               "summary": summarize(rows), "rows": rows}
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     slug = "db2-only" if llm is None else llm.info.replace(":", "_").replace("/", "_")
-    (OUT_DIR / f"{args.split}__{slug}__{result['git_commit']}.json").write_text(json.dumps(result, indent=1, default=str))
+    stamp = started.replace("-", "").replace(":", "")[:15]  # repeated runs at one commit are all kept
+    (OUT_DIR / f"{args.split}__{slug}__{result['git_commit']}__{stamp}.json").write_text(
+        json.dumps(result, indent=1, default=str))
     REPORT.write_text(render([json.loads(f.read_text()) for f in sorted(OUT_DIR.glob("*.json"))]))
     s = result["summary"]
     print(f"{s['routed_right']}/{s['routable']} routed right, {s['misrouted']} misrouted, {s['asked']} asked; "

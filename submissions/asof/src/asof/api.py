@@ -328,9 +328,14 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         return state["intake_llm"]
 
     def doc_router() -> router.Router:
-        """The router behind doc_id "auto". Its agent uses the check's model, and only with ASOF_ROUTER_AGENT on."""
+        """The router behind doc_id "auto". Its agent gets the configured model without the local fallback, so a failed
+        routing call asks a person instead of letting an unmeasured model decide; ASOF_ROUTER_AGENT says when it runs."""
         if state.get("router") is None:
-            llm = components()[0].llm if settings.asof_router_agent else None
+            llm = None
+            if settings.asof_router_agent != "off" and settings.llm_ready:
+                client = build_llm(settings, fallback=False)
+                llm = client if router.agent_runs(settings.asof_router_agent, client.info) else None
+            log.info("routing agent: %s", llm.info if llm else "off (close calls go to a person)")
             state["router"] = router.Router(get_embeddings(settings.embedding_model), app_conn, schema, llm)
         return state["router"]
 

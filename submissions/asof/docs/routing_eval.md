@@ -6,7 +6,15 @@ Thresholds, set on the 20-case dev split: route on Db2 alone when the leader is 
 
 **Misrouted** is the dangerous error: a draft checked against the other company's policy. **Asked** costs a specialist's time but is safe. **Guessed**: a question that needs a person (ambiguous, out of scope, or needing both documents) routed to one document anyway.
 
-The routing agent is off by default (`ASOF_ROUTER_AGENT=false`): on the test split it recovered every shared-vocabulary case Db2 alone sent to a person, but with the local model it also guessed on ambiguous questions, and asking is the safe failure. A deployment can turn it on after measuring its own model with `python -m asof.eval.routing --split routing-test`.
+Whether the routing agent runs depends on the model (`ASOF_ROUTER_AGENT=auto`, the default): only a model whose run on the pinned test split misrouted nothing and guessed on none of the questions that need a person (`router.MEASURED`, held to these run files by a test). The default hosted model qualifies. The local 7B model recovered the same shared-vocabulary cases but guessed on ambiguous questions, so with it close calls go to a person, the safe failure. The agent's model client has no local fallback, so a failed routing call also asks a person. A deployment measures its own model with `python -m asof.eval.routing --split routing-test --provider ...`.
+
+## The test split, side by side
+
+| Configuration | Routed right | **Misrouted** | Asked, document was clear | Asked when it should | Guessed | Agent calls | Median latency |
+|---|---|---|---|---|---|---|---|
+| Db2 vote only (no model) | 26 of 30 | **0 of 30** | 4 of 30 | 10 of 10 | 0 of 10 | 0 | 19 ms |
+| Db2 vote + routing agent (openrouter:google/gemini-3.1-flash-lite) | 30 of 30 | **0 of 30** | 0 of 30 | 10 of 10 | 0 of 10 | 10 | 20 ms |
+| Db2 vote + routing agent (ollama:qwen2.5:7b-instruct) | 30 of 30 | **0 of 30** | 0 of 30 | 6 of 10 | 4 of 10 | 10 | 33 ms |
 
 ## routing-test: Db2 vote only (no model), run 2026-11-08 at `6c5e99f`
 
@@ -32,6 +40,29 @@ The routing agent is off by default (`ASOF_ROUTER_AGENT=false`): on the test spl
 | injection | 2 | 2 | 0 | 0 | 0 |
 
 Not as labelled: `RT17` (trap) expected AURELIA-CSP, got ASK via ask; `RT22` (trap) expected AURELIA-CSP, got ASK via ask; `RT24` (trap) expected FERNHOLLOW-FEES, got ASK via ask; `RT27` (trap) expected FERNHOLLOW-FEES, got ASK via ask.
+
+## routing-test: Db2 vote + routing agent (openrouter:google/gemini-3.1-flash-lite), run 2026-11-08 at `69d92a8`
+
+| Measure | Result |
+|---|---|
+| Routed to the right document | 30 of 30 |
+| **Misrouted** (other document) | **0 of 30** |
+| Asked a person, document was clear | 0 of 30 |
+| Asked a person when it should | 10 of 10 |
+| Guessed when it should have asked | 0 of 10 |
+| Decided by Db2 alone / with the agent / asked | 26 / 4 / 10 |
+| Routing agent calls | 10 |
+| Median latency | 20 ms |
+
+| Category | Cases | Correct | Misrouted | Asked | Guessed |
+|---|---|---|---|---|---|
+| clear_airline | 8 | 8 | 0 | 0 | 0 |
+| clear_bank | 8 | 8 | 0 | 0 | 0 |
+| trap | 12 | 12 | 0 | 0 | 0 |
+| ambiguous | 5 | 5 | 0 | 0 | 0 |
+| out_of_scope | 3 | 3 | 0 | 0 | 0 |
+| mixed | 2 | 2 | 0 | 0 | 0 |
+| injection | 2 | 2 | 0 | 0 | 0 |
 
 ## routing-test: Db2 vote + routing agent (ollama:qwen2.5:7b-instruct), run 2026-11-08 at `6c5e99f`
 
