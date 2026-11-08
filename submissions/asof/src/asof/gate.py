@@ -22,6 +22,7 @@ import html
 import logging
 import re
 import unicodedata
+import uuid
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import date
@@ -64,6 +65,7 @@ class GateRequest:
     doc_id: str
     channel: str = "api"
     requested_by: str | None = None  # the API user, when ASOF_AUTH=users; recorded in the hashed verdicts
+    route: dict[str, Any] | None = None  # how the router chose doc_id (asof/router.py), when the caller asked it to
 
 
 @dataclass
@@ -513,7 +515,19 @@ class Gate:
         }
         if req.requested_by:
             verdicts["requested_by"] = req.requested_by[:40]
+        if req.route:
+            verdicts["route"] = req.route
         return verdicts
+
+    def hold(self, req: GateRequest, reason_code: str, model_info: str) -> GateResult:
+        """Record a decision held before any check ran (the router could not tell which policy applies), so it is in
+        the ledger and the specialist inbox like any other held answer."""
+        q, d = redact(req.question), redact(req.draft_answer)
+        result = GateResult(str(uuid.uuid4()), "ESCALATED", reason_code, HOLDING_REPLY, [], [], None, 0, model_info[:200],
+                            released=False)
+        self._record(req, q.text, d.text, result, q.counts, d.counts)
+        result.released = False  # held: the holding reply goes out, never the draft
+        return result
 
     def _record(self, req: GateRequest, q_red: str, d_red: str, result: GateResult,
                 q_counts: dict[str, int], d_counts: dict[str, int]) -> None:

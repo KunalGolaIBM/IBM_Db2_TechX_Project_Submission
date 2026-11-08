@@ -178,6 +178,7 @@ function explain(r, asOf) {
     case "ERROR_FAIL_CLOSED": return "A check could not complete, so the answer was held (fail closed)."
       + (health.replay ? " In replay mode this is what happens to any input without a recorded model output." : "");
     case "LEDGER_UNAVAILABLE": return "The decision could not be recorded in the ledger, so nothing was released.";
+    case "ROUTE_UNCERTAIN": return "AsOf could not tell which policy document this is about, so it did not guess: a specialist picks the document and answers, in the inbox.";
     default: return r.reason_code;
   }
 }
@@ -213,7 +214,8 @@ function renderPlayground() {
         </div>
         <div class="field" ${s.mode === "ask" ? raw("hidden") : ""}>
           <label for="doc">Policy document</label>
-          <select id="doc">${[AIRLINE, BANK].map((d) => html`<option value="${d}" ${d === s.doc ? raw("selected") : ""}>${DOC_NAME[d]} (${d})</option>`)}</select>
+          <select id="doc">${[AIRLINE, BANK].map((d) => html`<option value="${d}" ${d === s.doc ? raw("selected") : ""}>${DOC_NAME[d]} (${d})</option>`)}
+            <option value="auto" ${s.doc === "auto" ? raw("selected") : ""}>Let AsOf decide (routing)</option></select>
         </div>
         <div class="field" ${s.mode === "ask" ? raw("hidden") : ""}>
           <label for="d">Assistant draft to check</label>
@@ -291,11 +293,19 @@ function claimCard(c) {
       <div class="reason">${c.reason}</div>
     </div>`;
 }
+function routeBanner(rt) {
+  if (!rt) return "";
+  const dist = Object.entries(rt.distances).map(([d, v]) => `${DOC_NAME[d] || d} ${Number(v).toFixed(2)}`).join(", ");
+  const how = rt.method === "db2" ? "Db2's vote alone" : rt.method === "db2+agent" ? "Db2's vote, confirmed by the routing agent" : "";
+  return rt.doc_id
+    ? html`<div class="banner ok"><strong>Routed to ${DOC_NAME[rt.doc_id]}.</strong><span>By ${how}: nearest clause distance ${dist} (lead ${Number(rt.margin).toFixed(2)}).</span></div>`
+    : html`<div class="banner fix"><strong>Asked a person instead of guessing.</strong><span>${rt.reason}. Nearest clause distance ${dist}. Held for the <a href="#/inbox">specialist inbox</a>.</span></div>`;
+}
 function resultView(r, asOf) {
   const first = r.claims.filter((c) => c.pass_no === 1);
   const second = r.claims.filter((c) => c.pass_no === 2);
   const draft = r._draft ?? r.assistant?.draft;
-  return html`
+  return html`${routeBanner(r.route)}
     <div class="decision ${lower(r.decision)}">
       <div class="icon">${ICONS[r.decision]}</div>
       <div><div class="row">${pill(r.decision)}<h2>${HEADLINE[r.decision]}</h2></div><p>${explain(r, asOf)}</p></div>
@@ -660,7 +670,7 @@ function reviewLink(e) {
 const waited = (m) => (m < 60 ? `${m} min` : m < 2880 ? `${Math.round(m / 60)} h` : `${Math.round(m / 1440)} days`);
 async function Inbox(id) {
   const target = id ? Number(id) : null;
-  if (target !== inb.id) Object.assign(inb, { id: target, reply: "", note: "", check: null, sent: null });
+  if (target !== inb.id) Object.assign(inb, { id: target, reply: "", note: "", doc: null, check: null, sent: null });
   mount(view, html`
     <div class="page-head"><div><h1>Specialist inbox</h1>
       <p>Answers AsOf held back wait here for a person. The specialist reads every claim and the clause version it was checked against, writes the reply, and AsOf checks it against the policy in force on the customer's date before it goes out. The SQL PL procedure <code>RESOLVE_ESCALATION</code> appends it to the hash-chained ledger as a <code>REVIEWED</code> decision linked to the held one. Db2 refuses a reply that contradicts the policy, and keeps the specialist's note when no clause covers it.</p></div></div>
@@ -729,6 +739,9 @@ async function renderReview() {
       : html`<form class="card" id="reply-form" autocomplete="off">
       <div class="card-head"><h2>Reply to the customer</h2><span class="sub">checked against the policy in force on ${fmtDate(d.as_of_date)} before it is sent</span></div>
       ${suggested ? html`<div class="field"><div class="chips"><button type="button" class="chip" id="use-suggested">Use the suggested reply for this scenario</button></div></div>` : ""}
+      ${d.reason_code === "ROUTE_UNCERTAIN" ? html`<div class="field"><label for="reply-doc">Policy document to check the reply against</label>
+        <select id="reply-doc">${[AIRLINE, BANK].map((x) => html`<option value="${x}" ${x === (inb.doc || d.doc_id) ? raw("selected") : ""}>${DOC_NAME[x]}</option>`)}</select>
+        <div class="hint">The router could not tell; you decide. The reply is checked against this document's clauses for ${fmtDate(d.as_of_date)}.</div></div>` : ""}
       <div class="field"><label for="reply">Reply</label><textarea id="reply" rows="5" maxlength="3500" required>${inb.reply}</textarea>
         <div class="hint">Policy statements in the reply are checked like the assistant's. ${d.rewrite ? "Started from AsOf's rewrite, which did not pass on its own." : ""}</div></div>
       <div class="field"><label for="note">Note for the record</label><textarea id="note" rows="2" maxlength="1000">${inb.note}</textarea>
@@ -739,7 +752,7 @@ async function renderReview() {
     </form>`}`);
   const form = $("#reply-form");
   if (!form) return;
-  const sync = () => { inb.reply = $("#reply").value; inb.note = $("#note").value; };
+  const sync = () => { inb.reply = $("#reply").value; inb.note = $("#note").value; inb.doc = $("#reply-doc") ? $("#reply-doc").value : null; };
   if (suggested) $("#use-suggested").addEventListener("click", () => { inb.reply = suggested.reply; inb.note = suggested.note || ""; renderReview(); });
   const run = async (send) => {
     sync();
@@ -747,7 +760,7 @@ async function renderReview() {
     mount($("#reply-result"), html`<div class="loading"><div class="spinner"></div>Checking the reply against Db2's clauses for ${fmtDate(d.as_of_date)}...</div>`);
     $$("#reply-form button").forEach((b) => { b.disabled = true; });
     try {
-      const res = await fetchReply(send, { reply: inb.reply, note: inb.note || null });
+      const res = await fetchReply(send, { reply: inb.reply, note: inb.note || null, ...(inb.doc ? { doc_id: inb.doc } : {}) });
       if (res.sent) { inb.sent = res.body; inb.check = res.body.check; } else { inb.check = res.body.check || res.body; inb.checkError = res.error; }
     } catch (err) { inb.check = null; mount($("#reply-result"), html`<div class="error-box">${err.message}</div>`); inb.busy = false; return; }
     inb.busy = false;

@@ -404,3 +404,32 @@ def test_a_replay_miss_is_explained_not_reported_as_a_broken_model():
 def test_ledger_ids_out_of_range_are_rejected_before_db2(path):
     assert client().get(path.format(10**13)).status_code == 422
     assert client().get(path.format(0)).status_code == 422
+
+
+def test_auto_routing_checks_the_routed_document_or_holds_for_a_person(monkeypatch):
+    from asof import router as router_mod
+    from asof.router import Route
+
+    class FakeRouter:
+        def __init__(self, doc):
+            self.doc = doc
+
+        def route(self, question, draft, as_of):
+            return Route(self.doc, "db2" if self.doc else "ask", "r", "FERNHOLLOW-FEES",
+                         {"AURELIA-CSP": 0.6, "FERNHOLLOW-FEES": 0.2}, 0.4)
+
+    class HoldingGate(FakeGate):
+        def hold(self, req, reason, model_info):
+            self.seen.append(req)
+            return GateResult("rid", "ESCALATED", reason, HOLDING_REPLY, [], [], None, 0, model_info, ledger_id=2,
+                              released=False)
+
+    for doc, status, decision in (("FERNHOLLOW-FEES", 200, "PASS"), (None, 503, "ESCALATED")):
+        gate = HoldingGate()
+        monkeypatch.setattr(router_mod, "Router", lambda *a, _doc=doc, **k: FakeRouter(_doc))
+        monkeypatch.setattr("asof.api.get_embeddings", lambda name: object())
+        r = client(gate).post("/api/gate", json={**OK, "doc_id": "auto"})
+        assert r.status_code == status and r.json()["decision"] == decision
+        assert gate.seen[0].doc_id == "FERNHOLLOW-FEES" and gate.seen[0].route["method"] in ("db2", "ask")
+        assert r.json()["route"]["leader"] == "FERNHOLLOW-FEES"
+    assert client().post("/api/gate", json={**OK, "doc_id": "AUTO"}).status_code == 422

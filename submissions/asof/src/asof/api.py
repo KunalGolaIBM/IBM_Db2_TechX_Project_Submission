@@ -29,7 +29,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from . import __version__, db, impactagent, intake, ledger, notices, policy, review
+from . import __version__, db, impactagent, intake, ledger, notices, policy, review, router
 from .anchor import AnchorLog
 from .anchor import verify as verify_anchors
 from .askledger import LedgerAsker
@@ -146,7 +146,8 @@ class GateIn(_In):
     draft_answer: Draft
     as_of_date: AsOfDate = Field(description="The date that decides which policy applies (booking or travel date). "
                                              "Supplied by the calling system, never guessed.")
-    doc_id: DocId = "AURELIA-CSP"
+    doc_id: DocId | Literal["auto"] = Field("AURELIA-CSP", description="The policy document, or auto to let the router "
+                                            "decide (it asks a person rather than guess; asof/router.py).")
     channel: Channel = "api"
 
 
@@ -191,6 +192,8 @@ class GateOut(BaseModel):
                                  "stated; any makes the draft escalate.")
     row_hash: str | None = Field(None, description="Receipt: the decision's SHA-256 ledger row hash. Kept outside Db2, "
                                  "it proves later (POST /api/ledger/receipt) that the record was not rewritten.")
+    route: dict[str, Any] | None = Field(None, description="With doc_id auto: which document the router chose and why, "
+                                         "or why it asked a person instead (decision ESCALATED, reason ROUTE_UNCERTAIN).")
 
 
 def _claims(result: GateResult) -> list[ClaimOut]:
@@ -323,6 +326,13 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
             state["intake_llm"] = build_llm(settings, max_output_tokens=settings.asof_intake_max_output_tokens,
                                             deadline_s=settings.asof_intake_timeout_s)
         return state["intake_llm"]
+
+    def doc_router() -> router.Router:
+        """The router behind doc_id "auto". Its agent uses the check's model, and only with ASOF_ROUTER_AGENT on."""
+        if state.get("router") is None:
+            llm = components()[0].llm if settings.asof_router_agent else None
+            state["router"] = router.Router(get_embeddings(settings.embedding_model), app_conn, schema, llm)
+        return state["router"]
 
     def ledger_asker() -> LedgerAsker:
         if state["asker"] is None:
@@ -458,8 +468,15 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     @app.post("/api/gate", response_model=GateOut)
     def check_answer(body: GateIn, request: Request):
         g, _ = components()
-        return respond(g.check(GateRequest(body.question, body.draft_answer, body.as_of_date, body.doc_id, body.channel,
-                                           requested_by(request))))
+        if body.doc_id != "auto":
+            return respond(g.check(GateRequest(body.question, body.draft_answer, body.as_of_date, body.doc_id,
+                                               body.channel, requested_by(request))))
+        r = doc_router().route(body.question, body.draft_answer, body.as_of_date)
+        req = GateRequest(body.question, body.draft_answer, body.as_of_date, r.doc_id or r.leader, body.channel,
+                          requested_by(request), r.as_json())
+        result = g.check(req) if r.doc_id else g.hold(req, "ROUTE_UNCERTAIN", f"router:{r.method}")
+        out = gate_out(result).model_dump(mode="json") | {"route": jsonable_encoder(router.describe(r))}
+        return JSONResponse(out, status_code=200 if result.released else 503)
 
     @app.post("/api/assistant/ask")
     def ask_assistant(body: AskIn, request: Request):

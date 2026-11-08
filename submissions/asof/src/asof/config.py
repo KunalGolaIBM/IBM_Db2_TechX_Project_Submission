@@ -116,6 +116,10 @@ class Settings(BaseSettings):
     asof_intake_timeout_s: float = Field(150.0, gt=0, le=600)
     # Whole-check budget: no step of a check starts after it (the check then fails closed).
     asof_check_deadline_s: float = Field(300.0, gt=0, le=3600)
+    # Routing (doc_id "auto", asof/router.py): Db2's vote decides clear cases. With the agent on, the model looks at
+    # close calls and may confirm Db2's leader; off, a close call goes to a person. Off by default: on the frozen
+    # routing test split the agent guessed on ambiguous questions (docs/routing_eval.md).
+    asof_router_agent: bool = False
 
     openrouter_api_key: SecretStr | None = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
