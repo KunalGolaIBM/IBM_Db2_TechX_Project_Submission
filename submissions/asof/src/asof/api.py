@@ -645,6 +645,15 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         elif (request.client.host if request.client else "") not in LOCAL_CLIENTS:
             raise HTTPException(403, "policy changes are only accepted from localhost unless ASOF_EDITOR_TOKEN is set")
 
+    def require_local_reviewer(request: Request) -> None:
+        """Specialist actions in local mode: localhost only, as for editors, unless a token already authenticated the
+        caller (ASOF_API_TOKEN, or ASOF_AUTH=users, where the middleware required the reviewer role)."""
+        if users_mode or api_token:
+            return
+        if (request.client.host if request.client else "") not in LOCAL_CLIENTS:
+            raise HTTPException(403, "specialist actions are only accepted from localhost unless ASOF_AUTH=users or "
+                                     "ASOF_API_TOKEN is set")
+
     @app.post("/api/impact/{clause_id}/suggestions")
     def draft_suggestions(clause_id: Annotated[str, Path(pattern=r"^[A-Z]{3}-[0-9]{3}$")], request: Request,
                           x_asof_editor_token: Annotated[str | None, Header()] = None):
@@ -863,6 +872,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     @app.post("/api/reviews/{ledger_id}/check")
     def review_check(ledger_id: Annotated[int, Path(ge=1, le=10**12)], body: ReplyIn, request: Request):
         """The full check of a draft reply on the customer's date. Nothing is recorded or sent."""
+        require_local_reviewer(request)
         g, _ = components()
         try:
             result = review.check_reply(g, ledger_id, body.reply, body.doc_id, requested_by(request))
@@ -873,6 +883,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     @app.post("/api/reviews/{ledger_id}/resolve")
     def review_resolve(ledger_id: Annotated[int, Path(ge=1, le=10**12)], body: ReplyIn, request: Request):
         """Check the reply and send it: appended to the ledger as a REVIEWED decision through RESOLVE_ESCALATION."""
+        require_local_reviewer(request)
         g, _ = components()
         try:
             done = review.resolve(g, ledger_id, body.reply, body.note, body.doc_id, requested_by(request))
@@ -895,6 +906,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     @app.post("/api/notices/draft")
     def notice_draft(body: NoticeDraftIn, request: Request):
         """Run the change-impact agent: a checked correction notice for every answer now stale for its date."""
+        require_local_reviewer(request)
         drafted = impactagent.draft_notices(components()[0], body.clause_id, requested_by(request))
         conn = app_conn()
         try:
@@ -905,6 +917,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     @app.post("/api/notices/{notice_id}/decision")
     def notice_decision(notice_id: Annotated[int, Path(ge=1, le=10**12)], body: NoticeDecision, request: Request):
         """A specialist approves a notice for sending (it is marked SENT; AsOf sends nothing itself) or rejects it."""
+        require_local_reviewer(request)
         conn = app_conn()
         try:
             notices.decide(conn, notice_id, body.approve, requested_by(request), schema)
@@ -931,6 +944,18 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     return app
 
 
+LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
+
+
+def bind_refusal(host: str, settings: Settings) -> str | None:
+    """Why the server must not listen on `host`, or None. Local mode trusts its clients (it answers on localhost
+    only), so listening beyond localhost needs authentication first: per-user tokens or the shared API token."""
+    if host in LOOPBACK_HOSTS or settings.asof_auth == "users" or settings.asof_api_token:
+        return None
+    return (f"refusing to listen on {host}: local mode has no authentication. Set ASOF_AUTH=users (per-user tokens, "
+            "python -m asof.users) or ASOF_API_TOKEN in .env first, or keep the default 127.0.0.1.")
+
+
 def main(argv: list[str] | None = None) -> None:
     import uvicorn
 
@@ -939,6 +964,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    refusal = bind_refusal(args.host, get_settings())
+    if refusal:
+        raise SystemExit(refusal)
     uvicorn.run(create_app(), host=args.host, port=args.port)
 
 

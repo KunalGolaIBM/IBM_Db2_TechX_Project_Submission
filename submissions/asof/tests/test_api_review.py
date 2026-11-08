@@ -34,7 +34,8 @@ def fake_db(monkeypatch):
 
 @pytest.fixture
 def local(fake_db):
-    return TestClient(create_app(Settings(_env_file=None), gate=FakeGate(), assistant=FakeAssistant()))
+    return TestClient(create_app(Settings(_env_file=None), gate=FakeGate(), assistant=FakeAssistant()),
+                      client=("127.0.0.1", 50000))
 
 
 @pytest.fixture
@@ -137,3 +138,24 @@ def test_notice_endpoints_validate_and_map_db2_refusals(local, monkeypatch):
     assert "SQL0438N" not in r.json()["detail"]  # Db2's message frame stays in the server log
     monkeypatch.setattr(notices, "decide", lambda conn, notice_id, approve, user, schema: None)
     assert local.post("/api/notices/1/decision", json={"approve": False}).json() == {"notice_id": 1, "status": "REJECTED"}
+
+
+def test_in_local_mode_specialist_actions_come_only_from_localhost():
+    """As for editor actions: local mode has no authentication, so a remote client may not send replies or decide
+    notices. With per-user tokens the middleware requires the reviewer role from any client."""
+    remote = TestClient(create_app(Settings(_env_file=None), gate=FakeGate(), assistant=FakeAssistant()),
+                        client=("203.0.113.7", 50000))
+    for path, body in (("/api/reviews/5/check", {"reply": "Thanks."}), ("/api/reviews/5/resolve", {"reply": "Thanks."}),
+                       ("/api/notices/draft", {"clause_id": "PET-001"}), ("/api/notices/1/decision", {"approve": True})):
+        r = remote.post(path, json=body)
+        assert r.status_code == 403 and "localhost" in r.json()["detail"], path
+
+
+def test_the_server_refuses_to_listen_beyond_localhost_without_authentication():
+    from asof.api import bind_refusal
+
+    everywhere = "0.0.0.0"  # noqa: S104 - the address under test
+    assert bind_refusal("127.0.0.1", Settings(_env_file=None)) is None
+    assert "ASOF_AUTH=users" in (bind_refusal(everywhere, Settings(_env_file=None)) or "")
+    assert bind_refusal(everywhere, Settings(_env_file=None, asof_auth="users")) is None
+    assert bind_refusal(everywhere, Settings(_env_file=None, asof_api_token="t" * 32)) is None
