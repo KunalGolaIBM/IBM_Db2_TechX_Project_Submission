@@ -208,6 +208,24 @@ What this means for AsOf, and two things we learned about Db2 along the way:
 - **Keyword search was tested and left out.** Db2 Text Search could add a keyword leg to retrieval, but vector search alone already retrieves the right clause version for 18 of 18 dev cases at the 4 clauses per claim the check uses, and enabling Text Search failed in IBM's own container setup here (details in [architecture.md](architecture.md#design-decisions)).
 - **The index is only used when `k` is a constant.** With `FETCH APPROX FIRST ? ROWS ONLY` (a parameter marker), Db2 12.1.5 never chose the index at any size; with `FETCH APPROX FIRST 10 ROWS ONLY` it did from 20,000 rows. An optimizer guideline (`<IXSCAN TABLE='...' SEARCH_LIST_SIZE='100'/>`) also forces it.
 
+### Backup and restore, proven on a database that did not exist
+
+A ledger is only evidence if it survives losing the machine, so AsOf tests its recovery end to end, with Db2's own utilities and the ledger's own checks. `python -m asof.backup drill` ([backup.py](src/asof/backup.py)) works in scratch databases and never touches `TESTDB` or its logging mode:
+
+1. It creates `ASOFSRC` in archive-logging mode (`LOGARCHMETH1 DISK:`), installs AsOf with the normal setup, and appends decisions through `APPEND_LEDGER` as the runtime user, anchoring each chain head as the app does.
+2. It runs `BACKUP DATABASE ASOFSRC ONLINE ... COMPRESS INCLUDE LOGS` while a writer keeps appending.
+3. It restores with `RESTORE DATABASE ... INTO` a database that does not exist yet, then `ROLLFORWARD ... TO END OF BACKUP AND STOP` from the logs inside the image.
+4. On the copy, as the runtime user, it runs `VERIFY_CHAIN` and checks every chain-head anchor up to the restored head. It compares the restored head's hash with the source, and confirms the triggers still refuse an `UPDATE`, even from the owner.
+
+Last run, Sun 8 Nov 2026 at `eff8e62`, Db2 12.1.5 under Rosetta on the MacBook Air ([report](docs/backup/db2-x86_64-on-arm64__eff8e62.json)):
+
+- **Timing:** 62 s end to end, with the online backup taking 1.4 s and the restore with rollforward 9.9 s.
+- **Writes during the backup:** 40 decisions were in the ledger when the backup started, and the writer appended 7 more while it ran, none refused.
+- **The copy:** it holds 46. Every decision committed before the backup's end made it in; the 47th committed after the backup finished, so it is correctly absent.
+- **Checks:** `VERIFY_CHAIN` OK over 46 rows, all 46 anchors match, and the head hash matches the source. All 7 checks pass.
+
+CI runs the same drill on IBM's stock image (x86 Linux) on every push. Two things we learned: an online backup needs archive logging, which `TESTDB` (created by IBM's container setup) does not have, hence the scratch source. And with the instance's directory cache on (`DIR_CACHE=YES`), `RESTORE ... INTO` a name that had been dropped earlier failed with SQL30061N, while a name never used before always worked, so each run restores into a new name. To back up your own AsOf database online, switch it to archive logging and take one offline backup first, which Db2 requires.
+
 ### In-database embeddings (Db2 12.1.5)
 
 Db2 embeds the policy text itself. Setup registers the model once:

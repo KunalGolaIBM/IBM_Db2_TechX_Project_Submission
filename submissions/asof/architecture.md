@@ -196,6 +196,10 @@ Each line is a choice and the reason for it. Findings marked "spike" were verifi
 
 #### Db2: storage, queries and schema
 
+- **Recovery is tested by restoring, and judged by the ledger's checks.** The drill restores an online backup into a database that did not exist and requires `VERIFY_CHAIN`, the anchors and the source's head hash to agree. A backup that was never restored proves nothing.
+- **The drill uses scratch databases.** An online backup needs archive logging. Switching `TESTDB` to it would put the judge's database into backup-pending state until an offline backup, which needs every connection closed. The drill never runs `FORCE APPLICATION ALL`, which would cut off every user of the instance.
+- **A new name for every restored copy.** With `DIR_CACHE=YES`, `RESTORE ... INTO` a database name dropped earlier in the instance's life failed with SQL30061N here, while a fresh name always worked. The directory cache is the most likely cause; the fix does not depend on knowing.
+
 - **Db2 12.1.5.0 Community Edition, pinned.** `db2level` reports v12.1.5.0; native `VECTOR` and `VECTOR_DISTANCE` need 12.1.2 or later. The image tag `12.1.5.0` resolves to the same manifest as `latest` today, so pinning costs nothing and keeps judges on the tested level.
 - **Thin derived Db2 image (`docker/db2/Dockerfile`).** Under Rosetta (Colima `--vz-rosetta`, binfmt flags `OCF` without `P`), argv[0] is not preserved, so `su - db2inst1 -c ...` never starts a login shell and `db2profile` is never sourced. IBM's setup script then fails every `db2` call with "command not found" and still prints "Setup has completed", with no engine running and no database. The image gives the Db2 users a login-shell wrapper; on hosts that preserve argv[0] it changes nothing. Spike: stock image left TESTDB missing; derived image created TESTDB in about 90 seconds.
 - **No fenced routines.** Under Rosetta the fenced-mode process (`db2fmp`) crashes on start, so fenced C routines such as `SYSPROC.ENV_GET_INST_INFO` fail with SQL1646N. Everything AsOf runs in Db2 is built-in SQL, triggers or SQL PL procedures, which execute inside the engine and behave the same on Apple Silicon and x86.
@@ -402,6 +406,16 @@ Db2 Community Edition 12.1.5.0, database `TESTDB`, schema `ASOF`. Full DDL: [00_
 | `IX_CLAUSE_EMBEDDING` | `CREATE VECTOR INDEX ... ON POLICY_CLAUSE (EMBEDDING) WITH DISTANCE COSINE` (type `VANN`) | Approximate nearest-neighbour search at scale; the temporal query stays exact (see [vector benchmark](docs/vector_benchmark.md)) |
 | `ANSWER_LEDGER`, `CLAIM_CITATION` | `COMPRESS YES ADAPTIVE` | Append-only, repetitive rows |
 | Statistics | `RUNSTATS ... WITH DISTRIBUTION AND SAMPLED DETAILED INDEXES ALL` in setup | Plans costed from real cardinalities; [access plans](docs/explain/README.md) |
+
+### Backup and restore
+
+`python -m asof.backup drill` ([backup.py](src/asof/backup.py)) is the recovery test, and CI runs it on IBM's stock image:
+
+1. It takes an online backup (`BACKUP DATABASE ... ONLINE COMPRESS INCLUDE LOGS`) of a scratch database in archive-logging mode while the runtime user keeps appending.
+2. It restores into a database that did not exist (`RESTORE ... INTO`), then runs `ROLLFORWARD ... TO END OF BACKUP AND STOP`.
+3. It judges the copy with the ledger's own checks: `VERIFY_CHAIN`, the chain-head anchors up to the restored head (`anchor.verify(..., through=head)`), the head hash against the source, and the UPDATE trigger.
+
+The restored copy is a point in time: the anchors written after its head are left out, but the log as a whole is still checked for tampering. Last run: 7 of 7 checks passed, 46 of the 47 rows restored (the 47th committed after the backup ended), 62 s under Rosetta ([report](docs/backup/db2-x86_64-on-arm64__eff8e62.json)).
 
 ### Tables
 

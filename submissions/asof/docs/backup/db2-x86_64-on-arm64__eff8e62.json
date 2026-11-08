@@ -1,0 +1,124 @@
+{
+ "ran_at": "2026-11-08T05:44:31+00:00",
+ "git_commit": "eff8e62",
+ "machine": "x86_64",
+ "host_machine": "arm64",
+ "db2level": "Informational tokens are \"DB2 v12.1.5.0\", \"special_85816\",",
+ "container": "asof-db2",
+ "source_db": "ASOFSRC",
+ "restored_db": "ASOFRDAB",
+ "image_timestamp": "20261108054415",
+ "image_bytes": {
+  "20261108054359": 180359168,
+  "20261108054415": 42008576
+ },
+ "source_head_before_backup": {
+  "ledger_id": 40,
+  "rows": 40
+ },
+ "appended_during_backup": 7,
+ "writer_errors": [],
+ "source_head_after_backup": {
+  "ledger_id": 47,
+  "rows": 47
+ },
+ "restored_head": {
+  "ledger_id": 46,
+  "rows": 46
+ },
+ "verify_chain": {
+  "status": "OK",
+  "checked": 46
+ },
+ "anchors": {
+  "status": "OK",
+  "anchors": 46,
+  "covered_through": 46,
+  "unanchored_rows": 0,
+  "first_bad_anchor": null,
+  "detail": null
+ },
+ "update_refused_sqlstate": "75001",
+ "checks": {
+  "online backup did not block the app: appends during the backup succeeded": true,
+  "restored ledger holds every decision committed before the backup started": true,
+  "restored ledger holds nothing after the source's head when the backup ended": true,
+  "VERIFY_CHAIN on the restored database is OK": true,
+  "every anchor up to the restored head matches the restored ledger": true,
+  "the restored head has the same hash in the source ledger": true,
+  "the triggers still refuse UPDATE on the restored ledger, even from the owner": true
+ },
+ "passed": true,
+ "steps": [
+  {
+   "name": "machine",
+   "seconds": 0.5,
+   "detail": "x86_64"
+  },
+  {
+   "name": "db2level",
+   "seconds": 0.8,
+   "detail": "Informational tokens are \"DB2 v12.1.5.0\", \"special_85816\","
+  },
+  {
+   "name": "list databases",
+   "seconds": 0.7,
+   "detail": "Alternate server hostname            = | Alternate server port number         ="
+  },
+  {
+   "name": "work directories",
+   "seconds": 0.5,
+   "detail": ""
+  },
+  {
+   "name": "CREATE DATABASE ASOFSRC",
+   "seconds": 25.3,
+   "detail": "DB20000I  The CREATE DATABASE command completed successfully."
+  },
+  {
+   "name": "LOGARCHMETH1 to disk",
+   "seconds": 0.7,
+   "detail": "DB20000I  The UPDATE DATABASE CONFIGURATION command completed successfully."
+  },
+  {
+   "name": "offline backup (ends backup-pending)",
+   "seconds": 1.8,
+   "detail": "Backup successful. The timestamp for this backup image is : 20261108054359"
+  },
+  {
+   "name": "python -m asof.setup on ASOFSRC",
+   "seconds": 14.3,
+   "detail": "Setup complete."
+  },
+  {
+   "name": "append 40 decisions (APPEND_LEDGER as asofapp, each anchored)",
+   "seconds": 0.6,
+   "detail": ""
+  },
+  {
+   "name": "BACKUP DATABASE ONLINE COMPRESS INCLUDE LOGS",
+   "seconds": 1.4,
+   "detail": "Backup successful. The timestamp for this backup image is : 20261108054415"
+  },
+  {
+   "name": "image sizes",
+   "seconds": 0.5,
+   "detail": "-rw------- 1 db2inst1 db2iadm1 180359168 Nov  8 05:43 ASOFSRC.0.db2inst1.DBPART000.20261108054359.001 | -rw------- 1 db2inst1 db2iadm1  42008576 Nov  8 05:44 ASOFSRC.0.db2inst1.DBPART000.20261108054415.001"
+  },
+  {
+   "name": "RESTORE DATABASE ... INTO a new database",
+   "seconds": 5.9,
+   "detail": "DB20000I  The RESTORE DATABASE command completed successfully."
+  },
+  {
+   "name": "ROLLFORWARD TO END OF BACKUP AND STOP",
+   "seconds": 4.0,
+   "detail": "Last committed transaction             = 2026-11-08-05.44.16.000000 UTC | DB20000I  The ROLLFORWARD command completed successfully."
+  },
+  {
+   "name": "checks on the restored database",
+   "seconds": 4.6,
+   "detail": ""
+  }
+ ]
+}
