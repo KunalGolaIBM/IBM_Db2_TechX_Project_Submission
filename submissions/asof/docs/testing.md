@@ -3,7 +3,7 @@
 What the test suite covers, types and coverage, dependency pinning and the fresh-clone check. The evaluation of the check itself is in [evaluation.md](evaluation.md); the headline results are in the [README](../README.md#testing--verification).
 
 ```bash
-pytest -q                                 # 888 tests: 9 need an opt-in flag (live LLM, remote endpoints, the backup drill), 3 need TLS on (scripts/enable_db2_tls.sh; CI turns it on), 1 needs the watsonx extra
+pytest -q                                 # 900 tests: 9 need an opt-in flag (live LLM, remote endpoints, the backup drill), 3 need TLS on (scripts/enable_db2_tls.sh; CI turns it on), 1 needs the watsonx extra
 pytest -q -m "not db2"                    # unit tests only, no database needed
 ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 4 live tests against the configured LLM (spends API calls)
 ASOF_RUN_BACKUP_TESTS=1 pytest -q -m backup   # the online backup and restore drill (about a minute; creates and drops two databases)
@@ -14,7 +14,7 @@ mypy                                     # type check (configuration in pyprojec
 pytest -q --cov=asof --cov-report=term   # line coverage of src/asof
 ```
 
-**Types and coverage** (Sun 8 Nov 2026, 6 PM). `mypy` 2.4 with the Pydantic plugin finds no issues in the 46 modules. It runs `--strict` on 40 of them: the check and its LangGraph wiring (`gate.py`, `checkgraph.py`), the rule checker, redaction, the ledger, the anchors, policy changes, intake, the specialist inbox, correction notices, the change-impact agent, the router, setup, the seed loader, the Db2 layer, the configuration and the benchmarks. The other six run with relaxed annotation rules: the FastAPI routes, Ask the ledger's LangChain SQL chain, the model clients, replay, the SQL-file loader and the evaluation's counting wrapper, all glue around untyped libraries, and still fully type-checked. The MCP server passes `--strict` in its own environment. The full suite against Db2 covers **75% of the lines in `src/asof`** (6,977 statements, run locally without the opt-in backup drill; CI runs the drill too), including:
+**Types and coverage** (Sun 8 Nov 2026, 7 PM). `mypy` 2.4 with the Pydantic plugin finds no issues in the 46 modules. It runs `--strict` on 40 of them: the check and its LangGraph wiring (`gate.py`, `checkgraph.py`), the rule checker, redaction, the ledger, the anchors, policy changes, intake, the specialist inbox, correction notices, the change-impact agent, the router, setup, the seed loader, the Db2 layer, the configuration and the benchmarks. The other six run with relaxed annotation rules: the FastAPI routes, Ask the ledger's LangChain SQL chain, the model clients, replay, the SQL-file loader and the evaluation's counting wrapper, all glue around untyped libraries, and still fully type-checked. The MCP server passes `--strict` in its own environment. The full suite against Db2 covers **80% of the lines in `src/asof`** (7,095 statements, run locally without the opt-in backup drill; CI runs the drill too), including:
 
 | Module | Coverage |
 |---|---|
@@ -22,13 +22,14 @@ pytest -q --cov=asof --cov-report=term   # line coverage of src/asof
 | `rules.py` | 99% |
 | `notices.py`, `impactagent.py` | 97% |
 | `policy.py` | 96% |
-| `gate.py`, `checkgraph.py` | 95% |
+| `gate.py` | 97% |
+| `checkgraph.py` | 95% |
 | `ledger.py` | 93% |
 | `intake.py` | 92% |
 | `review.py` | 88% |
 | `api.py` | 86% |
 
-The ledger benchmark is at 89%; the backup drill (`backup.py`) reaches 82% when its opt-in test runs, as it does in CI. The lowest numbers belong to command-line tools that CI runs as steps of their own rather than through pytest: `setup.py` 27%, `explain.py` 55%, `db2check.py` 0%, and the evaluation runners at 34 to 71%. CI runs mypy on every push to `main` and fails the Db2 job if coverage drops below 74%.
+The ledger benchmark is at 89%; the backup drill (`backup.py`) reaches 82% when its opt-in test runs, as it does in CI. The lowest numbers belong to command-line tools that CI runs as steps of their own rather than through pytest: `setup.py` 28%, `explain.py` 55% and the evaluation runners at 37 to 71%. `db2check.py` (95%) and a 40-row run of the chain benchmark (`chainbench.py`, 86%) now run under pytest too. CI runs mypy on every push to `main` and fails the Db2 job if coverage drops below 78%.
 
 `requirements.txt` lists the 23 direct dependencies; `requirements.lock` pins all 109 packages, transitive ones included, at the versions tested. It is used as a pip constraints file, so Linux and Windows still get their platform-only packages. `python scripts/lock_deps.py` regenerates it, and a test fails if the two files disagree. Last audit (8 Nov 2026): no known vulnerabilities; CI repeats it on every push to `main`.
 

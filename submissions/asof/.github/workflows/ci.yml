@@ -143,7 +143,7 @@ jobs:
       - name: All tests, including Db2 integration, TLS and the backup drill (online BACKUP, RESTORE into a new database)
         run: |
           set -o pipefail
-          ASOF_RUN_BACKUP_TESTS=1 pytest -q -rs --cov=asof --cov-report=term --cov-fail-under=74 | tee /tmp/pytest.log
+          ASOF_RUN_BACKUP_TESTS=1 pytest -q -rs --cov=asof --cov-report=term --cov-fail-under=78 | tee /tmp/pytest.log
           if grep -q "TLS not enabled" /tmp/pytest.log; then echo "TLS tests were skipped"; exit 1; fi
       - name: Access plans for the hot queries
         run: python -m asof.explain
