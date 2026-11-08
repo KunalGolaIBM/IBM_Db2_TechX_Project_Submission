@@ -58,8 +58,8 @@ def _value_ok(spec: dict, rule: dict[str, Any]) -> bool:
     if "flag" in spec:
         return rule.get(spec["flag"]) is spec["value"]
     if "items" in spec:
-        want = {intake.normalize(x).casefold() for x in spec["items"]}
-        return any(isinstance(v, list) and {intake.normalize(str(x)).casefold() for x in v} == want for v in rule.values())
+        items = {intake.normalize(x).casefold() for x in spec["items"]}
+        return any(isinstance(v, list) and {intake.normalize(str(x)).casefold() for x in v} == items for v in rule.values())
     raise ValueError(f"unknown value spec {spec}")
 
 

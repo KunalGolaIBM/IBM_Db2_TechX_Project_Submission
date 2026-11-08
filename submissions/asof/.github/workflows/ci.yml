@@ -44,14 +44,17 @@ jobs:
           python -m venv /tmp/lf-venv
           /tmp/lf-venv/bin/pip install -q -r langflow/requirements-langflow.txt
           /tmp/lf-venv/bin/python -m pytest -q langflow/tests -p no:cacheprovider
-      - name: MCP server tests (own virtualenv; MCP SDK and httpx only) and its dependency audit
+      - name: MCP server tests, mypy --strict and dependency audit (own virtualenv; MCP SDK and httpx only)
         run: |
           python -m venv /tmp/mcp-venv
-          /tmp/mcp-venv/bin/pip install -q -r mcp_server/requirements-mcp.txt pip-audit==2.10.1
+          /tmp/mcp-venv/bin/pip install -q -r mcp_server/requirements-mcp.txt pip-audit==2.10.1 mypy==2.4.0
           /tmp/mcp-venv/bin/python -m pytest -q mcp_server/tests -p no:cacheprovider
+          /tmp/mcp-venv/bin/mypy --strict mcp_server/asof_mcp.py
           /tmp/mcp-venv/bin/pip-audit -r mcp_server/requirements-mcp.txt --progress-spinner off
       - name: Lint (ruff, including its SQL-injection rule)
         run: ruff check .
+      - name: Type check (mypy, strict except the glue modules listed in pyproject.toml)
+        run: mypy
       - name: Secret check over every tracked file
         run: python scripts/check_secrets.py --all
       - name: Dependency audit (pip-audit over all locked packages)
@@ -93,6 +96,7 @@ jobs:
           pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt -c requirements.lock
           pip install -e . --no-deps
+          pip install -r requirements-dev.txt
       - name: Configure (.env from .env.example, random owner password)
         run: |
           cp .env.example .env
@@ -129,7 +133,7 @@ jobs:
       - name: All tests, including Db2 integration and TLS
         run: |
           set -o pipefail
-          pytest -q -rs | tee /tmp/pytest.log
+          pytest -q -rs --cov=asof --cov-report=term --cov-fail-under=74 | tee /tmp/pytest.log
           if grep -q "TLS not enabled" /tmp/pytest.log; then echo "TLS tests were skipped"; exit 1; fi
       - name: Access plans for the hot queries
         run: python -m asof.explain

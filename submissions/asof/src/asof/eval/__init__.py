@@ -30,9 +30,13 @@ import statistics
 from dataclasses import dataclass
 from datetime import date
 from importlib import resources
-from typing import Any
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
+
+from ..llm import LLMResult, structured_call
+
+T = TypeVar("T", bound=BaseModel)
 
 SPLITS = {"dev": "cases_dev.jsonl", "test": "cases_test.jsonl",
           "bank-dev": "bank_cases_dev.jsonl", "bank-test": "bank_cases_test.jsonl",
@@ -131,9 +135,10 @@ class CountingLLM:
     def begin_check(self) -> None:
         getattr(self.inner, "begin_check", lambda: None)()
 
-    def structured(self, schema: type[BaseModel], messages, choices=None):
+    def structured(self, schema: type[T], messages: list[tuple[str, str]], choices: dict[str, list[str]] | None = None,
+                   max_chars: int | None = None) -> LLMResult[T]:
         self.calls += 1
-        result = self.inner.structured(schema, messages, choices)
+        result = structured_call(self.inner, schema, messages, choices, max_chars)
         self.input_tokens += result.input_tokens or 0
         self.output_tokens += result.output_tokens or 0
         return result

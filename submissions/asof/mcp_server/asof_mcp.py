@@ -66,7 +66,7 @@ class AsOfAPI:
         self._http = httpx.Client(base_url=base_url.rstrip("/"), headers=headers, transport=transport,
                                   timeout=httpx.Timeout(timeout_s, connect=5.0), follow_redirects=False)
 
-    def _call(self, method: str, path: str, json: dict | None = None, held_ok: bool = False) -> Any:
+    def _call(self, method: str, path: str, json: dict[str, Any] | None = None, held_ok: bool = False) -> Any:
         try:
             r = self._http.request(method, path, json=json)
         except httpx.HTTPError as exc:
@@ -85,17 +85,29 @@ class AsOfAPI:
             raise AsOfError(f"AsOf answered {r.status_code}: {detail if isinstance(detail, str) else 'request refused'}")
         return body
 
-    def gate(self, payload: dict) -> dict:
-        return self._call("POST", "/api/gate", payload, held_ok=True)
+    def gate(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return _json_object(self._call("POST", "/api/gate", payload, held_ok=True))
 
-    def timeline(self, doc_id: str) -> list:
-        return self._call("GET", f"/api/policy/timeline?doc_id={doc_id}")
+    def timeline(self, doc_id: str) -> list[dict[str, Any]]:
+        return _json_list(self._call("GET", f"/api/policy/timeline?doc_id={doc_id}"))
 
-    def impact(self, clause_id: str) -> list:
-        return self._call("GET", f"/api/impact/{clause_id}")
+    def impact(self, clause_id: str) -> list[dict[str, Any]]:
+        return _json_list(self._call("GET", f"/api/impact/{clause_id}"))
 
-    def receipt(self, ledger_id: int, row_hash: str) -> dict:
-        return self._call("POST", "/api/ledger/receipt", {"ledger_id": ledger_id, "row_hash": row_hash})
+    def receipt(self, ledger_id: int, row_hash: str) -> dict[str, Any]:
+        return _json_object(self._call("POST", "/api/ledger/receipt", {"ledger_id": ledger_id, "row_hash": row_hash}))
+
+
+def _json_object(body: Any) -> dict[str, Any]:
+    if not isinstance(body, dict):
+        raise AsOfError("AsOf returned an unexpected response")
+    return body
+
+
+def _json_list(body: Any) -> list[dict[str, Any]]:
+    if not isinstance(body, list) or not all(isinstance(x, dict) for x in body):
+        raise AsOfError("AsOf returned an unexpected response")
+    return body
 
 
 def build_server(api: AsOfAPI) -> MCPServer:
@@ -111,7 +123,7 @@ def build_server(api: AsOfAPI) -> MCPServer:
                                                      "travel date or statement date). Never guessed.")],
         doc_id: Annotated[DocId, Field(description="The policy document: AURELIA-CSP (airline) or FERNHOLLOW-FEES (bank).")]
         = "AURELIA-CSP",
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Check every policy claim in a draft answer against the clause versions in force on as_of_date. Returns the
         decision (PASS, CORRECTED or ESCALATED), the text to send, the clauses each claim was checked against, and a
         ledger receipt. Send the customer only `send_this`."""
@@ -138,7 +150,7 @@ def build_server(api: AsOfAPI) -> MCPServer:
         doc_id: Annotated[DocId, Field(description="AURELIA-CSP or FERNHOLLOW-FEES.")] = "AURELIA-CSP",
         area: Annotated[str | None, Field(max_length=40, description="Optional policy area, such as bereavement, "
                                                                      "baggage, refund or overdraft.")] = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """The version of every clause that applied on as_of_date (Db2 business time), with its text and period."""
         on = _date(as_of_date)
         out = []
@@ -153,19 +165,23 @@ def build_server(api: AsOfAPI) -> MCPServer:
 
     @server.tool(annotations=ToolAnnotations(title="What a policy change made stale", readOnlyHint=True,
                                              openWorldHint=False))
-    def change_impact(clause_id: Annotated[str, Field(description="A clause ID such as BRV-002.")]) -> dict:
+    def change_impact(clause_id: Annotated[str, Field(description="A clause ID such as BRV-002.")]) -> dict[str, Any]:
         """Every released answer and help-centre answer that relied on a clause, judged against the policy as it
         stands now: STALE (the customer was told a version that no longer covers their date) or HISTORICALLY_VALID."""
         if not CLAUSE_ID.match(clause_id or ""):
             raise AsOfError("clause_id looks like BRV-002")
         rows = api.impact(clause_id)
-        count = lambda kind, status: sum(1 for r in rows if r["kind"] == kind and r["status"] == status)  # noqa: E731
+
+        def count(kind: str, status: str) -> int:
+            return sum(1 for r in rows if r["kind"] == kind and r["status"] == status)
+
         return {"stale_answers": count("ANSWER", "STALE"), "still_valid_answers": count("ANSWER", "HISTORICALLY_VALID"),
                 "help_centre_needing_review": count("PUBLISHED", "NEEDS_REVIEW"), "rows": rows}
 
     @server.tool(annotations=ToolAnnotations(title="Verify a ledger receipt", readOnlyHint=True, openWorldHint=False))
     def verify_receipt(ledger_id: Annotated[int, Field(ge=1, le=10**12)],
-                       receipt: Annotated[str, Field(description="The 64-character receipt check_answer returned.")]) -> dict:
+                       receipt: Annotated[str, Field(description="The 64-character receipt check_answer returned.")],
+                       ) -> dict[str, Any]:
         """Does the ledger still hold exactly the decision this receipt was issued for? Re-verifies the hash chain."""
         if not HASH.match(receipt or ""):
             raise AsOfError("a receipt is 64 lowercase hexadecimal characters")

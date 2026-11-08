@@ -26,7 +26,7 @@ import logging
 import time
 import uuid
 from datetime import date
-from typing import Any, TypedDict
+from typing import Any, Literal, TypedDict
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import StructuredTool
@@ -36,6 +36,7 @@ from . import db
 from .gate import (
     HOLDING_REPLY,
     ClaimOutcome,
+    Decision,
     Gate,
     GateRequest,
     GateResult,
@@ -69,7 +70,7 @@ class CheckState(TypedDict, total=False):
     first: list
     second: list
     rewrite: str | None
-    decision: str
+    decision: Decision | Literal["REWRITE"]  # REWRITE only between the first pass and the rewrite node
     reason: str
     final: str
     error: str | None
@@ -218,9 +219,10 @@ def build(gate: Gate, req: GateRequest, deadline_at: float | None = None):
         if state["pass_no"] == 1:
             decision, reason, final = gate._decide(outcomes, req.draft_answer, unchecked)
             return {"first": outcomes, "decision": decision, "reason": reason, "final": final, "unchecked": unchecked}
-        if outcomes and all(c.verdict == "SUPPORTED" for c in outcomes) and not unchecked:
+        rewrite = state["rewrite"]
+        if rewrite and outcomes and all(c.verdict == "SUPPORTED" for c in outcomes) and not unchecked:
             return {"second": outcomes, "decision": "CORRECTED", "reason": "CORRECTED_FROM_CLAUSES",
-                    "final": strip_placeholders(state["rewrite"]) + references(outcomes)}
+                    "final": strip_placeholders(rewrite) + references(outcomes)}
         return {"second": outcomes, "decision": "ESCALATED", "reason": "CORRECTION_FAILED", "final": HOLDING_REPLY,
                 "unchecked": unchecked}
 
@@ -280,7 +282,10 @@ def run_check(gate: Gate, req: GateRequest) -> GateResult:
         log.exception("check graph failed")
         state = {**state, "decision": "ESCALATED", "reason": "ERROR_FAIL_CLOSED", "final": HOLDING_REPLY,
                  "error": type(exc).__name__}
-    result = GateResult(str(uuid.uuid4()), state["decision"], state["reason"], state["final"],
+    decision, reason, final = state["decision"], state["reason"], state["final"]
+    if decision == "REWRITE":  # unreachable (a rewrite always goes back through the check), and never released
+        decision, reason, final = "ESCALATED", "ERROR_FAIL_CLOSED", HOLDING_REPLY
+    result = GateResult(str(uuid.uuid4()), decision, reason, final,
                         state.get("first", []), state.get("second", []), state.get("rewrite"),
                         int((time.monotonic() - started) * 1000), gate.llm.info, error=state.get("error"),
                         investigation=state.get("investigation", []), unchecked=state.get("unchecked", []))

@@ -44,7 +44,7 @@ _NEGATION = re.compile(r"\b(not|cannot|can ?not|no|never|none|without|unable|ine
 _FREE = re.compile(r"\b(free(?: of charge)?|no (?:change )?(?:fee|charge|cost)|at no (?:extra )?cost"
                    r"|without charge|no extra cost)\b", re.I)
 
-_PATTERNS: list[tuple[str, re.Pattern]] = [
+_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("usd", re.compile(r"\$\s?(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)", re.I)),
     ("usd", re.compile(rf"\b{_NUM_STRICT}\s?(?:dollars|usd)\b", re.I)),
     ("pct", re.compile(r"\b(\d+(?:\.\d+)?)\s?(?:%|percent\b)", re.I)),
@@ -69,7 +69,7 @@ _SUFFIXES = [("_business_days", "days"), ("_days", "days"), ("_hours", "hours"),
 _SITUATION_UNITS = {"delay_hours": "hours"}
 
 # How claims typically express each permission. A cue in a negated phrase means False.
-_FLAG_CUES: dict[str, re.Pattern] = {
+_FLAG_CUES: dict[str, re.Pattern[str]] = {
     "retroactive_allowed": re.compile(
         r"retroactiv|after (?:you(?:'ve| have)? )?(?:travel|fl(?:y|ew|own)|complet)"
         r"|after (?:your|the) (?:trip|flight|journey|travel)"
@@ -256,7 +256,7 @@ _LIST_CUES = {
 }
 
 
-def _list_segments(claim: str, cue: re.Pattern) -> list[tuple[str, bool]]:
+def _list_segments(claim: str, cue: re.Pattern[str]) -> list[tuple[str, bool]]:
     """The parts of a claim that say something qualifies, each with whether it is negated. A part between commas
     holding the cue counts on its own. A sentence whose cue and term sit in different parts ("Since she was your
     godmother, you are eligible") counts as a whole, but only when nothing in it is negated."""
@@ -385,8 +385,8 @@ def check(claim: str, clause: RuleClause, candidates: Sequence[RuleClause] = (),
     settled = {i for i, q in enumerate(quantities) if i not in situational
                and any(p.unit == u and _close(v, p.value, u) for u, v in q.forms for p in params)}
     for unit in sorted(units):
-        qs = [(i, q, q.value_in(unit)) for i, q in enumerate(quantities)
-              if i not in situational and q.value_in(unit) is not None]
+        qs = [(i, q, v) for i, q in enumerate(quantities)
+              if i not in situational and (v := q.value_in(unit)) is not None]
         values = [p for p in params if p.unit == unit and not p.limit]
         limits = [p for p in params if p.unit == unit and p.limit]
         if not values and not limits:

@@ -190,6 +190,12 @@ class Settings(BaseSettings):
                 f"Set them in {DEFAULT_ENV_FILE} (copy .env.example to start)."
             )
 
+    def secret(self, name: str) -> str:
+        """The value of a required secret setting (ConfigError naming its .env key when it is unset)."""
+        self.require(name)
+        value = getattr(self, name)
+        return value.get_secret_value() if isinstance(value, SecretStr) else str(value)
+
     @property
     def db2_ssl_cert_path(self) -> Path | None:
         if not self.db2_ssl_server_cert:

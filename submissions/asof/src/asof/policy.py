@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
 from datetime import date
 from typing import Annotated, Any
 
@@ -24,7 +25,7 @@ MAX_RULE_BYTES = 2000
 log = logging.getLogger(__name__)
 
 
-def _bytes(limit: int):
+def _bytes(limit: int) -> Callable[[str], str]:
     def check(v: str) -> str:
         if len(v.encode("utf-8")) > limit:
             raise ValueError(f"must be at most {limit} bytes in UTF-8")
@@ -93,9 +94,11 @@ def apply_change(conn: ibm_db_dbi.Connection, change: PolicyChange, embeddings: 
         raise ValueError("no in-database embedding model, so a local embeddings model is required")
 
     def local_vector() -> str:
+        if embeddings is None:
+            raise ValueError("no local embeddings model to fall back on")
         return db.vector_literal(embeddings.embed_query(clause_embedding_text(rows[0][0], change.clause_text)))
 
-    def call(vector: str | None) -> list:
+    def call(vector: str | None) -> list[Any]:
         cur = conn.cursor()
         try:
             out = cur.callproc("APPLY_POLICY_CHANGE", (
@@ -103,7 +106,7 @@ def apply_change(conn: ibm_db_dbi.Connection, change: PolicyChange, embeddings: 
                 json.dumps(change.rule, sort_keys=True), vector, change.change_note, 0, 0))
             if commit:
                 conn.commit()
-            return out
+            return list(out)
         except Exception as exc:  # noqa: BLE001
             conn.rollback()
             raise db.wrap_error(exc, "APPLY_POLICY_CHANGE failed") from None

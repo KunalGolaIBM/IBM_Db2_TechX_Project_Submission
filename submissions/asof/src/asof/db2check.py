@@ -19,6 +19,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
+from typing import Any
 
 import ibm_db
 import ibm_db_dbi
@@ -94,15 +95,15 @@ def _vec(seed: int) -> str:
 @dataclass
 class Ctx:
     conn: ibm_db_dbi.Connection
-    state: dict = field(default_factory=dict)
+    state: dict[str, Any] = field(default_factory=dict)
 
-    def q(self, sql: str, params: tuple = ()) -> list[tuple]:
+    def q(self, sql: str, params: tuple[Any, ...] = ()) -> list[tuple[Any, ...]]:
         return db.query(self.conn, sql, params)
 
-    def x(self, sql: str, params: tuple = ()) -> int:
+    def x(self, sql: str, params: tuple[Any, ...] = ()) -> int:
         return db.execute(self.conn, sql, params)
 
-    def call(self, proc: str, params: tuple) -> tuple:
+    def call(self, proc: str, params: tuple[Any, ...]) -> tuple[Any, ...]:
         cur = self.conn.cursor()
         try:
             return tuple(cur.callproc(proc, params))
@@ -111,7 +112,7 @@ class Ctx:
         finally:
             cur.close()
 
-    def call_rows(self, proc: str, params: tuple) -> list[tuple]:
+    def call_rows(self, proc: str, params: tuple[Any, ...]) -> list[tuple[Any, ...]]:
         cur = self.conn.cursor()
         try:
             cur.callproc(proc, params)
@@ -121,7 +122,7 @@ class Ctx:
         finally:
             cur.close()
 
-    def expect_sqlstate(self, sql: str, params: tuple, states: tuple[str, ...]) -> str:
+    def expect_sqlstate(self, sql: str, params: tuple[Any, ...], states: tuple[str, ...]) -> str:
         try:
             self.x(sql, params)
         except db.DatabaseError as exc:

@@ -18,6 +18,7 @@ import shutil
 import subprocess
 import sys
 from datetime import date, datetime
+from typing import Any
 
 import ibm_db_dbi
 
@@ -56,7 +57,7 @@ def _latest_plan(conn: ibm_db_dbi.Connection) -> tuple[list[tuple[str, float]], 
             [f"{n.strip()} ({'index' if t.strip() == 'IX' else 'table'})" for n, t in objs])
 
 
-def _explain(conn: ibm_db_dbi.Connection, sql: str, params: tuple) -> None:
+def _explain(conn: ibm_db_dbi.Connection, sql: str, params: tuple[Any, ...]) -> None:
     db.execute(conn, "SET CURRENT EXPLAIN MODE = EXPLAIN")
     try:
         cur = conn.cursor()

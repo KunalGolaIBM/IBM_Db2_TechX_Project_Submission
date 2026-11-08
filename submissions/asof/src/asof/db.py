@@ -148,7 +148,7 @@ def connection(settings: Settings, role: Role = "app", autocommit: bool = False)
             pass
 
 
-def _close_quietly(conn) -> None:
+def _close_quietly(conn: ibm_db_dbi.Connection) -> None:
     try:
         conn.close()
     except Exception:  # noqa: BLE001, S110 - a broken connection is being thrown away anyway
@@ -162,7 +162,7 @@ class PooledConnection:
     def __init__(self, pool: ConnectionPool, raw: ibm_db_dbi.Connection):
         self._pool, self.raw = pool, raw
 
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> Any:
         if self.raw is None:
             raise DatabaseError("this pooled connection was already returned")
         return getattr(self.raw, name)
@@ -241,7 +241,7 @@ class ConnectionPool:
             _close_quietly(raw)
 
 
-def query(conn: ibm_db_dbi.Connection, sql: str, params: Sequence[Any] = ()) -> list[tuple]:
+def query(conn: ibm_db_dbi.Connection, sql: str, params: Sequence[Any] = ()) -> list[tuple[Any, ...]]:
     cur = conn.cursor()
     try:
         cur.execute(sql, tuple(params))
@@ -256,7 +256,7 @@ def execute(conn: ibm_db_dbi.Connection, sql: str, params: Sequence[Any] = ()) -
     cur = conn.cursor()
     try:
         cur.execute(sql, tuple(params))
-        return cur.rowcount
+        return int(cur.rowcount)
     except Exception as exc:  # noqa: BLE001
         raise wrap_error(exc, "Statement failed") from None
     finally:

@@ -51,6 +51,12 @@ markers = [
   "network: Db2 calls the remote embedding endpoint (skipped unless ASOF_RUN_NETWORK_TESTS=1)",
 ]
 
+[tool.coverage.run]
+source = ["asof"]
+
+[tool.coverage.report]
+skip_empty = true
+
 [tool.ruff]
 line-length = 130
 target-version = "py312"
@@ -69,3 +75,26 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S105", "S106"]  # dummy credentials in test fixtures
+
+[tool.mypy]
+# Run from this folder: `mypy` (CI does the same). Strict everywhere, relaxed below for the modules that are mostly
+# glue (FastAPI routes, LangGraph state, benchmarks, CLIs), which are still fully type-checked, bodies included.
+python_version = "3.12"
+files = ["src/asof"]  # mcp_server/ has its own environment; CI checks it there with --strict
+plugins = ["pydantic.mypy"]
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["asof.api", "asof.askledger", "asof.checkgraph", "asof.eval", "asof.eval.__main__", "asof.eval.intake_eval",
+          "asof.impactagent", "asof.llm", "asof.replay", "asof.schema", "asof.seed", "asof.setup", "asof.vectorbench"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+disallow_any_generics = false
+warn_return_any = false
+
+[[tool.mypy.overrides]]
+# Drivers and libraries that ship no type information.
+module = ["ibm_db", "ibm_db_dbi", "langchain_db2.*", "sentence_transformers.*", "pypdf.*", "ibm_watsonx_ai.*",
+          "langchain_ibm.*"]
+ignore_missing_imports = true

@@ -31,7 +31,7 @@ import time
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import ibm_db
 import sqlglot
@@ -41,10 +41,14 @@ from sqlglot.errors import SqlglotError
 
 from . import db
 from .config import Settings
-from .llm import LLMError
+from .llm import LLMError, ModelClient
 from .prompts import ASK_PROMPT_VERSION, ask_answer_messages, ask_sql_messages
 from .replay import ReplayMiss
 from .schemas import LedgerAnswer, LedgerSql
+
+if TYPE_CHECKING:  # imported lazily at run time: the SQL chain is optional until someone asks the ledger
+    from langchain_community.utilities import SQLDatabase
+    from sqlalchemy.engine import Engine
 
 log = logging.getLogger(__name__)
 
@@ -224,7 +228,7 @@ class AskResult:
 class LedgerAsker:
     """The chain, plus the analyst's connection. One instance per app; thread-safe."""
 
-    def __init__(self, llm, settings: Settings, schema: str = db.SCHEMA, *, row_cap: int = ROW_CAP,
+    def __init__(self, llm: ModelClient, settings: Settings, schema: str = db.SCHEMA, *, row_cap: int = ROW_CAP,
                  timeout_s: int = QUERY_TIMEOUT_S):
         self.llm = llm
         self.settings = settings
@@ -232,8 +236,8 @@ class LedgerAsker:
         self.row_cap = row_cap
         self.timeout_s = timeout_s
         self._lock = threading.Lock()
-        self._engine = None
-        self._database = None
+        self._engine: Engine | None = None
+        self._database: SQLDatabase | None = None
 
     # --- Db2, as the analyst -------------------------------------------------------------
 
@@ -252,7 +256,7 @@ class LedgerAsker:
                 eng = create_engine("ibm_db_sa://", creator=creator, poolclass=NullPool)
                 # ibm_db_sa 0.4.4 does not implement this, and LangChain's SQLDatabase calls it for
                 # view support. None of the allowed views is a materialized query table.
-                eng.dialect.get_materialized_view_names = _no_materialized_views
+                eng.dialect.get_materialized_view_names = _no_materialized_views  # type: ignore[method-assign]
                 self._engine = eng
             return self._engine
 

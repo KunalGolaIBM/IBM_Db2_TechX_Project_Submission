@@ -15,8 +15,9 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Generic, TypeVar
+from typing import Generic, Protocol, TypeVar
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
@@ -27,6 +28,7 @@ from .config import ConfigError, Settings
 log = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
+R = TypeVar("R")
 
 APP_URL = "https://github.com/JustJay7/asof"
 APP_TITLE = "AsOf"
@@ -45,7 +47,7 @@ class LLMResult(Generic[T]):
     attempts: int
 
 
-def _run_with_deadline(fn, deadline_s: float):
+def _run_with_deadline(fn: Callable[[], R], deadline_s: float) -> R:
     """Run fn() in a daemon thread and stop waiting after deadline_s seconds.
 
     The thread cannot be killed, but it no longer blocks the caller or interpreter exit,
@@ -69,6 +71,35 @@ def _run_with_deadline(fn, deadline_s: float):
     return box["value"]
 
 
+class ModelClient(Protocol):
+    """What the check and the agents need from a model client. LLMClient provides it, and so do the wrappers
+    around one: FallbackLLM, the replay and recording clients, and the evaluation's call counter."""
+
+    @property
+    def info(self) -> str: ...
+
+    def structured(self, schema: type[T], messages: list[tuple[str, str]],
+                   choices: dict[str, list[str]] | None = None, max_chars: int | None = None) -> LLMResult[T]: ...
+
+    def tool_round(self, messages: list, tools: list) -> AIMessage: ...
+
+    def run(self, fn: Callable[[], R]) -> R: ...
+
+
+class ChatModelClient(ModelClient, Protocol):
+    """A model client that also exposes its LangChain chat model, for chains that call the model directly
+    (the demo assistant)."""
+
+    @property
+    def provider(self) -> str: ...
+
+    @property
+    def model_name(self) -> str: ...
+
+    @property
+    def chat_model(self) -> BaseChatModel: ...
+
+
 class LLMClient:
     """A configured chat model plus the provider details needed for structured output."""
 
@@ -89,7 +120,7 @@ class LLMClient:
     def info(self) -> str:
         return f"{self.provider}:{self.model_name}"
 
-    def run(self, fn):
+    def run(self, fn: Callable[[], R]) -> R:
         """Run any LLM-backed callable (for example a LangChain chain) under the same deadline."""
         try:
             return _run_with_deadline(fn, self._deadline_s)
@@ -218,6 +249,8 @@ def _bounded_ollama_runnable(chat_model: BaseChatModel, schema: type[T], choices
         def invoke(messages):
             raw = bound.invoke(messages)
             try:
+                if not isinstance(raw.content, str):
+                    raise TypeError("the model replied with content blocks, not JSON text")
                 return {"raw": raw, "parsed": schema.model_validate_json(raw.content), "parsing_error": None}
             except Exception as exc:  # noqa: BLE001 - reported as a parsing error, then retried once
                 return {"raw": raw, "parsed": None, "parsing_error": exc}
@@ -323,7 +356,7 @@ class FallbackLLM:
         self._mark("primary")
         return msg
 
-    def run(self, fn):
+    def run(self, fn: Callable[[], R]) -> R:
         return self.primary.run(fn)
 
 
@@ -419,7 +452,7 @@ def _watsonx_chat(settings: Settings, name: str, deadline: float, max_out: int) 
     The client authenticates with IBM Cloud IAM when it is built, so a wrong key or an unreachable region
     is a ConfigError here, at startup, not a surprise on the first check.
     """
-    settings.require("watsonx_api_key")
+    api_key = settings.secret("watsonx_api_key")
     if not (settings.watsonx_project_id or settings.watsonx_space_id):
         raise ConfigError("LLM_PROVIDER=watsonx needs WATSONX_PROJECT_ID (or WATSONX_SPACE_ID) in .env")
     try:
@@ -433,11 +466,11 @@ def _watsonx_chat(settings: Settings, name: str, deadline: float, max_out: int) 
     timeout = HttpClientConfig(timeout=httpx.Timeout(deadline, connect=10.0))
     project, space = settings.watsonx_project_id or None, settings.watsonx_space_id or None
     try:
-        client = APIClient(credentials=Credentials(url=settings.watsonx_url, api_key=settings.watsonx_api_key.get_secret_value()),
+        client = APIClient(credentials=Credentials(url=settings.watsonx_url, api_key=api_key),
                            project_id=project, space_id=space, httpx_client=timeout, async_httpx_client=timeout)
         # The output cap and a server-side time limit go in the model's own parameters: given only to ChatWatsonx,
         # watsonx.ai ignored the cap and used its 1024-token default (found on the first live call).
-        params = {"max_tokens": max_out, "time_limit": int(deadline * 1000)}
+        params: dict[str, int | float] = {"max_tokens": max_out, "time_limit": int(deadline * 1000)}
         if settings.llm_temperature is not None:
             params["temperature"] = settings.llm_temperature
         inference = ModelInference(model_id=name, api_client=client, project_id=project, space_id=space,

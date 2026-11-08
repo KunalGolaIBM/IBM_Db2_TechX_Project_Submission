@@ -18,7 +18,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
 from . import db, seed
-from .llm import LLMClient, LLMError
+from .llm import ChatModelClient, LLMError
 from .prompts import escape
 
 ASSISTANT_SYSTEM = """\
@@ -45,7 +45,7 @@ def _format(docs: list[Document]) -> str:
 
 
 class DemoAssistant:
-    def __init__(self, llm: LLMClient, embeddings: Embeddings, connect: Callable[[], ibm_db_dbi.Connection],
+    def __init__(self, llm: ChatModelClient, embeddings: Embeddings, connect: Callable[[], ibm_db_dbi.Connection],
                  schema: str = db.SCHEMA, k: int = 2):
         self.llm = llm
         self.embeddings = embeddings

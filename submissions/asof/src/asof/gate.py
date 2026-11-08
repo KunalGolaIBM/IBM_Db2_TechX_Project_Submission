@@ -22,7 +22,7 @@ import html
 import logging
 import re
 import unicodedata
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Literal
@@ -33,14 +33,14 @@ from langchain_core.embeddings import Embeddings
 from . import db, ledger
 from .anchor import AnchorLog
 from .domains import AIRLINE, DOMAINS, Domain
-from .llm import LLMClient, LLMError
+from .llm import LLMError, ModelClient
 from .prompts import extract_messages, judge_messages, rewrite_messages
 from .redact import redact
 from .retriever import RetrievedClause, clauses_as_of
 from .rules import RuleClause, RuleResult, extract_quantities, situation_conflicts
 from .rules import _close as same_amount
 from .rules import check as rule_check
-from .schemas import MAX_CLAIMS, JudgeResult, RewriteResult
+from .schemas import MAX_CLAIMS, ClaimVerdict, ExtractedClaim, JudgeResult, RewriteResult
 
 log = logging.getLogger(__name__)
 
@@ -231,9 +231,12 @@ def _premise_claim(sentence: str, extracted: Sequence[Any]) -> Any:
     return type(closest)(text=sentence, area=closest.area if shared else "other", claim_type=closest.claim_type)
 
 
+_QUOTES = str.maketrans({"‘": "'", "’": "'", "“": '"', "”": '"', "–": "-"})
+
+
 def normalise(text: str) -> str:
     text = unicodedata.normalize("NFKC", html.unescape(text))
-    text = text.translate(str.maketrans({"‘": "'", "’": "'", "“": '"', "”": '"', "–": "-"}))
+    text = text.translate(_QUOTES)
     text = re.sub(r"\s+", " ", text).strip().strip("\"'").rstrip(".,;:!?…").strip()
     return text.casefold()
 
@@ -280,7 +283,7 @@ def contradiction_ground(span: str | None, claim_text: str, clause: RetrievedCla
     return None
 
 
-def clause_sentences(clauses) -> list[str]:
+def clause_sentences(clauses: Iterable[RetrievedClause]) -> list[str]:
     """Every sentence of the given clauses, the only quotes a grammar-constrained judge may give."""
     out: list[str] = []
     for c in clauses:
@@ -310,7 +313,7 @@ def references(claims: list[ClaimOutcome]) -> str:
 
 
 class Gate:
-    def __init__(self, llm: LLMClient, embeddings: Embeddings, connect: Callable[[], ibm_db_dbi.Connection],
+    def __init__(self, llm: ModelClient, embeddings: Embeddings, connect: Callable[[], ibm_db_dbi.Connection],
                  schema: str = db.SCHEMA, k: int = 4, investigate: bool = True, deadline_s: float = 300.0,
                  anchors: AnchorLog | None = None):
         self.llm = llm
@@ -332,7 +335,7 @@ class Gate:
         gets the airline wording and retrieves nothing for that doc_id, so it escalates."""
         return DOMAINS.get(doc_id, AIRLINE)
 
-    def extract(self, question: str, text: str, domain: Domain = AIRLINE):
+    def extract(self, question: str, text: str, domain: Domain = AIRLINE) -> list[ExtractedClaim]:
         extracted = self.llm.structured(domain.extraction_schema,
                                         extract_messages(question, text, domain.extract_system)).value.claims
         if len(extracted) > MAX_CLAIMS:
@@ -340,7 +343,7 @@ class Gate:
         return extracted
 
     @staticmethod
-    def premise_claims(text: str, extracted) -> list:
+    def premise_claims(text: str, extracted: list[ExtractedClaim]) -> list[ExtractedClaim]:
         """Claims for the premise sentences no extracted claim kept (see unstated_premises). Together with the
         extracted claims they stay within MAX_CLAIMS, so a recorded check can never exceed what APPEND_LEDGER
         accepts; more than that holds the answer, like too many extracted claims."""
@@ -353,7 +356,7 @@ class Gate:
             log.info("judging %d premise sentence(s) no extracted claim kept", len(added))
         return [_premise_claim(sentence, extracted) for sentence in added]
 
-    def retrieve(self, claims, as_of: date, doc_id: str) -> list[list[RetrievedClause]]:
+    def retrieve(self, claims: Sequence[ExtractedClaim], as_of: date, doc_id: str) -> list[list[RetrievedClause]]:
         """Db2 tool: the clauses in force on the date, nearest first, for each claim."""
         vectors = self.embeddings.embed_documents([c.text for c in claims])
         conn = self.connect()
@@ -362,7 +365,8 @@ class Gate:
         finally:
             conn.close()
 
-    def judge(self, claims, per_claim, pool: dict[str, RetrievedClause], as_of: date,
+    def judge(self, claims: Sequence[ExtractedClaim], per_claim: list[list[RetrievedClause]],
+              pool: dict[str, RetrievedClause], as_of: date,
               numbers: list[int] | None = None, domain: Domain = AIRLINE, question: str = "") -> list[ClaimOutcome]:
         """One batched judge call over `claims`, then the verbatim-quote rule and the rule check. The judge also
         sees the (redacted) customer question, to test situation facts a claim rests on against it."""
@@ -388,8 +392,10 @@ class Gate:
         per_claim = self.retrieve(extracted, as_of, doc_id)
         return self.judge(extracted, per_claim, pool_of(per_claim), as_of, domain=domain, question=question)
 
-    def _settle(self, no, claim, found, pool, v, question: str = "") -> ClaimOutcome:
-        base = dict(claim_no=no, text=claim.text, area=claim.area, claim_type=claim.claim_type, candidates=found)
+    def _settle(self, no: int, claim: ExtractedClaim, found: list[RetrievedClause], pool: dict[str, RetrievedClause],
+                v: ClaimVerdict | None, question: str = "") -> ClaimOutcome:
+        base: dict[str, Any] = dict(claim_no=no, text=claim.text, area=claim.area, claim_type=claim.claim_type,
+                                    candidates=found)
         if v is None:
             return ClaimOutcome(**base, verdict="NOT_COVERED", llm_verdict=None, rule_check="NOT_APPLICABLE",
                                 rule_details=[], clause=None, quoted_span=None, reason="the judge returned no verdict")
@@ -415,7 +421,7 @@ class Gate:
                     reason = f"{reason} ({note})" if reason else note
             elif not quote_is_verbatim(span, clause.clause_text):
                 verdict, reason = "NOT_COVERED", "the quoted text does not appear in the cited clause"
-        if verdict == "NOT_COVERED":
+        if verdict == "NOT_COVERED" or clause is None:  # no clause means NOT_COVERED (set above)
             return ClaimOutcome(**base, verdict="NOT_COVERED", llm_verdict=v.verdict, rule_check="NOT_APPLICABLE",
                                 rule_details=[], clause=None, quoted_span=None, reason=reason)
 
@@ -476,7 +482,8 @@ class Gate:
             raise LLMError("rewrite was empty or too long")
         return text
 
-    def _record(self, req: GateRequest, q_red: str, d_red: str, result: GateResult, q_counts, d_counts) -> None:
+    def _record(self, req: GateRequest, q_red: str, d_red: str, result: GateResult,
+                q_counts: dict[str, int], d_counts: dict[str, int]) -> None:
         prompt_version = self.domain(req.doc_id).prompt_version
         verdicts = {
             "version": 1, "prompt_version": prompt_version, "as_of": req.as_of.isoformat(),

@@ -58,7 +58,7 @@ def check_endpoint(url: str) -> Endpoint:
 
 def model_exists(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> bool:
     db.use_schema(conn, schema)
-    return db.query(conn, SQL_MODEL_EXISTS)[0][0] > 0
+    return bool(db.query(conn, SQL_MODEL_EXISTS)[0][0] > 0)
 
 
 def register(conn: ibm_db_dbi.Connection, settings: Settings, schema: str = db.SCHEMA) -> Endpoint:
@@ -106,18 +106,21 @@ def _register_watsonx(conn: ibm_db_dbi.Connection, settings: Settings, schema: s
     endpoint = check_endpoint(watsonx_embeddings_url(settings))
     if model_exists(conn, schema):
         db.execute(conn, f"DROP EXTERNAL MODEL {db.ident(schema)}.{db.ident(MODEL_NAME)}")
-    key = settings.watsonx_api_key.get_secret_value()
+    key = settings.secret("watsonx_api_key")
+    project, space = settings.watsonx_project_id, settings.watsonx_space_id
     try:
-        if settings.watsonx_project_id:
+        if project:
             db.execute(conn, f"CREATE EXTERNAL MODEL {db.ident(schema)}.{db.ident(MODEL_NAME)} PROVIDER WATSONX "
                              f"ID {db.string_literal(settings.watsonx_embedding_model)} URL {db.string_literal(endpoint.url)} "
                              f"TYPE TEXT_EMBEDDING RETURNING VECTOR(384, FLOAT32) KEY {db.string_literal(key)} "
-                             f"PROJECT_ID {db.string_literal(settings.watsonx_project_id)}")
-        else:
+                             f"PROJECT_ID {db.string_literal(project)}")
+        elif space:
             db.execute(conn, f"CREATE EXTERNAL MODEL {db.ident(schema)}.{db.ident(MODEL_NAME)} PROVIDER WATSONX "
                              f"ID {db.string_literal(settings.watsonx_embedding_model)} URL {db.string_literal(endpoint.url)} "
                              f"TYPE TEXT_EMBEDDING RETURNING VECTOR(384, FLOAT32) KEY {db.string_literal(key)} "
-                             f"SPACE_ID {db.string_literal(settings.watsonx_space_id)}")
+                             f"SPACE_ID {db.string_literal(space)}")
+        else:  # watsonx_ready above guarantees one of them
+            raise InDbError("ASOF_INDB_PROVIDER=watsonx needs WATSONX_PROJECT_ID or WATSONX_SPACE_ID")
     except ValueError:
         raise InDbError("the watsonx model ID, URL, key or project ID contains characters Db2 DDL cannot take safely") from None
     db.execute(conn, f"GRANT USAGE ON EXTERNAL MODEL {db.ident(schema)}.{db.ident(MODEL_NAME)} "

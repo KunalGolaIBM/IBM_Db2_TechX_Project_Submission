@@ -23,6 +23,7 @@ import re
 import secrets
 import sys
 from dataclasses import dataclass
+from typing import Any
 
 import ibm_db_dbi
 
@@ -109,7 +110,7 @@ def disable(conn: ibm_db_dbi.Connection, name: str, schema: str = db.SCHEMA) -> 
     return done
 
 
-def list_users(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> list[dict]:
+def list_users(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> list[dict[str, Any]]:
     db.use_schema(conn, schema)
     return [{"user": r[0].strip(), "roles": [role for role, f in zip(ROLES, r[1:4], strict=True) if f],
              "created_at": r[4], "disabled_at": r[5]} for r in db.query(conn, SQL_LIST)]

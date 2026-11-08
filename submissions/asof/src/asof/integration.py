@@ -39,7 +39,7 @@ def build_gate(settings: Settings | None = None, schema: str = db.SCHEMA) -> Gat
 
 
 def as_runnable(*, as_of: date | None = None, doc_id: str = "AURELIA-CSP", question: str = "", channel: str = "api",
-                output: Literal["text", "result"] = "text", gate: Gate | None = None) -> RunnableLambda:
+                output: Literal["text", "result"] = "text", gate: Gate | None = None) -> RunnableLambda[Any, Any]:
     """`as_of` and `question` are defaults for calls that pass only a draft; a dict input overrides them."""
     checker = gate or build_gate()
 
@@ -54,8 +54,8 @@ def as_runnable(*, as_of: date | None = None, doc_id: str = "AURELIA-CSP", quest
             raise ValueError("AsOf needs the customer's date: pass 'as_of' in the input or to as_runnable()")
         from .api import GateIn  # the API's own input model: byte limits, date range, allowed doc_id and channel
 
-        checked = GateIn(question=q or "(question not provided)", draft_answer=draft, as_of_date=day,
-                         doc_id=doc_id, channel=channel)
+        checked = GateIn.model_validate({"question": q or "(question not provided)", "draft_answer": draft,
+                                         "as_of_date": day, "doc_id": doc_id, "channel": channel})
         result = checker.check(GateRequest(checked.question, checked.draft_answer, checked.as_of_date, checked.doc_id,
                                            checked.channel))
         return result if output == "result" else result.final_answer

@@ -10,6 +10,7 @@ stores the redacted question and draft only. Name detection is rule-based and no
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from .names import find_names
@@ -41,13 +42,14 @@ def _luhn(digits: str) -> bool:
 def redact(text: str) -> Redaction:
     counts = {"email": 0, "card": 0, "number": 0, "phone": 0, "booking_ref": 0, "name": 0}
 
-    def sub(pattern: re.Pattern, label: str, key: str, s: str, valid=lambda m: True) -> str:
-        def repl(m: re.Match) -> str:
+    def sub(pattern: re.Pattern[str], label: str, key: str, s: str,
+            valid: Callable[[re.Match[str]], bool] = lambda m: True) -> str:
+        def repl(m: re.Match[str]) -> str:
             if not valid(m):
-                return m.group(0)
+                return str(m.group(0))
             counts[key] += 1
             return label
-        return pattern.sub(repl, s)
+        return str(pattern.sub(repl, s))
 
     out = sub(_EMAIL, "[EMAIL]", "email", text)
     # 13 to 19 digits: a card if the Luhn check passes, otherwise still masked (account numbers).

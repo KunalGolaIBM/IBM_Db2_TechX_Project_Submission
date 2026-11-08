@@ -24,6 +24,7 @@ import logging
 import re
 import unicodedata
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
@@ -37,8 +38,8 @@ from . import db, policy, prompts, rules
 from .corpus import OPEN_END
 from .domains import domain_for
 from .embeddings import clause_embedding_text
-from .llm import _run_with_deadline
-from .schemas import MAX_INTAKE_ITEMS, BankIntakeResult, IntakeClause, IntakeResult
+from .llm import ModelClient, _run_with_deadline
+from .schemas import MAX_INTAKE_ITEMS, BankIntakeResult, IntakeClause, IntakeResult, IntakeRuleParam
 
 log = logging.getLogger(__name__)
 
@@ -136,7 +137,8 @@ _MONTHS.update({k[:3]: v for k, v in list(_MONTHS.items())})
 _MONTHS["sept"] = 9
 _MON = (r"(january|february|march|april|may|june|july|august|september|october|november|december"
         r"|jan|feb|mar|apr|jun|jul|aug|sept|sep|oct|nov|dec)\.?")
-_DATE_PATTERNS = (
+_DatePattern = tuple[re.Pattern[str], Callable[[re.Match[str]], tuple[str, str, str]]]
+_DATE_PATTERNS: tuple[_DatePattern, ...] = (
     (re.compile(rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+{_MON}\s+(\d{{4}})\b", re.I), lambda m: (m[3], m[2], m[1])),
     (re.compile(rf"\b{_MON}\s+(\d{{1,2}})(?:st|nd|rd|th)?,?\s+(\d{{4}})\b", re.I), lambda m: (m[3], m[1], m[2])),
     (re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b"), lambda m: (m[1], m[2], m[3])),
@@ -150,8 +152,10 @@ def dates_in(text: str) -> set[date]:
         for m in pattern.finditer(text):
             y, mo, d = parts(m)
             month = int(mo) if mo.isdigit() else _MONTHS.get(mo.lower().rstrip("."))
+            if month is None:
+                continue
             try:
-                found.add(date(int(y), int(month), int(d)))
+                found.add(date(int(y), month, int(d)))
             except (TypeError, ValueError):
                 continue
     return found
@@ -223,7 +227,8 @@ def extraction_schema(doc_id: str) -> type[IntakeResult]:
     return BankIntakeResult if domain_for(doc_id).key == "bank" else IntakeResult
 
 
-def extract(llm, source: SourceDocument, doc_id: str, existing: dict[str, ExistingClause]) -> tuple[IntakeResult, str]:
+def extract(llm: ModelClient, source: SourceDocument, doc_id: str,
+            existing: dict[str, ExistingClause]) -> tuple[IntakeResult, str]:
     """One structured call: the model proposes clause versions. Returns them and the model's name."""
     listed = [(c.clause_id, c.area, c.title, sorted(c.latest.rule)) for c in existing.values()]
     messages = prompts.intake_messages(source.name, source.pages, listed)
@@ -277,7 +282,7 @@ class Discarded:
     reason: str
 
 
-def _rule_dict(params) -> tuple[dict[str, Any], list[Check]]:
+def _rule_dict(params: list[IntakeRuleParam]) -> tuple[dict[str, Any], list[Check]]:
     rule: dict[str, Any] = {}
     checks: list[Check] = []
     for p in params:
@@ -343,8 +348,8 @@ def _page_of(snippet: str, source: SourceDocument) -> int | None:
 
 
 def _new_id(area: str, existing: dict[str, ExistingClause], taken: set[str]) -> str:
-    prefixes = Counter(CLAUSE_ID_RE.match(c.clause_id)[1] for c in existing.values()
-                       if c.area == area and CLAUSE_ID_RE.match(c.clause_id))
+    ids = (CLAUSE_ID_RE.match(c.clause_id) for c in existing.values() if c.area == area)
+    prefixes = Counter(m[1] for m in ids if m)
     prefix = prefixes.most_common(1)[0][0] if prefixes else ("OTH" if area == "other" else area[:3].upper())
     used = [int(m[2]) for cid in [*existing, *taken] if (m := CLAUSE_ID_RE.match(cid)) and m[1] == prefix]
     return f"{prefix}-{(max(used) if used else 0) + 1:03d}"
@@ -464,7 +469,7 @@ def _check_one(raw: IntakeClause, source: SourceDocument, doc_norm: str, doc_dat
                     checks, cur)
 
 
-def propose(llm, source: SourceDocument, doc_id: str, conn: ibm_db_dbi.Connection,
+def propose(llm: ModelClient, source: SourceDocument, doc_id: str, conn: ibm_db_dbi.Connection,
             schema: str = db.SCHEMA) -> tuple[list[Proposal], list[Discarded], str]:
     """Extract and check. `conn` reads the policy (any user with SELECT on the timeline view)."""
     existing = existing_clauses(conn, doc_id, schema)
@@ -611,7 +616,11 @@ def decide(conn: ibm_db_dbi.Connection, draft_id: int, approve: bool, accept: li
         return out
 
 
-def _decide(conn, draft_id, approve, accept, embeddings, user, preview, in_db, schema) -> dict[str, Any]:
+def _decide(conn: ibm_db_dbi.Connection, draft_id: int, approve: bool, accept: list[int], embeddings: Embeddings | None,
+            user: str | None, preview: bool, in_db: bool, schema: str) -> dict[str, Any]:
+    local = None if in_db else embeddings
+    if not in_db and local is None:  # decide() already refused this; kept so the vector below is never None by accident
+        raise ValueError("no in-database embedding model, so a local embeddings model is required")
     cur = conn.cursor()
     applied: list[dict[str, Any]] = []
     try:
@@ -621,8 +630,8 @@ def _decide(conn, draft_id, approve, accept, embeddings, user, preview, in_db, s
             items = {r[0]: r for r in db.query(conn, SQL_ITEM_TEXTS, (int(draft_id),))}
             for no in accept:
                 _, kind, clause_id, title, text = items[no]
-                vector = None if in_db else db.vector_literal(
-                    embeddings.embed_query(clause_embedding_text(title.strip(), text)))
+                vector = None if local is None else db.vector_literal(
+                    local.embed_query(clause_embedding_text(title.strip(), text)))
                 out = cur.callproc("APPLY_DRAFT_ITEM", (int(draft_id), int(no), vector, " " * 20, 0, 0))
                 applied.append({"item_no": no, "kind": kind.strip(), "clause_id": clause_id.strip(),
                                 "version": str(out[3]).strip(), "rows_changed": int(out[4]),

@@ -29,9 +29,14 @@ import threading
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from . import db
+
+if TYPE_CHECKING:
+    import ibm_db_dbi
+
+    from .config import Settings
 
 try:  # one writer at a time across processes; the thread lock covers platforms without fcntl
     import fcntl
@@ -74,7 +79,7 @@ class AnchorLog:
         self.path = self.directory / f"anchors-{schema}.jsonl"
 
     @classmethod
-    def from_settings(cls, settings, schema: str = db.SCHEMA) -> AnchorLog | None:
+    def from_settings(cls, settings: Settings, schema: str = db.SCHEMA) -> AnchorLog | None:
         """None when no ASOF_ANCHOR_KEY is set: anchoring is then off, and /healthz says so."""
         key = settings.anchor_key
         return cls(settings.anchor_dir, key, schema) if key else None
@@ -147,7 +152,7 @@ class AnchorLog:
         return None, None
 
 
-def verify(anchors: AnchorLog, conn, schema: str = db.SCHEMA) -> AnchorStatus:
+def verify(anchors: AnchorLog, conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> AnchorStatus:
     """The log itself, then every anchor against the ledger's row hashes, then VERIFY_CHAIN."""
     from .ledger import verify_chain
 

@@ -29,15 +29,17 @@ import time
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from .config import REPLAY_FILE, ConfigError
 from .llm import LLMError, LLMResult, structured_call
+
+T = TypeVar("T", bound=BaseModel)
 
 log = logging.getLogger(__name__)
 
@@ -92,7 +94,7 @@ def _shape(obj: Any) -> str:
     return hashlib.sha256(json.dumps(obj, sort_keys=True, default=str).encode("utf-8")).hexdigest()
 
 
-def structured_key(schema: type, messages, choices: dict[str, list[str]] | None = None) -> str:
+def structured_key(schema: type[BaseModel], messages, choices: dict[str, list[str]] | None = None) -> str:
     # The schema's shape is part of the key: if a schema changes, its old outputs stop replaying.
     return _key("structured", schema.__name__, messages,
                 {"choices": {k: list(v) for k, v in sorted((choices or {}).items())},
@@ -168,7 +170,7 @@ class _StoreChatModel(BaseChatModel):
         return ChatResult(generations=[ChatGeneration(message=AIMessage(content=text))])
 
 
-def _validated(schema: type, output: Any):
+def _validated(schema: type[T], output: Any) -> T:
     try:
         return schema.model_validate(output)
     except ValidationError as exc:
@@ -189,8 +191,8 @@ class ReplayLLM:
     def info(self) -> str:
         return f"replay:{self.recording.model} (recorded {self.recording.recorded_on})"
 
-    def structured(self, schema: type, messages, choices: dict[str, list[str]] | None = None,
-                   max_chars: int | None = None) -> LLMResult:
+    def structured(self, schema: type[T], messages: list[tuple[str, str]], choices: dict[str, list[str]] | None = None,
+                   max_chars: int | None = None) -> LLMResult[T]:
         value = _validated(schema, self.recording.get(structured_key(schema, messages, choices), "structured"))
         return LLMResult(value=value, latency_ms=0, input_tokens=None, output_tokens=None, attempts=1)
 
@@ -225,8 +227,8 @@ class Recorder:
     def begin_check(self) -> None:
         getattr(self.inner, "begin_check", lambda: None)()
 
-    def structured(self, schema: type, messages, choices: dict[str, list[str]] | None = None,
-                   max_chars: int | None = None) -> LLMResult:
+    def structured(self, schema: type[T], messages: list[tuple[str, str]], choices: dict[str, list[str]] | None = None,
+                   max_chars: int | None = None) -> LLMResult[T]:
         key = structured_key(schema, messages, choices)
         if self.recording.has(key):
             return ReplayLLM(self.recording).structured(schema, messages, choices)

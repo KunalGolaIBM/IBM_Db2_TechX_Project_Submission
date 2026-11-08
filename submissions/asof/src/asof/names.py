@@ -93,7 +93,8 @@ def find_names(text: str) -> list[tuple[int, int]]:
                 spans.append((start, start + len(name)))
     for w in _WORD.finditer(text):  # every capitalised word, so "Can Priya Sharma" finds Priya
         if w.group(0) in GIVEN_NAMES:
-            name = _clean(_NAME_AT.match(text, w.start()).group(0))
+            at = _NAME_AT.match(text, w.start())
+            name = _clean(at.group(0)) if at else ""
             if name and (w.group(0) not in AMBIGUOUS or " " in name):
                 spans.append((w.start(), w.start() + len(name)))
     spans.sort()

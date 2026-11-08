@@ -10,11 +10,14 @@ import hmac
 import json
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import ibm_db_dbi
 
 from . import db
+
+if TYPE_CHECKING:
+    from .anchor import AnchorLog
 
 MAX_VERDICTS_BYTES = 30000
 DECISIONS = ("PASS", "CORRECTED", "ESCALATED")
@@ -166,7 +169,7 @@ SQL_CLAUSE_NOW = ("SELECT CLAUSE_ID, VERSION_LABEL, CLAUSE_TEXT, RULE_JSON, BUS_
                   "CHANGED_BY FROM POLICY_CLAUSE FOR BUSINESS_TIME AS OF ? WHERE CLAUSE_ID = ?")
 
 
-def _entry(row: tuple) -> dict[str, Any]:
+def _entry(row: tuple[Any, ...]) -> dict[str, Any]:
     out = dict(zip(_ENTRY_KEYS, row, strict=True))
     out["verdicts"] = json.loads(out.pop("verdicts_json"))
     for k in ("request_id", "prev_hash", "row_hash"):
@@ -200,7 +203,7 @@ def replay(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCHEMA)
     entry = get_entry(conn, ledger_id, schema)
     if entry is None:
         return None
-    def one(rows: list[tuple]) -> dict[str, Any] | None:
+    def one(rows: list[tuple[Any, ...]]) -> dict[str, Any] | None:
         if not rows:
             return None
         row = dict(zip(_CLAUSE_KEYS, rows[0], strict=True))
@@ -229,7 +232,8 @@ def replay(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCHEMA)
 EVIDENCE_FORMAT = 1
 
 
-def evidence(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCHEMA, anchors=None) -> dict[str, Any] | None:
+def evidence(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCHEMA,
+             anchors: AnchorLog | None = None) -> dict[str, Any] | None:
     """Everything needed to account for one answer in a dispute, in one document.
 
     The decision as recorded (question and draft redacted, the answer released, every claim with its

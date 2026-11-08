@@ -117,7 +117,9 @@ class BodyLimit:
 
 def token_matches(given: str | None, expected: str) -> bool:
     """Constant-time comparison on UTF-8 bytes (hmac.compare_digest refuses non-ASCII str)."""
-    return bool(given) and hmac.compare_digest(given.encode("utf-8"), expected.encode("utf-8"))
+    if not given:
+        return False
+    return hmac.compare_digest(given.encode("utf-8"), expected.encode("utf-8"))
 
 
 def _in_range(value: date) -> date:

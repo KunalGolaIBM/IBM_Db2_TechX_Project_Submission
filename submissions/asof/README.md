@@ -592,7 +592,24 @@ ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 4 live tests against the configured 
 
 pip install -r requirements-dev.txt
 python scripts/audit_deps.py             # pip-audit over all 109 pinned packages; exit 1 on any known vulnerability
+mypy                                     # type check (configuration in pyproject.toml)
+pytest -q --cov=asof --cov-report=term   # line coverage of src/asof
 ```
+
+**Types and coverage** (Sun 8 Nov 2026). `mypy` 2.4 with the Pydantic plugin finds no issues in the 38 modules. It runs `--strict` on 25 of them, every module on the path from a draft to the ledger among them: the check (`gate.py`), the rule checker, redaction, the ledger, the anchors, policy changes, intake, the Db2 layer and the configuration. The other 13 are glue (FastAPI routes, LangGraph state, CLIs, benchmarks). They are still fully type-checked, but may leave parameters unannotated. The MCP server passes `--strict` in its own environment. The full suite against Db2 covers **76% of the lines in `src/asof`** (5,591 statements), including:
+
+| Module | Coverage |
+|---|---|
+| `redact.py` | 100% |
+| `rules.py` | 99% |
+| `gate.py` | 96% |
+| `checkgraph.py` | 95% |
+| `policy.py` | 95% |
+| `ledger.py` | 93% |
+| `intake.py` | 92% |
+| `api.py` | 87% |
+
+The lowest numbers belong to command-line tools that CI runs as steps of their own rather than through pytest: `setup.py` 27%, `explain.py` 24%, `db2check.py` 0%, the evaluation runners 34 to 43%, and the benchmarks. CI runs mypy on every push and fails the Db2 job if coverage drops below 74%.
 
 `requirements.txt` lists the 24 direct dependencies; `requirements.lock` pins all 109 packages, transitive ones included, at the versions tested. It is used as a pip constraints file, so Linux and Windows still get their platform-only packages. `python scripts/lock_deps.py` regenerates it, and a test fails if the two files disagree. Last audit (6 Nov 2026): no known vulnerabilities.
 
