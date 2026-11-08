@@ -39,13 +39,14 @@ SPLITS = {"dev": "cases_dev.jsonl", "test": "cases_test.jsonl",
           "extractor-test": "extractor_cases_test.jsonl", "bank-test2": "bank_cases_test2.jsonl",
           "escalation-dev": "escalation_cases_dev.jsonl", "escalation-test": "escalation_cases_test.jsonl",
           "situation-dev": "situation_cases_dev.jsonl", "situation-test": "situation_cases_test.jsonl",
-          "situation-test2": "situation_cases_test2.jsonl", "situation-test3": "situation_cases_test3.jsonl"}
+          "situation-test2": "situation_cases_test2.jsonl", "situation-test3": "situation_cases_test3.jsonl",
+          "list-dev": "list_cases_dev.jsonl", "list-test": "list_cases_test.jsonl"}
 SPLIT_DOC = {"dev": "AURELIA-CSP", "test": "AURELIA-CSP", "bank-dev": "FERNHOLLOW-FEES", "bank-test": "FERNHOLLOW-FEES",
              "extractor-test": "AURELIA-CSP", "bank-test2": "FERNHOLLOW-FEES",
              # both documents; every case names its own doc_id
              "escalation-dev": "AURELIA-CSP", "escalation-test": "AURELIA-CSP",
              "situation-dev": "AURELIA-CSP", "situation-test": "AURELIA-CSP", "situation-test2": "AURELIA-CSP",
-             "situation-test3": "AURELIA-CSP"}
+             "situation-test3": "AURELIA-CSP", "list-dev": "AURELIA-CSP", "list-test": "AURELIA-CSP"}
 # Pinned when the test split was committed (81b5b69), before any run.
 FROZEN_TEST_SHA256 = "bfb24f0ac4722bd6925e4e12a4820bc1e498f15958f9701c447161e78cffd5b2"
 # Each frozen split, pinned in the commit that added it and before its first run.
@@ -68,7 +69,12 @@ FROZEN = {"test": FROZEN_TEST_SHA256,
           # Premise drafts (both domains) written after the 5861368 run of situation-test2 released SU01, whose
           # premise the extractor had turned into a general rule. Pinned before its first run and before any change
           # meant to fix that, so it gives a baseline on the unchanged check and then the measure of the change.
-          "situation-test3": "cfb8c55b6beb7dbae7ad4fef5be8482cd7f8c4a9c9aea5c701f85bef65e273a9"}
+          "situation-test3": "cfb8c55b6beb7dbae7ad4fef5be8482cd7f8c4a9c9aea5c701f85bef65e273a9",
+          # Drafts that claim a relation or a document qualifies when the clause's list (eligible_relations,
+          # accepted_documents) leaves it out, and correct drafts that name listed ones or rightly exclude others.
+          # Written after the watsonx.ai run released T20 (a mother-in-law counted as immediate family), from scratch,
+          # and pinned before its first run and before any change meant to catch that.
+          "list-test": "97974df816f6130690c48e9259dbd3251bec5b9580364abdc781624faca1536a"}
 EVAL_SCHEMA = "ASOF_EVAL"
 DECISIONS = ("PASS", "CORRECTED", "ESCALATED")
 
