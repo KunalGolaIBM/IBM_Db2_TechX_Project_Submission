@@ -1,0 +1,908 @@
+{
+  "generated_at": "2026-11-07T23:32:37+00:00",
+  "metricguard_version": "0.2.0",
+  "api_contract_version": "1.2.0",
+  "client": {
+    "python": "3.12.14",
+    "machine": "arm64",
+    "os": "Darwin"
+  },
+  "target": "db2inst1@localhost:50000/MGDB",
+  "analytical_connection": "mgreader",
+  "connectivity": {
+    "status": "PASS",
+    "dbms_name": "DB2/LINUXX8664",
+    "dbms_version": "12.01.0500",
+    "db_name": "MGDB",
+    "service_level": "DB2 v12.1.5.0",
+    "version_number": 12010500,
+    "current_server": "MGDB",
+    "current_user": "DB2INST1",
+    "server_timestamp": "2026-11-07T23:32:37.294717",
+    "codeset": "utf-8"
+  },
+  "schema": {
+    "tables": [
+      {
+        "table": "ORDERS",
+        "present": true,
+        "rows": 2924,
+        "expected_rows": 2924,
+        "status": "PASS"
+      },
+      {
+        "table": "ORDER_ITEMS",
+        "present": true,
+        "rows": 6540,
+        "expected_rows": 6540,
+        "status": "PASS"
+      },
+      {
+        "table": "PRODUCTS",
+        "present": true,
+        "rows": 40,
+        "expected_rows": 40,
+        "status": "PASS"
+      },
+      {
+        "table": "REFUNDS",
+        "present": true,
+        "rows": 1032,
+        "expected_rows": 1032,
+        "status": "PASS"
+      },
+      {
+        "table": "METRIC_DEFINITIONS",
+        "present": true,
+        "rows": 6,
+        "expected_rows": 6,
+        "status": "PASS"
+      },
+      {
+        "table": "QUERY_AUDIT_LOG",
+        "present": true,
+        "rows": 360,
+        "expected_rows": null,
+        "status": "PASS"
+      }
+    ],
+    "indexes_per_table": {
+      "METRIC_DEFINITIONS": 1,
+      "ORDERS": 5,
+      "ORDER_ITEMS": 5,
+      "PRODUCTS": 3,
+      "QUERY_AUDIT_LOG": 3,
+      "REFUNDS": 4
+    }
+  },
+  "data_quality": [
+    {
+      "id": "DQ-01",
+      "check": "Every order has at least one line (order_count is derived from lines)",
+      "violations": 0,
+      "status": "PASS"
+    },
+    {
+      "id": "DQ-02",
+      "check": "Processed refunds never exceed the refunded line's revenue",
+      "violations": 0,
+      "status": "PASS"
+    },
+    {
+      "id": "DQ-03",
+      "check": "No refund is dated before its order",
+      "violations": 0,
+      "status": "PASS"
+    },
+    {
+      "id": "DQ-04",
+      "check": "No order falls outside the documented coverage window 2026-01-01..2026-06-30",
+      "violations": 0,
+      "status": "PASS"
+    },
+    {
+      "id": "DQ-05",
+      "check": "Refund rows always reference a line of the same order (composite FK)",
+      "violations": 0,
+      "status": "PASS"
+    }
+  ],
+  "registry": {
+    "fingerprint": "0c78f16f500bb55d516877d2d9bd0d8124bb2ae7bd3a086a1ea4fa8ed16cd362",
+    "metrics": [
+      {
+        "metric": "gross_revenue@1.0.0",
+        "hash": "a2fbebcda8a5ea0b",
+        "status": "PASS"
+      },
+      {
+        "metric": "net_revenue@1.0.0",
+        "hash": "471c17a8d0ab04f5",
+        "status": "PASS"
+      },
+      {
+        "metric": "order_count@1.0.0",
+        "hash": "c1f1986331b01222",
+        "status": "PASS"
+      },
+      {
+        "metric": "average_order_value@1.0.0",
+        "hash": "c8f1e1930a4d3c70",
+        "status": "PASS"
+      },
+      {
+        "metric": "refund_amount@1.0.0",
+        "hash": "ca57657914ae5686",
+        "status": "PASS"
+      },
+      {
+        "metric": "refund_rate@1.0.0",
+        "hash": "d086d4453baa2e05",
+        "status": "PASS"
+      }
+    ]
+  },
+  "golden_queries": [
+    {
+      "id": "ex-01-net-revenue-trend",
+      "question": "What was net revenue by month in the first half of 2026?",
+      "status": "PASS",
+      "plan_issues": [],
+      "row_count": 6,
+      "execution_ms": 48.6,
+      "db2_rows": [
+        {
+          "order_month": "2026-01",
+          "net_revenue": "95931.95"
+        },
+        {
+          "order_month": "2026-02",
+          "net_revenue": "84776.81"
+        },
+        {
+          "order_month": "2026-03",
+          "net_revenue": "109725.04"
+        },
+        {
+          "order_month": "2026-04",
+          "net_revenue": "98382.98"
+        },
+        {
+          "order_month": "2026-05",
+          "net_revenue": "115794.10"
+        },
+        {
+          "order_month": "2026-06",
+          "net_revenue": "111093.25"
+        }
+      ],
+      "oracle_rows": [
+        {
+          "order_month": "2026-01",
+          "net_revenue": "95931.95"
+        },
+        {
+          "order_month": "2026-02",
+          "net_revenue": "84776.81"
+        },
+        {
+          "order_month": "2026-03",
+          "net_revenue": "109725.04"
+        },
+        {
+          "order_month": "2026-04",
+          "net_revenue": "98382.98"
+        },
+        {
+          "order_month": "2026-05",
+          "net_revenue": "115794.10"
+        },
+        {
+          "order_month": "2026-06",
+          "net_revenue": "111093.25"
+        }
+      ],
+      "sql": "WITH eligible_orders AS (\n    SELECT o.ORDER_ID, o.ORDER_TS, o.REGION_CODE, o.CHANNEL_CODE\n    FROM METRICGUARD.ORDERS o\n    WHERE o.STATUS IN (CAST(? AS VARCHAR(16)))\n      AND o.ORDER_TS >= CAST(? AS TIMESTAMP)\n      AND o.ORDER_TS < CAST(? AS TIMESTAMP)\n),\nline_refunds AS (\n    -- Pre-aggregate refunds per order line BEFORE joining (no fan-out).\n    SELECT r.ORDER_ITEM_ID, SUM(r.REFUND_AMOUNT) AS REFUND_AMOUNT\n    FROM METRICGUARD.REFUNDS r\n    JOIN eligible_orders e ON e.ORDER_ID = r.ORDER_ID\n    WHERE r.STATUS = CAST(? AS VARCHAR(12))\n    GROUP BY r.ORDER_ITEM_ID\n),\nline_facts AS (\n    SELECT e.ORDER_ID, e.ORDER_TS, e.REGION_CODE, e.CHANNEL_CODE, p.CATEGORY,\n           (i.QUANTITY * i.UNIT_PRICE) - i.DISCOUNT_AMOUNT AS LINE_REVENUE,\n           COALESCE(lr.REFUND_AMOUNT, 0) AS LINE_REFUND\n    FROM eligible_orders e\n    JOIN METRICGUARD.ORDER_ITEMS i ON i.ORDER_ID = e.ORDER_ID\n    JOIN METRICGUARD.PRODUCTS p ON p.PRODUCT_ID = i.PRODUCT_ID\n    LEFT JOIN line_refunds lr ON lr.ORDER_ITEM_ID = i.ORDER_ITEM_ID\n)\nSELECT VARCHAR_FORMAT(f.ORDER_TS, 'YYYY-MM') AS ORDER_MONTH,\n       CAST(COALESCE(SUM(f.LINE_REVENUE), 0) - COALESCE(SUM(f.LINE_REFUND), 0) AS DECIMAL(18,2)) AS NET_REVENUE\nFROM line_facts f\nGROUP BY VARCHAR_FORMAT(f.ORDER_TS, 'YYYY-MM')\nORDER BY ORDER_MONTH ASC\nFETCH FIRST 501 ROWS ONLY",
+      "parameters": [
+        {
+          "position": 1,
+          "name": "eligible_status_1",
+          "db2_type": "VARCHAR(16)",
+          "value": "COMPLETED"
+        },
+        {
+          "position": 2,
+          "name": "date_start_inclusive",
+          "db2_type": "TIMESTAMP",
+          "value": "2026-01-01 00:00:00"
+        },
+        {
+          "position": 3,
+          "name": "date_end_exclusive",
+          "db2_type": "TIMESTAMP",
+          "value": "2026-07-01 00:00:00"
+        },
+        {
+          "position": 4,
+          "name": "refund_status",
+          "db2_type": "VARCHAR(12)",
+          "value": "PROCESSED"
+        }
+      ]
+    },
+    {
+      "id": "ex-02-region-refunds-q1",
+      "question": "Compare gross revenue, refund amount and refund rate by region for Q1 2026.",
+      "status": "PASS",
+      "plan_issues": [],
+      "row_count": 4,
+      "execution_ms": 21.66,
+      "db2_rows": [
+        {
+          "region": "APAC",
+          "gross_revenue": "69291.82",
+          "refund_amount": "5040.25",
+          "refund_rate": "0.072739"
+        },
+        {
+          "region": "EMEA",
+          "gross_revenue": "85880.72",
+          "refund_amount": "6588.25",
+          "refund_rate": "0.076714"
+        },
+        {
+          "region": "LATAM",
+          "gross_revenue": "28756.06",
+          "refund_amount": "1467.35",
+          "refund_rate": "0.051028"
+        },
+        {
+          "region": "NA",
+          "gross_revenue": "126723.76",
+          "refund_amount": "7122.71",
+          "refund_rate": "0.056207"
+        }
+      ],
+      "oracle_rows": [
+        {
+          "region": "APAC",
+          "gross_revenue": "69291.82",
+          "refund_amount": "5040.25",
+          "refund_rate": "0.072739"
+        },
+        {
+          "region": "EMEA",
+          "gross_revenue": "85880.72",
+          "refund_amount": "6588.25",
+          "refund_rate": "0.076714"
+        },
+        {
+          "region": "LATAM",
+          "gross_revenue": "28756.06",
+          "refund_amount": "1467.35",
+          "refund_rate": "0.051028"
+        },
+        {
+          "region": "NA",
+          "gross_revenue": "126723.76",
+          "refund_amount": "7122.71",
+          "refund_rate": "0.056207"
+        }
+      ],
+      "sql": "WITH eligible_orders AS (\n    SELECT o.ORDER_ID, o.ORDER_TS, o.REGION_CODE, o.CHANNEL_CODE\n    FROM METRICGUARD.ORDERS o\n    WHERE o.STATUS IN (CAST(? AS VARCHAR(16)))\n      AND o.ORDER_TS >= CAST(? AS TIMESTAMP)\n      AND o.ORDER_TS < CAST(? AS TIMESTAMP)\n),\nline_refunds AS (\n    -- Pre-aggregate refunds per order line BEFORE joining (no fan-out).\n    SELECT r.ORDER_ITEM_ID, SUM(r.REFUND_AMOUNT) AS REFUND_AMOUNT\n    FROM METRICGUARD.REFUNDS r\n    JOIN eligible_orders e ON e.ORDER_ID = r.ORDER_ID\n    WHERE r.STATUS = CAST(? AS VARCHAR(12))\n    GROUP BY r.ORDER_ITEM_ID\n),\nline_facts AS (\n    SELECT e.ORDER_ID, e.ORDER_TS, e.REGION_CODE, e.CHANNEL_CODE, p.CATEGORY,\n           (i.QUANTITY * i.UNIT_PRICE) - i.DISCOUNT_AMOUNT AS LINE_REVENUE,\n           COALESCE(lr.REFUND_AMOUNT, 0) AS LINE_REFUND\n    FROM eligible_orders e\n    JOIN METRICGUARD.ORDER_ITEMS i ON i.ORDER_ID = e.ORDER_ID\n    JOIN METRICGUARD.PRODUCTS p ON p.PRODUCT_ID = i.PRODUCT_ID\n    LEFT JOIN line_refunds lr ON lr.ORDER_ITEM_ID = i.ORDER_ITEM_ID\n)\nSELECT f.REGION_CODE AS REGION,\n       CAST(COALESCE(SUM(f.LINE_REVENUE), 0) AS DECIMAL(18,2)) AS GROSS_REVENUE,\n       CAST(COALESCE(SUM(f.LINE_REFUND), 0) AS DECIMAL(18,2)) AS REFUND_AMOUNT,\n       CAST(ROUND(CAST(COALESCE(SUM(f.LINE_REFUND), 0) AS DECIMAL(25,4)) / NULLIF(SUM(f.LINE_REVENUE), 0), 6) AS DECIMAL(12,6)) AS REFUND_RATE\nFROM line_facts f\nGROUP BY f.REGION_CODE\nORDER BY REGION ASC\nFETCH FIRST 501 ROWS ONLY",
+      "parameters": [
+        {
+          "position": 1,
+          "name": "eligible_status_1",
+          "db2_type": "VARCHAR(16)",
+          "value": "COMPLETED"
+        },
+        {
+          "position": 2,
+          "name": "date_start_inclusive",
+          "db2_type": "TIMESTAMP",
+          "value": "2026-01-01 00:00:00"
+        },
+        {
+          "position": 3,
+          "name": "date_end_exclusive",
+          "db2_type": "TIMESTAMP",
+          "value": "2026-04-01 00:00:00"
+        },
+        {
+          "position": 4,
+          "name": "refund_status",
+          "db2_type": "VARCHAR(12)",
+          "value": "PROCESSED"
+        }
+      ]
+    },
+    {
+      "id": "ex-03-aov-by-channel-q2",
+      "question": "What was the average order value and order count by sales channel in Q2 2026?",
+      "status": "PASS",
+      "plan_issues": [],
+      "row_count": 4,
+      "execution_ms": 18.63,
+      "db2_rows": [
+        {
+          "channel": "MARKETPLACE",
+          "average_order_value": "257.20",
+          "order_count": 140
+        },
+        {
+          "channel": "MOBILE",
+          "average_order_value": "255.82",
+          "order_count": 426
+        },
+        {
+          "channel": "STORE",
+          "average_order_value": "269.84",
+          "order_count": 207
+        },
+        {
+          "channel": "WEB",
+          "average_order_value": "249.00",
+          "order_count": 627
+        }
+      ],
+      "oracle_rows": [
+        {
+          "channel": "MARKETPLACE",
+          "average_order_value": "257.20",
+          "order_count": 140
+        },
+        {
+          "channel": "MOBILE",
+          "average_order_value": "255.82",
+          "order_count": 426
+        },
+        {
+          "channel": "STORE",
+          "average_order_value": "269.84",
+          "order_count": 207
+        },
+        {
+          "channel": "WEB",
+          "average_order_value": "249.00",
+          "order_count": 627
+        }
+      ],
+      "sql": "WITH eligible_orders AS (\n    SELECT o.ORDER_ID, o.ORDER_TS, o.REGION_CODE, o.CHANNEL_CODE\n    FROM METRICGUARD.ORDERS o\n    WHERE o.STATUS IN (CAST(? AS VARCHAR(16)))\n      AND o.ORDER_TS >= CAST(? AS TIMESTAMP)\n      AND o.ORDER_TS < CAST(? AS TIMESTAMP)\n),\nline_facts AS (\n    SELECT e.ORDER_ID, e.ORDER_TS, e.REGION_CODE, e.CHANNEL_CODE, p.CATEGORY,\n           (i.QUANTITY * i.UNIT_PRICE) - i.DISCOUNT_AMOUNT AS LINE_REVENUE,\n           CAST(0 AS DECIMAL(10,2)) AS LINE_REFUND\n    FROM eligible_orders e\n    JOIN METRICGUARD.ORDER_ITEMS i ON i.ORDER_ID = e.ORDER_ID\n    JOIN METRICGUARD.PRODUCTS p ON p.PRODUCT_ID = i.PRODUCT_ID\n)\nSELECT f.CHANNEL_CODE AS CHANNEL,\n       CAST(ROUND(CAST(SUM(f.LINE_REVENUE) AS DECIMAL(25,4)) / NULLIF(COUNT(DISTINCT f.ORDER_ID), 0), 2) AS DECIMAL(18,2)) AS AVERAGE_ORDER_VALUE,\n       COUNT(DISTINCT f.ORDER_ID) AS ORDER_COUNT\nFROM line_facts f\nGROUP BY f.CHANNEL_CODE\nORDER BY CHANNEL ASC\nFETCH FIRST 501 ROWS ONLY",
+      "parameters": [
+        {
+          "position": 1,
+          "name": "eligible_status_1",
+          "db2_type": "VARCHAR(16)",
+          "value": "COMPLETED"
+        },
+        {
+          "position": 2,
+          "name": "date_start_inclusive",
+          "db2_type": "TIMESTAMP",
+          "value": "2026-04-01 00:00:00"
+        },
+        {
+          "position": 3,
+          "name": "date_end_exclusive",
+          "db2_type": "TIMESTAMP",
+          "value": "2026-07-01 00:00:00"
+        }
+      ]
+    },
+    {
+      "id": "ex-04-category-refund-rate",
+      "question": "Which product categories had the highest refund rate in H1 2026?",
+      "status": "PASS",
+      "plan_issues": [],
+      "row_count": 5,
+      "execution_ms": 43.35,
+      "db2_rows": [
+        {
+          "product_category": "SPORTS",
+          "refund_rate": "0.087599",
+          "refund_amount": "14326.92",
+          "gross_revenue": "163551.63"
+        },
+        {
+          "product_category": "ELECTRONICS",
+          "refund_rate": "0.078763",
+          "refund_amount": "15492.94",
+          "gross_revenue": "196702.44"
+        },
+        {
+          "product_category": "APPAREL",
+          "refund_rate": "0.075580",
+          "refund_amount": "7664.35",
+          "gross_revenue": "101406.88"
+        },
+        {
+          "product_category": "HOME",
+          "refund_rate": "0.072883",
+          "refund_amount": "10226.96",
+          "gross_revenue": "140320.49"
+        },
+        {
+          "product_category": "BEAUTY",
+          "refund_rate": "0.064089",
+          "refund_amount": "4206.86",
+          "gross_revenue": "65640.72"
+        }
+      ],
+      "oracle_rows": [
+        {
+          "product_category": "SPORTS",
+          "refund_rate": "0.087599",
+          "refund_amount": "14326.92",
+          "gross_revenue": "163551.63"
+        },
+        {
+          "product_category": "ELECTRONICS",
+          "refund_rate": "0.078763",
+          "refund_amount": "15492.94",
+          "gross_revenue": "196702.44"
+        },
+        {
+          "product_category": "APPAREL",
+          "refund_rate": "0.075580",
+          "refund_amount": "7664.35",
+          "gross_revenue": "101406.88"
+        },
+        {
+          "product_category": "HOME",
+          "refund_rate": "0.072883",
+          "refund_amount": "10226.96",
+          "gross_revenue": "140320.49"
+        },
+        {
+          "product_category": "BEAUTY",
+          "refund_rate": "0.064089",
+          "refund_amount": "4206.86",
+          "gross_revenue": "65640.72"
+        }
+      ],
+      "sql": "WITH eligible_orders AS (\n    SELECT o.ORDER_ID, o.ORDER_TS, o.REGION_CODE, o.CHANNEL_CODE\n    FROM METRICGUARD.ORDERS o\n    WHERE o.STATUS IN (CAST(? AS VARCHAR(16)))\n      AND o.ORDER_TS >= CAST(? AS TIMESTAMP)\n      AND o.ORDER_TS < CAST(? AS TIMESTAMP)\n),\nline_refunds AS (\n    -- Pre-aggregate refunds per order line BEFORE joining (no fan-out).\n    SELECT r.ORDER_ITEM_ID, SUM(r.REFUND_AMOUNT) AS REFUND_AMOUNT\n    FROM METRICGUARD.REFUNDS r\n    JOIN eligible_orders e ON e.ORDER_ID = r.ORDER_ID\n    WHERE r.STATUS = CAST(? AS VARCHAR(12))\n    GROUP BY r.ORDER_ITEM_ID\n),\nline_facts AS (\n    SELECT e.ORDER_ID, e.ORDER_TS, e.REGION_CODE, e.CHANNEL_CODE, p.CATEGORY,\n           (i.QUANTITY * i.UNIT_PRICE) - i.DISCOUNT_AMOUNT AS LINE_REVENUE,\n           COALESCE(lr.REFUND_AMOUNT, 0) AS LINE_REFUND\n    FROM eligible_orders e\n    JOIN METRICGUARD.ORDER_ITEMS i ON i.ORDER_ID = e.ORDER_ID\n    JOIN METRICGUARD.PRODUCTS p ON p.PRODUCT_ID = i.PRODUCT_ID\n    LEFT JOIN line_refunds lr ON lr.ORDER_ITEM_ID = i.ORDER_ITEM_ID\n)\nSELECT f.CATEGORY AS PRODUCT_CATEGORY,\n       CAST(ROUND(CAST(COALESCE(SUM(f.LINE_REFUND), 0) AS DECIMAL(25,4)) / NULLIF(SUM(f.LINE_REVENUE), 0), 6) AS DECIMAL(12,6)) AS REFUND_RATE,\n       CAST(COALESCE(SUM(f.LINE_REFUND), 0) AS DECIMAL(18,2)) AS REFUND_AMOUNT,\n       CAST(COALESCE(SUM(f.LINE_REVENUE), 0) AS DECIMAL(18,2)) AS GROSS_REVENUE\nFROM line_facts f\nGROUP BY f.CATEGORY\nORDER BY REFUND_RATE DESC, PRODUCT_CATEGORY ASC\nFETCH FIRST 501 ROWS ONLY",
+      "parameters": [
+        {
+          "position": 1,
+          "name": "eligible_status_1",
+          "db2_type": "VARCHAR(16)",
+          "value": "COMPLETED"
+        },
+        {
+          "position": 2,
+          "name": "date_start_inclusive",
+          "db2_type": "TIMESTAMP",
+          "value": "2026-01-01 00:00:00"
+        },
+        {
+          "position": 3,
+          "name": "date_end_exclusive",
+          "db2_type": "TIMESTAMP",
+          "value": "2026-07-01 00:00:00"
+        },
+        {
+          "position": 4,
+          "name": "refund_status",
+          "db2_type": "VARCHAR(12)",
+          "value": "PROCESSED"
+        }
+      ]
+    },
+    {
+      "id": "ex-05-emea-monthly-q1",
+      "question": "Show net revenue and order count by month for EMEA in Q1 2026.",
+      "status": "PASS",
+      "plan_issues": [],
+      "row_count": 3,
+      "execution_ms": 16.0,
+      "db2_rows": [
+        {
+          "order_month": "2026-01",
+          "net_revenue": "25347.46",
+          "order_count": 114
+        },
+        {
+          "order_month": "2026-02",
+          "net_revenue": "22552.32",
+          "order_count": 95
+        },
+        {
+          "order_month": "2026-03",
+          "net_revenue": "31392.69",
+          "order_count": 130
+        }
+      ],
+      "oracle_rows": [
+        {
+          "order_month": "2026-01",
+          "net_revenue": "25347.46",
+          "order_count": 114
+        },
+        {
+          "order_month": "2026-02",
+          "net_revenue": "22552.32",
+          "order_count": 95
+        },
+        {
+          "order_month": "2026-03",
+          "net_revenue": "31392.69",
+          "order_count": 130
+        }
+      ],
+      "sql": "WITH eligible_orders AS (\n    SELECT o.ORDER_ID, o.ORDER_TS, o.REGION_CODE, o.CHANNEL_CODE\n    FROM METRICGUARD.ORDERS o\n    WHERE o.STATUS IN (CAST(? AS VARCHAR(16)))\n      AND o.ORDER_TS >= CAST(? AS TIMESTAMP)\n      AND o.ORDER_TS < CAST(? AS TIMESTAMP)\n      AND o.REGION_CODE IN (CAST(? AS VARCHAR(16)))\n),\nline_refunds AS (\n    -- Pre-aggregate refunds per order line BEFORE joining (no fan-out).\n    SELECT r.ORDER_ITEM_ID, SUM(r.REFUND_AMOUNT) AS REFUND_AMOUNT\n    FROM METRICGUARD.REFUNDS r\n    JOIN eligible_orders e ON e.ORDER_ID = r.ORDER_ID\n    WHERE r.STATUS = CAST(? AS VARCHAR(12))\n    GROUP BY r.ORDER_ITEM_ID\n),\nline_facts AS (\n    SELECT e.ORDER_ID, e.ORDER_TS, e.REGION_CODE, e.CHANNEL_CODE, p.CATEGORY,\n           (i.QUANTITY * i.UNIT_PRICE) - i.DISCOUNT_AMOUNT AS LINE_REVENUE,\n           COALESCE(lr.REFUND_AMOUNT, 0) AS LINE_REFUND\n    FROM eligible_orders e\n    JOIN METRICGUARD.ORDER_ITEMS i ON i.ORDER_ID = e.ORDER_ID\n    JOIN METRICGUARD.PRODUCTS p ON p.PRODUCT_ID = i.PRODUCT_ID\n    LEFT JOIN line_refunds lr ON lr.ORDER_ITEM_ID = i.ORDER_ITEM_ID\n)\nSELECT VARCHAR_FORMAT(f.ORDER_TS, 'YYYY-MM') AS ORDER_MONTH,\n       CAST(COALESCE(SUM(f.LINE_REVENUE), 0) - COALESCE(SUM(f.LINE_REFUND), 0) AS DECIMAL(18,2)) AS NET_REVENUE,\n       COUNT(DISTINCT f.ORDER_ID) AS ORDER_COUNT\nFROM line_facts f\nGROUP BY VARCHAR_FORMAT(f.ORDER_TS, 'YYYY-MM')\nORDER BY ORDER_MONTH ASC\nFETCH FIRST 501 ROWS ONLY",
+      "parameters": [
+        {
+          "position": 1,
+          "name": "eligible_status_1",
+          "db2_type": "VARCHAR(16)",
+          "value": "COMPLETED"
+        },
+        {
+          "position": 2,
+          "name": "date_start_inclusive",
+          "db2_type": "TIMESTAMP",
+          "value": "2026-01-01 00:00:00"
+        },
+        {
+          "position": 3,
+          "name": "date_end_exclusive",
+          "db2_type": "TIMESTAMP",
+          "value": "2026-04-01 00:00:00"
+        },
+        {
+          "position": 4,
+          "name": "filter_region_1",
+          "db2_type": "VARCHAR(16)",
+          "value": "EMEA"
+        },
+        {
+          "position": 5,
+          "name": "refund_status",
+          "db2_type": "VARCHAR(12)",
+          "value": "PROCESSED"
+        }
+      ]
+    },
+    {
+      "id": "ex-06-march-kpis",
+      "question": "How many orders did we complete in March 2026, and what was the AOV?",
+      "status": "PASS",
+      "plan_issues": [],
+      "row_count": 1,
+      "execution_ms": 8.05,
+      "db2_rows": [
+        {
+          "order_count": 426,
+          "average_order_value": "274.83",
+          "gross_revenue": "117078.14"
+        }
+      ],
+      "oracle_rows": [
+        {
+          "order_count": 426,
+          "average_order_value": "274.83",
+          "gross_revenue": "117078.14"
+        }
+      ],
+      "sql": "WITH eligible_orders AS (\n    SELECT o.ORDER_ID, o.ORDER_TS, o.REGION_CODE, o.CHANNEL_CODE\n    FROM METRICGUARD.ORDERS o\n    WHERE o.STATUS IN (CAST(? AS VARCHAR(16)))\n      AND o.ORDER_TS >= CAST(? AS TIMESTAMP)\n      AND o.ORDER_TS < CAST(? AS TIMESTAMP)\n),\nline_facts AS (\n    SELECT e.ORDER_ID, e.ORDER_TS, e.REGION_CODE, e.CHANNEL_CODE, p.CATEGORY,\n           (i.QUANTITY * i.UNIT_PRICE) - i.DISCOUNT_AMOUNT AS LINE_REVENUE,\n           CAST(0 AS DECIMAL(10,2)) AS LINE_REFUND\n    FROM eligible_orders e\n    JOIN METRICGUARD.ORDER_ITEMS i ON i.ORDER_ID = e.ORDER_ID\n    JOIN METRICGUARD.PRODUCTS p ON p.PRODUCT_ID = i.PRODUCT_ID\n)\nSELECT COUNT(DISTINCT f.ORDER_ID) AS ORDER_COUNT,\n       CAST(ROUND(CAST(SUM(f.LINE_REVENUE) AS DECIMAL(25,4)) / NULLIF(COUNT(DISTINCT f.ORDER_ID), 0), 2) AS DECIMAL(18,2)) AS AVERAGE_ORDER_VALUE,\n       CAST(COALESCE(SUM(f.LINE_REVENUE), 0) AS DECIMAL(18,2)) AS GROSS_REVENUE\nFROM line_facts f",
+      "parameters": [
+        {
+          "position": 1,
+          "name": "eligible_status_1",
+          "db2_type": "VARCHAR(16)",
+          "value": "COMPLETED"
+        },
+        {
+          "position": 2,
+          "name": "date_start_inclusive",
+          "db2_type": "TIMESTAMP",
+          "value": "2026-03-01 00:00:00"
+        },
+        {
+          "position": 3,
+          "name": "date_end_exclusive",
+          "db2_type": "TIMESTAMP",
+          "value": "2026-04-01 00:00:00"
+        }
+      ]
+    },
+    {
+      "id": "ex-07-top-web-categories-q2",
+      "question": "What were the top 3 product categories by net revenue on the web channel in Q2 2026?",
+      "status": "PASS",
+      "plan_issues": [],
+      "row_count": 3,
+      "execution_ms": 22.9,
+      "db2_rows": [
+        {
+          "product_category": "ELECTRONICS",
+          "net_revenue": "38877.93"
+        },
+        {
+          "product_category": "SPORTS",
+          "net_revenue": "34809.96"
+        },
+        {
+          "product_category": "HOME",
+          "net_revenue": "31735.53"
+        }
+      ],
+      "oracle_rows": [
+        {
+          "product_category": "ELECTRONICS",
+          "net_revenue": "38877.93"
+        },
+        {
+          "product_category": "SPORTS",
+          "net_revenue": "34809.96"
+        },
+        {
+          "product_category": "HOME",
+          "net_revenue": "31735.53"
+        }
+      ],
+      "sql": "WITH eligible_orders AS (\n    SELECT o.ORDER_ID, o.ORDER_TS, o.REGION_CODE, o.CHANNEL_CODE\n    FROM METRICGUARD.ORDERS o\n    WHERE o.STATUS IN (CAST(? AS VARCHAR(16)))\n      AND o.ORDER_TS >= CAST(? AS TIMESTAMP)\n      AND o.ORDER_TS < CAST(? AS TIMESTAMP)\n      AND o.CHANNEL_CODE IN (CAST(? AS VARCHAR(16)))\n),\nline_refunds AS (\n    -- Pre-aggregate refunds per order line BEFORE joining (no fan-out).\n    SELECT r.ORDER_ITEM_ID, SUM(r.REFUND_AMOUNT) AS REFUND_AMOUNT\n    FROM METRICGUARD.REFUNDS r\n    JOIN eligible_orders e ON e.ORDER_ID = r.ORDER_ID\n    WHERE r.STATUS = CAST(? AS VARCHAR(12))\n    GROUP BY r.ORDER_ITEM_ID\n),\nline_facts AS (\n    SELECT e.ORDER_ID, e.ORDER_TS, e.REGION_CODE, e.CHANNEL_CODE, p.CATEGORY,\n           (i.QUANTITY * i.UNIT_PRICE) - i.DISCOUNT_AMOUNT AS LINE_REVENUE,\n           COALESCE(lr.REFUND_AMOUNT, 0) AS LINE_REFUND\n    FROM eligible_orders e\n    JOIN METRICGUARD.ORDER_ITEMS i ON i.ORDER_ID = e.ORDER_ID\n    JOIN METRICGUARD.PRODUCTS p ON p.PRODUCT_ID = i.PRODUCT_ID\n    LEFT JOIN line_refunds lr ON lr.ORDER_ITEM_ID = i.ORDER_ITEM_ID\n)\nSELECT f.CATEGORY AS PRODUCT_CATEGORY,\n       CAST(COALESCE(SUM(f.LINE_REVENUE), 0) - COALESCE(SUM(f.LINE_REFUND), 0) AS DECIMAL(18,2)) AS NET_REVENUE\nFROM line_facts f\nGROUP BY f.CATEGORY\nORDER BY NET_REVENUE DESC, PRODUCT_CATEGORY ASC\nFETCH FIRST 3 ROWS ONLY",
+      "parameters": [
+        {
+          "position": 1,
+          "name": "eligible_status_1",
+          "db2_type": "VARCHAR(16)",
+          "value": "COMPLETED"
+        },
+        {
+          "position": 2,
+          "name": "date_start_inclusive",
+          "db2_type": "TIMESTAMP",
+          "value": "2026-04-01 00:00:00"
+        },
+        {
+          "position": 3,
+          "name": "date_end_exclusive",
+          "db2_type": "TIMESTAMP",
+          "value": "2026-07-01 00:00:00"
+        },
+        {
+          "position": 4,
+          "name": "filter_channel_1",
+          "db2_type": "VARCHAR(16)",
+          "value": "WEB"
+        },
+        {
+          "position": 5,
+          "name": "refund_status",
+          "db2_type": "VARCHAR(12)",
+          "value": "PROCESSED"
+        }
+      ]
+    }
+  ],
+  "canaries": [
+    {
+      "order_id": 90001,
+      "status": "PASS",
+      "db2": [
+        "COMPLETED",
+        "2026-01",
+        "110.00",
+        "20.00"
+      ],
+      "hand_computed": [
+        "COMPLETED",
+        "2026-01",
+        "110.00",
+        "20.00"
+      ]
+    },
+    {
+      "order_id": 90002,
+      "status": "PASS",
+      "db2": [
+        "COMPLETED",
+        "2026-02",
+        "40.00",
+        "40.00"
+      ],
+      "hand_computed": [
+        "COMPLETED",
+        "2026-02",
+        "40.00",
+        "40.00"
+      ]
+    },
+    {
+      "order_id": 90003,
+      "status": "PASS",
+      "db2": [
+        "CANCELLED",
+        "2026-02",
+        "100.00",
+        "100.00"
+      ],
+      "hand_computed": [
+        "CANCELLED",
+        "2026-02",
+        "100.00",
+        "100.00"
+      ]
+    },
+    {
+      "order_id": 90004,
+      "status": "PASS",
+      "db2": [
+        "COMPLETED",
+        "2026-03",
+        "0.00",
+        "0.00"
+      ],
+      "hand_computed": [
+        "COMPLETED",
+        "2026-03",
+        "0.00",
+        "0.00"
+      ]
+    }
+  ],
+  "traps": [
+    {
+      "id": "TRAP-01",
+      "title": "Refunds joined to items at order grain (fan-out)",
+      "metric": "gross_revenue",
+      "governed_value": "667622.16",
+      "naive_value": "781330.86",
+      "difference": "113708.70",
+      "naive_sql": "SELECT CAST(SUM(i.QUANTITY * i.UNIT_PRICE - i.DISCOUNT_AMOUNT) AS DECIMAL(18,2)) FROM METRICGUARD.ORDERS o JOIN METRICGUARD.ORDER_ITEMS i ON i.ORDER_ID = o.ORDER_ID LEFT JOIN METRICGUARD.REFUNDS r ON r.ORDER_ID = o.ORDER_ID WHERE o.STATUS = 'COMPLETED'"
+    },
+    {
+      "id": "TRAP-02",
+      "title": "Net revenue ignoring order status and refund status",
+      "metric": "net_revenue",
+      "governed_value": "615704.13",
+      "naive_value": "664765.50",
+      "difference": "49061.37",
+      "naive_sql": "SELECT CAST((SELECT SUM(QUANTITY * UNIT_PRICE - DISCOUNT_AMOUNT) FROM METRICGUARD.ORDER_ITEMS) - (SELECT SUM(REFUND_AMOUNT) FROM METRICGUARD.REFUNDS) AS DECIMAL(18,2)) FROM SYSIBM.SYSDUMMY1"
+    },
+    {
+      "id": "TRAP-03",
+      "title": "Revenue including shipping summed after a line join",
+      "metric": "gross_revenue",
+      "governed_value": "667622.16",
+      "naive_value": "672368.22",
+      "difference": "4746.06",
+      "naive_sql": "SELECT CAST(SUM(i.QUANTITY * i.UNIT_PRICE - i.DISCOUNT_AMOUNT + o.SHIPPING_AMOUNT) AS DECIMAL(18,2)) FROM METRICGUARD.ORDERS o JOIN METRICGUARD.ORDER_ITEMS i ON i.ORDER_ID = o.ORDER_ID WHERE o.STATUS = 'COMPLETED'"
+    },
+    {
+      "id": "TRAP-04",
+      "title": "January order count with BETWEEN '2026-01-01' AND '2026-01-31' (drops Jan 31 after midnight)",
+      "metric": "order_count",
+      "governed_value": 394,
+      "naive_value": 383,
+      "difference": -11,
+      "naive_sql": "SELECT COUNT(*) FROM METRICGUARD.ORDERS WHERE STATUS = 'COMPLETED' AND ORDER_TS BETWEEN '2026-01-01' AND '2026-01-31'"
+    }
+  ],
+  "h1_totals": {
+    "gross_revenue": "667622.16",
+    "net_revenue": "615704.13",
+    "order_count": 2581,
+    "refund_amount": "51918.03"
+  },
+  "reconciliation": [
+    {
+      "dimension": "order_month",
+      "metric": "gross_revenue",
+      "sum_of_groups": "667622.16",
+      "control_total": "667622.16",
+      "status": "PASS"
+    },
+    {
+      "dimension": "order_month",
+      "metric": "net_revenue",
+      "sum_of_groups": "615704.13",
+      "control_total": "615704.13",
+      "status": "PASS"
+    },
+    {
+      "dimension": "order_month",
+      "metric": "refund_amount",
+      "sum_of_groups": "51918.03",
+      "control_total": "51918.03",
+      "status": "PASS"
+    },
+    {
+      "dimension": "order_month",
+      "metric": "order_count",
+      "sum_of_groups": 2581,
+      "control_total": 2581,
+      "status": "PASS"
+    },
+    {
+      "dimension": "region",
+      "metric": "gross_revenue",
+      "sum_of_groups": "667622.16",
+      "control_total": "667622.16",
+      "status": "PASS"
+    },
+    {
+      "dimension": "region",
+      "metric": "net_revenue",
+      "sum_of_groups": "615704.13",
+      "control_total": "615704.13",
+      "status": "PASS"
+    },
+    {
+      "dimension": "region",
+      "metric": "refund_amount",
+      "sum_of_groups": "51918.03",
+      "control_total": "51918.03",
+      "status": "PASS"
+    },
+    {
+      "dimension": "region",
+      "metric": "order_count",
+      "sum_of_groups": 2581,
+      "control_total": 2581,
+      "status": "PASS"
+    },
+    {
+      "dimension": "channel",
+      "metric": "gross_revenue",
+      "sum_of_groups": "667622.16",
+      "control_total": "667622.16",
+      "status": "PASS"
+    },
+    {
+      "dimension": "channel",
+      "metric": "net_revenue",
+      "sum_of_groups": "615704.13",
+      "control_total": "615704.13",
+      "status": "PASS"
+    },
+    {
+      "dimension": "channel",
+      "metric": "refund_amount",
+      "sum_of_groups": "51918.03",
+      "control_total": "51918.03",
+      "status": "PASS"
+    },
+    {
+      "dimension": "channel",
+      "metric": "order_count",
+      "sum_of_groups": 2581,
+      "control_total": 2581,
+      "status": "PASS"
+    },
+    {
+      "dimension": "product_category",
+      "metric": "gross_revenue",
+      "sum_of_groups": "667622.16",
+      "control_total": "667622.16",
+      "status": "PASS"
+    },
+    {
+      "dimension": "product_category",
+      "metric": "net_revenue",
+      "sum_of_groups": "615704.13",
+      "control_total": "615704.13",
+      "status": "PASS"
+    },
+    {
+      "dimension": "product_category",
+      "metric": "refund_amount",
+      "sum_of_groups": "51918.03",
+      "control_total": "51918.03",
+      "status": "PASS"
+    }
+  ],
+  "least_privilege": {
+    "status": "PASS",
+    "detail": "DELETE rejected by Db2 (SQLSTATE 42501, SQLCODE -551)"
+  },
+  "audit_writer": {
+    "status": "PASS",
+    "user": "MGAUDIT",
+    "detail": "SELECT business data: rejected (SQLSTATE 42501); UPDATE audit rows: rejected (SQLSTATE 42501); DELETE audit rows: rejected (SQLSTATE 42501)"
+  },
+  "failures": 0,
+  "result": "PASS"
+}

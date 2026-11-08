@@ -1,0 +1,146 @@
+{
+  "request_id": "a066bdf8-8c85-43de-b219-f2996f9143d6",
+  "created_at": "2026-11-07T22:08:51.219181Z",
+  "api_version": "1.2.0",
+  "status": "BLOCKED",
+  "question": "What is the average order value by product category?",
+  "answer": null,
+  "plan": {
+    "metrics": [
+      {
+        "name": "average_order_value",
+        "version": "1.0.0"
+      }
+    ],
+    "dimensions": [
+      "product_category"
+    ],
+    "filters": [],
+    "date_range": {
+      "start_date": "2026-01-01",
+      "end_date": "2026-06-30",
+      "attribution": "order_date",
+      "source": "default"
+    },
+    "order_by": [],
+    "limit": null
+  },
+  "assumptions": [
+    {
+      "code": "DEFAULT_DATE_RANGE",
+      "message": "No period given; using data coverage 2026-01-01..2026-06-30."
+    }
+  ],
+  "metrics": [
+    {
+      "name": "average_order_value",
+      "version": "1.0.0",
+      "display_name": "Average Order Value",
+      "unit": "USD",
+      "scale": 2,
+      "definition_hash": "c8f1e1930a4d3c70ea6008912008d56d7dea4f79ad44308200491d4abe4d9851"
+    }
+  ],
+  "sql": null,
+  "result": null,
+  "chart": null,
+  "verification": {
+    "status": "BLOCKED",
+    "summary": "'average_order_value' cannot be broken down by 'product_category' (allowed: order_month, region, channel).",
+    "reasons": [
+      {
+        "code": "DIMENSION_NOT_ALLOWED",
+        "severity": "error",
+        "message": "'average_order_value' cannot be broken down by 'product_category' (allowed: order_month, region, channel)."
+      }
+    ],
+    "checks": [
+      {
+        "id": "V01",
+        "name": "plan_schema",
+        "status": "PASS",
+        "detail": "Plan parsed."
+      },
+      {
+        "id": "V02",
+        "name": "metric_approval",
+        "status": "PASS",
+        "detail": "average_order_value@1.0.0 approved."
+      },
+      {
+        "id": "V03",
+        "name": "registry_integrity",
+        "status": "SKIPPED",
+        "detail": "Not reached."
+      },
+      {
+        "id": "V04",
+        "name": "dimension_filter_policy",
+        "status": "FAIL",
+        "detail": "'average_order_value' cannot be broken down by 'product_category' (allowed: order_month, region, channel)."
+      },
+      {
+        "id": "V05",
+        "name": "deterministic_sql",
+        "status": "SKIPPED",
+        "detail": "Blocked by policy; not executed."
+      },
+      {
+        "id": "V06",
+        "name": "sql_guard",
+        "status": "SKIPPED",
+        "detail": "Blocked by policy; not executed."
+      },
+      {
+        "id": "V07",
+        "name": "parameterized",
+        "status": "SKIPPED",
+        "detail": "Blocked by policy; not executed."
+      },
+      {
+        "id": "V08",
+        "name": "execution",
+        "status": "SKIPPED",
+        "detail": "Blocked by policy; not executed."
+      },
+      {
+        "id": "V09",
+        "name": "reconciliation",
+        "status": "SKIPPED",
+        "detail": "Blocked by policy; not executed."
+      },
+      {
+        "id": "V10",
+        "name": "completeness",
+        "status": "SKIPPED",
+        "detail": "Blocked by policy; not executed."
+      },
+      {
+        "id": "V11",
+        "name": "null_semantics",
+        "status": "SKIPPED",
+        "detail": "Blocked by policy; not executed."
+      }
+    ]
+  },
+  "clarification": null,
+  "timing": {
+    "total_ms": 2491.5,
+    "planning_ms": 2491.4,
+    "validation_ms": 0.1,
+    "execution_ms": null,
+    "verification_ms": null
+  },
+  "planner": {
+    "name": "langchain-meta",
+    "model": "muse-spark-1.3",
+    "provider": "meta",
+    "execution_mode": "LLM",
+    "disclosure": null
+  },
+  "audit": {
+    "persisted": true,
+    "url": "/api/audit/a066bdf8-8c85-43de-b219-f2996f9143d6"
+  },
+  "error": null
+}

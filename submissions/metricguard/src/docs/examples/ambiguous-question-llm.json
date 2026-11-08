@@ -1,0 +1,134 @@
+{
+  "request_id": "15e80b89-3a38-44d8-82e4-ea98dea1726c",
+  "created_at": "2026-11-07T22:08:46.412990Z",
+  "api_version": "1.2.0",
+  "status": "AMBIGUOUS",
+  "question": "What was our revenue last quarter?",
+  "answer": null,
+  "plan": null,
+  "assumptions": [],
+  "metrics": [],
+  "sql": null,
+  "result": null,
+  "chart": null,
+  "verification": {
+    "status": "AMBIGUOUS",
+    "summary": "\"last quarter\" is relative and has no anchor date; data covers 2026-01-01..2026-06-30. \"revenue\" could mean gross_revenue or net_revenue.",
+    "reasons": [
+      {
+        "code": "AMBIGUOUS_TIME_RANGE",
+        "severity": "warning",
+        "message": "\"last quarter\" is relative and has no anchor date; data covers 2026-01-01..2026-06-30."
+      },
+      {
+        "code": "AMBIGUOUS_METRIC",
+        "severity": "warning",
+        "message": "\"revenue\" could mean gross_revenue or net_revenue."
+      }
+    ],
+    "checks": [
+      {
+        "id": "V01",
+        "name": "plan_schema",
+        "status": "SKIPPED",
+        "detail": "No single plan."
+      },
+      {
+        "id": "V02",
+        "name": "metric_approval",
+        "status": "SKIPPED",
+        "detail": "Awaiting clarification."
+      },
+      {
+        "id": "V03",
+        "name": "registry_integrity",
+        "status": "SKIPPED",
+        "detail": "Awaiting clarification."
+      },
+      {
+        "id": "V04",
+        "name": "dimension_filter_policy",
+        "status": "SKIPPED",
+        "detail": "Awaiting clarification."
+      },
+      {
+        "id": "V05",
+        "name": "deterministic_sql",
+        "status": "SKIPPED",
+        "detail": "Awaiting clarification."
+      },
+      {
+        "id": "V06",
+        "name": "sql_guard",
+        "status": "SKIPPED",
+        "detail": "Awaiting clarification."
+      },
+      {
+        "id": "V07",
+        "name": "parameterized",
+        "status": "SKIPPED",
+        "detail": "Awaiting clarification."
+      },
+      {
+        "id": "V08",
+        "name": "execution",
+        "status": "SKIPPED",
+        "detail": "Awaiting clarification."
+      },
+      {
+        "id": "V09",
+        "name": "reconciliation",
+        "status": "SKIPPED",
+        "detail": "Awaiting clarification."
+      },
+      {
+        "id": "V10",
+        "name": "completeness",
+        "status": "SKIPPED",
+        "detail": "Awaiting clarification."
+      },
+      {
+        "id": "V11",
+        "name": "null_semantics",
+        "status": "SKIPPED",
+        "detail": "Awaiting clarification."
+      }
+    ]
+  },
+  "clarification": {
+    "prompt": "Which revenue do you mean?",
+    "options": [
+      {
+        "id": "net_revenue",
+        "label": "Net Revenue",
+        "description": "Gross revenue minus processed refunds on the same completed orders.",
+        "suggested_question": "What was our net revenue in Q2 2026?"
+      },
+      {
+        "id": "gross_revenue",
+        "label": "Gross Revenue",
+        "description": "Merchandise revenue charged to customers on completed orders, after line discounts and before refunds.",
+        "suggested_question": "What was our gross revenue in Q2 2026?"
+      }
+    ]
+  },
+  "timing": {
+    "total_ms": 3044.5,
+    "planning_ms": 3044.3,
+    "validation_ms": 0.1,
+    "execution_ms": null,
+    "verification_ms": null
+  },
+  "planner": {
+    "name": "langchain-meta",
+    "model": "muse-spark-1.3",
+    "provider": "meta",
+    "execution_mode": "LLM",
+    "disclosure": null
+  },
+  "audit": {
+    "persisted": true,
+    "url": "/api/audit/15e80b89-3a38-44d8-82e4-ea98dea1726c"
+  },
+  "error": null
+}

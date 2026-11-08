@@ -1,0 +1,234 @@
+{
+  "request_id": "0c0af7da-c359-4e81-abcc-805f6c2829e2",
+  "created_at": "2026-11-07T20:36:39.060632Z",
+  "api_version": "1.1.0",
+  "status": "VERIFIED",
+  "question": "How many orders did we complete in March 2026, and what was the AOV?",
+  "answer": {
+    "summary": "For March 2026: Order Count was 426; Average Order Value was $274.83.",
+    "headline": {
+      "metric": "order_count",
+      "label": "Order Count (March 2026)",
+      "value": 426,
+      "unit": "COUNT",
+      "formatted": "426"
+    }
+  },
+  "plan": {
+    "metrics": [
+      {
+        "name": "order_count",
+        "version": "1.0.0"
+      },
+      {
+        "name": "average_order_value",
+        "version": "1.0.0"
+      }
+    ],
+    "dimensions": [],
+    "filters": [],
+    "date_range": {
+      "start_date": "2026-03-01",
+      "end_date": "2026-03-31",
+      "attribution": "order_date",
+      "source": "explicit"
+    },
+    "order_by": [],
+    "limit": null
+  },
+  "assumptions": [],
+  "metrics": [
+    {
+      "name": "order_count",
+      "version": "1.0.0",
+      "display_name": "Order Count",
+      "unit": "COUNT",
+      "scale": 0,
+      "definition_hash": "c1f1986331b0122264c5be4793d30003583ca0807e16e066daf967de0ed6a364"
+    },
+    {
+      "name": "average_order_value",
+      "version": "1.0.0",
+      "display_name": "Average Order Value",
+      "unit": "USD",
+      "scale": 2,
+      "definition_hash": "c8f1e1930a4d3c70ea6008912008d56d7dea4f79ad44308200491d4abe4d9851"
+    }
+  ],
+  "sql": {
+    "text": "WITH eligible_orders AS (\n    SELECT o.ORDER_ID, o.ORDER_TS, o.REGION_CODE, o.CHANNEL_CODE\n    FROM METRICGUARD.ORDERS o\n    WHERE o.STATUS IN (CAST(? AS VARCHAR(16)))\n      AND o.ORDER_TS >= CAST(? AS TIMESTAMP)\n      AND o.ORDER_TS < CAST(? AS TIMESTAMP)\n),\nline_facts AS (\n    SELECT e.ORDER_ID, e.ORDER_TS, e.REGION_CODE, e.CHANNEL_CODE, p.CATEGORY,\n           (i.QUANTITY * i.UNIT_PRICE) - i.DISCOUNT_AMOUNT AS LINE_REVENUE,\n           CAST(0 AS DECIMAL(10,2)) AS LINE_REFUND\n    FROM eligible_orders e\n    JOIN METRICGUARD.ORDER_ITEMS i ON i.ORDER_ID = e.ORDER_ID\n    JOIN METRICGUARD.PRODUCTS p ON p.PRODUCT_ID = i.PRODUCT_ID\n)\nSELECT COUNT(DISTINCT f.ORDER_ID) AS ORDER_COUNT,\n       CAST(ROUND(CAST(SUM(f.LINE_REVENUE) AS DECIMAL(25,4)) / NULLIF(COUNT(DISTINCT f.ORDER_ID), 0), 2) AS DECIMAL(18,2)) AS AVERAGE_ORDER_VALUE\nFROM line_facts f",
+    "dialect": "db2",
+    "parameters": [
+      {
+        "position": 1,
+        "name": "eligible_status_1",
+        "db2_type": "VARCHAR(16)",
+        "value": "COMPLETED"
+      },
+      {
+        "position": 2,
+        "name": "date_start_inclusive",
+        "db2_type": "TIMESTAMP",
+        "value": "2026-03-01 00:00:00"
+      },
+      {
+        "position": 3,
+        "name": "date_end_exclusive",
+        "db2_type": "TIMESTAMP",
+        "value": "2026-04-01 00:00:00"
+      }
+    ],
+    "generated_by": "metricguard-compiler",
+    "sql_hash": "e92514299c76d214bdee7104b697c2fe6067af314c304af0d3f06891b74b9d04",
+    "tables": [
+      "METRICGUARD.ORDERS",
+      "METRICGUARD.ORDER_ITEMS",
+      "METRICGUARD.PRODUCTS"
+    ]
+  },
+  "result": {
+    "columns": [
+      {
+        "name": "order_count",
+        "label": "Order Count",
+        "role": "metric",
+        "data_type": "integer",
+        "unit": "COUNT",
+        "scale": 0
+      },
+      {
+        "name": "average_order_value",
+        "label": "Average Order Value",
+        "role": "metric",
+        "data_type": "decimal",
+        "unit": "USD",
+        "scale": 2
+      }
+    ],
+    "rows": [
+      {
+        "order_count": 426,
+        "average_order_value": 274.83
+      }
+    ],
+    "row_count": 1,
+    "truncated": false
+  },
+  "chart": {
+    "type": "kpi",
+    "title": "Order Count \u00b7 March 2026",
+    "x": null,
+    "series": [
+      {
+        "key": "order_count",
+        "label": "Order Count",
+        "metric": "order_count",
+        "unit": "COUNT",
+        "points": [
+          {
+            "x": null,
+            "y": 426.0
+          }
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "status": "VERIFIED",
+    "summary": "Approved metrics, governed SQL, executed on IBM Db2 and checked against independent control queries.",
+    "reasons": [
+      {
+        "code": "RECONCILED",
+        "severity": "info",
+        "message": "Average_order_value recomputed from reconciled components."
+      }
+    ],
+    "checks": [
+      {
+        "id": "V01",
+        "name": "plan_schema",
+        "status": "PASS",
+        "detail": "Plan parsed."
+      },
+      {
+        "id": "V02",
+        "name": "metric_approval",
+        "status": "PASS",
+        "detail": "order_count@1.0.0, average_order_value@1.0.0 approved."
+      },
+      {
+        "id": "V03",
+        "name": "registry_integrity",
+        "status": "PASS",
+        "detail": "Definition hashes match METRICGUARD.METRIC_DEFINITIONS."
+      },
+      {
+        "id": "V04",
+        "name": "dimension_filter_policy",
+        "status": "PASS",
+        "detail": "Dimensions, filters and sort allowed."
+      },
+      {
+        "id": "V05",
+        "name": "deterministic_sql",
+        "status": "PASS",
+        "detail": "Generated by metricguard-compiler."
+      },
+      {
+        "id": "V06",
+        "name": "sql_guard",
+        "status": "PASS",
+        "detail": "Single SELECT on 3 allow-listed tables."
+      },
+      {
+        "id": "V07",
+        "name": "parameterized",
+        "status": "PASS",
+        "detail": "3 markers, 3 parameters."
+      },
+      {
+        "id": "V08",
+        "name": "execution",
+        "status": "PASS",
+        "detail": "Db2 returned 1 row as MGREADER."
+      },
+      {
+        "id": "V09",
+        "name": "reconciliation",
+        "status": "PASS",
+        "detail": "Average_order_value recomputed from reconciled components."
+      },
+      {
+        "id": "V10",
+        "name": "completeness",
+        "status": "PASS",
+        "detail": "1 row, not truncated, range within coverage."
+      },
+      {
+        "id": "V11",
+        "name": "null_semantics",
+        "status": "PASS",
+        "detail": "No NULL metric values."
+      }
+    ]
+  },
+  "clarification": null,
+  "timing": {
+    "total_ms": 46.6,
+    "planning_ms": 1.0,
+    "validation_ms": 27.9,
+    "execution_ms": 8.5,
+    "verification_ms": 8.2
+  },
+  "planner": {
+    "name": "rules-demo",
+    "model": null,
+    "execution_mode": "DEMO_RULE_BASED",
+    "disclosure": "Demo mode: this plan was produced by a deterministic rule-based planner for the curated example questions, not by an LLM. SQL compilation, validation, execution and verification are unchanged."
+  },
+  "audit": {
+    "persisted": true,
+    "url": "/api/audit/0c0af7da-c359-4e81-abcc-805f6c2829e2"
+  },
+  "error": null
+}

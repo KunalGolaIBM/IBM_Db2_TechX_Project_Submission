@@ -1,0 +1,37 @@
+[project]
+name = "metricguard"
+version = "0.2.0"
+description = "MetricGuard - trustworthy AI analytics on IBM Db2"
+requires-python = ">=3.11,<3.14"
+license = { text = "Apache-2.0" }
+dependencies = [
+  "ibm_db>=3.2.5",
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.8",
+  "pydantic-settings>=2.4",
+  "python-dotenv>=1.0",
+  "langchain-core>=1.7.5,<2",
+  "langchain-openai>=1.7,<2",      # Meta Model API (OpenAI-compatible Chat Completions)
+  "langchain-anthropic>=1.7,<2",   # optional legacy provider (AI_PROVIDER=anthropic)
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[project.scripts]
+metricguard = "metricguard.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["metricguard*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "db2: requires a live IBM Db2 connection (set MG_RUN_DB2_TESTS=1)",
+  "live_llm: calls the real LLM provider selected by AI_PROVIDER (set MG_RUN_LIVE_LLM_TESTS=1 and the provider key)",
+]
