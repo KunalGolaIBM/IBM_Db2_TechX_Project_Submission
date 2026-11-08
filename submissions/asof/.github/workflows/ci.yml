@@ -65,7 +65,10 @@ jobs:
           /tmp/wx-venv/bin/pip install -q -r requirements.txt -r requirements-watsonx.txt -c requirements.lock -r requirements-dev.txt
           /tmp/wx-venv/bin/pip install -q -e . --no-deps
           /tmp/wx-venv/bin/pip check
-          /tmp/wx-venv/bin/pip freeze > /tmp/wx-freeze.txt && /tmp/wx-venv/bin/pip-audit -r /tmp/wx-freeze.txt --progress-spinner off
+          # Exact installed pins, audited as pinned (no re-resolution: the CPU-only torch wheel is not on PyPI;
+          # torch itself is audited through requirements.lock by the step above).
+          /tmp/wx-venv/bin/pip freeze --exclude-editable | grep -v '^torch==' > /tmp/wx-freeze.txt
+          /tmp/wx-venv/bin/pip-audit -r /tmp/wx-freeze.txt --no-deps --disable-pip --strict --progress-spinner off
           /tmp/wx-venv/bin/python -m pytest -q tests/test_watsonx.py -m "not db2" -p no:cacheprovider
 
   db2:
