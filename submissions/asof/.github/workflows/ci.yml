@@ -44,6 +44,12 @@ jobs:
           python -m venv /tmp/lf-venv
           /tmp/lf-venv/bin/pip install -q -r langflow/requirements-langflow.txt
           /tmp/lf-venv/bin/python -m pytest -q langflow/tests -p no:cacheprovider
+      - name: MCP server tests (own virtualenv; MCP SDK and httpx only) and its dependency audit
+        run: |
+          python -m venv /tmp/mcp-venv
+          /tmp/mcp-venv/bin/pip install -q -r mcp_server/requirements-mcp.txt pip-audit==2.10.1
+          /tmp/mcp-venv/bin/python -m pytest -q mcp_server/tests -p no:cacheprovider
+          /tmp/mcp-venv/bin/pip-audit -r mcp_server/requirements-mcp.txt --progress-spinner off
       - name: Lint (ruff, including its SQL-injection rule)
         run: ruff check .
       - name: Secret check over every tracked file

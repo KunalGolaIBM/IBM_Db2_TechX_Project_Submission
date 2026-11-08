@@ -39,6 +39,7 @@ It uses the following third-party software. No third-party code is copied into t
 | pypdf (policy intake: text from uploaded PDFs) | 6.21.4 | BSD-3-Clause |
 | langchain-ibm (optional, [requirements-watsonx.txt](requirements-watsonx.txt): IBM watsonx.ai as the model) | 1.1.2 | MIT |
 | ibm-watsonx-ai (optional, with langchain-ibm) | 1.8.1 | BSD-3-Clause |
+| mcp, the Model Context Protocol SDK (own environment, [mcp_server/requirements-mcp.txt](mcp_server/requirements-mcp.txt)) | 2.3.0 | MIT |
 | pytest | 9.2.0 | MIT |
 
 `ibm_db` downloads the IBM Data Server Driver (clidriver) at install time, which is distributed under IBM's own licence terms.
