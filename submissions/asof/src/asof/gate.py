@@ -21,12 +21,13 @@ from __future__ import annotations
 import html
 import logging
 import re
+import time
 import unicodedata
 import uuid
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import ibm_db_dbi
 from langchain_core.embeddings import Embeddings
@@ -500,6 +501,36 @@ class Gate:
         from .checkgraph import run_check
 
         return run_check(self, req, record=False)
+
+    def assess_sentences(self, req: GateRequest, sentences: Sequence[str]) -> GateResult:
+        """Judge `sentences` of a text as claims of their own, without extraction, and record nothing: the specialist
+        inbox's backstop when extraction found no claim in a reply that talks policy (asof/review.py). Each sentence is
+        retrieved for, judged with the verbatim-quote rule, and rule-checked, as any claim is. Contradicted means
+        CONTRADICTED, uncovered means NOT_COVERED, all supported means ALL_SUPPORTED; any failure fails closed."""
+        started = time.monotonic()
+        domain = self.domain(req.doc_id)
+        q, d = redact(req.question), redact(req.draft_answer)
+        claims: list[ExtractedClaim] = []
+        outcomes: list[ClaimOutcome] = []
+        error = None
+        try:
+            if not sentences or len(sentences) > MAX_CLAIMS:
+                raise TooManyClaims(f"{len(sentences)} sentences")
+            claims = list(domain.extraction_schema.model_validate(
+                {"claims": [{"text": redact(x).text, "area": "other", "claim_type": "procedure"} for x in sentences]}).claims)
+            per_claim = self.retrieve(claims, req.as_of, req.doc_id)
+            outcomes = self.judge(claims, per_claim, pool_of(per_claim), req.as_of, domain=domain, question=q.text)
+            decision, reason, final = self._decide(outcomes, req.draft_answer)
+            if decision == "REWRITE":
+                decision, reason, final = "ESCALATED", "CONTRADICTED", HOLDING_REPLY
+        except TooManyClaims as exc:
+            decision, reason, final, error = "ESCALATED", "TOO_MANY_CLAIMS", HOLDING_REPLY, str(exc)
+        except (LLMError, db.DatabaseError) as exc:
+            decision, reason, final, error = "ESCALATED", "ERROR_FAIL_CLOSED", HOLDING_REPLY, str(exc)[:300]
+        result = GateResult(str(uuid.uuid4()), cast(Decision, decision), reason, final, outcomes, [], None,
+                            int((time.monotonic() - started) * 1000), self.llm.info, released=False, error=error)
+        result.redactions = {"question": q.counts, "draft": d.counts}
+        return result
 
     def verdicts(self, req: GateRequest, result: GateResult, q_counts: dict[str, int],
                  d_counts: dict[str, int]) -> dict[str, Any]:

@@ -214,15 +214,24 @@ def test_a_reviewed_row_can_only_come_through_resolve_escalation(settings, embed
     assert update.value.sqlstate == "75001"
 
 
-def test_a_reply_that_talks_policy_but_yields_no_claim_needs_a_note(settings, embeddings, inbox):
-    """The backstop for an extraction that missed a claim (seen with a small local model): a reply about a fare in which
-    the check found no claim is sent only on the specialist's judgment, with their note."""
+def test_a_contradiction_the_extractor_missed_is_still_refused(settings, embeddings, inbox):
+    """Seen with a small local model: extraction found no claim in "You can request the bereavement fare after you
+    travel." A reply that talks policy but yields no claim has its policy sentences judged as written, so the
+    contradiction is refused, not sent on a note."""
     held = _held(settings, embeddings, inbox)
+    missed = dict(extract=[claims()],
+                  judge=[judge(verdict(1, "CONTRADICTED", "BRV-002", "A bereavement fare cannot be applied retroactively"))])
     with pytest.raises(review.ReviewError) as refused:
-        review.resolve(_gate(settings, embeddings, inbox, extract=[claims()]), held, CONTRADICTING_REPLY)
-    assert refused.value.status == 422 and "bereavement" in str(refused.value) and "note" in str(refused.value)
-    done = review.resolve(_gate(settings, embeddings, inbox, extract=[claims()]), held, CONTRADICTING_REPLY, note=NOTE)
+        review.resolve(_gate(settings, embeddings, inbox, **missed), held, CONTRADICTING_REPLY)
+    assert refused.value.status == 409 and refused.value.check.reason_code == "CONTRADICTED"
+    assert [c.text for c in refused.value.check.claims] == [CONTRADICTING_REPLY]  # judged as written
+    # The same sentence, which no clause covers, goes out only with the specialist's note.
+    uncovered = dict(extract=[claims()], judge=[judge(verdict(1, "NOT_COVERED"))])
+    with pytest.raises(review.ReviewError) as no_note:
+        review.resolve(_gate(settings, embeddings, inbox, **uncovered), held, JUDGMENT_REPLY)
+    assert no_note.value.status == 422
+    done = review.resolve(_gate(settings, embeddings, inbox, **uncovered), held, JUDGMENT_REPLY, note=NOTE)
     assert done.outcome == "SPECIALIST_JUDGMENT"
     small_talk = review.resolve(_gate(settings, embeddings, inbox, extract=[claims()]),
                                 _held(settings, embeddings, inbox), "Thank you for your patience. I am sorry for your loss.")
-    assert small_talk.outcome == "SPECIALIST_CHECKED"  # nothing a policy decides: no note needed
+    assert small_talk.outcome == "SPECIALIST_CHECKED"  # nothing a policy decides: nothing to judge, no note needed

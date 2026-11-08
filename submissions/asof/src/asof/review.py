@@ -15,6 +15,7 @@ sent, so the ledger holds what the customer was told, not every draft the specia
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -174,7 +175,28 @@ def check_reply(gate: Gate, ledger_id: int, reply: str, doc_id: str | None = Non
     finally:
         conn.close()
     doc = doc_id or entry["doc_id"].strip()
-    return gate.assess(_request(entry, _validate(reply, doc, entry), doc, reviewer))
+    reply = _validate(reply, doc, entry)
+    return assess(gate, _request(entry, reply, doc, reviewer))
+
+
+def policy_sentences(text: str) -> list[str]:
+    """The sentences of `text` that state something a policy decides."""
+    sentences = [x.strip() for x in re.split(r"(?<=[.!?])\s+", text.strip()) if x.strip()]
+    return [x for x in sentences if policy_terms(x)]
+
+
+def assess(gate: Gate, req: GateRequest) -> GateResult:
+    """The reply's check: the full check graph, once, recording nothing. If extraction found no claim in a reply that
+    talks policy, its policy sentences are judged as claims of their own (Gate.assess_sentences), so a contradiction
+    the extractor missed is still refused, not merely sent on a note."""
+    result = gate.assess(req)
+    if result.reason_code == "NO_POLICY_CLAIMS" and policy_terms(req.draft_answer):
+        sentences = policy_sentences(req.draft_answer)
+        if sentences:
+            log.info("extraction found no claim in a reply that talks policy; judging %d sentence(s) as written",
+                     len(sentences))
+            return gate.assess_sentences(req, sentences)
+    return result
 
 
 def final_text(reply: str, result: GateResult) -> str:
@@ -197,7 +219,7 @@ def resolve(gate: Gate, ledger_id: int, reply: str, note: str | None = None, doc
     reply = _validate(reply, doc, entry)
     note = (note or "").strip()[:1000] or None
     req = _request(entry, reply, doc, reviewer)
-    result = gate.assess(req)
+    result = assess(gate, req)
     if result.reason_code not in SENDABLE:
         raise ReviewError(409, refusal(result), result)
     if needs_note(result, reply) and len(note or "") < MIN_NOTE_CHARS:
@@ -237,8 +259,8 @@ def resolve(gate: Gate, ledger_id: int, reply: str, note: str | None = None, doc
 
 def needs_note(result: GateResult, reply: str) -> bool:
     """A reply goes out on the specialist's judgment, with their note, when no clause covers part of it, or when it
-    talks policy (fees, refunds, eligibility, amounts) but the check found no claim in it. The second is the
-    deterministic backstop for an extraction that missed a claim: the reply is not refused, a person vouches for it."""
+    talks policy (fees, refunds, eligibility, amounts) and still no claim of it was judged (assess judges its policy
+    sentences when extraction finds none, so this is the last resort: a person vouches for it)."""
     return result.reason_code == "NOT_COVERED" or (result.reason_code == "NO_POLICY_CLAIMS" and bool(policy_terms(reply)))
 
 
