@@ -80,6 +80,7 @@ p { margin: 0; }
 }
 .tabs a:hover { background: var(--surface-2); text-decoration: none; }
 .tabs a.active { background: var(--brand-soft); color: var(--brand); }
+.tabs a.tab-out { color: var(--brand); }
 .status { display: flex; gap: 8px; align-items: center; white-space: nowrap; }
 
 main { max-width: 1320px; margin: 0 auto; padding: 26px 28px 40px; outline: none; }

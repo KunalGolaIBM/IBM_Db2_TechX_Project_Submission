@@ -275,6 +275,8 @@ def check_scenarios() -> list[dict[str, Any]]:
               for q, d in SCENARIOS]
     items += [{"label": f"demo: {q}", "doc_id": BANK.doc_id, "question": q, "as_of": d.isoformat(), "draft": t}
               for q, t, d in BANK_DRAFTS]
+    items += [{"label": f"chat {b['ref']}: {q}", "doc_id": AIRLINE.doc_id, "question": q, "as_of": b["booked"], "draft": None}
+              for b in load_scenarios().get("chat", {}).get("bookings", []) for q in b["questions"]]
     seen, unique = set(), []
     for it in items:
         k = (it["doc_id"], it["question"], it["as_of"], it["draft"])
@@ -393,6 +395,50 @@ def record_intake(settings, recording: Recording) -> dict[str, Any]:
                       for p in proposals], "discarded": [d.title for d in discarded]}
 
 
+def _run_checks(settings, recorder, items) -> list[dict[str, Any]]:
+    from . import db
+    from .assistant import DemoAssistant
+    from .embeddings import get_embeddings
+    from .gate import Gate, GateRequest
+
+    emb = get_embeddings(settings.embedding_model)
+    app = db.ConnectionPool(settings, "app").connect
+    gate, bot = Gate(recorder, emb, app, REPLAY_SCHEMA), DemoAssistant(recorder, emb, app, REPLAY_SCHEMA)
+    out = []
+    for sc in items:
+        draft = sc["draft"] or bot.answer(sc["question"]).text
+        r = gate.check(GateRequest(sc["question"], draft, date.fromisoformat(sc["as_of"]), sc["doc_id"], "demo"))
+        out.append(sc | {"draft_checked": draft, "decision": r.decision, "reason_code": r.reason_code})
+        print(f"  {r.decision:<9} {r.reason_code:<24} {sc['label']}", flush=True)
+    return out
+
+
+def record_only_chat(settings) -> int:
+    """Record the customer chat's questions that the shipped recording lacks, leaving every other output as it is."""
+    from .embeddings import get_embeddings
+    from .llm import build_llm
+
+    recording = Recording.load()
+    live = build_llm(settings, fallback=False)
+    if live.info != recording.model:
+        print(f"The shipped recording is from {recording.model}; set that model to add to it (now: {live.info}).")
+        return 2
+    have = {(c["doc_id"], c["question"], c["as_of"], c["draft"]) for c in recording.scenarios.get("checks", [])}
+    todo = [c for c in check_scenarios() if c["label"].startswith("chat ")
+            and (c["doc_id"], c["question"], c["as_of"], c["draft"]) not in have]
+    if not todo:
+        print("Every chat question is already recorded.")
+        return 0
+    _fresh_schema(settings, get_embeddings(settings.embedding_model))
+    done = _run_checks(settings, Recorder(live, recording), todo)
+    if any(c["reason_code"] == "ERROR_FAIL_CLOSED" for c in done):
+        print("A check failed closed on a live-model error; nothing saved. Run it again.")
+        return 1
+    recording.scenarios.setdefault("checks", []).extend(done)
+    recording.save()
+    return 0
+
+
 def record_only_intake(settings) -> int:
     """Add the intake recording to the shipped one without re-recording (and so changing) any other scenario."""
     from .embeddings import get_embeddings
@@ -415,8 +461,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m asof.replay", description=__doc__.split("\n\n")[0])
     parser.add_argument("command", choices=["record", "show"], help="record: re-record with the live model; "
                         "show: list what the shipped recording covers")
-    parser.add_argument("--only", choices=["intake"], help="record only this scenario and add it to the shipped "
-                        "recording, leaving every other recorded output as it is")
+    parser.add_argument("--only", choices=["intake", "chat"], help="record only these scenarios and add them to the "
+                        "shipped recording, leaving every other recorded output as it is")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.WARNING)
     from . import db
@@ -431,6 +477,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.only == "intake":
             return record_only_intake(get_settings())
+        if args.only == "chat":
+            return record_only_chat(get_settings())
         return record(get_settings())
     except (ConfigError, LLMError, db.DatabaseError) as exc:
         print(f"Recording failed: {exc}")

@@ -1,5 +1,5 @@
 {
-  "note": "Built-in scenarios: the playground chips, the change-impact presets and the Ask the ledger examples. The UI loads this file; replay mode has recorded model outputs for exactly these (python -m asof.replay record).",
+  "note": "Built-in scenarios: the playground chips, the change-impact presets and the Ask the ledger examples. The UI loads this file; replay mode has recorded model outputs for exactly these (python -m asof.replay record). The customer chat page (chat.html) uses the chat bookings: the booking date is what the booking system would send as the as-of date.",
   "playground": [
     {
       "label": "Moffatt: March booking",
@@ -128,5 +128,49 @@
     "Where did the rule check overrule the model judge?",
     "What share of checks for March 2026 travel dates were escalated?",
     "Show the escalated decisions with the customer's question and our reply."
-  ]
+  ],
+  "chat": {
+    "bookings": [
+      {
+        "ref": "AUR-7Q2K",
+        "route": "Boston to Lisbon",
+        "booked": "2026-03-10",
+        "questions": [
+          "My grandmother just died. Can I get the bereavement fare after I travel?"
+        ]
+      },
+      {
+        "ref": "AUR-9M4T",
+        "route": "Dublin to Chicago",
+        "booked": "2026-06-02",
+        "questions": [
+          "My grandmother just died. Can I get the bereavement fare after I travel?"
+        ]
+      },
+      {
+        "ref": "AUR-5K1P",
+        "route": "Madrid to New York",
+        "booked": "2026-07-15",
+        "questions": [
+          "How much is the first checked bag?"
+        ]
+      },
+      {
+        "ref": "AUR-4C9N",
+        "route": "Toronto to Reykjavik",
+        "booked": "2026-09-14",
+        "questions": [
+          "Can I use my travel credit to pay for seat upgrades and lounge access?"
+        ]
+      },
+      {
+        "ref": "AUR-2H6W",
+        "route": "Seattle to Honolulu",
+        "booked": "2026-12-15",
+        "questions": [
+          "Can my cat fly in the cabin with me, and what does it cost?"
+        ]
+      }
+    ]
+  }
 }

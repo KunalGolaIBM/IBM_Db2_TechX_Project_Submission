@@ -1,5 +1,10 @@
 {
  "entries": {
+  "0403616445b791481dcacdbeae7c65707e8e003ca30bb6efa2f30fec98c790c2": {
+   "kind": "chat",
+   "name": "chat",
+   "output": "Hello! Thank you for reaching out to us. Unfortunately, travel credits can only be applied toward the base fare of your flight and are not valid for seat upgrades or lounge access. We hope this information helps with your travel planning!"
+  },
   "048f376e636b36626182b61c744beb4a5169336bd097e78d851612ee4dc8c106": {
    "kind": "chat",
    "name": "chat",
@@ -352,6 +357,22 @@
     ]
    }
   },
+  "47d8788e55704c32d7784603bfcbb34d5c01ceae4638bee00113a1ac56fcef6c": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "what can travel credits be used for and exclusions"
+      },
+      "id": "call_9273202283672103879",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
   "4d6459ee5afdacb575032b0bb10316c1ee8fb93bda9468f6afb173d5e1b3a483": {
    "kind": "structured",
    "name": "RewriteResult",
@@ -534,6 +555,22 @@
    "output": {
     "content": "To update the answer for dates from 2027-01-01, we must reflect the new fee amount of $20 and include the relevant limits and refund information identified in the policy search.\n\n<answer>\n<question>How much is the overdraft fee?</question>\nWe charge an overdraft fee of $20 for each item we pay when your account does not have enough available funds.\n\nWe charge no more than 3 overdraft fees per business day, and no overdraft fee is charged if your account is overdrawn by $5 or less at the end of the business day. You may ask for a courtesy refund of up to two overdraft fees in any 12-month period by submitting a request within 60 days of the date the fee was charged.\n</answer>",
     "tool_calls": []
+   }
+  },
+  "5e2ac1bada813ebf7a49d779f914adcf154298fc21543ce1fc68810f2e544cbc": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "travel credit usage restrictions seat upgrades lounge access base fare"
+      },
+      "id": "call_8828731296145601206",
+      "name": "search_policy"
+     }
+    ]
    }
   },
   "62ae542285813d1b244e1e5eae8bfc5eb10a6ab09190e1be84dbf39582cc4f0f": {
@@ -1062,6 +1099,38 @@
     ]
    }
   },
+  "bc277a82a5bff1a496e5a8886dfef6976f501213831c4ca69ea6a67d1a677bbc": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no clause that specifies what travel credits can be used for.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no clause that specifies whether travel credits are valid for seat upgrades.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     },
+     {
+      "claim_no": 3,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no clause that specifies whether travel credits are valid for lounge access.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
+  },
   "bd70fad8676213f83f4d422a024a0fd9876daad3b3176707509acc67a5c6b006": {
    "kind": "structured",
    "name": "RewriteResult",
@@ -1272,6 +1341,38 @@
     ]
    }
   },
+  "df78ed4f304f63c1a4f8a3e845947f7234f00b20c206d64bb9a671e0117e6bad": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "No clause defines the specific permitted uses for travel credits.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "No clause addresses restrictions on using travel credits for seat upgrades.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     },
+     {
+      "claim_no": 3,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "No clause addresses restrictions on using travel credits for lounge access.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
+  },
   "e2735f4934a81326b3680bfd8039d06f4f9fa9ffd796caef30e9c9f20d2a3d19": {
    "kind": "structured",
    "name": "JudgeResult",
@@ -1324,6 +1425,29 @@
    "kind": "chat",
    "name": "chat",
    "output": "I am so incredibly sorry for your loss. You can certainly request a 40% bereavement discount retroactively as long as you provide the required documentation within 90 days of your ticket's issuance. Simply send us a death certificate or a letter from the funeral home or physician, and we will happily refund the fare difference for you."
+  },
+  "eaaadebddc43c98f8a9425d554ca98cf942c02c72c5e477ae84d76692ba57706": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "travel_credit",
+      "claim_type": "eligibility",
+      "text": "Travel credits can only be applied toward the base fare of your flight."
+     },
+     {
+      "area": "travel_credit",
+      "claim_type": "eligibility",
+      "text": "Travel credits are not valid for seat upgrades."
+     },
+     {
+      "area": "travel_credit",
+      "claim_type": "eligibility",
+      "text": "Travel credits are not valid for lounge access."
+     }
+    ]
+   }
   },
   "f25f508ed638165672a896cfb6402afc90e6566f94686c08e33889e0ed4785b8": {
    "kind": "structured",
@@ -1551,6 +1675,16 @@
     "label": "demo: I was charged an overdraft fee yesterday. Will you refund it?",
     "question": "I was charged an overdraft fee yesterday. Will you refund it?",
     "reason_code": "ALL_SUPPORTED"
+   },
+   {
+    "as_of": "2026-09-14",
+    "decision": "ESCALATED",
+    "doc_id": "AURELIA-CSP",
+    "draft": null,
+    "draft_checked": "Hello! Thank you for reaching out to us. Unfortunately, travel credits can only be applied toward the base fare of your flight and are not valid for seat upgrades or lounge access. We hope this information helps with your travel planning!",
+    "label": "chat AUR-4C9N: Can I use my travel credit to pay for seat upgrades and lounge access?",
+    "question": "Can I use my travel credit to pay for seat upgrades and lounge access?",
+    "reason_code": "NOT_COVERED"
    }
   ],
   "impact": [

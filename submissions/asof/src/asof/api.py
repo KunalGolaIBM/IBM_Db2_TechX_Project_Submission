@@ -761,6 +761,10 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     def root():
         return RedirectResponse("/ui/")
 
+    @app.get("/chat", include_in_schema=False)
+    def chat():
+        return RedirectResponse("/ui/chat.html")
+
     if UI_DIR.is_dir():
         app.mount("/ui", StaticFiles(directory=UI_DIR, html=True), name="ui")
 

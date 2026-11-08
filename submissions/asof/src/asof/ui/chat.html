@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aurelia Air Help</title>
+  <meta name="description" content="A customer chat demo: every reply is checked by AsOf against the policy in force on the booking date.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='16' fill='%230b5f73'/%3E%3Cpath d='M7 19l18-7-6 10-3-4z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="chat.css">
+</head>
+<body>
+  <div class="ribbon">
+    <span><b>Demo.</b> Aurelia Air is fictional. Every reply in this chat was checked by AsOf against the policy in force on the
+      booking date before it was shown.</span>
+    <a href="./#/ledger">Open the AsOf console</a>
+  </div>
+  <header class="air-top">
+    <a class="air-brand" href="#" aria-label="Aurelia Air">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="16"/><path d="M7 19l18-7-6 10-3-4z"/></svg>
+      <span>Aurelia <b>Air</b></span>
+    </a>
+    <nav aria-label="Site"><span>Book</span><span>My trips</span><span class="on">Help</span></nav>
+  </header>
+
+  <main class="air-main">
+    <section class="trip" aria-labelledby="trip-h">
+      <h1 id="trip-h">Help with your trip</h1>
+      <p class="lead">Choose a booking. The booking system sends its date with every question, so the assistant is checked
+        against the policy that applied when you booked. The model never guesses the date.</p>
+      <div class="bookings" id="bookings" role="radiogroup" aria-label="Your bookings"></div>
+      <ol class="how">
+        <li><b>The assistant drafts</b> an answer from the help-centre FAQ.</li>
+        <li><b>AsOf checks</b> each policy claim against the clause version in force on the booking date, in IBM Db2.</li>
+        <li><b>You see</b> the answer as written, a corrected answer with its sources, or a specialist follow-up.</li>
+      </ol>
+    </section>
+
+    <section class="widget" aria-label="Chat with Aurelia Air">
+      <div class="w-head">
+        <div class="w-avatar" aria-hidden="true">A</div>
+        <div class="w-title"><b>Aurelia Assistant</b><span id="w-sub">Answers checked by AsOf</span></div>
+        <label class="switch" title="Show the assistant's draft, the claim verdicts and the ledger receipt">
+          <input type="checkbox" id="w-behind"><span class="track" aria-hidden="true"></span><span>Behind the scenes</span>
+        </label>
+      </div>
+      <div class="w-log" id="log" aria-live="polite"></div>
+      <div class="w-suggest" id="suggest" aria-label="Suggested questions"></div>
+      <form class="w-input" id="ask" autocomplete="off">
+        <label class="sr-only" for="q">Your question</label>
+        <input id="q" type="text" maxlength="500" placeholder="Ask about fares, bags, refunds or credits" required>
+        <button type="submit" id="send" aria-label="Send">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg>
+        </button>
+      </form>
+    </section>
+  </main>
+  <script type="module" src="chat.js"></script>
+</body>
+</html>
