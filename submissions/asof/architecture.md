@@ -6,6 +6,8 @@ AsOf sits between any AI assistant and its customers. The calling system sends t
 
 Db2 is the system of record for everything that matters in a dispute: the dated policy versions (bitemporal table with native vectors and JSON rule parameters), the decisions and their evidence (append-only, hash-chained, written only by a stored procedure), and the help-centre answers that depend on them. The application keeps no decision data of its own; the two things it holds outside Db2 are the chain-head anchor log, kept outside on purpose (see Design decisions), and an in-memory rate limiter.
 
+What the check holds goes to a person: a specialist answers it in the inbox, the reply passes the same check for the customer's date, and `RESOLVE_ESCALATION` appends it to the chain as a `REVIEWED` decision linked to the held one. After a policy change, each customer whose answer is now wrong for their date gets a correction notice: drafted by the change-impact agent, checked on that date, verified by `ADD_NOTICE` and approved by a specialist. A caller that does not know which policy document applies can pass `doc_id` `auto`: Db2 routes a clear lead and anything closer goes to a person.
+
 Policy reaches Db2 in two ways: an editor's change through `APPLY_POLICY_CHANGE`, or a policy document (PDF) taken in as a draft that code checks against the document and an editor approves, after which the same procedure applies it. Answers reach the check from any assistant over HTTP, a LangChain runnable, a customer chat page, a Langflow component, or an agent through the MCP server.
 
 All data in this repository is fictional (Aurelia Air, an airline, and Fernhollow Bank, a bank fee schedule). Both are loaded into the same tables; the request's `doc_id` decides which document a check reads and which prompt wording it uses ([domains.py](src/asof/domains.py)).
@@ -28,6 +30,7 @@ flowchart LR
 
     subgraph AsOf["AsOf (Python, FastAPI)"]
         API["API: validation, rate limit, security headers,<br/>per-user tokens and roles (ASOF_AUTH=users)"]
+        ROUTER["Router (doc_id auto)<br/>Db2 vote; close calls to a person<br/>(or an agent that may only confirm)"]
         GATE["Check graph (LangGraph)<br/>extract, retrieve, judge + quote, rule<br/>and situation checks, investigate, decide, rewrite"]
         AGENT["Investigate agent<br/>search_policy, clause_versions (max 3 calls)"]
         LLM["LLM layer<br/>strict schemas, deadlines, output caps,<br/>fallback to Ollama"]
@@ -40,7 +43,7 @@ flowchart LR
     subgraph DB2["IBM Db2 12.1.5, schema ASOF (TLS optional)"]
         USERS[("API_USER<br/>token SHA-256, roles")]
         PC[("POLICY_CLAUSE + history<br/>BUSINESS_TIME + SYSTEM_TIME,<br/>VECTOR(384) with a VANN index, RULE_JSON")]
-        PROCS["SQL PL: APPEND_LEDGER<br/>(in-SQL SHA-256 chain)"]
+        PROCS["SQL PL: APPEND_LEDGER, RESOLVE_ESCALATION<br/>via APPEND_LEDGER_ROW (in-SQL SHA-256 chain)"]
         LED[("ANSWER_LEDGER, CLAIM_CITATION, CHAIN_HEAD<br/>append-only, hash-chained")]
         FAQ[("FAQ_KB (DB2VS)")]
     end
@@ -51,6 +54,9 @@ flowchart LR
     MCP --> API
     UI --> API
     API -- "token hash lookup" --> USERS
+    API -- "doc_id auto" --> ROUTER
+    ROUTER -- "nearest clauses of each document, one statement" --> PC
+    ROUTER -- "routed" --> GATE
     API --> GATE
     GATE --> LLM --> PROVIDER
     GATE --> EMB
@@ -73,15 +79,22 @@ flowchart LR
         PC[("POLICY_CLAUSE + history")]
         LEDGER[("ANSWER_LEDGER,<br/>CLAIM_CITATION")]
         PUB[("PUBLISHED_ANSWER,<br/>ANSWER_SUGGESTION")]
+        HELD[("ESCALATION_REVIEW,<br/>CORRECTION_NOTICE")]
+        IPROCS["SQL PL: RESOLVE_ESCALATION,<br/>ADD_NOTICE, DECIDE_NOTICE"]
         MODEL["EMBEDDER<br/>CREATE EXTERNAL MODEL, TO_EMBEDDING<br/>(OpenAI-compatible or watsonx.ai)"]
         VIEWS["Six audit views, RCAC column masks;<br/>timeline view with JSON_TABLE"]
     end
     MART[("ASOF_MART<br/>dbt's own schema")]
 
     EDITOR["Policy editor"] --> API["AsOf API"]
+    SPECIALIST["Specialist (reviewer role)"] --> API
+    API -- "a held decision answered: reply checked,<br/>then RESOLVE_ESCALATION (asofapp)" --> IPROCS
+    IMPACT -- "correction notices: checked on the<br/>customer's date, ADD_NOTICE (asofapp)" --> IPROCS
+    IPROCS -- "REVIEWED row, notices" --> HELD
+    IPROCS -- "append through APPEND_LEDGER_ROW" --> LEDGER
     AUDITOR["Auditor"] --> API
     API -- "the editor's calls (asofedit):<br/>APPLY_POLICY_CHANGE, DECIDE_SUGGESTION" --> PROCS
-    API --> IMPACT["Change-impact agent<br/>drafts corrections for an editor"]
+    API --> IMPACT["Change-impact agent<br/>drafts help-centre corrections<br/>and customer correction notices"]
     IMPACT -- "every draft: the full check" --> GATE["Check graph"]
     IMPACT -- "proposes only:<br/>ADD_SUGGESTION (asofapp)" --> PROCS
     API -- "VERIFY_CHAIN, replay, receipts" --> PROCS
@@ -125,7 +138,7 @@ flowchart TD
 
 ## Component Breakdown
 
-1. **User interface** ([src/asof/ui/](src/asof/ui/)): plain HTML, CSS and ES modules served by FastAPI, with no framework or build step. Seven console screens (Playground, Policy timeline, Policy intake, Ledger and replay, Ask the ledger, Change impact, Analytics) and a customer chat page (`chat.html`, at `/chat`), which renders every API string with `textContent` only. A strict Content Security Policy is in force (no inline script or style), and every string from the API or the LLM is escaped before rendering.
+1. **User interface** ([src/asof/ui/](src/asof/ui/)): plain HTML, CSS and ES modules served by FastAPI, with no framework or build step. Eight console screens (Playground, Timeline, Intake, Ledger and replay, Inbox, Ask the ledger, Change impact, Analytics) and a customer chat page (`chat.html`, at `/chat`), which renders every API string with `textContent` only. A strict Content Security Policy is in force (no inline script or style), and every string from the API or the LLM is escaped before rendering.
 2. **API** ([src/asof/api.py](src/asof/api.py)): FastAPI. Pydantic input models with UTF-8 byte limits, date bounds, an allow-listed `doc_id` and no control characters. Per-client rate limit on LLM endpoints and full-chain verification, 64 KB body cap, security headers, and error handlers that return SQLSTATEs but never stack traces or SQL. Binds to localhost by default.
 3. **Check graph and gate** ([src/asof/checkgraph.py](src/asof/checkgraph.py), [src/asof/gate.py](src/asof/gate.py)): the LangGraph state graph orchestrates one check (diagram above); the gate owns the steps it calls (extract, the premise check, retrieve, judge, the quote, rule, coverage and invented-number checks, decide, rewrite, record) and the decision rules.
    - The `investigate` node is a tool-calling agent with two read-only Db2 tools, `search_policy` (as-of search on the customer's date) and `clause_versions` (a clause's dated versions), capped at 3 calls; its trace is stored with the decision in `VERDICTS_JSON`.
@@ -140,10 +153,12 @@ flowchart TD
 7. **Ask the ledger** ([src/asof/askledger.py](src/asof/askledger.py)): a LangChain SQL chain for auditors. LangChain's `SQLDatabase` (SQLAlchemy over `ibm_db_sa`, reflected as the analyst) describes the six audit views; the model's SQL must pass a SQLGlot check (IBM's `db2-sqlglot-dialect`), and only SQLGlot's regeneration of the checked tree runs, as the read-only analyst `asofread`, under a Db2 statement timeout and a row cap. Db2's column masks hide the ledger text from that user.
 8. **Integration** ([src/asof/integration.py](src/asof/integration.py)): `as_runnable()` drops the check into an existing LangChain chain. [assistant.py](src/asof/assistant.py) is the deliberately naive demo assistant over the official `DB2VS` store.
 9. **Policy intake** ([src/asof/intake.py](src/asof/intake.py)): reads a PDF (pypdf, under a deadline and size, page and text limits), asks the model once for proposed clause versions, checks each against the document in code, stores the draft through two editor procedures and applies an approved one through two more, in one transaction. Its evaluation is [src/asof/eval/intake_eval.py](src/asof/eval/intake_eval.py).
-10. **MCP server** ([mcp_server/](mcp_server/)): four tools for agents over AsOf's own HTTP API, in its own small environment (the MCP SDK and httpx).
-11. **Tooling**:
+10. **Specialist inbox and correction notices** ([src/asof/review.py](src/asof/review.py), [src/asof/notices.py](src/asof/notices.py), the notice agent in [src/asof/impactagent.py](src/asof/impactagent.py)): the queue of held decisions, the reply's check (`Gate.assess`: one pass, no rewrite, nothing recorded), `RESOLVE_ESCALATION`; the notice drafting, `ADD_NOTICE` and `DECIDE_NOTICE`.
+11. **Router** ([src/asof/router.py](src/asof/router.py)): a LangGraph graph (Db2 vote, decide, optional agent) for `doc_id` `auto`; its evaluation is [src/asof/eval/routing.py](src/asof/eval/routing.py).
+12. **MCP server** ([mcp_server/](mcp_server/)): four tools for agents over AsOf's own HTTP API, in its own small environment (the MCP SDK and httpx).
+13. **Tooling**:
    - [setup.py](src/asof/setup.py): users, schema, seed, grants, self-check, and the demo-only `--reset-ledger`.
-   - [db2check.py](src/asof/db2check.py): the 32 Db2 feature checks.
+   - [db2check.py](src/asof/db2check.py): the 34 Db2 feature checks.
    - [eval/](src/asof/eval/): the frozen evaluation.
    - [demo.py](src/asof/demo.py): records sample history.
    - [scripts/check_secrets.py](scripts/check_secrets.py): pre-commit secret check.
@@ -167,11 +182,15 @@ flowchart TD
   - the final release (decided by code)
   - anything executable: model output is never run, and is escaped in the UI. It becomes SQL in one place only, Ask the ledger, where SQLGlot parses it and Db2 runs SQLGlot's regenerated `SELECT` on six allowed views as the read-only analyst
 - **Policy intake** uses one structured call per document (`INTAKE_SYSTEM`, its own prompt version), with a larger output cap and a longer deadline than a check. The model sees the clause IDs, titles and rule keys, not the current text, so a recorded intake still replays after a policy change. What it is not trusted with: the clause text (must be in the document word for word), the dates (must be stated by the sentence it quotes), the rule values (must be stated in the clause text), new clause IDs (assigned by code), and what goes into force (an editor, through Db2 procedures).
+- **Routing agent** (off by default, `ASOF_ROUTER_AGENT`): one structured call (`RouteResult`) that sees the question, the draft and the nearest clauses of both documents, only when Db2's vote is close (lead between 0.12 and 0.30). It can confirm Db2's leader or return the question to a person; it cannot overrule Db2, and an instruction in the question about where to route is data. Measured on the frozen routing split (below), it guessed on ambiguous questions with the local model, so it ships off.
+- **The notice agent** reuses the change-impact agent's graph and Db2 tools with its own prompt (`NOTICE_SYSTEM`, per domain): look up what the stale answer relied on, rewrite from the clause text now in force for the customer's date (the check's own rewrite step), then the full check on that date. It writes nothing but the notice, through `ADD_NOTICE`, and sends nothing.
 - **Failure handling:** hard wall-clock deadline and output cap on every call; one retry for malformed output; a timeout is final. Ollama requests are non-streaming, so a stuck generation is cancelled. Every failure becomes ESCALATED and is still recorded.
 
 ### Evaluation
 
 [docs/eval_results.md](docs/eval_results.md) holds every recorded run. Nine frozen splits, each committed and pinned by SHA-256 before its first run: the airline `test` split (40 cases), the bank `bank-test` split (26; no longer blind after its first run found a rule-data gap), `extractor-test` (10 drafts aimed at the claim extractor), the blind `bank-test2` (22), `escalation-test` (33, aimed at needless holds, both domains), `situation-test` (12; its first run found the premise gap), `situation-test2` (12, blind until a run that released a draft) `situation-test3` (20, pinned before the premise checks that run led to) and `list-test` (16, pinned before the list check). On the current check (`0be4f60`), `gemini-3.1-flash-lite` released none of the 100 wrong drafts in the seven original splits, none of the 12 in `situation-test3` and none of the 9 in `list-test` (16 cases about relations and documents a clause's list leaves out, pinned before the list check), and held 1 of the 70 correct drafts. On `list-test`, local Ollama released 1 of 9 on the unchanged check and 0 after the list check. An earlier run, at `5861368`, released one (SU01 on the then blind `situation-test2`: the extractor restated the draft's premise about the customer as a general rule, so the judge never compared it with the question); `situation-test3` released 2 of 12 on that unchanged check and 0 of 12 after the premise checks. On the escalation split, ideal decisions rose from 75.8% (baseline, before the change) to 87.9%, and were 97.0% in the latest run. An eval-only ablation (`--ablation current-policy`) runs AsOf's own check with every case's date replaced by 7 Nov 2026, a stand-in for a checker that only knows the current policy. On the 25 cases whose key clause changed in between, with both arms at `a4cb55f`, before the list check, it released 6 of 16 wrong drafts and rewrote 8 of 9 correct ones to a policy that did not apply, against 0 and 1 with the customer's date (paired exact McNemar p ≈ 0.03 and 0.02; 6 or 7 of 16 in three earlier pairs). The README has every run, both providers and the misses. Policy intake has its own frozen evaluation ([docs/intake_eval.md](docs/intake_eval.md)): three fictional documents and 11 expected items, pinned at `99c183eb` before the first run; at `74e400a` the hosted model proposed 10 correctly, the one wrong proposal was blocked by the date check, none reached the editor unblocked, and the injected instruction in one document produced no proposal.
+
+Routing has its own evaluation ([docs/routing_eval.md](docs/routing_eval.md)): 40 test cases (airline, bank, shared-vocabulary traps, ambiguous, out-of-scope, mixed, injection), committed and pinned at `6f3a15e` before the router existed, thresholds set on a 20-case dev split. Db2's vote alone: 26 of 30 routed right, 0 misrouted, 4 sent to a person, and 10 of 10 that need a person asked. With the local 7B routing agent: 30 of 30 routed right, 0 misrouted, but 4 of 10 guessed.
 
 On IBM watsonx.ai (Lite plan, one split's worth of tokens), `ibm/granite-4-h-small` ran the airline `test` split at `ac86d09`: 1 of 26 wrong drafts released (T20, a mother-in-law counted as immediate family against BRV-001's list, the same misreading Ollama made in its first run), 3 of 14 correct drafts held, 85% ideal, median 5.7 s, about 4,200 tokens per check. On the intake evaluation Granite got none of the 11 items right, though every wrong proposal was blocked; three unexpected proposals (changes proposed as new clauses) passed the checks. The default model stays the recommendation; the README has the comparison.
 
@@ -324,6 +343,18 @@ Each line is a choice and the reason for it. Findings marked "spike" were verifi
 - **Help-centre answers store the version label they cite.** After a `FOR PORTION OF` split, the unchanged part of a row keeps its `BUS_START` but gets a new `SYS_START`, so the label is the stable way to say "this answer relied on v1".
 - **Impact preview by rollback, not by a second code path.** A what-if could have been written as a separate query that imitates what `APPLY_POLICY_CHANGE` would do. Running the real procedure and `CHANGE_IMPACT` in one transaction and rolling it back means the preview cannot drift from the change: it is the change, unsaved. The cost is that the preview briefly holds the editor's row locks on that clause; readers are not blocked (currently committed semantics), and the lock timeout bounds any writer.
 
+#### The specialist inbox, correction notices and routing
+
+- **A specialist's reply is a fourth ledger decision, `REVIEWED`, not a note beside the ledger.** What the customer was finally told belongs in the same hash chain as what the assistant wanted to say, so a dispute replays both. `APPEND_LEDGER` refuses `REVIEWED`, and both it and `RESOLVE_ESCALATION` write through `APPEND_LEDGER_ROW`, which is granted to no one: the runtime user cannot file a "specialist reply" without the inbox's rules.
+- **Db2 enforces the inbox's rules from the verdicts it hashes, not from the caller's say-so.** `RESOLVE_ESCALATION` counts contradicted and uncovered claims with `CLAIMS_FROM_JSON` over the verdicts it is about to record, checks them against the reason the application gives, and copies the question, channel and customer date from the held row. It takes the chain lock before reading, so two specialists answering one held decision serialise and the second is refused; the primary key on `ESCALATION_REVIEW` backs that up.
+- **A person may answer what no clause covers, but not contradict one.** The reason a decision is held is often that the policy is silent; a specialist's judgment is legitimate there, so it goes out with a note that is hashed with the reply. A contradiction of the clause in force is refused outright: the Moffatt failure, made by a human, is still the Moffatt failure. Nor does a contradiction slip through when extraction misses it: the local model found no claim in "Yes, you can claim the bereavement fare after you travel", so a reply that uses policy vocabulary but yields no claim has its policy sentences judged as written (`Gate.assess_sentences`: retrieval, judge, verbatim quote, rule check), and that one was refused as contradicted by `BRV-002` v1.
+- **Separation of duties where names exist.** With API users on, Db2 refuses a specialist answering a check they submitted (75054), as intake refuses an approval by the uploader. In local mode there are no names to compare.
+- **A correction notice's fixed wording states no policy.** Only the correction does, and it is the text the check released for the customer's date. `ADD_NOTICE` cross-checks every claim made about it: the answer was released and cited the old version, the new version is in force for that date, and the named check is a ledger row for that date and document whose released claims include one supported by the new version. Approval is refused if the policy changed again since drafting, because the correction was checked against a version that no longer applies.
+- **One open notice per answer and version, enforced by an index.** A generated column `OPEN_KEY` is non-null only while a notice is `PENDING` or `SENT`, and a unique index with `EXCLUDE NULL KEYS` makes a second open notice impossible while leaving any number of rejected ones (spike, 8 Nov: the second open insert fails with SQL0803N, a rejected one makes way).
+- **Routing asks rather than guesses, and Db2 votes first.** The Db2 vote is deterministic, cheap (one statement, a window function over the as-of query) and explainable as distances. Thresholds were set on the dev split only. The routing agent can confirm Db2's leader but never overrule it, and ships off because on the frozen test split the local model guessed on 4 of 5 ambiguous questions; a misroute was never seen either way, and most would fail closed anyway, since the other document's clauses do not cover the claims.
+- **A held route goes to the inbox with its best guess filed, not a null.** The ledger needs a `DOC_ID`, so a `ROUTE_UNCERTAIN` decision records Db2's leader and its distances in the hashed verdicts; `RESOLVE_ESCALATION` lets the specialist check the reply against the other document only for that reason code.
+- **The version diff reads both rows in one statement.** `FOR SYSTEM_TIME FROM ... TO ...` reaches current and history rows alike; the same statement returns `VECTOR_DISTANCE` between the two embeddings. The word diff folds an unchanged run of one or two words between changes into the change, so a rewritten sentence reads as one change.
+
 #### Integrations, evaluation and operations
 
 - **The Langflow component calls AsOf over HTTP.** Langflow and `lfx` pin their own LangChain and `ibm_db`, so importing AsOf's Python package into Langflow would force one side to compromise. The component posts to `/api/gate` and passes on only `final_answer`, which AsOf already sets to the holding reply when nothing is released; it validates the date, URL and document before any request, and caches the check so its two outputs never cost two checks.
@@ -384,6 +415,18 @@ The editor submits a new clause version for a period. `APPLY_POLICY_CHANGE` vali
 ### Taking in a policy document
 
 The editor uploads a PDF. pypdf reads it page by page; one model call proposes clause versions; code checks each against the document (verbatim text, quoted date, rule values in the text) and blocks any that fails. `ADD_POLICY_DRAFT` stores the file and Db2's hash of it, and `ADD_POLICY_DRAFT_ITEM` each proposal with its checks; nothing is in force. The editor reviews each item against the version in force on its date, can preview the approval (applied and measured by `CHANGE_IMPACT` in a transaction that is rolled back), and approves the items to accept: `DECIDE_POLICY_DRAFT` then `APPLY_DRAFT_ITEM` per item, which calls `APPLY_POLICY_CHANGE` for a changed clause, all in one transaction.
+
+### Answering a held decision
+
+The specialist opens a held decision in the inbox: the question, the draft, each claim with the clause version it was checked against, and the clauses in force on the customer's date nearest the question. The reply runs through the check graph once with `record=False`: no rewrite, nothing written; if extraction finds no claim in a reply that talks policy, its policy sentences are judged as written. If it may be sent (every claim supported, no claims, or uncovered claims with the specialist's note), `RESOLVE_ESCALATION` locks the chain, re-validates everything from the verdicts, appends the `REVIEWED` row and writes `ESCALATION_REVIEW`, in one transaction; the chain-head anchor follows.
+
+### A correction notice
+
+After a policy change, the notice agent takes each `STALE` answer from `CHANGE_IMPACT`, looks up related clauses, rewrites the answer from the clause now in force for the customer's date, and runs the full check on that date (recorded, channel `email`). `ADD_NOTICE` stores the notice after its cross-checks; a specialist's approval (`DECIDE_NOTICE`) marks it `SENT`.
+
+### Routing
+
+With `doc_id` `auto`, the router embeds the question and draft, and one Db2 statement returns each document's nearest three clauses in force on the date. A lead of 0.30 or more (with the other document's best clause farther than 0.45) routes; nothing nearer than 0.65 in either document, or a lead under 0.12, holds the decision for a person (`Gate.hold`, reason `ROUTE_UNCERTAIN`); in between, the agent may confirm the leader if it is on, and otherwise a person decides. The route goes into the hashed verdicts either way.
 
 ### Replaying a decision
 
@@ -461,14 +504,16 @@ ALTER TABLE ASOF.POLICY_CLAUSE ADD VERSIONING USE HISTORY TABLE ASOF.POLICY_CLAU
 |---|---|---|
 | `POLICY_DOC` | Policy documents | PK `DOC_ID` |
 | `POLICY_CLAUSE` (+ `_HIST`) | Dated clause versions with embedding and rule parameters | `WITHOUT OVERLAPS` PK, FK to `POLICY_DOC`, JSON check, area enum |
-| `ANSWER_LEDGER` | One row per decision: redacted question and draft, final answer, decision, reason, model, prompt version, latency, verdict JSON, `PREV_HASH`, `ROW_HASH` | gapless `LEDGER_ID >= 1`, unique `REQUEST_ID` and `ROW_HASH`, decision and channel enums, JSON check |
+| `ANSWER_LEDGER` | One row per decision (`PASS`, `CORRECTED`, `ESCALATED`, or a specialist's `REVIEWED` reply): redacted question and draft, final answer, decision, reason, model, prompt version, latency, verdict JSON, `PREV_HASH`, `ROW_HASH` | gapless `LEDGER_ID >= 1`, unique `REQUEST_ID` and `ROW_HASH`, decision and channel enums, JSON check |
 | `CLAIM_CITATION` | One row per claim per check (`PASS_NO` 1 = draft, 2 = rewrite): verdict, judge verdict, rule check, clause ID, version, `BUS_START`, `SYS_START`, distance, quote | PK `(LEDGER_ID, PASS_NO, CLAIM_NO)`, FK to ledger, verdict enums, clause/date pairing check |
 | `CHAIN_HEAD` | Single row: last ledger ID and hash; locked by every append | `HEAD_ID = 1` check |
 | `PUBLISHED_ANSWER` | Help-centre answers with cited clause, version, `BUS_START` and the dates they cover | FK to `POLICY_DOC`, status enum, range check |
 | `FAQ_KB` | Demo assistant's knowledge base, created and searched by `langchain-db2` `DB2VS` | created by `DB2VS` |
-| `API_USER` | Per-user API access (`ASOF_AUTH=users`): user name, the SHA-256 of the personal token (never the token), role flags `CAN_CHECK`, `CAN_AUDIT`, `CAN_EDIT`, who created it and when it was disabled | unique token hash, lower-case hex check, 0/1 flags with at least one role; the runtime user may only `SELECT` it |
+| `API_USER` | Per-user API access (`ASOF_AUTH=users`): user name, the SHA-256 of the personal token (never the token), role flags `CAN_CHECK`, `CAN_AUDIT`, `CAN_EDIT`, `CAN_REVIEW`, who created it and when it was disabled | unique token hash, lower-case hex check, 0/1 flags with at least one role; the runtime user may only `SELECT` it |
 | `POLICY_DRAFT` | An uploaded policy document: the PDF as a `BLOB(4M)`, the SHA-256 Db2 computed over it, pages, extracted text (`CLOB`), the model that proposed the items, who uploaded and who decided | status enum, lower-case hex hash check, pages 1 to 50; identity without cache, so draft numbers have no gaps after a restart; written only through `ADD_POLICY_DRAFT` and `DECIDE_POLICY_DRAFT` |
 | `POLICY_DRAFT_ITEM` | One proposed clause version: kind (CHANGE, NEW, UNCHANGED), clause, text, rule JSON, period, the quoted date sentence, the checks as JSON, whether a check failed, status, and the version it became | PK `(DRAFT_ID, ITEM_NO)`, FK to the draft, kind and status enums, JSON checks, `BUS_END > BUS_START`, and `STATUS <> 'APPLIED' OR (BLOCKED = 0 AND KIND <> 'UNCHANGED')` |
+| `ESCALATION_REVIEW` | Which held decision a specialist answered and with which `REVIEWED` row: outcome (`SPECIALIST_CHECKED` or `SPECIALIST_JUDGMENT`), reviewer, note | PK on the held decision (answered once), unique reply row, both FKs to the ledger, a note required for a judgment, reply after the held row; append-only triggers; written only by `RESOLVE_ESCALATION` |
+| `CORRECTION_NOTICE` | A correction for a customer whose answer went stale: the answer, clause, cited and current versions, customer date, the checked correction, the full notice, the check's decision and ledger row, the agent's trace, status and who decided | generated `OPEN_KEY` with unique index `UX_NOTICE_OPEN ... EXCLUDE NULL KEYS` (one open notice per answer and version), `SENT` needs a released check, FKs to the ledger; a trigger allows one change (from `PENDING`), none deleted; written only through `ADD_NOTICE` and `DECIDE_NOTICE` |
 | `ANSWER_SUGGESTION` | Help-centre corrections drafted by the change-impact agent: the answer, clause, version and date it holds from, the check's decision and ledger entry, the agent's trace, and the editor's decision | status and decision enums, JSON check on the trace; written only through `ADD_SUGGESTION` and `DECIDE_SUGGESTION` |
 
 Indexes: the native vector index `IX_CLAUSE_EMBEDDING` (`VANN`, cosine, in `ASOF_TS32K`), `IX_CLAUSE_DOC_ASOF` on `POLICY_CLAUSE (DOC_ID, BUS_START, BUS_END)` for the as-of query (its start and stop keys are in [docs/explain/as_of_retrieval.txt](docs/explain/as_of_retrieval.txt)), `ANSWER_SUGGESTION` by answer, `POLICY_CLAUSE_HIST (CLAUSE_ID, SYS_END)`, `ANSWER_LEDGER (CREATED_AT)`, `ANSWER_LEDGER (DECISION, LEDGER_ID)` (global), `ANSWER_LEDGER (CHANNEL, DECISION, REASON_CODE, CREATED_AT)` for `V_DECISION_STATS`, `CLAIM_CITATION (CLAUSE_ID, CLAUSE_BUS_START)`, `PUBLISHED_ANSWER (CITED_CLAUSE_ID, CITED_BUS_START)`.
@@ -479,7 +524,10 @@ All routines are `LANGUAGE SQL`. They run inside the engine and execute with the
 
 | Object | Kind | What it does |
 |---|---|---|
-| `APPEND_LEDGER` | SQL PL procedure | Locks `CHAIN_HEAD`, assigns the next gapless ID, computes the row hash in Db2, inserts the ledger row, shreds citations from the verdict JSON, moves the chain head. Rejects a ninth claim per check (SQLSTATE 75003). |
+| `APPEND_LEDGER_ROW` | SQL PL procedure, granted to no one | Locks `CHAIN_HEAD`, assigns the next gapless ID, computes the row hash in Db2, inserts the ledger row, shreds citations from the verdict JSON, moves the chain head. Rejects a ninth claim per check (SQLSTATE 75003). |
+| `APPEND_LEDGER` | SQL PL procedure | The check's way in: refuses any decision but `PASS`, `CORRECTED` and `ESCALATED` (75004), then calls `APPEND_LEDGER_ROW`. |
+| `RESOLVE_ESCALATION` | SQL PL procedure | A specialist's reply to a held decision: copies the question, channel and date from the held row, refuses an unknown (75050), unheld (75051) or answered (75052) decision, another document unless the route was uncertain (75053), self-review (75054), a contradiction or an unclean check (75055), a missing note (75056) and verdicts that disagree with the stated reason (75057); appends the `REVIEWED` row through `APPEND_LEDGER_ROW` and writes `ESCALATION_REVIEW`. |
+| `ADD_NOTICE`, `DECIDE_NOTICE` | SQL PL procedures | Store a drafted correction notice after cross-checking the answer, the version in force and the check (75060 to 75062); approve or reject it once (75063), refusing a correction the check did not release (75064) or one whose policy changed again (75065). |
 | `VERIFY_CHAIN` | SQL PL procedure | Recomputes every hash in order. Checks consecutive IDs, each link, each row's content, the chain head, and that citations match the hashed JSON. Returns OK or the first broken entry. Refuses (75030) a caller without `ASOF_TEXT_READER`, who would hash masked text. |
 | `APPLY_POLICY_CHANGE` | SQL PL procedure | Validates, then `UPDATE ... FOR PORTION OF BUSINESS_TIME`, stamps `CHANGED_BY = SESSION_USER`, flags overlapping help-centre answers. |
 | `CHANGE_IMPACT` | SQL PL procedure, dynamic result set | Stale and historically valid answers, help-centre answers to review. |
@@ -490,7 +538,8 @@ All routines are `LANGUAGE SQL`. They run inside the engine and execute with the
 | `APPLY_DRAFT_ITEM` | SQL PL procedure | Puts one accepted item of an approved draft into force, once (75048 otherwise): `CALL APPLY_POLICY_CHANGE` for a changed clause, `INSERT` for a new one (embedded with `TO_EMBEDDING` when no vector is passed), with the version label Db2 picks and a change note naming the draft, item and file hash. |
 | `LEDGER_ROW_HASH`, `SHA256_HEX` | SQL scalar functions | SHA-256 of the previous hash followed by the SHA-256 of every field (`HASH(..., 2)`). |
 | `CLAIMS_FROM_JSON` | SQL table function | Up to 16 claims out of the verdict JSON with `JSON_TABLE`. |
-| `*_NO_UPDATE`, `*_NO_DELETE` | Triggers (`SECURED`) | Reject every UPDATE or DELETE on `ANSWER_LEDGER` and `CLAIM_CITATION`, and DELETE on `CHAIN_HEAD`, with SQLSTATE 75001. |
+| `*_NO_UPDATE`, `*_NO_DELETE` | Triggers (`SECURED` on the masked ledger) | Reject every UPDATE or DELETE on `ANSWER_LEDGER`, `CLAIM_CITATION` and `ESCALATION_REVIEW`, and DELETE on `CHAIN_HEAD` and `CORRECTION_NOTICE`, with SQLSTATE 75001; `CORRECTION_NOTICE_DECIDED_ONCE` lets a notice change only from `PENDING` to its decision. |
+| `V_REVIEW_QUEUE` | View | Every held decision and, once answered, the reply's ledger row; no free text, so it is safe to count from. |
 | `V_POLICY_TIMELINE` | View | Every version with key `RULE_JSON` parameters as columns, through `JSON_TABLE`. |
 | `V_DECISION_STATS`, `V_CLAIM_OUTCOMES_BY_AREA`, `V_RULE_OVERRIDES` | Views | Analytics. The first two read the MQTs; `V_DECISION_STATS` takes each group's first and last time from the ends of `IX_LEDGER_GROUP_CREATED`. Same columns and values as the GROUP BY over the base tables they replaced (tested). |
 | `MQT_DECISION_STATS`, `MQT_CLAIM_OUTCOMES` | Materialized query tables (`REFRESH IMMEDIATE`) | Counts and latency sums per channel, decision and reason; verdict counts per pass and area. Setup refreshes a new or pending one at once: until then Db2 refuses inserts into the base table. |
@@ -511,6 +560,21 @@ ORDER BY DIST FETCH EXACT FIRST ? ROWS ONLY;
 -- Replay: the same question against what the database held at an earlier moment.
 SELECT ... FROM ASOF.POLICY_CLAUSE FOR SYSTEM_TIME AS OF ? FOR BUSINESS_TIME AS OF ? AS c WHERE ...;
 
+-- Routing (router.py): each document's nearest three clauses in force on the date, in one statement.
+SELECT R.DOC_ID, R.CLAUSE_ID, R.DIST FROM (
+  SELECT D.*, ROW_NUMBER() OVER (PARTITION BY D.DOC_ID ORDER BY D.DIST) AS RN FROM (
+    SELECT c.DOC_ID, c.CLAUSE_ID, VECTOR_DISTANCE(c.EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE) AS DIST
+    FROM POLICY_CLAUSE FOR BUSINESS_TIME AS OF ? AS c) D) R
+WHERE R.RN <= ?;
+
+-- Version diff (policy.py): two rows of one clause from anywhere in its history, side by side.
+SELECT A.VERSION_LABEL, A.CLAUSE_TEXT, A.RULE_JSON, B.VERSION_LABEL, B.CLAUSE_TEXT, B.RULE_JSON,
+       VECTOR_DISTANCE(A.EMBEDDING, B.EMBEDDING, COSINE)
+FROM POLICY_CLAUSE FOR SYSTEM_TIME FROM '0001-01-01' TO '9999-12-30' AS A,
+     POLICY_CLAUSE FOR SYSTEM_TIME FROM '0001-01-01' TO '9999-12-30' AS B
+WHERE A.CLAUSE_ID = ? AND A.BUS_START = ? AND A.SYS_START = ?
+  AND B.CLAUSE_ID = A.CLAUSE_ID AND B.BUS_START = ? AND B.SYS_START = ?;
+
 -- Policy change (inside APPLY_POLICY_CHANGE): Db2 splits the row, history keeps the old one.
 UPDATE ASOF.POLICY_CLAUSE FOR PORTION OF BUSINESS_TIME FROM P_FROM TO P_TO
    SET VERSION_LABEL = P_VERSION_LABEL, CLAUSE_TEXT = P_TEXT, RULE_JSON = P_RULE_JSON,
@@ -523,7 +587,7 @@ UPDATE ASOF.POLICY_CLAUSE FOR PORTION OF BUSINESS_TIME FROM P_FROM TO P_TO
 | Db2 user | Used by | Holds |
 |---|---|---|
 | `db2inst1` (owner) | `python -m asof.setup`, `python -m asof.db2check` | Everything; reads the ledger's text as `[masked]` like everyone but the runtime user |
-| `asofapp` (runtime) | API, gate, UI, agents, eval | `CONNECT`; `SELECT` on the policy, ledger, help-centre, suggestion, policy-draft, FAQ and API-user tables and four analytics views; `EXECUTE` on `APPEND_LEDGER`, `VERIFY_CHAIN`, `CHANGE_IMPACT`, `ADD_SUGGESTION`; role `ASOF_TEXT_READER`. No `INSERT`, `UPDATE`, `DELETE` or DDL. |
+| `asofapp` (runtime) | API, gate, UI, agents, inbox, eval | `CONNECT`; `SELECT` on the policy, ledger, help-centre, suggestion, policy-draft, FAQ, API-user, inbox and notice tables and five views; `EXECUTE` on `APPEND_LEDGER`, `VERIFY_CHAIN`, `CHANGE_IMPACT`, `ADD_SUGGESTION`, `RESOLVE_ESCALATION`, `ADD_NOTICE`, `DECIDE_NOTICE`; role `ASOF_TEXT_READER`. No `INSERT`, `UPDATE`, `DELETE` or DDL, and no `EXECUTE` on `APPEND_LEDGER_ROW`. |
 | `asofedit` (policy editor) | `POST /api/policy/change`, approving drafted corrections, policy intake | `CONNECT`; `SELECT` on the policy, suggestion and policy-draft tables; `EXECUTE` on `APPLY_POLICY_CHANGE`, `CHANGE_IMPACT`, `DECIDE_SUGGESTION`, `ADD_POLICY_DRAFT`, `ADD_POLICY_DRAFT_ITEM`, `DECIDE_POLICY_DRAFT`, `APPLY_DRAFT_ITEM`; `USAGE` on the `EMBEDDER` model. No direct `INSERT`, `UPDATE` or `DELETE`. |
 | `asofread` (analyst) | "Ask the ledger" | Role `ASOF_ANALYST`: `CONNECT` and `SELECT` on `V_AUDIT_DECISIONS`, `V_AUDIT_CLAIMS`, `V_POLICY_TIMELINE`, `V_DECISION_STATS`, `V_CLAIM_OUTCOMES_BY_AREA`, `V_RULE_OVERRIDES`. No tables, no procedures. |
 | `asofmart` (dbt) | The optional dbt marts ([dbt/](dbt/)) | `CONNECT`; `SELECT` on `ANSWER_LEDGER`, `CLAIM_CITATION`, `POLICY_CLAUSE`, `POLICY_CLAUSE_HIST`; `CREATETAB`; `CREATEIN`, `ALTERIN`, `DROPIN` on `ASOF_MART` only; `USE` of the 32K tablespace. Reads the ledger text as `[masked]`. |
@@ -606,6 +670,7 @@ Each line of the judging rubric's Security criterion, and where it is met.
 
 **Trusted, but checked.**
 - **The policy editor:** trusted for policy, never for the ledger.
+- **The specialist:** trusted to answer what no clause covers, on the record; never to contradict a clause in force, or to answer a check they submitted.
 - **The Db2 owner:** trusted to run setup. Any tampering by the owner is detected, not prevented.
 
 **Trust boundaries.**
@@ -618,8 +683,12 @@ Each line of the judging rubric's Security criterion, and where it is met.
 | STRIDE | Threat | Mitigation | Evidence | Residual risk |
 |---|---|---|---|---|
 | Spoofing | A remote caller applies a policy change | `POST /api/policy/change` accepts localhost only, or a matching `ASOF_EDITOR_TOKEN` (constant-time compare); in Db2 only `asofedit` may `EXECUTE APPLY_POLICY_CHANGE` | `test_policy_change_is_refused_from_a_remote_client`, `test_policy_change_token_is_enforced_when_set`, `test_only_the_editor_can_change_policy` | With `ASOF_AUTH=local` (the default), read and check endpoints rely on the localhost binding or one shared token. `ASOF_AUTH=users` gives each caller a personal token and role (`tests/test_api_users.py`, `tests/test_db2_users.py`); tokens are bearer secrets, so a deployment still needs TLS in front of the API and should rotate them |
+| Spoofing | A specialist answers a check they submitted themselves | With API users on, `RESOLVE_ESCALATION` compares the reviewer with the held decision's hashed `requested_by` and refuses (75054); each held decision can be answered once | `test_a_specialist_cannot_answer_their_own_check`, `test_a_held_decision_waits_in_the_inbox_until_a_checked_reply_answers_it` | In local mode (no API users) there are no names to compare |
 | Spoofing | The model or the draft picks a convenient date | The as-of date is a required, validated request field from the calling system; prompts never ask the model for a date | `GateIn.as_of_date`; [api.py](src/asof/api.py) | A caller that sends a false date gets a check against that date; the date's truth belongs to the booking system |
 | Tampering | Prompt injection in a question or draft gets a contradiction released | Untrusted text escaped inside delimited blocks; strict output schemas; a verdict counts only with a verbatim quote from a retrieved clause; deterministic rule checks override the judge; full re-check of any rewrite; any error escalates | `test_manipulated_judge_cannot_pass_a_contradiction`, `test_injection_in_draft_reaches_the_llm_only_as_escaped_data`, `test_invented_quote_downgrades_to_not_covered`, 3 injection cases in the frozen test split (none released), `test_a_draft_that_talks_the_extractor_out_of_a_claim_is_still_held`, the 8 extractor-injection drafts in `extractor-test` (none released) | A judge can still be wrong on a semantic point no rule parameter covers (frozen-split case T20 on the local model). A premise about the customer that contradicts the question is caught by the judge's `situation_conflict` (on `situation-test2`, 0 of 7 released at `512ee74`, 1 of 7 at `5861368` because the extractor dropped the premise; since the premise checks, a premise no claim kept is judged as written: 0 of 7, and 0 of 12 on `situation-test3`, which released 2 of 12 before them), which is still a model judgement except for delays, which code checks |
+| Tampering | A reply that contradicts the policy goes out as a specialist's answer, or is filed against another customer's question | The reply passes the full check for the customer's date; `RESOLVE_ESCALATION` re-counts contradicted and uncovered claims from the verdicts it hashes, refuses any but a clean result, requires a note where the policy is silent, and copies the question, channel and date from the held row; `APPEND_LEDGER` refuses `REVIEWED`, and `APPEND_LEDGER_ROW` is granted to no one | `test_a_reply_that_contradicts_the_policy_is_never_recorded`, `test_db2_refuses_what_the_inbox_must_never_record` (6 cases), `test_a_reviewed_row_can_only_come_through_resolve_escalation` | The reply's check is a model check like any other. A specialist's judgment where no clause applies is trusted as a human decision; the note records it. An extraction that misses a claim is caught when the reply uses policy vocabulary (`policy_terms`): its sentences are then judged as written |
+| Tampering | A correction notice is approved for a correction that was never checked, was checked for another date, or no longer matches the policy | `ADD_NOTICE` cross-checks the answer, the version now in force for its date and the named check (same date and document, decision as stated, a released claim supported by the new version); `DECIDE_NOTICE` requires a released check and refuses if the policy for that date changed again; a decided notice cannot change and none can be deleted | `test_db2_checks_every_claim_made_about_a_notice`, `test_a_held_correction_can_be_rejected_but_never_sent`, `test_a_notice_is_not_sent_if_the_policy_changed_again_since_it_was_drafted`, `test_notices_are_written_only_through_the_procedures_and_never_rewritten` | AsOf records the approval; delivering the notice, and proving it was delivered, is the messaging system's job |
+| Tampering | An instruction in a question steers routing to the other company's policy | Db2's vote ranks by meaning and cannot be instructed; the routing agent gets the question as escaped data, is told to ignore routing instructions, and can only confirm Db2's leader; a close call goes to a person | Routing split cases RT39 and RT40 (both routed to the right document, with and without the agent), `test_the_routing_prompt_keeps_user_text_in_data_blocks`, `test_the_agent_may_only_confirm_db2s_leader` | A question whose meaning is genuinely closer to the wrong document would be routed there by Db2 alone; none of the 30 routable test cases was, and a draft checked against the other company's clauses mostly escalates, since they do not cover it |
 | Tampering | SQL injection through any input | No SQL text built from input at runtime (Ask the ledger's SQL is regenerated by SQLGlot from a parse tree it checked); every value bound; identifiers in setup DDL only through `db.ident` | `tests/test_sql_safety.py`, `test_injection_strings_are_stored_as_plain_text`, `test_unknown_doc_or_injection_string_returns_nothing` | None known |
 | Tampering | Someone edits the replay recording (`src/asof/data/replay.json`) so a wrong draft passes in replay mode | A recorded output is treated like a live one: it must fit the same Pydantic schema, and the verbatim-quote rule, the rule check on `RULE_JSON` and the coverage check still run on it, so an edited SUPPORTED on a wrong number is still overruled. Replay answers only the exact inputs recorded (SHA-256 of schema and messages), labels every decision `replay:` in `MODEL_INFO`, and `python -m asof.eval` refuses to run in it | `tests/test_replay.py`, `tests/test_db2_replay.py` | An edited verdict on a semantic point with a genuine quote would pass, as a manipulated live judge could. Replay is a review mode: never point it at real customers |
 | Tampering | Someone edits or deletes a ledger row | No INSERT, UPDATE or DELETE grant for any runtime user; triggers reject UPDATE and DELETE even for the owner; SHA-256 chain computed in Db2; `VERIFY_CHAIN` finds the first bad row | `test_app_user_cannot_write_ledger_tables`, `test_triggers_stop_even_the_owner`, `test_verify_chain_catches_an_owner_who_edits_a_row`, `..._an_edited_citation`, `..._a_deleted_last_row` | Detaching a monthly partition would remove rows without firing the DELETE trigger, but Db2 refuses it while `CLAIM_CITATION`'s foreign key references the ledger (SQL0270N reason 92, `test_db2_refuses_to_detach_a_ledger_partition`), so even the owner must drop that constraint first. An owner who drops the triggers and recomputes every hash can rewrite the chain consistently. Receipts narrow this: every check response carries its row hash, and `POST /api/ledger/receipt` reports MISMATCH when the row with that ID is no longer the one issued (`test_a_receipt_catches_a_ledger_rebuilt_consistently_which_verify_chain_cannot`). Chain-head anchors cover the rows nobody kept a receipt for (`test_an_anchor_catches_a_ledger_rebuilt_consistently_with_no_receipt_at_all`). What remains: someone who controls both Db2 and the anchor log's storage and also holds `ASOF_ANCHOR_KEY`, or who cuts the end off the log (shown as unanchored rows, not as tampering) |
