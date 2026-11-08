@@ -31,6 +31,21 @@ Routing and policy intake have evaluations of their own: [routing_eval.md](routi
 
 0 of 121 wrong drafts released; 4 of 70 correct drafts held or rewritten. L10 was held in every run (the extractor turns "you qualify" into a claim no clause states). ET09 (the rule check read the premise "the 24-hour free cancellation period has passed" as a mismatch), ET12 (the judge said supported, but its citation failed the check that the quote appears word for word in a clause in force, so the claim became not covered) and ET14 (the judge found the 8-hour condition not covered) passed at `0be4f60`; ET09 and ET12 have been decided both ways in earlier runs of this split. All four are frozen test cases, so nothing was tuned for them.
 
+**Why 4 of 70 held and not 1: measured, not assumed.** The commits since `0be4f60` added code that ordinary checks do not run, so the rise could be the model's run-to-run variation, but that was tested rather than assumed. The four held cases were run 10 times each on the hosted model in four arms ([the 160 records](live-runs/held-correct-drafts-ab.json)):
+
+| Case | Today's check | Today's, inbox rule replaced by a tripwire | The `0be4f60` code | Today's, premise rule off |
+|---|---|---|---|---|
+| ET09 | held 3 of 10 | 3 of 10 | 6 of 10 | 2 of 10 |
+| ET12 | 0 of 10 | 0 of 10 | 0 of 10 | 0 of 10 |
+| ET14 | 2 of 10 | 3 of 10 | 1 of 10 | 0 of 10 |
+| L10 | 9 of 10 | 9 of 10 | 9 of 10 | 9 of 10 |
+| All four | 14 of 40 | 15 of 40 | 16 of 40 | 11 of 40 |
+
+- **The specialist inbox's uncovered-sentence rule (`7829f8f`) is not in the check.** It is called only from `review.py`, for a specialist's reply; replaced by functions that count their calls and raise, it was called 0 times in 40 checks, with the same holds.
+- **The old code holds these drafts at least as often.** The `0be4f60` code held 16 of 40 against today's 14, by the same mechanisms. The frozen run at `0be4f60` happened to pass ET09, ET12 and ET14 together; the latest run happened to hold all three. ET12 was not held once in these 40 runs.
+- **What holds each one.** L10: the judge finds the draft's conclusion, "you qualify for the bereavement fare", stated by no clause (9 of 10 in every arm; a person decides). ET09: two causes. Either the rule check reads "the 24-hour free cancellation period" as a $0 fee against CXL-003's $100 and overrules a correct judge (the false block described [below](#fewer-needless-holds-measured-on-new-frozen-splits), kept so as not to weaken a deterministic check; 1 or 2 of 10 in every arm), or the extractor's claim "the 24-hour free cancellation period has passed" gets a SUPPORTED verdict whose quote is not in the clause, so it is downgraded (1 to 4 of 10 in three arms, 0 in the fourth). ET14: the judge does not connect "flights of 8 hours or less" with PET-004's "not accepted on flights scheduled for more than 8 hours"; that claim comes from the extractor (the draft has no premise sentence), so the premise rule's 0 of 10 there is chance.
+- **The premise rule (`822608e`), which is in the check**, was in place for both runs, and none of the four holds depends on it: with it off, ET09 was still held 2 of 10 and L10 9 of 10, and ET14's held claim is not one it adds. It stays, since it is what stopped the SU01 pattern of releasing a wrong draft.
+
 **The run before, at `0be4f60`** (Sat 7 Nov, after the list check described [below](#lists-who-counts-as-family-which-documents-count)):
 
 | Frozen split | Cases | False allow | False block | Safe | Ideal | Citation | p50 |
