@@ -162,14 +162,25 @@ def test_db2_rejects_more_than_eight_claims_per_check(app_conn, test_schema):
     assert err.value.sqlstate == "75003"
 
 
-def test_db2_rejects_an_unknown_decision(app_conn, test_schema):
+def test_db2_rejects_an_unknown_decision(app_conn, admin_conn, test_schema):
+    """Twice over: APPEND_LEDGER takes only the check's three decisions (75004), and the table's CHECK constraint
+    refuses anything else even from the owner writing directly (23513)."""
     cur = app_conn.cursor()
     e = entry()
     with pytest.raises(Exception) as err:
         cur.callproc(f"{test_schema}.APPEND_LEDGER", (e.request_id, "api", "AURELIA-CSP", e.as_of, "q", "d", "f",
                                                       "MAYBE", "X", "m", "p", 1, json.dumps(e.verdicts), 0, "", None))
     app_conn.rollback()
-    assert "23513" in str(err.value)
+    assert "75004" in str(err.value)
+    db.use_schema(admin_conn, test_schema)
+    with pytest.raises(db.DatabaseError) as direct:
+        db.execute(admin_conn, "INSERT INTO ANSWER_LEDGER (LEDGER_ID, REQUEST_ID, CREATED_AT, CHANNEL, "
+                               "DOC_ID, AS_OF_DATE, QUESTION_REDACTED, DRAFT_REDACTED, FINAL_ANSWER, DECISION, REASON_CODE, "
+                               "MODEL_INFO, PROMPT_VERSION, LATENCY_MS, VERDICTS_JSON, PREV_HASH, ROW_HASH) VALUES (999, ?, "
+                               "CURRENT TIMESTAMP, 'api', 'AURELIA-CSP', '2026-03-10', 'q', 'd', 'f', 'MAYBE', 'X', 'm', 'p', "
+                               "1, '{}', ?, ?)", (e.request_id, "0" * 64, "1" * 64))
+    admin_conn.rollback()
+    assert direct.value.sqlstate == "23513"
 
 
 def _drop_trigger(conn, schema_name, name):

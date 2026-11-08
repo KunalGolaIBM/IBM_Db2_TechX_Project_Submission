@@ -7,7 +7,8 @@
 
 Roles: checker (submit drafts: /api/gate, the demo assistant), auditor (ledger, replay, evidence, receipts,
 the chain and anchor checks, analytics, change impact, Ask the ledger), editor (policy changes and previews,
-drafting and approving corrected help-centre answers). Reading the policy timeline needs any role.
+drafting and approving corrected help-centre answers), reviewer (the specialist inbox: answer held decisions,
+draft and approve correction notices for stale answers). Reading the policy timeline needs any role.
 
 Tokens are 256 random bits ("asof_" plus 43 URL-safe characters). Db2 stores only their SHA-256, in
 ASOF.API_USER; a token that high in entropy needs no salt or slow hash, and a lookup by hash cannot be
@@ -29,16 +30,17 @@ import ibm_db_dbi
 
 from . import db
 
-ROLES = ("checker", "auditor", "editor")
+ROLES = ("checker", "auditor", "editor", "reviewer")
 NAME_RE = re.compile(r"^[a-z][a-z0-9._-]{1,39}$")
 TOKEN_RE = re.compile(r"^asof_[A-Za-z0-9_-]{43}$")
 
-SQL_FIND = ("SELECT USER_NAME, CAN_CHECK, CAN_AUDIT, CAN_EDIT FROM API_USER "
+SQL_FIND = ("SELECT USER_NAME, CAN_CHECK, CAN_AUDIT, CAN_EDIT, CAN_REVIEW FROM API_USER "
             "WHERE TOKEN_SHA256 = ? AND DISABLED_AT IS NULL")
-SQL_ADD = "INSERT INTO API_USER (USER_NAME, TOKEN_SHA256, CAN_CHECK, CAN_AUDIT, CAN_EDIT) VALUES (?, ?, ?, ?, ?)"
+SQL_ADD = ("INSERT INTO API_USER (USER_NAME, TOKEN_SHA256, CAN_CHECK, CAN_AUDIT, CAN_EDIT, CAN_REVIEW) "
+           "VALUES (?, ?, ?, ?, ?, ?)")
 SQL_ROTATE = "UPDATE API_USER SET TOKEN_SHA256 = ? WHERE USER_NAME = ? AND DISABLED_AT IS NULL"
 SQL_DISABLE = "UPDATE API_USER SET DISABLED_AT = CURRENT TIMESTAMP WHERE USER_NAME = ? AND DISABLED_AT IS NULL"
-SQL_LIST = ("SELECT USER_NAME, CAN_CHECK, CAN_AUDIT, CAN_EDIT, CREATED_AT, DISABLED_AT FROM API_USER "
+SQL_LIST = ("SELECT USER_NAME, CAN_CHECK, CAN_AUDIT, CAN_EDIT, CAN_REVIEW, CREATED_AT, DISABLED_AT FROM API_USER "
             "ORDER BY USER_NAME")
 
 
@@ -63,7 +65,7 @@ def new_token() -> str:
     return "asof_" + secrets.token_urlsafe(32)
 
 
-def _flags(roles: set[str]) -> tuple[int, int, int]:
+def _flags(roles: set[str]) -> tuple[int, int, int, int]:
     unknown = roles - set(ROLES)
     if unknown or not roles:
         raise UserError(f"roles must be one or more of {', '.join(ROLES)}")
@@ -112,8 +114,8 @@ def disable(conn: ibm_db_dbi.Connection, name: str, schema: str = db.SCHEMA) -> 
 
 def list_users(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> list[dict[str, Any]]:
     db.use_schema(conn, schema)
-    return [{"user": r[0].strip(), "roles": [role for role, f in zip(ROLES, r[1:4], strict=True) if f],
-             "created_at": r[4], "disabled_at": r[5]} for r in db.query(conn, SQL_LIST)]
+    return [{"user": r[0].strip(), "roles": [role for role, f in zip(ROLES, r[1:5], strict=True) if f],
+             "created_at": r[5], "disabled_at": r[6]} for r in db.query(conn, SQL_LIST)]
 
 
 def authenticate(conn: ibm_db_dbi.Connection, token: str | None, schema: str = db.SCHEMA) -> APIUser | None:
@@ -135,7 +137,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = p.add_subparsers(dest="command", required=True)
     a = sub.add_parser("add", help="add a user and print its token once")
     a.add_argument("name")
-    a.add_argument("--roles", required=True, help="comma-separated: checker, auditor, editor")
+    a.add_argument("--roles", required=True, help="comma-separated: checker, auditor, editor, reviewer")
     sub.add_parser("rotate", help="replace a user's token and print the new one once").add_argument("name")
     sub.add_parser("disable", help="disable a user (takes effect on its next request)").add_argument("name")
     sub.add_parser("list", help="list users and roles (no tokens or hashes)")

@@ -348,11 +348,12 @@ CREATE OR REPLACE FUNCTION ASOF.CLAIMS_FROM_JSON (P_VERDICTS VARCHAR(30000))
     WHERE CLAIM_NO IS NOT NULL
 @
 
--- procedure: APPEND_LEDGER
+-- procedure: APPEND_LEDGER_ROW
 -- Appends one decision and its claim citations atomically. Locks CHAIN_HEAD first, so
 -- concurrent callers queue instead of forking the chain, and assigns the next LEDGER_ID.
--- The caller commits.
-CREATE OR REPLACE PROCEDURE ASOF.APPEND_LEDGER (
+-- Granted to nobody: the runtime user reaches it only through APPEND_LEDGER (the check's own
+-- decisions) and RESOLVE_ESCALATION (a specialist's reply). The caller commits.
+CREATE OR REPLACE PROCEDURE ASOF.APPEND_LEDGER_ROW (
     IN  P_REQUEST_ID     CHAR(36),
     IN  P_CHANNEL        VARCHAR(20),
     IN  P_DOC_ID         VARCHAR(32),
@@ -405,6 +406,38 @@ BEGIN
     FROM TABLE(ASOF.CLAIMS_FROM_JSON(P_VERDICTS)) AS j;
 
   UPDATE ASOF.CHAIN_HEAD SET LAST_LEDGER_ID = P_LEDGER_ID, LAST_HASH = P_ROW_HASH WHERE HEAD_ID = 1;
+END
+@
+
+-- procedure: APPEND_LEDGER
+-- The way the check records its decisions. A REVIEWED row (a specialist's reply) is refused here: it is
+-- only ever written by RESOLVE_ESCALATION, which enforces the inbox's rules first.
+CREATE OR REPLACE PROCEDURE ASOF.APPEND_LEDGER (
+    IN  P_REQUEST_ID     CHAR(36),
+    IN  P_CHANNEL        VARCHAR(20),
+    IN  P_DOC_ID         VARCHAR(32),
+    IN  P_AS_OF          DATE,
+    IN  P_QUESTION       VARCHAR(2000),
+    IN  P_DRAFT          VARCHAR(4000),
+    IN  P_FINAL          VARCHAR(4000),
+    IN  P_DECISION       VARCHAR(12),
+    IN  P_REASON         VARCHAR(40),
+    IN  P_MODEL          VARCHAR(200),
+    IN  P_PROMPT_VERSION VARCHAR(40),
+    IN  P_LATENCY_MS     INTEGER,
+    IN  P_VERDICTS       VARCHAR(30000),
+    OUT P_LEDGER_ID      BIGINT,
+    OUT P_ROW_HASH       CHAR(64),
+    OUT P_CREATED_AT     TIMESTAMP(12))
+  LANGUAGE SQL
+  MODIFIES SQL DATA
+BEGIN
+  IF P_DECISION IS NULL OR P_DECISION NOT IN ('PASS', 'CORRECTED', 'ESCALATED') THEN
+    SIGNAL SQLSTATE '75004' SET MESSAGE_TEXT = 'APPEND_LEDGER records the check''s decisions; a specialist''s reply goes through RESOLVE_ESCALATION';
+  END IF;
+  CALL ASOF.APPEND_LEDGER_ROW(P_REQUEST_ID, P_CHANNEL, P_DOC_ID, P_AS_OF, P_QUESTION, P_DRAFT, P_FINAL, P_DECISION,
+                              P_REASON, P_MODEL, P_PROMPT_VERSION, P_LATENCY_MS, P_VERDICTS,
+                              P_LEDGER_ID, P_ROW_HASH, P_CREATED_AT);
 END
 @
 
@@ -609,8 +642,8 @@ END
 
 -- procedure: CHANGE_IMPACT
 -- Everything that relied on a clause, judged against the policy as it stands now.
---   ANSWER rows: released decisions (PASS, or the re-checked rewrite of a CORRECTED one)
---     that cited the clause. HISTORICALLY_VALID if the version in force for the customer's
+--   ANSWER rows: released decisions (PASS, the re-checked rewrite of a CORRECTED one, or a
+--     specialist's checked reply, REVIEWED) that cited the clause. HISTORICALLY_VALID if the version in force for the customer's
 --     date is still the one cited; STALE if that date now falls under a different version.
 --   PUBLISHED rows: help-centre answers citing the clause. NEEDS_REVIEW if any other version
 --     now applies within the dates they cover, from STALE_FROM; otherwise STILL_VALID.
@@ -625,7 +658,8 @@ BEGIN
       FROM ASOF.ANSWER_LEDGER L
       JOIN ASOF.CLAIM_CITATION C ON C.LEDGER_ID = L.LEDGER_ID
       WHERE C.CLAUSE_ID = P_CLAUSE_ID AND C.VERDICT = 'SUPPORTED'
-        AND ((L.DECISION = 'PASS' AND C.PASS_NO = 1) OR (L.DECISION = 'CORRECTED' AND C.PASS_NO = 2))
+        AND ((L.DECISION IN ('PASS', 'REVIEWED') AND C.PASS_NO = 1)
+             OR (L.DECISION = 'CORRECTED' AND C.PASS_NO = 2))
     )
     SELECT 'ANSWER' AS KIND, RTRIM(CHAR(R.LEDGER_ID)) AS REF_ID, R.AS_OF_DATE AS FOR_FROM,
            CAST(NULL AS DATE) AS FOR_TO, R.DECISION AS STATE, R.CREATED_AT,
@@ -965,5 +999,111 @@ BEGIN
     SET P_ROWS = 1;
   END IF;
   UPDATE ASOF.POLICY_DRAFT_ITEM SET APPLIED_VERSION = P_VERSION WHERE DRAFT_ID = P_DRAFT_ID AND ITEM_NO = P_ITEM_NO;
+END
+@
+
+-- procedure: RESOLVE_ESCALATION
+-- A specialist answers a held decision (the review inbox, asof/review.py). The reply has been checked in
+-- full against the clauses in force on the customer's date; this appends it to the hash-chained ledger as
+-- a REVIEWED decision, through APPEND_LEDGER, and records which held decision it answers. The channel,
+-- customer date and question are copied from the held row itself, so the reply cannot be filed against
+-- another customer's question. Db2 refuses (and the caller rolls back):
+--   75050 an unknown ledger row, 75051 one that was not held (only ESCALATED decisions are answered),
+--   75052 one already answered, 75053 a reply checked against another policy document (allowed only
+--   when the held decision's reason was that the document was uncertain, ROUTE_UNCERTAIN),
+--   75054 a specialist answering a check they submitted themselves (with API users),
+--   75055 a reply whose check found a contradiction, an unchecked detail or anything but a clean result,
+--   75056 a reply the policy does not cover without the specialist's note (their judgment, on record),
+--   75057 verdicts that do not match what is being recorded, 75030 a caller who cannot read ledger text.
+-- The caller commits.
+CREATE OR REPLACE PROCEDURE ASOF.RESOLVE_ESCALATION (
+    IN  P_ESCALATED_ID   BIGINT,
+    IN  P_REQUEST_ID     CHAR(36),
+    IN  P_DOC_ID         VARCHAR(32),
+    IN  P_REPLY          VARCHAR(4000),
+    IN  P_FINAL          VARCHAR(4000),
+    IN  P_CHECK_REASON   VARCHAR(40),
+    IN  P_NOTE           VARCHAR(1000),
+    IN  P_REVIEWER       VARCHAR(40),
+    IN  P_MODEL          VARCHAR(200),
+    IN  P_PROMPT_VERSION VARCHAR(40),
+    IN  P_LATENCY_MS     INTEGER,
+    IN  P_VERDICTS       VARCHAR(30000),
+    OUT P_LEDGER_ID      BIGINT,
+    OUT P_ROW_HASH       CHAR(64),
+    OUT P_OUTCOME        VARCHAR(40))
+  LANGUAGE SQL
+  MODIFIES SQL DATA
+BEGIN
+  DECLARE V_DECISION VARCHAR(12);
+  DECLARE V_REASON VARCHAR(40);
+  DECLARE V_CHANNEL VARCHAR(20);
+  DECLARE V_DOC VARCHAR(32);
+  DECLARE V_AS_OF DATE;
+  DECLARE V_QUESTION VARCHAR(2000);
+  DECLARE V_HELD_VERDICTS VARCHAR(30000);
+  DECLARE V_REQUESTER VARCHAR(40);
+  DECLARE V_CREATED TIMESTAMP(12);
+  DECLARE V_CLAIMS INTEGER;
+  DECLARE V_CONTRADICTED INTEGER;
+  DECLARE V_UNCOVERED INTEGER;
+  DECLARE V_NOTE VARCHAR(1000);
+  DECLARE V_REVIEWER VARCHAR(40);
+
+  IF VERIFY_ROLE_FOR_USER(SESSION_USER, 'ASOF_TEXT_READER') <> 1 THEN
+    SIGNAL SQLSTATE '75030' SET MESSAGE_TEXT = 'RESOLVE_ESCALATION needs role ASOF_TEXT_READER: it copies the held question';
+  END IF;
+  -- Take the chain lock first (APPEND_LEDGER takes it too), so two specialists answering the same held
+  -- decision queue here and the second one sees the first one's answer.
+  UPDATE ASOF.CHAIN_HEAD SET LAST_LEDGER_ID = LAST_LEDGER_ID WHERE HEAD_ID = 1;
+
+  SELECT DECISION, REASON_CODE, CHANNEL, DOC_ID, AS_OF_DATE, QUESTION_REDACTED, VERDICTS_JSON
+    INTO V_DECISION, V_REASON, V_CHANNEL, V_DOC, V_AS_OF, V_QUESTION, V_HELD_VERDICTS
+    FROM ASOF.ANSWER_LEDGER WHERE LEDGER_ID = P_ESCALATED_ID;
+  IF V_DECISION IS NULL THEN
+    SIGNAL SQLSTATE '75050' SET MESSAGE_TEXT = 'Unknown ledger entry';
+  END IF;
+  IF V_DECISION <> 'ESCALATED' THEN
+    SIGNAL SQLSTATE '75051' SET MESSAGE_TEXT = 'Only a held (ESCALATED) decision goes to a specialist';
+  END IF;
+  IF EXISTS (SELECT 1 FROM ASOF.ESCALATION_REVIEW WHERE ESCALATED_LEDGER_ID = P_ESCALATED_ID) THEN
+    SIGNAL SQLSTATE '75052' SET MESSAGE_TEXT = 'A specialist has already answered this decision';
+  END IF;
+  IF P_DOC_ID <> V_DOC AND V_REASON <> 'ROUTE_UNCERTAIN' THEN
+    SIGNAL SQLSTATE '75053' SET MESSAGE_TEXT = 'The reply must be checked against the held decision''s policy document';
+  END IF;
+  -- '' (the driver binds no NULL here) means a local, unnamed specialist.
+  SET V_REVIEWER = NULLIF(TRIM(COALESCE(P_REVIEWER, '')), '');
+  SET V_REQUESTER = JSON_VALUE(V_HELD_VERDICTS, '$.requested_by' RETURNING VARCHAR(40));
+  IF V_REVIEWER IS NOT NULL AND V_REQUESTER IS NOT NULL AND V_REVIEWER = V_REQUESTER THEN
+    SIGNAL SQLSTATE '75054' SET MESSAGE_TEXT = 'A specialist cannot answer a check they submitted themselves';
+  END IF;
+
+  -- What the reply's check found, read from the verdicts that will be hashed into the chain.
+  SELECT COUNT(*), COALESCE(SUM(CASE WHEN J.VERDICT = 'CONTRADICTED' THEN 1 ELSE 0 END), 0),
+         COALESCE(SUM(CASE WHEN J.VERDICT = 'NOT_COVERED' THEN 1 ELSE 0 END), 0)
+    INTO V_CLAIMS, V_CONTRADICTED, V_UNCOVERED
+    FROM TABLE(ASOF.CLAIMS_FROM_JSON(P_VERDICTS)) AS J;
+  IF EXISTS (SELECT 1 FROM TABLE(ASOF.CLAIMS_FROM_JSON(P_VERDICTS)) AS J WHERE J.PASS_NO <> 1)
+     OR COALESCE(JSON_VALUE(P_VERDICTS, '$.review.of_ledger_id' RETURNING BIGINT), 0) <> P_ESCALATED_ID
+     OR (P_CHECK_REASON = 'ALL_SUPPORTED' AND (V_CLAIMS = 0 OR V_UNCOVERED > 0))
+     OR (P_CHECK_REASON = 'NO_POLICY_CLAIMS' AND V_CLAIMS > 0)
+     OR (P_CHECK_REASON = 'NOT_COVERED' AND V_UNCOVERED = 0) THEN
+    SIGNAL SQLSTATE '75057' SET MESSAGE_TEXT = 'The verdicts do not match the reply check being recorded';
+  END IF;
+  IF V_CONTRADICTED > 0 OR P_CHECK_REASON NOT IN ('ALL_SUPPORTED', 'NO_POLICY_CLAIMS', 'NOT_COVERED') THEN
+    SIGNAL SQLSTATE '75055' SET MESSAGE_TEXT = 'The reply did not pass the check against the policy in force on the customer''s date: revise it';
+  END IF;
+  SET V_NOTE = NULLIF(TRIM(COALESCE(P_NOTE, '')), '');
+  IF V_UNCOVERED > 0 AND LENGTH(COALESCE(V_NOTE, '')) < 10 THEN
+    SIGNAL SQLSTATE '75056' SET MESSAGE_TEXT = 'No clause in force covers part of this reply: add a note that explains the specialist''s judgment';
+  END IF;
+
+  SET P_OUTCOME = CASE WHEN V_UNCOVERED > 0 THEN 'SPECIALIST_JUDGMENT' ELSE 'SPECIALIST_CHECKED' END;
+  CALL ASOF.APPEND_LEDGER_ROW(P_REQUEST_ID, V_CHANNEL, P_DOC_ID, V_AS_OF, V_QUESTION, P_REPLY, P_FINAL, 'REVIEWED',
+                              P_OUTCOME, P_MODEL, P_PROMPT_VERSION, P_LATENCY_MS, P_VERDICTS,
+                              P_LEDGER_ID, P_ROW_HASH, V_CREATED);
+  INSERT INTO ASOF.ESCALATION_REVIEW (ESCALATED_LEDGER_ID, REVIEW_LEDGER_ID, OUTCOME, REVIEWER, NOTE)
+    VALUES (P_ESCALATED_ID, P_LEDGER_ID, P_OUTCOME, V_REVIEWER, V_NOTE);
 END
 @

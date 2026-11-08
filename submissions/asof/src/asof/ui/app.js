@@ -101,11 +101,12 @@ const ICONS = {
   PASS: raw('<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg>'),
   CORRECTED: raw('<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>'),
   ESCALATED: raw('<svg viewBox="0 0 24 24"><path d="M12 8v5"/><path d="M12 16.5v.5"/><path d="M10.3 3.9L2.6 17.3A2 2 0 004.3 20h15.4a2 2 0 001.7-2.7L13.7 3.9a2 2 0 00-3.4 0z"/></svg>'),
+  REVIEWED: raw('<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></svg>'),
 };
 
 // ---------- shell ----------
 const view = $("#view");
-const routes = { playground: Playground, timeline: Timeline, intake: Intake, ledger: Ledger, ask: Ask, impact: Impact, analytics: Analytics };
+const routes = { playground: Playground, timeline: Timeline, intake: Intake, ledger: Ledger, inbox: Inbox, ask: Ask, impact: Impact, analytics: Analytics };
 async function route() {
   const [name, arg] = location.hash.replace(/^#\/?/, "").split("/");
   const key = routes[name] ? name : "playground";
@@ -161,6 +162,7 @@ const HEADLINE = {
   PASS: "Released as written",
   CORRECTED: "Corrected before release",
   ESCALATED: "Held for a specialist",
+  REVIEWED: "Answered by a specialist",
 };
 function explain(r, asOf) {
   const contradicted = r.claims.filter((c) => c.pass_no === 1 && c.verdict === "CONTRADICTED").length;
@@ -480,7 +482,7 @@ async function Ledger(id) {
       <div class="row"><input id="rc-id" type="number" min="1" placeholder="Ledger #" required><input id="rc-hash" class="grow code" type="text" pattern="[0-9a-fA-F]{64}" placeholder="64-character row hash" required>
       <button class="btn ghost" type="submit">Check</button></div><div id="rc-out"></div></form>
     <div class="card"><div class="card-head"><div class="chips" id="dec-filter">
-      ${[null, "PASS", "CORRECTED", "ESCALATED"].map((d) => html`<button type="button" class="chip ${led.decision === d ? "on" : ""}" data-dec="${d || ""}">${d ? d.toLowerCase() : "all decisions"}</button>`)}
+      ${[null, "PASS", "CORRECTED", "ESCALATED", "REVIEWED"].map((d) => html`<button type="button" class="chip ${led.decision === d ? "on" : ""}" data-dec="${d || ""}">${d ? d.toLowerCase() : "all decisions"}</button>`)}
     </div></div><div id="ledger-table"><div class="loading"><div class="spinner"></div>Loading ledger...</div></div></div>`);
   $("#verify").addEventListener("click", verifyChain);
   $("#receipt-form").addEventListener("submit", async (e) => {
@@ -557,6 +559,7 @@ async function LedgerEntry(id) {
       <div class="row">${pill(e.decision)}<button class="btn ghost sm" id="evidence" title="The decision, its claims and clause versions, the replay, the chain check and the receipt, in one JSON file for a dispute">Evidence pack</button><button class="btn ghost sm" id="verify">Verify hash chain</button></div>
     </div>
     <div id="chain"></div>
+    ${reviewLink(e)}
     <div class="card">
       <div class="card-head"><h2>Replay</h2><span class="sub">What did the policy say for ${fmtDate(e.as_of_date)}, what did Db2 hold when we answered, and what applies today?</span></div>
       ${rp.clauses.length ? html`<div class="replay-sql">${sqlBlock(rp.created_at, rp.as_of_date, rp.clauses[0].clause_id)}</div>` : ""}
@@ -594,6 +597,140 @@ async function LedgerEntry(id) {
     } catch (err) { mount($("#chain"), html`<div class="error-box">${err.message}</div>`); }
     finally { btn.disabled = false; }
   });
+}
+
+// ---------- Specialist inbox ----------
+// Held decisions wait here for a person. The reply is checked like any other answer and appended to the ledger
+// by RESOLVE_ESCALATION as a REVIEWED decision; Db2 refuses a reply that contradicts the policy in force.
+let REVIEW_REPLIES = [];  // suggested replies for the built-in held scenarios (scenarios.json; replay mode has them)
+const inb = { id: null, reply: "", note: "", check: null, busy: false, sent: null };
+const WHY_HELD = {
+  NOT_COVERED: "No clause in force on the customer's date covers at least one claim.",
+  UNCHECKED_DETAILS: "The draft states details the claim check never covered.",
+  CORRECTION_FAILED: "The draft contradicted the policy, and the rewrite did not pass the re-check.",
+  TOO_MANY_CLAIMS: "The draft makes more than 8 policy claims.",
+  ERROR_FAIL_CLOSED: "A check step failed, so the answer was held (fail closed).",
+  LEDGER_UNAVAILABLE: "The decision could not be recorded, so nothing was released.",
+  ROUTE_UNCERTAIN: "AsOf could not tell which policy document the question is about, so it did not guess.",
+};
+function reviewLink(e) {
+  if (!e.review) return "";
+  if (e.decision === "ESCALATED")
+    return html`<div class="banner ok"><strong>Answered by a specialist.</strong><span>Ledger entry <a href="#/ledger/${e.review.review_ledger_id}">#${e.review.review_ledger_id}</a> holds the reply${e.review.reviewer ? html` from <code>${e.review.reviewer}</code>` : ""} (${String(e.review.outcome).replaceAll("_", " ").toLowerCase()}).</span></div>`;
+  return html`<div class="banner ok"><strong>A specialist's reply.</strong><span>It answers held decision <a href="#/ledger/${e.review.escalated_ledger_id}">#${e.review.escalated_ledger_id}</a>${e.review.reviewer ? html`, from <code>${e.review.reviewer}</code>` : ""}. ${e.review.note ? html`Note on record: ${e.review.note}` : "Every claim in it was supported by the policy in force on the customer's date."}</span></div>`;
+}
+const waited = (m) => (m < 60 ? `${m} min` : m < 2880 ? `${Math.round(m / 60)} h` : `${Math.round(m / 1440)} days`);
+async function Inbox(id) {
+  const target = id ? Number(id) : null;
+  if (target !== inb.id) Object.assign(inb, { id: target, reply: "", note: "", check: null, sent: null });
+  mount(view, html`
+    <div class="page-head"><div><h1>Specialist inbox</h1>
+      <p>Answers AsOf held back wait here for a person. The specialist reads every claim and the clause version it was checked against, writes the reply, and AsOf checks it against the policy in force on the customer's date before it goes out. The SQL PL procedure <code>RESOLVE_ESCALATION</code> appends it to the hash-chained ledger as a <code>REVIEWED</code> decision linked to the held one. Db2 refuses a reply that contradicts the policy, and keeps the specialist's note when no clause covers it.</p></div></div>
+    <div class="grid-2 inbox">
+      <section id="inbox-list"><div class="loading"><div class="spinner"></div>Loading the queue from Db2...</div></section>
+      <section id="inbox-detail">${inb.id ? html`<div class="loading"><div class="spinner"></div>Loading held decision #${inb.id}...</div>`
+        : html`<div class="empty"><h3>Pick a held answer</h3><p>The oldest is at the top. Held answers come from the playground, the customer chat and the API whenever a check could not release a draft.</p></div>`}</section>
+    </div>`);
+  const { body: q } = await api("/api/reviews");
+  mount($("#inbox-list"), html`
+    <div class="card">
+      <div class="inbox-stats"><div><b>${q.counts.open}</b><span>waiting</span></div><div><b>${q.counts.open ? waited(q.counts.oldest_open_minutes) : "none"}</b><span>oldest wait</span></div><div><b>${q.counts.answered}</b><span>answered</span></div></div>
+      <div class="sep"></div>
+      ${q.open.length ? html`<div class="inbox-items">${q.open.map((i) => inboxItem(i, false))}</div>` : html`<p class="muted">Nothing is waiting. A check that cannot release a draft lands here.</p>`}
+    </div>
+    ${q.answered.length ? html`<div class="card"><div class="card-head"><h2>Answered</h2><span class="sub">latest first</span></div>
+      <div class="inbox-items">${q.answered.slice(0, 12).map((i) => inboxItem(i, true))}</div></div>` : ""}`);
+  if (inb.id) await renderReview();
+}
+function inboxItem(i, done) {
+  return html`<a class="inbox-item ${inb.id === i.ledger_id ? "on" : ""}" href="#/inbox/${i.ledger_id}">
+    <div class="row wrap"><b>#${i.ledger_id}</b>${pill(done ? i.outcome : i.reason_code, done ? "reviewed" : "escalated")}<span class="muted small">${DOC_NAME[i.doc_id] || i.doc_id} · ${fmtDate(i.as_of_date)} · ${i.channel}</span></div>
+    <div class="trunc">${i.question}</div>
+    <div class="muted small">${done ? html`answered in ${waited(i.minutes_to_answer)} as #${i.review_ledger_id}${i.reviewer ? ` by ${i.reviewer}` : ""}` : `waiting ${waited(i.waiting_minutes)}`}</div></a>`;
+}
+function reviewClaim(c) {
+  return html`<div class="claim ${lower(c.verdict)}">
+    <div class="claim-top">${pill(c.verdict)}<div class="claim-text">${c.text}</div></div>
+    ${c.clause_id ? html`<div class="row wrap small">${clauseRef(c.clause_id, c.clause_version, c.effective_from || c.clause_bus_start, c.effective_to || OPEN)}</div>` : ""}
+    <div class="reason">${c.reason}</div></div>`;
+}
+async function renderReview() {
+  const box = $("#inbox-detail");
+  let d;
+  try { d = (await api(`/api/reviews/${inb.id}`)).body; } catch (err) { mount(box, html`<div class="error-box">${err.message}</div>`); return; }
+  if (!box.isConnected) return;
+  const suggested = REVIEW_REPLIES.find((r) => r.question === d.question);
+  if (!inb.reply && !d.answered) inb.reply = d.rewrite || "";
+  const first = d.claims.filter((c) => c.pass === 1);
+  mount(box, html`
+    <div class="decision escalated"><div class="icon">${ICONS.ESCALATED}</div>
+      <div><div class="row">${pill("ESCALATED")}<h2>Held decision #${d.ledger_id}</h2></div>
+        <p>${WHY_HELD[d.reason_code] || d.reason_code} Customer date ${fmtDate(d.as_of_date)}, ${DOC_NAME[d.doc_id] || d.doc_id}, via ${d.channel}.</p></div>
+      <div class="meta">held ${fmtTs(d.created_at)}<br><a href="#/ledger/${d.ledger_id}">Ledger entry #${d.ledger_id} →</a></div></div>
+    <div class="cols-2">
+      <div class="card"><div class="eyebrow">Customer question (redacted)</div><div class="sep"></div><div class="answer">${d.question}</div>
+        <div class="sep"></div><div class="eyebrow">Assistant's draft, not sent</div><div class="sep"></div><div class="answer struck">${d.draft}</div>
+        ${d.unchecked.length ? html`<p class="small muted">Details no claim covered: ${d.unchecked.join(", ")}</p>` : ""}</div>
+      <div class="card"><div class="eyebrow">Policy in force on ${fmtDate(d.as_of_date)}, nearest the question</div><div class="sep"></div>
+        <div class="stack">${d.in_force.map((c) => html`<div><div class="row wrap">${clauseRef(c.clause_id, c.version, c.from, c.to)}<span class="small muted">${c.title}</span></div><p class="small">${c.text}</p></div>`)}</div></div>
+    </div>
+    <div class="card"><div class="card-head"><h2>Why the check held it</h2><span class="sub">each claim of the draft and the clause version it was checked against</span></div>
+      ${first.length ? html`<div class="claims">${first.map(reviewClaim)}</div>` : html`<p class="muted">No claims were judged before the check stopped.</p>`}</div>
+    ${d.answered ? html`<div class="banner ok"><strong>Answered.</strong><span>Ledger entry <a href="#/ledger/${d.answered.review_ledger_id}">#${d.answered.review_ledger_id}</a> holds the reply${d.answered.reviewer ? ` from ${d.answered.reviewer}` : ""}, sent ${fmtTs(d.answered.answered_at)}. ${d.answered.note ? `Note: ${d.answered.note}` : ""}</span></div>`
+      : html`<form class="card" id="reply-form" autocomplete="off">
+      <div class="card-head"><h2>Reply to the customer</h2><span class="sub">checked against the policy in force on ${fmtDate(d.as_of_date)} before it is sent</span></div>
+      ${suggested ? html`<div class="field"><div class="chips"><button type="button" class="chip" id="use-suggested">Use the suggested reply for this scenario</button></div></div>` : ""}
+      <div class="field"><label for="reply">Reply</label><textarea id="reply" rows="5" maxlength="3500" required>${inb.reply}</textarea>
+        <div class="hint">Policy statements in the reply are checked like the assistant's. ${d.rewrite ? "Started from AsOf's rewrite, which did not pass on its own." : ""}</div></div>
+      <div class="field"><label for="note">Note for the record</label><textarea id="note" rows="2" maxlength="1000">${inb.note}</textarea>
+        <div class="hint">Required when no clause covers part of the reply: your judgment, kept with it in the ledger.</div></div>
+      <div class="field row"><button class="btn ghost" type="button" id="check-reply" ${inb.busy ? raw("disabled") : ""}>Check reply</button>
+        <button class="btn" type="submit" id="send-reply" ${inb.busy ? raw("disabled") : ""}>Check and send</button></div>
+      <div id="reply-result">${inb.sent ? sentView(inb.sent) : inb.check ? replyCheckView(inb.check) : ""}</div>
+    </form>`}`);
+  const form = $("#reply-form");
+  if (!form) return;
+  const sync = () => { inb.reply = $("#reply").value; inb.note = $("#note").value; };
+  if (suggested) $("#use-suggested").addEventListener("click", () => { inb.reply = suggested.reply; inb.note = suggested.note || ""; renderReview(); });
+  const run = async (send) => {
+    sync();
+    inb.busy = true;
+    mount($("#reply-result"), html`<div class="loading"><div class="spinner"></div>Checking the reply against Db2's clauses for ${fmtDate(d.as_of_date)}...</div>`);
+    $$("#reply-form button").forEach((b) => { b.disabled = true; });
+    try {
+      const res = await fetchReply(send, { reply: inb.reply, note: inb.note || null });
+      if (res.sent) { inb.sent = res.body; inb.check = res.body.check; } else { inb.check = res.body.check || res.body; inb.checkError = res.error; }
+    } catch (err) { inb.check = null; mount($("#reply-result"), html`<div class="error-box">${err.message}</div>`); inb.busy = false; return; }
+    inb.busy = false;
+    if (inb.sent) { Inbox(String(inb.id)); return; }
+    renderReview();
+  };
+  $("#check-reply").addEventListener("click", () => run(false));
+  form.addEventListener("submit", (e) => { e.preventDefault(); run(true); });
+}
+async function fetchReply(send, data) {
+  // A refused reply is a 409 or 422 that carries the reply's check; show it rather than a bare error.
+  const headers = { "content-type": "application/json" };
+  const token = savedToken();
+  if (token) headers.authorization = `Bearer ${token}`;
+  const res = await fetch(`/api/reviews/${inb.id}/${send ? "resolve" : "check"}`, { method: "POST", headers, body: JSON.stringify(data) });
+  if (res.status === 401) { askToken(); throw new Error("This AsOf server needs an API token: enter it at the top of the page."); }
+  let body = null;
+  try { body = await res.json(); } catch { /* empty */ }
+  if (res.ok) return { sent: send, body };
+  if (body && body.check) return { sent: false, body: { ...body.check, message: body.error }, error: body.error };
+  throw new Error(errorText(body, res.status));
+}
+function replyCheckView(c) {
+  const head = c.sendable
+    ? (c.needs_note ? html`<div class="banner fix"><strong>Sendable with a note.</strong><span>No clause in force covers part of this reply. Say why in the note; it is recorded with the reply.</span></div>`
+      : html`<div class="banner ok"><strong>Passes the check.</strong><span>${c.claims.length ? "Every policy claim in the reply is supported by the clause version in force." : "The reply makes no policy claims."} Nothing has been sent yet.</span></div>`)
+    : html`<div class="banner bad"><strong>Cannot be sent.</strong><span>${c.message}</span></div>`;
+  return html`${head}${c.claims.length ? html`<div class="claims">${c.claims.map(reviewClaim)}</div>` : ""}`;
+}
+function sentView(s) {
+  return html`<div class="banner ok"><strong>Sent.</strong><span>Recorded as ledger entry <a href="#/ledger/${s.ledger_id}">#${s.ledger_id}</a> (${s.outcome.replaceAll("_", " ").toLowerCase()}).</span></div>
+    <div class="answer final">${s.final_answer}</div>`;
 }
 
 // ---------- Ask the ledger ----------
@@ -1076,7 +1213,7 @@ async function Analytics() {
 async function loadScenarios() {
   try {
     const res = await fetch("/ui/scenarios.json", { cache: "no-store" });
-    if (res.ok) ({ playground: SCENARIOS, presets: PRESETS, ask_examples: ASK_EXAMPLES } = await res.json());
+    if (res.ok) ({ playground: SCENARIOS, presets: PRESETS, ask_examples: ASK_EXAMPLES, reviews: REVIEW_REPLIES = [] } = await res.json());
   } catch { /* every screen still works; only the scenario chips are missing */ }
   ask.question = ASK_EXAMPLES[0] || "";
 }

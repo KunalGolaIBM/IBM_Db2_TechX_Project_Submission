@@ -109,7 +109,8 @@ CREATE TABLE ASOF.ANSWER_LEDGER (
   CONSTRAINT UQ_LEDGER_REQUEST UNIQUE (REQUEST_ID),
   CONSTRAINT UQ_LEDGER_HASH UNIQUE (ROW_HASH),
   CONSTRAINT FK_LEDGER_DOC FOREIGN KEY (DOC_ID) REFERENCES ASOF.POLICY_DOC (DOC_ID),
-  CONSTRAINT CK_LEDGER_DECISION CHECK (DECISION IN ('PASS', 'CORRECTED', 'ESCALATED')),
+  -- REVIEWED: a specialist's reply to a held (ESCALATED) decision, appended by RESOLVE_ESCALATION.
+  CONSTRAINT CK_LEDGER_DECISION CHECK (DECISION IN ('PASS', 'CORRECTED', 'ESCALATED', 'REVIEWED')),
   CONSTRAINT CK_LEDGER_CHANNEL CHECK (CHANNEL IN ('chat', 'email', 'faq', 'api', 'eval', 'demo')),
   CONSTRAINT CK_LEDGER_LATENCY CHECK (LATENCY_MS >= 0),
   CONSTRAINT CK_LEDGER_ID CHECK (LEDGER_ID >= 1),
@@ -247,21 +248,24 @@ CREATE INDEX ASOF.IX_SUGGESTION_ANSWER ON ASOF.ANSWER_SUGGESTION (ANSWER_ID, STA
 -- Per-user API access (ASOF_AUTH=users). Only the SHA-256 of each personal token is stored: the
 -- token itself is shown once, when the owner adds the user (python -m asof.users add). The flags
 -- are the API roles: CAN_CHECK (submit drafts), CAN_AUDIT (ledger, chain, analytics, Ask the
--- ledger), CAN_EDIT (policy changes, approving drafted corrections). A disabled user keeps its
--- row, so the ledger's requested_by names stay resolvable.
+-- ledger), CAN_EDIT (policy changes, approving drafted corrections), CAN_REVIEW (the specialist
+-- inbox: answer held decisions, approve correction notices). A disabled user keeps its row, so
+-- the ledger's requested_by and reviewer names stay resolvable.
 CREATE TABLE ASOF.API_USER (
   USER_NAME    VARCHAR(40)  NOT NULL,
   TOKEN_SHA256 CHAR(64)     NOT NULL,
   CAN_CHECK    SMALLINT     NOT NULL DEFAULT 0,
   CAN_AUDIT    SMALLINT     NOT NULL DEFAULT 0,
   CAN_EDIT     SMALLINT     NOT NULL DEFAULT 0,
+  CAN_REVIEW   SMALLINT     NOT NULL DEFAULT 0,
   CREATED_AT   TIMESTAMP    NOT NULL DEFAULT CURRENT TIMESTAMP,
   CREATED_BY   VARCHAR(128) NOT NULL DEFAULT SESSION_USER,
   DISABLED_AT  TIMESTAMP,
   CONSTRAINT PK_API_USER PRIMARY KEY (USER_NAME),
   CONSTRAINT UQ_API_USER_TOKEN UNIQUE (TOKEN_SHA256),
-  CONSTRAINT CK_API_USER_FLAGS CHECK (CAN_CHECK IN (0, 1) AND CAN_AUDIT IN (0, 1) AND CAN_EDIT IN (0, 1)),
-  CONSTRAINT CK_API_USER_SOME_ROLE CHECK (CAN_CHECK + CAN_AUDIT + CAN_EDIT >= 1),
+  CONSTRAINT CK_API_USER_FLAGS CHECK (CAN_CHECK IN (0, 1) AND CAN_AUDIT IN (0, 1) AND CAN_EDIT IN (0, 1)
+                                      AND CAN_REVIEW IN (0, 1)),
+  CONSTRAINT CK_API_USER_SOME_ROLE CHECK (CAN_CHECK + CAN_AUDIT + CAN_EDIT + CAN_REVIEW >= 1),
   CONSTRAINT CK_API_USER_HASH CHECK (TRANSLATE(TOKEN_SHA256, '', '0123456789abcdef') = '')
 ) IN ASOF_TS32K
 @
@@ -330,5 +334,30 @@ CREATE TABLE ASOF.POLICY_DRAFT_ITEM (
   CONSTRAINT CK_ITEM_RULE_JSON CHECK (JSON_EXISTS(RULE_JSON, '$')),
   CONSTRAINT CK_ITEM_CHECKS_JSON CHECK (JSON_EXISTS(CHECKS_JSON, '$')),
   CONSTRAINT CK_ITEM_APPLIABLE CHECK (STATUS <> 'APPLIED' OR (BLOCKED = 0 AND KIND <> 'UNCHANGED'))
+) IN ASOF_TS32K
+@
+
+-- table: ESCALATION_REVIEW
+-- The specialist inbox's record: which held decision a specialist answered, and with which ledger row.
+-- Written only by RESOLVE_ESCALATION, in the same transaction as the REVIEWED ledger row it points to,
+-- and append-only like the ledger (02_ledger_rules.sql). The primary key makes each held decision
+-- answerable once: of two specialists sending at the same moment, exactly one succeeds. The reply,
+-- the reviewer, the note and the link back are also inside that row's hashed verdicts, so VERIFY_CHAIN
+-- covers them; this table is the index the inbox reads.
+CREATE TABLE ASOF.ESCALATION_REVIEW (
+  ESCALATED_LEDGER_ID BIGINT        NOT NULL,
+  REVIEW_LEDGER_ID    BIGINT        NOT NULL,
+  OUTCOME             VARCHAR(40)   NOT NULL,
+  REVIEWER            VARCHAR(40),
+  NOTE                VARCHAR(1000),
+  CREATED_AT          TIMESTAMP     NOT NULL DEFAULT CURRENT TIMESTAMP,
+  CREATED_BY          VARCHAR(128)  NOT NULL DEFAULT SESSION_USER,
+  CONSTRAINT PK_ESCALATION_REVIEW PRIMARY KEY (ESCALATED_LEDGER_ID),
+  CONSTRAINT UQ_REVIEW_LEDGER UNIQUE (REVIEW_LEDGER_ID),
+  CONSTRAINT FK_REVIEW_ESCALATED FOREIGN KEY (ESCALATED_LEDGER_ID) REFERENCES ASOF.ANSWER_LEDGER (LEDGER_ID),
+  CONSTRAINT FK_REVIEW_REPLY FOREIGN KEY (REVIEW_LEDGER_ID) REFERENCES ASOF.ANSWER_LEDGER (LEDGER_ID),
+  CONSTRAINT CK_REVIEW_OUTCOME CHECK (OUTCOME IN ('SPECIALIST_CHECKED', 'SPECIALIST_JUDGMENT')),
+  CONSTRAINT CK_REVIEW_NOTE CHECK (OUTCOME <> 'SPECIALIST_JUDGMENT' OR LENGTH(TRIM(NOTE)) >= 10),
+  CONSTRAINT CK_REVIEW_ORDER CHECK (REVIEW_LEDGER_ID > ESCALATED_LEDGER_ID)
 ) IN ASOF_TS32K
 @

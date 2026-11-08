@@ -29,7 +29,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from . import __version__, db, impactagent, intake, ledger, policy
+from . import __version__, db, impactagent, intake, ledger, policy, review
 from .anchor import AnchorLog
 from .anchor import verify as verify_anchors
 from .askledger import LedgerAsker
@@ -66,6 +66,8 @@ def required_role(method: str, path: str) -> str | None:
         return "checker"
     if method == "POST" and _EDITOR_POSTS.match(path):
         return "editor"
+    if path.startswith(("/api/reviews", "/api/notices")):  # the specialist inbox, reads and writes
+        return "reviewer"
     if method == "GET" and (path.startswith("/api/policy/") or path == "/api/whoami"):
         return None
     return "auditor"
@@ -253,6 +255,13 @@ class DraftDecision(BaseModel):
 class SuggestionDecision(BaseModel):
     model_config = ConfigDict(extra="forbid")
     approve: bool
+
+
+class ReplyIn(_In):
+    """A specialist's reply to a held decision. doc_id may differ from the held one only when the router was unsure."""
+    reply: Annotated[str, Field(min_length=1, max_length=review.MAX_REPLY_CHARS), AfterValidator(_text(4000))]
+    note: Annotated[str, Field(max_length=1000), AfterValidator(_text(1000))] | None = None
+    doc_id: DocId | None = None
 
 
 def create_app(settings: Settings | None = None, *, gate: Gate | None = None, assistant: DemoAssistant | None = None,
@@ -443,7 +452,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
 
     @app.get("/api/ledger")
     def list_ledger(limit: Annotated[int, Query(ge=1, le=100)] = 25, offset: Annotated[int, Query(ge=0, le=1_000_000)] = 0,
-                    decision: Literal["PASS", "CORRECTED", "ESCALATED"] | None = None):
+                    decision: Literal["PASS", "CORRECTED", "ESCALATED", "REVIEWED"] | None = None):
         conn = app_conn()
         try:
             rows = ledger.list_entries(conn, schema, limit, offset, decision)
@@ -467,6 +476,10 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         conn = app_conn()
         try:
             entry = ledger.get_entry(conn, ledger_id, schema)
+            if entry is not None:  # the specialist inbox's link, in either direction
+                kind = entry["decision"].strip()
+                entry["review"] = (review.review_of(conn, ledger_id, schema) if kind == "ESCALATED"
+                                   else review.reviewed_for(conn, ledger_id, schema) if kind == "REVIEWED" else None)
         finally:
             conn.close()
         if entry is None:
@@ -758,6 +771,59 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         finally:
             reader.close()
         return out
+
+    # ---------- the specialist inbox (asof/review.py) ----------
+    def review_refused(exc: review.ReviewError, as_of: Any) -> JSONResponse:
+        body: dict[str, Any] = {"error": str(exc)}
+        if exc.check is not None:
+            body["check"] = review.check_out(exc.check, as_of)
+        return JSONResponse(jsonable_encoder(body), status_code=exc.status)
+
+    def held_date(ledger_id: int) -> Any:
+        conn = app_conn()
+        try:
+            entry = ledger.get_entry(conn, ledger_id, schema)
+        finally:
+            conn.close()
+        return entry["as_of_date"] if entry else None
+
+    @app.get("/api/reviews")
+    def review_queue(limit: Annotated[int, Query(ge=1, le=100)] = 50):
+        """Held decisions waiting for a specialist, oldest first, and the latest answered."""
+        conn = app_conn()
+        try:
+            return review.queue(conn, schema, limit)
+        finally:
+            conn.close()
+
+    @app.get("/api/reviews/{ledger_id}")
+    def review_detail(ledger_id: Annotated[int, Path(ge=1, le=10**12)]):
+        try:
+            return review.detail(app_conn, get_embeddings(settings.embedding_model), ledger_id, schema)
+        except review.ReviewError as exc:
+            raise HTTPException(exc.status, str(exc)) from None
+
+    @app.post("/api/reviews/{ledger_id}/check")
+    def review_check(ledger_id: Annotated[int, Path(ge=1, le=10**12)], body: ReplyIn, request: Request):
+        """The full check of a draft reply on the customer's date. Nothing is recorded or sent."""
+        g, _ = components()
+        try:
+            result = review.check_reply(g, ledger_id, body.reply, body.doc_id, requested_by(request))
+        except review.ReviewError as exc:
+            return review_refused(exc, held_date(ledger_id))
+        return review.check_out(result, held_date(ledger_id))
+
+    @app.post("/api/reviews/{ledger_id}/resolve")
+    def review_resolve(ledger_id: Annotated[int, Path(ge=1, le=10**12)], body: ReplyIn, request: Request):
+        """Check the reply and send it: appended to the ledger as a REVIEWED decision through RESOLVE_ESCALATION."""
+        g, _ = components()
+        try:
+            done = review.resolve(g, ledger_id, body.reply, body.note, body.doc_id, requested_by(request))
+        except review.ReviewError as exc:
+            return review_refused(exc, held_date(ledger_id))
+        return jsonable_encoder({"escalated_ledger_id": ledger_id, "ledger_id": done.ledger_id, "row_hash": done.row_hash,
+                                 "outcome": done.outcome, "final_answer": done.final_answer,
+                                 "check": review.check_out(done.check, held_date(ledger_id))})
 
     @app.get("/", include_in_schema=False)
     def root():

@@ -113,6 +113,7 @@ class GateResult:
     error: str | None = None
     investigation: list[dict[str, Any]] = field(default_factory=list)  # the agent's tool calls, if any
     unchecked: list[str] = field(default_factory=list)  # details in the draft that no extracted claim stated
+    redactions: dict[str, dict[str, int]] = field(default_factory=dict)  # what redaction removed, per field
 
 
 # "Feel free to call" and "toll-free" are not prices. Found when the demo assistant's "feel free to reach
@@ -482,11 +483,17 @@ class Gate:
             raise LLMError("rewrite was empty or too long")
         return text
 
-    def _record(self, req: GateRequest, q_red: str, d_red: str, result: GateResult,
-                q_counts: dict[str, int], d_counts: dict[str, int]) -> None:
-        prompt_version = self.domain(req.doc_id).prompt_version
-        verdicts = {
-            "version": 1, "prompt_version": prompt_version, "as_of": req.as_of.isoformat(),
+    def assess(self, req: GateRequest) -> GateResult:
+        """Check a text without recording it or rewriting it (a specialist's reply, asof/review.py)."""
+        from .checkgraph import run_check
+
+        return run_check(self, req, record=False)
+
+    def verdicts(self, req: GateRequest, result: GateResult, q_counts: dict[str, int],
+                 d_counts: dict[str, int]) -> dict[str, Any]:
+        """The verdicts document hashed into the ledger row for a check."""
+        verdicts: dict[str, Any] = {
+            "version": 1, "prompt_version": self.domain(req.doc_id).prompt_version, "as_of": req.as_of.isoformat(),
             "claims": [c.as_json(1) for c in result.claims] + [c.as_json(2) for c in result.rewrite_claims],
             "rewrite": result.rewrite[:MAX_REWRITE_CHARS] if result.rewrite else None,
             "redactions": {"question": q_counts, "draft": d_counts},
@@ -496,6 +503,12 @@ class Gate:
         }
         if req.requested_by:
             verdicts["requested_by"] = req.requested_by[:40]
+        return verdicts
+
+    def _record(self, req: GateRequest, q_red: str, d_red: str, result: GateResult,
+                q_counts: dict[str, int], d_counts: dict[str, int]) -> None:
+        prompt_version = self.domain(req.doc_id).prompt_version
+        verdicts = self.verdicts(req, result, q_counts, d_counts)
         entry = ledger.LedgerEntry(
             request_id=result.request_id, channel=req.channel, doc_id=req.doc_id, as_of=req.as_of,
             # The caller gets the answer as written; the ledger keeps the redacted form.
@@ -516,10 +529,14 @@ class Gate:
             result.decision, result.reason_code, result.final_answer = "ESCALATED", "LEDGER_UNAVAILABLE", HOLDING_REPLY
             result.error = f"ledger unavailable: {str(exc)[:200]}"
             return
+        self.anchor(appended.ledger_id, appended.row_hash)
+
+    def anchor(self, ledger_id: int, row_hash: str) -> None:
+        """Anchor a new chain head outside Db2, if anchoring is on."""
         if self.anchors is not None:
             # The decision is recorded either way. A failed anchor write is logged and shows up as unanchored
             # rows in /api/chain/anchors until the next append anchors a later head, which covers them.
             try:
-                self.anchors.append(appended.ledger_id, appended.row_hash)
+                self.anchors.append(ledger_id, row_hash)
             except Exception as exc:  # noqa: BLE001
-                log.error("chain-head anchor not written for ledger row %s: %s", appended.ledger_id, exc)
+                log.error("chain-head anchor not written for ledger row %s: %s", ledger_id, exc)

@@ -150,9 +150,11 @@ def tool_loop(gate: Gate, messages: list, tools: _Tools, left: int, pass_no: int
     return trace, left
 
 
-def build(gate: Gate, req: GateRequest, deadline_at: float | None = None):
+def build(gate: Gate, req: GateRequest, deadline_at: float | None = None, rewrite_contradictions: bool = True):
     """Compile the graph for one request (nodes close over the gate and the request).
-    `deadline_at` (time.monotonic()) is when the check's budget runs out: no node starts after it."""
+    `deadline_at` (time.monotonic()) is when the check's budget runs out: no node starts after it.
+    Without `rewrite_contradictions` (a specialist's reply), a contradiction ends the check: the person
+    who wrote the reply fixes it, the model does not."""
     domain = gate.domain(req.doc_id)  # from the validated doc_id, never from the model
 
     def guarded(fn):
@@ -249,7 +251,8 @@ def build(gate: Gate, req: GateRequest, deadline_at: float | None = None):
                     o.verdict == "NOT_COVERED" for o in state["outcomes"])
                 return "investigate" if wants else "decide"
             if step == "decide":
-                return "rewrite" if state["decision"] == "REWRITE" and state["pass_no"] == 1 else END
+                wants = state["decision"] == "REWRITE" and state["pass_no"] == 1 and rewrite_contradictions
+                return "rewrite" if wants else END
             return {"retrieve": "judge", "investigate": "decide", "rewrite": "extract"}[step]
         return route
 
@@ -269,25 +272,36 @@ def build(gate: Gate, req: GateRequest, deadline_at: float | None = None):
     return g.compile()
 
 
-def run_check(gate: Gate, req: GateRequest) -> GateResult:
-    """One check, start to ledger. Recording happens even when the graph failed closed."""
+def run_check(gate: Gate, req: GateRequest, record: bool = True) -> GateResult:
+    """One check, start to ledger. Recording happens even when the graph failed closed.
+
+    record=False is the specialist inbox's check of a reply (asof/review.py): one pass, no rewrite, nothing
+    written. A contradiction comes back as ESCALATED with reason CONTRADICTED, and the inbox records the reply
+    only through RESOLVE_ESCALATION, which refuses anything but a clean result."""
     started = time.monotonic()
     getattr(gate.llm, "begin_check", lambda: None)()  # per-check usage, e.g. provider fallback
     q, d = redact(req.question), redact(req.draft_answer)
     state: CheckState = {"question": q.text, "text": d.text, "pass_no": 1, "first": [], "second": [],
                          "rewrite": None, "error": None, "investigation": [], "tool_calls_left": MAX_TOOL_CALLS}
     try:
-        state = build(gate, req, started + gate.deadline_s).invoke(state, {"recursion_limit": 25})
+        state = build(gate, req, started + gate.deadline_s, rewrite_contradictions=record).invoke(
+            state, {"recursion_limit": 25})
     except Exception as exc:  # noqa: BLE001 - the graph itself failing must still fail closed
         log.exception("check graph failed")
         state = {**state, "decision": "ESCALATED", "reason": "ERROR_FAIL_CLOSED", "final": HOLDING_REPLY,
                  "error": type(exc).__name__}
     decision, reason, final = state["decision"], state["reason"], state["final"]
-    if decision == "REWRITE":  # unreachable (a rewrite always goes back through the check), and never released
+    if decision == "REWRITE" and not record:  # a reply check stops at the contradiction
+        decision, reason, final = "ESCALATED", "CONTRADICTED", HOLDING_REPLY
+    elif decision == "REWRITE":  # unreachable (a rewrite always goes back through the check), and never released
         decision, reason, final = "ESCALATED", "ERROR_FAIL_CLOSED", HOLDING_REPLY
     result = GateResult(str(uuid.uuid4()), decision, reason, final,
                         state.get("first", []), state.get("second", []), state.get("rewrite"),
                         int((time.monotonic() - started) * 1000), gate.llm.info, error=state.get("error"),
                         investigation=state.get("investigation", []), unchecked=state.get("unchecked", []))
-    gate._record(req, q.text, d.text, result, q.counts, d.counts)
+    result.redactions = {"question": q.counts, "draft": d.counts}
+    if record:
+        gate._record(req, q.text, d.text, result, q.counts, d.counts)
+    else:
+        result.released = False  # nothing goes out from a check that was not recorded
     return result

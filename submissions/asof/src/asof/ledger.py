@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from .anchor import AnchorLog
 
 MAX_VERDICTS_BYTES = 30000
-DECISIONS = ("PASS", "CORRECTED", "ESCALATED")
+DECISIONS = ("PASS", "CORRECTED", "ESCALATED", "REVIEWED")  # REVIEWED: only RESOLVE_ESCALATION writes it
 
 
 @dataclass(frozen=True)
@@ -65,7 +65,7 @@ def verdicts_json(verdicts: dict[str, Any]) -> str:
 def append(conn: ibm_db_dbi.Connection, entry: LedgerEntry, schema: str = db.SCHEMA) -> Appended:
     """Append one decision and commit. Raises DatabaseError if Db2 refuses it."""
     db.use_schema(conn, schema)
-    if entry.decision not in DECISIONS:
+    if entry.decision not in DECISIONS[:3]:  # a REVIEWED row goes through review.resolve, never through here
         raise ValueError(f"unknown decision {entry.decision!r}")
     params = (
         entry.request_id, entry.channel, entry.doc_id, entry.as_of, entry.question_redacted,

@@ -167,7 +167,8 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--b
   color: var(--hold); background: var(--hold-bg); border-color: var(--hold-line); }
 .pill.not_covered, .pill.not_applicable, .pill.neutral, .pill.live { color: var(--grey); background: var(--grey-bg); border-color: var(--grey-line); }
 .pill.plain::before { display: none; }
-.pill.approved { color: var(--pass); background: var(--pass-bg); border-color: var(--pass-line); }
+.pill.approved, .pill.sent { color: var(--pass); background: var(--pass-bg); border-color: var(--pass-line); }
+.pill.reviewed, .pill.specialist_checked, .pill.specialist_judgment { color: var(--brand); background: var(--brand-soft); border-color: var(--brand); }
 .pill.pending { color: var(--fix); background: var(--fix-bg); border-color: var(--fix-line); }
 .pill.rejected { color: var(--grey); background: var(--grey-bg); border-color: var(--grey-line); }
 .sugg { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 12px; background: var(--surface); }
@@ -385,3 +386,17 @@ tr.click.on td { background: var(--brand-soft); }
 @media (max-width: 1080px) {
   .tl-layout.itk-layout, .itk-grid { grid-template-columns: 1fr; }
 }
+
+/* Specialist inbox */
+.decision.reviewed { background: var(--brand-soft); border-color: var(--brand); }
+.decision.reviewed .icon { background: var(--brand); color: #fff; }
+.inbox-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
+.inbox-stats b { display: block; font-size: 22px; letter-spacing: -.01em; }
+.inbox-stats span { color: var(--muted); font-size: 12px; }
+.inbox-items { display: flex; flex-direction: column; gap: 8px; }
+.inbox-item { display: block; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 12px; color: var(--ink); background: var(--surface); }
+.inbox-item:hover { border-color: var(--brand); text-decoration: none; }
+.inbox-item.on { border-color: var(--brand); box-shadow: inset 3px 0 0 var(--brand); }
+.inbox-item .trunc { margin: 4px 0 2px; }
+#inbox-detail > * + * { margin-top: 14px; }
+

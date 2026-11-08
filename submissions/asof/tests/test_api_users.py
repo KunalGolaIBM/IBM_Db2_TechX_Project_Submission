@@ -102,6 +102,9 @@ def test_the_rate_limit_counts_per_user_not_per_address(monkeypatch):
     ("POST", "/api/policy/drafts", "editor"), ("POST", "/api/policy/drafts/7/decision", "editor"),
     ("GET", "/api/policy/drafts", None), ("GET", "/api/policy/drafts/7/source", None),
     ("POST", "/api/policy/drafts/7", "auditor"),   # no such editor route: closed, not open
+    ("GET", "/api/reviews", "reviewer"), ("GET", "/api/reviews/12", "reviewer"),
+    ("POST", "/api/reviews/12/check", "reviewer"), ("POST", "/api/reviews/12/resolve", "reviewer"),
+    ("GET", "/api/notices", "reviewer"), ("POST", "/api/notices/3/decision", "reviewer"),
     ("GET", "/api/some-future-route", "auditor"),   # not open by accident
 ])
 def test_every_route_needs_its_role(method, path, role):

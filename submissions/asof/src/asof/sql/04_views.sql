@@ -115,3 +115,16 @@ CREATE OR REPLACE VIEW ASOF.V_AUDIT_CLAIMS AS
   FROM ASOF.CLAIM_CITATION C
   JOIN ASOF.ANSWER_LEDGER L ON L.LEDGER_ID = C.LEDGER_ID
 @
+
+-- view: V_REVIEW_QUEUE
+-- Every held decision and, once a specialist has answered it, the answer's ledger row. No free text (the
+-- inbox joins the ledger for the question, as the runtime user), so it is safe to count from: how many
+-- decisions wait, and for how long.
+CREATE OR REPLACE VIEW ASOF.V_REVIEW_QUEUE AS
+  SELECT L.LEDGER_ID, L.CREATED_AT, L.CHANNEL, L.DOC_ID, L.AS_OF_DATE, L.REASON_CODE,
+         R.REVIEW_LEDGER_ID, R.OUTCOME, R.REVIEWER, R.CREATED_AT AS ANSWERED_AT,
+         CASE WHEN R.REVIEW_LEDGER_ID IS NULL THEN 'OPEN' ELSE 'ANSWERED' END AS STATE
+  FROM ASOF.ANSWER_LEDGER L
+  LEFT JOIN ASOF.ESCALATION_REVIEW R ON R.ESCALATED_LEDGER_ID = L.LEDGER_ID
+  WHERE L.DECISION = 'ESCALATED'
+@

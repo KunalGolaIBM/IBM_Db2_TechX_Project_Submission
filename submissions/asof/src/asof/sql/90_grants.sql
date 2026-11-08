@@ -137,6 +137,18 @@ GRANT SELECT ON TABLE ASOF.POLICY_DRAFT TO USER ASOF_APP_USER
 GRANT SELECT ON TABLE ASOF.POLICY_DRAFT_ITEM TO USER ASOF_APP_USER
 @
 
+-- Specialist inbox: the runtime user reads the queue and appends a specialist's reply only through
+-- RESOLVE_ESCALATION, which writes the REVIEWED ledger row and the link in one transaction.
+-- grant: APP_SELECT_ESCALATION_REVIEW
+GRANT SELECT ON TABLE ASOF.ESCALATION_REVIEW TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_V_REVIEW_QUEUE
+GRANT SELECT ON TABLE ASOF.V_REVIEW_QUEUE TO USER ASOF_APP_USER
+@
+-- grant: APP_EXECUTE_RESOLVE_ESCALATION
+GRANT EXECUTE ON PROCEDURE ASOF.RESOLVE_ESCALATION TO USER ASOF_APP_USER
+@
+
 -- Roles (database-wide, shared by every AsOf schema). Created if missing; need SECADM.
 -- ASOF_TEXT_READER: may read the ledger's free text (see the masks in 05_masks.sql).
 -- role: ASOF_TEXT_READER
