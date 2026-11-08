@@ -799,10 +799,10 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         return out
 
     # ---------- the specialist inbox (asof/review.py) ----------
-    def review_refused(exc: review.ReviewError, as_of: Any) -> JSONResponse:
+    def review_refused(exc: review.ReviewError, as_of: Any, reply: str = "") -> JSONResponse:
         body: dict[str, Any] = {"error": str(exc)}
         if exc.check is not None:
-            body["check"] = review.check_out(exc.check, as_of)
+            body["check"] = review.check_out(exc.check, as_of, reply)
         return JSONResponse(jsonable_encoder(body), status_code=exc.status)
 
     def held_date(ledger_id: int) -> Any:
@@ -836,8 +836,8 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         try:
             result = review.check_reply(g, ledger_id, body.reply, body.doc_id, requested_by(request))
         except review.ReviewError as exc:
-            return review_refused(exc, held_date(ledger_id))
-        return review.check_out(result, held_date(ledger_id))
+            return review_refused(exc, held_date(ledger_id), body.reply)
+        return review.check_out(result, held_date(ledger_id), body.reply)
 
     @app.post("/api/reviews/{ledger_id}/resolve")
     def review_resolve(ledger_id: Annotated[int, Path(ge=1, le=10**12)], body: ReplyIn, request: Request):
@@ -846,10 +846,10 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         try:
             done = review.resolve(g, ledger_id, body.reply, body.note, body.doc_id, requested_by(request))
         except review.ReviewError as exc:
-            return review_refused(exc, held_date(ledger_id))
+            return review_refused(exc, held_date(ledger_id), body.reply)
         return jsonable_encoder({"escalated_ledger_id": ledger_id, "ledger_id": done.ledger_id, "row_hash": done.row_hash,
                                  "outcome": done.outcome, "final_answer": done.final_answer,
-                                 "check": review.check_out(done.check, held_date(ledger_id))})
+                                 "check": review.check_out(done.check, held_date(ledger_id), body.reply)})
 
     @app.get("/", include_in_schema=False)
     def root():

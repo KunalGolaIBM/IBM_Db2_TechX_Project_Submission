@@ -761,7 +761,7 @@ async function fetchReply(send, data) {
 }
 function replyCheckView(c) {
   const head = c.sendable
-    ? (c.needs_note ? html`<div class="banner fix"><strong>Sendable with a note.</strong><span>No clause in force covers part of this reply. Say why in the note; it is recorded with the reply.</span></div>`
+    ? (c.needs_note ? html`<div class="banner fix"><strong>Sendable with a note.</strong><span>${c.note_reason}</span></div>`
       : html`<div class="banner ok"><strong>Passes the check.</strong><span>${c.claims.length ? "Every policy claim in the reply is supported by the clause version in force." : "The reply makes no policy claims."} Nothing has been sent yet.</span></div>`)
     : html`<div class="banner bad"><strong>Cannot be sent.</strong><span>${c.message}</span></div>`;
   return html`${head}${c.claims.length ? html`<div class="claims">${c.claims.map(reviewClaim)}</div>` : ""}`;

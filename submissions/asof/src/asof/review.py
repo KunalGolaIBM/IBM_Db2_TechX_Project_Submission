@@ -25,7 +25,7 @@ import ibm_db_dbi
 from langchain_core.embeddings import Embeddings
 
 from . import db, ledger
-from .gate import Gate, GateRequest, GateResult, references
+from .gate import Gate, GateRequest, GateResult, policy_terms, references
 from .redact import redact
 from .retriever import clauses_as_of
 
@@ -200,13 +200,12 @@ def resolve(gate: Gate, ledger_id: int, reply: str, note: str | None = None, doc
     result = gate.assess(req)
     if result.reason_code not in SENDABLE:
         raise ReviewError(409, refusal(result), result)
-    if result.reason_code == "NOT_COVERED" and len(note or "") < MIN_NOTE_CHARS:
-        raise ReviewError(422, "No clause in force on the customer's date covers part of this reply. Add a note that "
-                               "explains your judgment; it goes on record with the reply.", result)
+    if needs_note(result, reply) and len(note or "") < MIN_NOTE_CHARS:
+        raise ReviewError(422, note_reason(result, reply), result)
     redactions = result.redactions or {"question": {}, "draft": {}}
     verdicts = gate.verdicts(req, result, redactions.get("question", {}), redactions.get("draft", {}))
     verdicts["review"] = {"of_ledger_id": ledger_id, "reviewer": reviewer, "note": note,
-                          "check_reason": result.reason_code}
+                          "check_reason": result.reason_code, "on_judgment": needs_note(result, reply)}
     final = final_text(reply, result)
     params = (ledger_id, str(uuid.uuid4()), doc, redact(reply).text[:4000], redact(final).text[:4000],
               result.reason_code, note or "", reviewer or "", result.model_info[:200], gate.domain(doc).prompt_version,
@@ -236,6 +235,22 @@ def resolve(gate: Gate, ledger_id: int, reply: str, note: str | None = None, doc
     return Resolved(new_id, row_hash, outcome, final, result)
 
 
+def needs_note(result: GateResult, reply: str) -> bool:
+    """A reply goes out on the specialist's judgment, with their note, when no clause covers part of it, or when it
+    talks policy (fees, refunds, eligibility, amounts) but the check found no claim in it. The second is the
+    deterministic backstop for an extraction that missed a claim: the reply is not refused, a person vouches for it."""
+    return result.reason_code == "NOT_COVERED" or (result.reason_code == "NO_POLICY_CLAIMS" and bool(policy_terms(reply)))
+
+
+def note_reason(result: GateResult, reply: str) -> str:
+    if result.reason_code == "NOT_COVERED":
+        return ("No clause in force on the customer's date covers part of this reply. Add a note that explains your "
+                "judgment; it goes on record with the reply.")
+    terms = ", ".join(policy_terms(reply)[:5])
+    return (f"The check found no policy claim in this reply, but it talks about {terms}. Add a note that explains "
+            "your judgment; it goes on record with the reply.")
+
+
 def refusal(result: GateResult) -> str:
     """Why a reply cannot be sent, in the specialist's terms."""
     reason = result.reason_code
@@ -256,7 +271,7 @@ def refusal(result: GateResult) -> str:
     return f"The reply was not sent ({reason})."
 
 
-def check_out(result: GateResult, as_of: date) -> dict[str, Any]:
+def check_out(result: GateResult, as_of: date, reply: str = "") -> dict[str, Any]:
     """The reply's check for the API: claims with their verdicts and clause versions."""
     claims = []
     for c in result.claims:
@@ -267,6 +282,8 @@ def check_out(result: GateResult, as_of: date) -> dict[str, Any]:
                        "effective_from": cl.bus_start if cl else None, "effective_to": cl.bus_end if cl else None,
                        "clause_text": cl.clause_text if cl else None, "quoted_span": c.quoted_span, "reason": c.reason})
     sendable = result.reason_code in SENDABLE
-    return {"as_of_date": as_of, "reason_code": result.reason_code, "sendable": sendable,
-            "needs_note": result.reason_code == "NOT_COVERED", "message": None if sendable else refusal(result),
+    note = sendable and needs_note(result, reply)
+    return {"as_of_date": as_of, "reason_code": result.reason_code, "sendable": sendable, "needs_note": note,
+            "note_reason": note_reason(result, reply) if note else None,
+            "message": None if sendable else refusal(result),
             "unchecked": result.unchecked, "claims": claims, "latency_ms": result.latency_ms, "model": result.model_info}

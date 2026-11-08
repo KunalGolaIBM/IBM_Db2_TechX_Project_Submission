@@ -103,3 +103,16 @@ def test_only_a_reviewer_reaches_the_inbox(users, monkeypatch):
     assert users.get("/api/reviews", headers=bearer(REVIEWER)).status_code == 200
     r = users.post("/api/reviews/3/resolve", json={"reply": "ok"}, headers=bearer(REVIEWER))
     assert r.status_code == 200 and r.json()["ledger_id"] == 9  # the reviewer's name reached the inbox
+
+
+def test_policy_terms_drive_the_note_requirement():
+    from asof.gate import policy_terms
+
+    assert policy_terms("You can request the bereavement fare after you travel.") == ["bereavement", "fare", "travel"] \
+        or "bereavement" in policy_terms("You can request the bereavement fare after you travel.")
+    assert policy_terms("It costs $60.")[-1] == "amounts"
+    assert policy_terms("Thank you for your patience. I am sorry for your loss.") == []
+    r = _result("NO_POLICY_CLAIMS")
+    assert review.needs_note(r, "The fee is waived.") and not review.needs_note(r, "Thanks, and sorry for the wait.")
+    out = review.check_out(r, MARCH, "The fee is waived.")
+    assert out["sendable"] and out["needs_note"] and "fee" in out["note_reason"]

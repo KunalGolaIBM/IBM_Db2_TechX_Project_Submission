@@ -81,7 +81,7 @@ def test_a_held_decision_waits_in_the_inbox_until_a_checked_reply_answers_it(set
         assert (entry["decision"], entry["reason_code"], entry["channel"]) == ("REVIEWED", "SPECIALIST_CHECKED", "chat")
         assert entry["question_redacted"] == QUESTION and entry["as_of_date"] == MARCH  # copied by Db2 from the held row
         assert entry["verdicts"]["review"] == {"of_ledger_id": held, "reviewer": "maria", "note": None,
-                                               "check_reason": "ALL_SUPPORTED"}
+                                               "check_reason": "ALL_SUPPORTED", "on_judgment": False}
         assert [c["clause_version"] for c in entry["citations"]] == ["v1"]
         assert ledger.verify_chain(conn, inbox).status == "OK"
         q = review.queue(conn, inbox)
@@ -212,3 +212,17 @@ def test_a_reviewed_row_can_only_come_through_resolve_escalation(settings, embed
         db.execute(admin_conn, "UPDATE ESCALATION_REVIEW SET NOTE = 'edited'")
     admin_conn.rollback()
     assert update.value.sqlstate == "75001"
+
+
+def test_a_reply_that_talks_policy_but_yields_no_claim_needs_a_note(settings, embeddings, inbox):
+    """The backstop for an extraction that missed a claim (seen with a small local model): a reply about a fare in which
+    the check found no claim is sent only on the specialist's judgment, with their note."""
+    held = _held(settings, embeddings, inbox)
+    with pytest.raises(review.ReviewError) as refused:
+        review.resolve(_gate(settings, embeddings, inbox, extract=[claims()]), held, CONTRADICTING_REPLY)
+    assert refused.value.status == 422 and "bereavement" in str(refused.value) and "note" in str(refused.value)
+    done = review.resolve(_gate(settings, embeddings, inbox, extract=[claims()]), held, CONTRADICTING_REPLY, note=NOTE)
+    assert done.outcome == "SPECIALIST_JUDGMENT"
+    small_talk = review.resolve(_gate(settings, embeddings, inbox, extract=[claims()]),
+                                _held(settings, embeddings, inbox), "Thank you for your patience. I am sorry for your loss.")
+    assert small_talk.outcome == "SPECIALIST_CHECKED"  # nothing a policy decides: no note needed

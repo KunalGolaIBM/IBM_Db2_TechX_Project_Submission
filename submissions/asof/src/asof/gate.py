@@ -176,6 +176,16 @@ _POLICY_SUBSTANCE = re.compile(
     r"|cancel\w*|change[sd]?|transfer\w*|cabin|bags?|baggage|luggage|kg|weigh\w*|overdraft|wire|atm|statements?"
     r"|interest|limit|deadline|within|days?|hours?|months?|business\s+class|economy|bereavement|immediate\s+family"
     r"|documents?|certificate|control|delay(?:ed|s)?|cancelled|closure|close|balance|maintenance)\b", re.I)
+
+
+def policy_terms(text: str) -> list[str]:
+    """What in `text` a policy decides (fees, refunds, eligibility, deadlines), lower-cased; "amounts" for any number,
+    "$" or "%". Empty when the text states nothing a policy decides."""
+    found = {m.group(0).lower() for m in _POLICY_SUBSTANCE.finditer(text)}
+    words = sorted(w for w in found if any(ch.isalpha() for ch in w))
+    return words + (["amounts"] if any(not any(ch.isalpha() for ch in w) for w in found) else [])
+
+
 # "since 1 May", "since May 2026", "since then": time, not a premise. Months only as dates, so "Mark" or
 # "decisions" still start a premise.
 _MONTHS = (r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?"

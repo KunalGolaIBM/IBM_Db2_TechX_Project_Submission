@@ -1099,7 +1099,15 @@ BEGIN
     SIGNAL SQLSTATE '75056' SET MESSAGE_TEXT = 'No clause in force covers part of this reply: add a note that explains the specialist''s judgment';
   END IF;
 
-  SET P_OUTCOME = CASE WHEN V_UNCOVERED > 0 THEN 'SPECIALIST_JUDGMENT' ELSE 'SPECIALIST_CHECKED' END;
+  -- On the specialist's judgment: no clause covers part of the reply, or (asof/review.py) it talks policy but the
+  -- check found no claim in it; both need the note. Otherwise every claim was supported (or there was none to check).
+  IF COALESCE(JSON_VALUE(P_VERDICTS, '$.review.on_judgment' RETURNING VARCHAR(5)), 'false') = 'true'
+     AND LENGTH(COALESCE(V_NOTE, '')) < 10 THEN
+    SIGNAL SQLSTATE '75056' SET MESSAGE_TEXT = 'This reply goes out on the specialist''s judgment: add a note that explains it';
+  END IF;
+  SET P_OUTCOME = CASE WHEN V_UNCOVERED > 0
+                         OR COALESCE(JSON_VALUE(P_VERDICTS, '$.review.on_judgment' RETURNING VARCHAR(5)), 'false') = 'true'
+                       THEN 'SPECIALIST_JUDGMENT' ELSE 'SPECIALIST_CHECKED' END;
   CALL ASOF.APPEND_LEDGER_ROW(P_REQUEST_ID, V_CHANNEL, P_DOC_ID, V_AS_OF, V_QUESTION, P_REPLY, P_FINAL, 'REVIEWED',
                               P_OUTCOME, P_MODEL, P_PROMPT_VERSION, P_LATENCY_MS, P_VERDICTS,
                               P_LEDGER_ID, P_ROW_HASH, V_CREATED);
