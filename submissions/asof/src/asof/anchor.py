@@ -152,8 +152,12 @@ class AnchorLog:
         return None, None
 
 
-def verify(anchors: AnchorLog, conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> AnchorStatus:
-    """The log itself, then every anchor against the ledger's row hashes, then VERIFY_CHAIN."""
+def verify(anchors: AnchorLog, conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA,
+           through: int | None = None) -> AnchorStatus:
+    """The log itself, then every anchor against the ledger's row hashes, then VERIFY_CHAIN.
+
+    `through` is for a restored backup, a copy of the ledger as of a past moment: anchors written for rows after
+    its head are left out (the whole log is still checked for tampering first)."""
     from .ledger import verify_chain
 
     records = anchors.records()
@@ -165,6 +169,10 @@ def verify(anchors: AnchorLog, conn: ibm_db_dbi.Connection, schema: str = db.SCH
     bad, why = anchors.check_log()
     if bad is not None:
         return AnchorStatus("LOG_TAMPERED", len(records), None, 0, bad, why)
+    if through is not None:
+        records = [r for r in records if int(r["ledger_id"]) <= through]
+        if not records:
+            return AnchorStatus("NO_ANCHORS", 0, None, len(hashes), None, f"no anchors up to row {through}")
     for n, r in enumerate(records, start=1):
         stored = hashes.get(int(r["ledger_id"]))
         if stored is None:

@@ -108,6 +108,24 @@ def test_verify_catches_a_rewritten_or_truncated_ledger(log, ledger_now, hashes,
     assert s.status == status and s.first_bad_anchor == 2
 
 
+def test_a_restored_backup_is_judged_by_the_anchors_up_to_its_head(log, ledger_now):
+    """A backup restored as of row 2 lacks row 3: with through=2 that is expected, and rows 1 to 2 must still
+    match their anchors; a tampered log is refused whatever `through` says."""
+    for i, h in ((1, H1), (2, H2), (3, H3)):
+        log.append(i, h)
+    ledger_now["hashes"] = {1: H1, 2: H2}
+    assert anchor.verify(log, None, "ASOF_X").status == "MISSING_ROW"
+    s = anchor.verify(log, None, "ASOF_X", through=2)
+    assert (s.status, s.anchors, s.covered_through, s.unanchored_rows) == ("OK", 2, 2, 0)
+    ledger_now["hashes"] = {1: H1, 2: H3}
+    assert anchor.verify(log, None, "ASOF_X", through=2).status == "MISMATCH"
+    assert anchor.verify(log, None, "ASOF_X", through=0).status == "NO_ANCHORS"
+    records = lines(log)
+    records[0]["row_hash"] = H3
+    rewrite(log, records)
+    assert anchor.verify(log, None, "ASOF_X", through=2).status == "LOG_TAMPERED"
+
+
 def test_verify_reports_a_broken_chain_even_when_anchors_match(log, ledger_now):
     log.append(1, H1)
     ledger_now["hashes"], ledger_now["chain"] = {1: H1}, "BROKEN"

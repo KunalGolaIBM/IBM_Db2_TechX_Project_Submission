@@ -137,6 +137,8 @@ jobs:
           if grep -q "TLS not enabled" /tmp/pytest.log; then echo "TLS tests were skipped"; exit 1; fi
       - name: Access plans for the hot queries
         run: python -m asof.explain
+      - name: Backup drill (online BACKUP while writing, RESTORE into a new database, ledger checks on the copy)
+        run: python -m asof.backup drill
       - name: dbt marts and their audit tests (own virtualenv; ibm-dbt-db2 pins ibm_db 3.2.8)
         run: |
           python -m venv /tmp/dbt-venv

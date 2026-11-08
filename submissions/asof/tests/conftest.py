@@ -25,11 +25,13 @@ TEST_SCHEMA = "ASOF_TEST"
 
 def pytest_collection_modifyitems(config, items):
     """Tests that call paid or remote services run only when asked:
-    ASOF_RUN_LLM_TESTS=1 pytest -m llm, and ASOF_RUN_NETWORK_TESTS=1 pytest -m network."""
+    ASOF_RUN_LLM_TESTS=1 pytest -m llm, ASOF_RUN_NETWORK_TESTS=1 pytest -m network, and the slow backup drill with
+    ASOF_RUN_BACKUP_TESTS=1 pytest -m backup."""
     import os
 
     gates = {"llm": ("ASOF_RUN_LLM_TESTS", "calls a real LLM"),
-             "network": ("ASOF_RUN_NETWORK_TESTS", "Db2 calls a remote embedding endpoint")}
+             "network": ("ASOF_RUN_NETWORK_TESTS", "Db2 calls a remote embedding endpoint"),
+             "backup": ("ASOF_RUN_BACKUP_TESTS", "creates and drops two Db2 databases (minutes)")}
     for marker, (env, why) in gates.items():
         if os.environ.get(env) == "1":
             continue
