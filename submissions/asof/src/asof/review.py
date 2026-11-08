@@ -139,7 +139,11 @@ def detail(connect: Callable[[], ibm_db_dbi.Connection], embeddings: Embeddings,
     finally:
         conn.close()
     verdicts = entry["verdicts"]
-    claims = [c for c in verdicts.get("claims", []) if isinstance(c, dict)]
+    # The hashed verdicts name each claim's version by its start; the replay has the row it used, end date included.
+    ends = {(c["clause_id"], str(c["used"]["bus_start"])): c["used"]["bus_end"]
+            for c in replayed["clauses"] if c.get("used")}
+    claims = [c | {"effective_to": ends.get((c.get("clause_id"), str(c.get("clause_bus_start"))))}
+              for c in verdicts.get("claims", []) if isinstance(c, dict)]
     return {
         "ledger_id": ledger_id, "created_at": entry["created_at"], "channel": entry["channel"].strip(),
         "doc_id": entry["doc_id"].strip(), "as_of_date": entry["as_of_date"], "reason_code": entry["reason_code"].strip(),

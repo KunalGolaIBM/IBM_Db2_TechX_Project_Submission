@@ -275,3 +275,17 @@ def test_the_specialists_note_is_redacted_before_it_is_hashed(settings, embeddin
         hashed = ledger.get_entry(conn, done.ledger_id, inbox)["verdicts"]["review"]["note"]
     assert stored == hashed and "514-555-0199" not in stored and "jane.doe@example.com" not in stored
     assert "operations confirmed" in stored
+
+
+def test_the_inbox_shows_each_claims_version_with_the_dates_it_was_in_force(settings, embeddings, inbox):
+    """A held claim checked against BRV-002 v1 shows v1's end (1 May 2026), not an open end."""
+    gate = _gate(settings, embeddings, inbox,
+                 extract=[claims(("Bereavement fares must be requested before travel begins.", "bereavement", "procedure"),
+                                 UNCOVERED_CLAIM)],
+                 judge=[judge(verdict(1, "SUPPORTED", "BRV-002", BEFORE_TRAVEL), verdict(2, "NOT_COVERED"))])
+    r = gate.check(GateRequest(QUESTION, DRAFT, MARCH, "AURELIA-CSP", "chat"))
+    assert (r.decision, r.reason_code) == ("ESCALATED", "NOT_COVERED")
+    d = review.detail(lambda: db.connect(settings, "app"), embeddings, r.ledger_id, inbox)
+    by_clause = {c["clause_id"]: c for c in d["claims"]}
+    assert str(by_clause["BRV-002"]["effective_to"]) == "2026-05-01"
+    assert [c["effective_to"] for c in d["claims"] if not c.get("clause_id")] == [None]

@@ -71,7 +71,6 @@ const post = (path, data, extra = {}) => api(path, { method: "POST", body: JSON.
 
 // ---------- formatting ----------
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const OPEN = "9999-12-31";
 function fmtDate(d) {
   if (!d) return "";
   if (String(d).startsWith("9999")) return "open-ended";
@@ -82,7 +81,7 @@ function fmtTs(t) {
   if (!t) return "";
   return String(t).replace("T", " ").slice(0, 19);
 }
-const period = (from, to) => `${fmtDate(from)} → ${String(to).startsWith("9999") ? "open-ended" : fmtDate(to)}`;
+const period = (from, to) => (to ? `${fmtDate(from)} → ${String(to).startsWith("9999") ? "open-ended" : fmtDate(to)}` : `from ${fmtDate(from)}`);  // no end known: say only the start
 const lower = (s) => String(s || "").toLowerCase();
 const today = () => new Date().toISOString().slice(0, 10);
 const shortHash = (h) => (h || "").slice(0, 12);
@@ -710,7 +709,7 @@ function inboxItem(i, done) {
 function reviewClaim(c) {
   return html`<div class="claim ${lower(c.verdict)}">
     <div class="claim-top">${pill(c.verdict)}<div class="claim-text">${c.text}</div></div>
-    ${c.clause_id ? html`<div class="row wrap small">${clauseRef(c.clause_id, c.clause_version, c.effective_from || c.clause_bus_start, c.effective_to || OPEN)}</div>` : ""}
+    ${c.clause_id ? html`<div class="row wrap small">${clauseRef(c.clause_id, c.clause_version, c.effective_from || c.clause_bus_start, c.effective_to)}</div>` : ""}
     <div class="reason">${c.reason}</div></div>`;
 }
 async function renderReview() {
