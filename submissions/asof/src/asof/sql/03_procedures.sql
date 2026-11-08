@@ -483,13 +483,15 @@ BEGIN
   DECLARE V_HASHED INTEGER;
   DECLARE V_UNMATCHED INTEGER;
   DECLARE V_DONE SMALLINT DEFAULT 0;
+  DECLARE V_LAST BIGINT;
+  DECLARE V_HEAD_NOW BIGINT;
   DECLARE C_ROWS CURSOR FOR
     SELECT LEDGER_ID, REQUEST_ID, CREATED_AT, CHANNEL, DOC_ID, AS_OF_DATE, QUESTION_REDACTED,
            DRAFT_REDACTED, FINAL_ANSWER, DECISION, REASON_CODE, MODEL_INFO, PROMPT_VERSION,
            LATENCY_MS, VERDICTS_JSON, PREV_HASH, ROW_HASH
-    FROM ASOF.ANSWER_LEDGER ORDER BY LEDGER_ID;
+    FROM ASOF.ANSWER_LEDGER WHERE LEDGER_ID <= V_HEAD_ID ORDER BY LEDGER_ID;
   DECLARE C_VERDICTS CURSOR FOR
-    SELECT LEDGER_ID, VERDICTS_JSON FROM ASOF.ANSWER_LEDGER ORDER BY LEDGER_ID;
+    SELECT LEDGER_ID, VERDICTS_JSON FROM ASOF.ANSWER_LEDGER WHERE LEDGER_ID <= V_HEAD_ID ORDER BY LEDGER_ID;
   DECLARE CONTINUE HANDLER FOR NOT FOUND SET V_DONE = 1;
 
   IF VERIFY_ROLE_FOR_USER(SESSION_USER, 'ASOF_TEXT_READER') <> 1 THEN
@@ -500,6 +502,11 @@ BEGIN
   SET P_CHECKED = 0;
   SET P_FIRST_BAD = NULL;
   SET P_DETAIL = NULL;
+  -- The head first: an append writes its row and moves the head in one transaction, so the committed head names
+  -- the last committed row. Rows after it, appended while this runs, are checked on the next run (below, they
+  -- must at least be covered by the head by then).
+  SET (V_HEAD_ID, V_HEAD_HASH) = (SELECT LAST_LEDGER_ID, LAST_HASH FROM ASOF.CHAIN_HEAD WHERE HEAD_ID = 1);
+  SET V_HEAD_ID = COALESCE(V_HEAD_ID, -1);
 
   OPEN C_ROWS;
   ROWS: LOOP
@@ -528,10 +535,18 @@ BEGIN
   END LOOP;
   CLOSE C_ROWS;
 
+  IF P_STATUS = 'OK' AND (V_HEAD_ID < 0 OR V_HEAD_ID <> P_CHECKED OR V_HEAD_HASH <> V_PREV) THEN
+    SET (P_STATUS, P_FIRST_BAD, P_DETAIL) = ('BROKEN', P_CHECKED + 1, 'chain head does not point at the last ledger row');
+  END IF;
+  -- A row past the head is legitimate only if an append committed it meanwhile, and then the head covers it now.
+  -- Read the rows first and the head second, so a commit in between can only make the head larger.
   IF P_STATUS = 'OK' THEN
-    SET (V_HEAD_ID, V_HEAD_HASH) = (SELECT LAST_LEDGER_ID, LAST_HASH FROM ASOF.CHAIN_HEAD WHERE HEAD_ID = 1);
-    IF V_HEAD_ID IS NULL OR V_HEAD_ID <> P_CHECKED OR V_HEAD_HASH <> V_PREV THEN
-      SET (P_STATUS, P_FIRST_BAD, P_DETAIL) = ('BROKEN', P_CHECKED + 1, 'chain head does not point at the last ledger row');
+    SET V_LAST = (SELECT MAX(LEDGER_ID) FROM ASOF.ANSWER_LEDGER);
+    IF V_LAST > V_HEAD_ID THEN
+      SET V_HEAD_NOW = (SELECT LAST_LEDGER_ID FROM ASOF.CHAIN_HEAD WHERE HEAD_ID = 1);
+      IF V_LAST > COALESCE(V_HEAD_NOW, -1) THEN
+        SET (P_STATUS, P_FIRST_BAD, P_DETAIL) = ('BROKEN', COALESCE(V_HEAD_NOW, 0) + 1, 'a ledger row lies beyond the chain head');
+      END IF;
     END IF;
   END IF;
 
@@ -599,7 +614,10 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM ASOF.POLICY_CLAUSE WHERE CLAUSE_ID = P_CLAUSE_ID) THEN
     SIGNAL SQLSTATE '75011' SET MESSAGE_TEXT = 'Unknown clause';
   END IF;
-  IF EXISTS (SELECT 1 FROM ASOF.POLICY_CLAUSE WHERE CLAUSE_ID = P_CLAUSE_ID AND VERSION_LABEL = P_VERSION_LABEL) THEN
+  -- History too: change impact and notices tell versions apart by label, so a label that survives only in the
+  -- history table (its period wholly replaced) must not name new text.
+  IF EXISTS (SELECT 1 FROM ASOF.POLICY_CLAUSE WHERE CLAUSE_ID = P_CLAUSE_ID AND VERSION_LABEL = P_VERSION_LABEL)
+     OR EXISTS (SELECT 1 FROM ASOF.POLICY_CLAUSE_HIST WHERE CLAUSE_ID = P_CLAUSE_ID AND VERSION_LABEL = P_VERSION_LABEL) THEN
     SIGNAL SQLSTATE '75012' SET MESSAGE_TEXT = 'That version label is already in use for this clause';
   END IF;
 

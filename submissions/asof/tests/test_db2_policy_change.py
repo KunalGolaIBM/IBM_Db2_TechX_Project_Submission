@@ -207,3 +207,25 @@ def test_any_two_rows_of_a_clause_compare_from_the_history_table(settings, embed
         assert policy.diff(app, "PET-002", (v2["from"], v2["recorded_at"]), (v2["from"], v2["recorded_at"]), world) is None
     finally:
         app.close()
+
+
+def test_a_label_that_survives_only_in_history_cannot_be_reused(settings, embeddings, world):
+    """Change impact and notices tell versions apart by label. After v3 replaces all of v2, v2 lives only in the history
+    table; reusing it for new text would make an answer that cited the old v2 look historically valid."""
+    editor = db.connect(settings, "editor")
+    try:
+        policy.apply_change(editor, PET_CHANGE, embeddings, world)  # v1 until 1 Dec, v2 from then
+        v3 = PET_CHANGE.model_copy(update={"version_label": "v3", "clause_text": PET_CHANGE.clause_text.replace("$125", "$140"),
+                                           "rule": {"max_pet_weight_kg": 8, "pet_fee_usd": 140},
+                                           "change_note": "Pet fee to $140 from 1 December 2026, replacing v2"})
+        policy.apply_change(editor, v3, embeddings, world)  # covers all of v2's period: v2 is now history only
+        db.use_schema(editor, world)
+        current = {r[0].strip() for r in db.query(editor, "SELECT VERSION_LABEL FROM POLICY_CLAUSE WHERE CLAUSE_ID = 'PET-001'")}
+        assert current == {"v1", "v3"}
+        reuse = PET_CHANGE.model_copy(update={"effective_from": date(2027, 6, 1), "version_label": "v2",
+                                              "change_note": "A different text under an old label"})
+        with pytest.raises(db.DatabaseError) as err:
+            policy.apply_change(editor, reuse, embeddings, world)
+        assert err.value.sqlstate == "75012"
+    finally:
+        editor.close()

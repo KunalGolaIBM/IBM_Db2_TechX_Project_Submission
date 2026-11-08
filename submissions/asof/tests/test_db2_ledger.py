@@ -99,6 +99,42 @@ def test_chain_stays_intact_under_concurrent_writers(settings, app_conn, test_sc
     assert status.status == "OK", status
 
 
+def test_verify_chain_run_during_appends_never_reports_a_false_break(settings, test_schema):
+    """VERIFY_CHAIN reads the chain head first and checks the rows up to it, so an append that commits while it runs
+    is left for the next run instead of looking like a head that points past the last row."""
+    errors: list[Exception] = []
+    statuses: list[str] = []
+
+    def writer():
+        conn = db.connect(settings, "app")
+        try:
+            for _ in range(8):
+                ledger.append(conn, entry(), test_schema)
+        except Exception as exc:  # noqa: BLE001
+            errors.append(exc)
+        finally:
+            conn.close()
+
+    verifier = db.connect(settings, "app")
+    before = ledger.verify_chain(verifier, test_schema).checked  # the session's schema may hold rows already
+    threads = [threading.Thread(target=writer) for _ in range(3)]
+    for t in threads:
+        t.start()
+    try:
+        while any(t.is_alive() for t in threads) and len(statuses) < 40:
+            st = ledger.verify_chain(verifier, test_schema)
+            verifier.commit()
+            statuses.append(f"{st.status}: {st.detail}")
+        for t in threads:
+            t.join(120)
+        final = ledger.verify_chain(verifier, test_schema)
+    finally:
+        verifier.close()
+    assert not errors and statuses, (errors, statuses)
+    assert [x for x in statuses if not x.startswith("OK")] == []
+    assert (final.status, final.checked) == ("OK", before + 24)
+
+
 def test_a_held_chain_head_lock_makes_the_next_append_fail_in_seconds_not_hang(settings, scratch):
     """The runtime users run with SET CURRENT LOCK TIMEOUT, so a stuck writer cannot stall every check."""
     quick = settings.model_copy(update={"db2_lock_timeout_s": 2})
@@ -221,6 +257,23 @@ def test_verify_chain_catches_a_deleted_last_row(admin_conn, scratch, verifier):
     admin_conn.commit()
     status = verifier()
     assert status.status == "BROKEN" and "chain head" in status.detail
+
+
+def test_verify_chain_catches_a_row_the_owner_adds_beyond_the_chain_head(admin_conn, scratch, verifier):
+    """VERIFY_CHAIN checks the rows up to the head it read first; a row past the head is legitimate only if an append
+    committed it meanwhile, and then the head covers it. A row written straight into the table never moves the head."""
+    for _ in range(2):
+        ledger.append(admin_conn, entry(), scratch)
+    db.use_schema(admin_conn, scratch)
+    db.execute(admin_conn, "INSERT INTO ANSWER_LEDGER (LEDGER_ID, REQUEST_ID, CREATED_AT, CHANNEL, DOC_ID, AS_OF_DATE, "
+                           "QUESTION_REDACTED, DRAFT_REDACTED, FINAL_ANSWER, DECISION, REASON_CODE, MODEL_INFO, "
+                           "PROMPT_VERSION, LATENCY_MS, VERDICTS_JSON, PREV_HASH, ROW_HASH) VALUES (3, ?, CURRENT TIMESTAMP, "
+                           "'api', 'AURELIA-CSP', '2026-03-10', 'q', 'd', 'Yes, refunds after travel.', 'PASS', "
+                           "'ALL_SUPPORTED', 'm', 'p', 1, '{\"claims\": []}', ?, ?)",
+               (str(uuid.uuid4()), "0" * 64, "1" * 64))
+    admin_conn.commit()
+    status = verifier()
+    assert (status.status, status.first_bad) == ("BROKEN", 3) and "beyond the chain head" in status.detail
 
 
 def test_the_owner_reads_masked_text_and_cannot_verify_through_the_mask(admin_conn, scratch, verifier):
