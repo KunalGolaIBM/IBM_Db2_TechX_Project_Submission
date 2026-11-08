@@ -15,7 +15,7 @@ Routing and policy intake have evaluations of their own: [routing_eval.md](routi
 
 `python -m asof.eval --split test` runs the check on the 40 airline cases and writes [eval_results.md](eval_results.md), with every per-case decision recorded in [eval/](eval/). Dates on this page are Eastern time; the results file stamps each run in UTC, so a run late on 7 Nov appears there as 8 Nov. The 40 test cases are new scenarios, none used while building or choosing the model. They were committed (`81b5b69`) before the first run and are frozen: a unit test pins their SHA-256 and the runner refuses to run them if it changes. The 20-case dev split holds the scenarios used while debugging. Each case is labelled with the decision it should get and the clause version its key claim must be checked against.
 
-**Latest run** (Sun 8 Nov, OpenRouter `google/gemini-3.1-flash-lite`, all nine frozen splits, commits `333f14b` to `8058e85`). Since `0be4f60` the check has not changed: the commits between added the specialist inbox, correction notices and routing, which run only when asked for, and type annotations. The run confirms the check at the final code:
+**Latest run** (Sun 8 Nov, OpenRouter `google/gemini-3.1-flash-lite`, all nine frozen splits, commits `333f14b` to `8058e85`). Since `0be4f60` the check has not changed: the commits between added the specialist inbox, correction notices and routing, which run only when asked for, and type annotations. It measures the check as submitted:
 
 | Frozen split | Cases | False allow | False block | Safe | Ideal | Citation | p50 |
 |---|---|---|---|---|---|---|---|
