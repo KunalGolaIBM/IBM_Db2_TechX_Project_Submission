@@ -195,6 +195,20 @@ class ExistingClause:
         return [v for v in self.versions if v.start > on]
 
 
+def corpus_clauses(doc_id: str) -> dict[str, ExistingClause]:
+    """The policy as seeded, from the shipped corpus, in clause-ID order (the timeline view's order): for the intake
+    eval and tests, which need no Db2."""
+    from .corpus import load_corpus
+
+    out = {}
+    for c in sorted(load_corpus().clauses, key=lambda c: c.clause_id):
+        if c.doc_id == doc_id:
+            versions = tuple(ExistingVersion(v.version_label, v.bus_start, v.bus_end, v.clause_text, v.rule)
+                             for v in c.versions)
+            out[c.clause_id] = ExistingClause(c.clause_id, c.area, c.title, versions)
+    return out
+
+
 def existing_clauses(conn: ibm_db_dbi.Connection, doc_id: str, schema: str = db.SCHEMA) -> dict[str, ExistingClause]:
     out = {}
     for c in policy.timeline(conn, schema, doc_id):
@@ -388,8 +402,14 @@ def _check_one(raw: IntakeClause, source: SourceDocument, doc_norm: str, doc_dat
     else:
         checks.append(Check("effective date", "pass", f"{start.isoformat()} is stated: “{quote[:160]}”"))
     if end is not None:
-        if end in doc_dates or end - timedelta(days=1) in doc_dates:
-            checks.append(Check("end date", "pass", f"{end.isoformat()} is stated in the document"))
+        # AsOf's periods end on the first day a version no longer applies. "Until 31 August" is stated inclusively,
+        # so the right end is 1 September; an end equal to the stated date would drop that last day.
+        if end - timedelta(days=1) in doc_dates:
+            checks.append(Check("end date", "pass", f"applies through {(end - timedelta(days=1)).isoformat()}, as stated"))
+        elif end in doc_dates:
+            checks.append(Check("end date", "warn", f"the document states {end.isoformat()}; if that is the last day it "
+                                f"applies, the end should be {(end + timedelta(days=1)).isoformat()} (AsOf's end dates "
+                                "are exclusive)"))
         else:
             checks.append(Check("end date", "fail", f"the document does not state the end date {end.isoformat()}"))
 
@@ -421,6 +441,13 @@ def _check_one(raw: IntakeClause, source: SourceDocument, doc_norm: str, doc_dat
         rule = current.rule
     else:
         if current is not None:
+            # A tier condition ("applies_when": the situation a delay tier covers) cannot be proposed as a flat
+            # value; keep the one in force rather than silently losing it, and ask the editor to confirm it.
+            for key, value in current.rule.items():
+                if isinstance(value, dict) and key not in rule:
+                    rule[key] = value
+                    checks.append(Check("rule values", "warn", f"{key} kept from {current.version} "
+                                        f"({json.dumps(value)}); confirm the new text still describes it"))
             dropped = sorted(set(current.rule) - set(rule))
             if dropped:
                 checks.append(Check("rule values", "warn", f"{current.version} had {', '.join(dropped)}; "

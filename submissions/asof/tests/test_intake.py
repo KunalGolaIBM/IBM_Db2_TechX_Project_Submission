@@ -15,7 +15,6 @@ from pdfs import REVISION, make_pdf
 from pypdf import PdfWriter
 
 from asof import intake, prompts
-from asof.corpus import load_corpus
 from asof.schemas import IntakeClause, IntakeResult, IntakeRuleParam
 
 GENERAL = "This revision takes effect on 1 February 2027."
@@ -24,14 +23,7 @@ BAG_TEXT = "The first checked bag costs $45 each way on Economy fares."
 
 
 def existing() -> dict[str, intake.ExistingClause]:
-    out = {}
-    for c in load_corpus().clauses:
-        if c.doc_id != "AURELIA-CSP":
-            continue
-        versions = tuple(intake.ExistingVersion(v.version_label, v.bus_start, v.bus_end, v.clause_text, v.rule)
-                         for v in c.versions)
-        out[c.clause_id] = intake.ExistingClause(c.clause_id, c.area, c.title, versions)
-    return out
+    return intake.corpus_clauses("AURELIA-CSP")
 
 
 def source(pages=None) -> intake.SourceDocument:
@@ -181,6 +173,26 @@ def test_a_quote_that_is_not_in_the_document_is_blocked():
     assert p.blocked and statuses(p, "effective date") == ["fail"]
 
 
+def test_an_inclusive_end_date_is_read_as_the_day_after_and_a_literal_one_is_flagged():
+    pages = [[*REVISION, "This fee applies until 31 August 2027."]]
+    q = "This fee applies until 31 August 2027."
+    right, _ = intake.check_items(IntakeResult(clauses=[clause(end="2027-09-01", quote=GENERAL)]), source(pages), existing())
+    literal, _ = intake.check_items(IntakeResult(clauses=[clause(end="2027-08-31", quote=GENERAL)]), source(pages), existing())
+    assert statuses(right[0], "end date") == ["pass"] and q
+    assert statuses(literal[0], "end date") == ["warn"] and "2027-09-01" in " ".join(c.detail for c in literal[0].checks)
+
+
+def test_a_changed_tier_keeps_its_condition():
+    text = ("For a delay within Aurelia Air's control that makes the passenger arrive 9 hours or more late, the passenger "
+            "is entitled to $450 in compensation.")
+    pages = [[*REVISION, text]]
+    (p,), _ = intake.check_items(IntakeResult(clauses=[clause(text=text, cid="DLY-003", area="delay",
+                                                              rule=[num("compensation_usd", 450)], title="Long delays")]),
+                                 source(pages), existing())
+    assert p.rule == {"compensation_usd": 450, "applies_when": {"delay_hours": [9, None]}} and not p.blocked
+    assert any("applies_when kept from v1" in c.detail for c in p.checks)
+
+
 def test_an_end_date_the_document_never_states_is_blocked():
     (p,), _ = check(clause(end="2027-06-01"))
     assert p.blocked and statuses(p, "end date") == ["fail"]
@@ -281,7 +293,7 @@ def test_replay_mode_has_the_sample_revisions_extraction_and_it_passes_the_check
     from asof.replay import Recording, ReplayLLM
 
     src = intake.read_pdf(intake.SAMPLE_PDF.read_bytes(), intake.SAMPLE_PDF.name)
-    clauses = dict(sorted(existing().items()))  # the order the timeline view returns them in
+    clauses = existing()  # in clause-ID order, as the timeline view returns them
     result, model = intake.extract(ReplayLLM(Recording.load()), src, "AURELIA-CSP", clauses)
     proposals, discarded = intake.check_items(result, src, clauses)
     assert model.startswith("replay:") and not discarded
