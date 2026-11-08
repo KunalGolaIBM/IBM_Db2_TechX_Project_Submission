@@ -24,7 +24,7 @@
 | **A person for what the check holds** | Held answers wait in a specialist inbox. The specialist's reply passes the same check for the customer's date, and `RESOLVE_ESCALATION` appends it to the chain as a `REVIEWED` decision; Db2 refuses a contradicting reply, a second answer and self-review. After a policy change, each customer whose answer is now wrong for their date gets a correction notice: the correction is checked on that date, `ADD_NOTICE` verifies every claim made about it, and a specialist approves it ([details](#the-specialist-inbox-and-correction-notices)). |
 | **Routing, measured** | With `doc_id` `auto`, Db2 ranks both documents' clauses in one statement and routes a clear lead; anything closer goes to a person instead of a guess. On a 40-case split pinned before the router existed: 0 of 30 misrouted, 26 routed and 4 asked, and all 10 ambiguous, out-of-scope or mixed questions asked ([routing](#routing-which-policy-a-draft-is-about)). |
 | **Where it plugs in** | The HTTP API, a LangChain runnable, a customer chat page whose every reply AsOf checks, an MCP server any agent can call ([mcp_server/](mcp_server/)), and a Langflow component. IBM watsonx.ai can be the model (`LLM_PROVIDER=watsonx`) or Db2's own embedder (`CREATE EXTERNAL MODEL ... PROVIDER WATSONX`), both run on a real account: on the airline split IBM Granite released 1 of 26 wrong drafts, against 0 for the default model ([watsonx.ai results](#on-ibm-watsonxai)). |
-| **Engineering** | A LangGraph check with fixed edges that fails closed ([checkgraph.py](src/asof/checkgraph.py)), per-user API roles, optional TLS to Db2, 848 tests (plus 14 for the MCP server; 75% line coverage without the opt-in backup drill), mypy (strict on 32 of 45 modules), and three CI jobs including IBM's stock Db2 image. |
+| **Engineering** | A LangGraph check with fixed edges that fails closed ([checkgraph.py](src/asof/checkgraph.py)), per-user API roles, optional TLS to Db2, 876 tests (plus 14 for the MCP server; 75% line coverage without the opt-in backup drill), mypy (strict on 32 of 45 modules), and three CI jobs including IBM's stock Db2 image. |
 
 > **Fictional data.** "Aurelia Air", "Fernhollow Bank" and every policy, fee schedule, FAQ and help-centre answer in this repository are invented for the demo. The airline is modelled on the kind of policy at issue in *Moffatt v. Air Canada*; neither describes a real company.
 
@@ -686,7 +686,7 @@ One chain serves every customer: the assistant's draft joins the input, and the 
 ## Testing & Verification
 
 ```bash
-pytest -q                                 # 848 tests: 9 need an opt-in flag (live LLM, remote endpoints, the backup drill), 3 need TLS on (scripts/enable_db2_tls.sh; CI turns it on), 1 needs the watsonx extra
+pytest -q                                 # 876 tests: 9 need an opt-in flag (live LLM, remote endpoints, the backup drill), 3 need TLS on (scripts/enable_db2_tls.sh; CI turns it on), 1 needs the watsonx extra
 pytest -q -m "not db2"                    # unit tests only, no database needed
 ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 4 live tests against the configured LLM (spends API calls)
 ASOF_RUN_BACKUP_TESTS=1 pytest -q -m backup   # the online backup and restore drill (about a minute; creates and drops two databases)
@@ -697,19 +697,19 @@ mypy                                     # type check (configuration in pyprojec
 pytest -q --cov=asof --cov-report=term   # line coverage of src/asof
 ```
 
-**Types and coverage** (Sun 8 Nov 2026, noon). `mypy` 2.4 with the Pydantic plugin finds no issues in the 45 modules. It runs `--strict` on 32 of them, every module on the path from a draft to the ledger among them: the check (`gate.py`), the rule checker, redaction, the ledger, the anchors, policy changes, intake, the specialist inbox, correction notices, the router, the Db2 layer and the configuration. The other 13 are glue (FastAPI routes, LangGraph state, CLIs, benchmarks). They are still fully type-checked, but may leave parameters unannotated. The MCP server passes `--strict` in its own environment. The full suite against Db2 covers **75% of the lines in `src/asof`** (6,805 statements, run locally without the opt-in backup drill; CI runs the drill too), including:
+**Types and coverage** (Sun 8 Nov 2026, 3 PM). `mypy` 2.4 with the Pydantic plugin finds no issues in the 45 modules. It runs `--strict` on 32 of them, every module on the path from a draft to the ledger among them: the check (`gate.py`), the rule checker, redaction, the ledger, the anchors, policy changes, intake, the specialist inbox, correction notices, the router, the Db2 layer and the configuration. The other 13 are glue (FastAPI routes, LangGraph state, CLIs, benchmarks). They are still fully type-checked, but may leave parameters unannotated. The MCP server passes `--strict` in its own environment. The full suite against Db2 covers **75% of the lines in `src/asof`** (6,937 statements, run locally without the opt-in backup drill; CI runs the drill too), including:
 
 | Module | Coverage |
 |---|---|
 | `redact.py`, `router.py` | 100% |
 | `rules.py` | 99% |
-| `notices.py` | 97% |
-| `gate.py`, `policy.py` | 96% |
-| `checkgraph.py`, `impactagent.py` | 95% |
+| `notices.py`, `impactagent.py` | 97% |
+| `policy.py` | 96% |
+| `gate.py`, `checkgraph.py` | 95% |
 | `ledger.py` | 93% |
 | `intake.py` | 92% |
+| `review.py` | 88% |
 | `api.py` | 86% |
-| `review.py` | 83% |
 
 The ledger benchmark is at 89%; the backup drill (`backup.py`) reaches 82% when its opt-in test runs, as it does in CI. The lowest numbers belong to command-line tools that CI runs as steps of their own rather than through pytest: `setup.py` 27%, `explain.py` 55%, `db2check.py` 0%, and the evaluation runners at 34 to 71%. CI runs mypy on every push to `main` and fails the Db2 job if coverage drops below 74%.
 
