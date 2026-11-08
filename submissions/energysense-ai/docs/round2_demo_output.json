@@ -1,0 +1,42 @@
+{
+  "health": {
+    "status": "ok",
+    "api_version": "1.1.0",
+    "database_backend": "sqlite",
+    "telemetry_count": 31,
+    "event_count": 1
+  },
+  "telemetry_count": 31,
+  "latest_telemetry": {
+    "telemetry_id": "9300cf20-0618-4126-a860-73ad647d6c07",
+    "equipment_id": "ES-01",
+    "appliance_id": "pump-01",
+    "vrms_v": 229.5,
+    "irms_a": 2.45,
+    "apparent_power_va": 562.0,
+    "runtime_s": 5400.0,
+    "temperature_c": 42.0,
+    "vibration_rms": 0.22,
+    "relay_state": "ON",
+    "source": "synthetic",
+    "recorded_at": "2026-11-08T04:13:34+00:00"
+  },
+  "event_count": 1,
+  "event_preview": [
+    {
+      "event_id": "9b3ef2d8-8d2a-427b-854e-c546625ec7a1",
+      "equipment_id": "ES-01",
+      "appliance_id": "pump-01",
+      "severity": "HIGH",
+      "anomaly_score": 1.0,
+      "feature_name": "apparent_power_va",
+      "observed_value": 562.0,
+      "baseline_mean": 367.398,
+      "baseline_std": 11.0219,
+      "explanation": "Possible operating change: current draw is higher than this appliance's learned operating pattern; apparent power is higher than the observed baseline. This is a diagnostic hypothesis, not proof of a component fault.",
+      "recommended_action": "verify appliance load, cable/connector condition and sensor calibration. Confirm findings with a qualified technician before maintenance or shutdown.",
+      "created_at": "2026-11-08T04:13:36+00:00"
+    }
+  ],
+  "test_mode": "SQLite local smoke test; seeded synthetic data only"
+}
