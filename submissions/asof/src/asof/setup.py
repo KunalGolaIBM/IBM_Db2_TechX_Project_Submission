@@ -35,7 +35,8 @@ from .config import DEFAULT_ENV_FILE, PROJECT_ROOT, ConfigError, Settings, get_s
 from .embeddings import get_embeddings
 from .retriever import clauses_as_of
 
-GENERATED_KEYS = ("ASOF_APP_PASSWORD", "ASOF_EDITOR_PASSWORD", "ASOF_ANALYST_PASSWORD", "ASOF_MART_PASSWORD")
+GENERATED_KEYS = ("ASOF_APP_PASSWORD", "ASOF_EDITOR_PASSWORD", "ASOF_REVIEW_PASSWORD", "ASOF_ANALYST_PASSWORD",
+                  "ASOF_MART_PASSWORD")
 DOCKER_TIMEOUT_S = 60
 
 
@@ -160,6 +161,7 @@ def ensure_os_users(settings: Settings) -> bool:
         say(f"  DB2_CONTAINER '{settings.db2_container}' is not running; using the Db2 container '{container}' instead")
     for user, secret in ((settings.asof_app_user, settings.asof_app_password),
                          (settings.asof_editor_user, settings.asof_editor_password),
+                         (settings.asof_review_user, settings.asof_review_password),
                          (settings.asof_analyst_user, settings.asof_analyst_password),
                          (settings.asof_mart_user, settings.asof_mart_password)):
         if _docker(["exec", container, "id", "-u", user]).returncode != 0:
@@ -170,8 +172,8 @@ def ensure_os_users(settings: Settings) -> bool:
         pw = _docker(["exec", "-i", container, "chpasswd"], stdin=f"{user}:{secret.get_secret_value()}\n")  # type: ignore[union-attr]
         if pw.returncode != 0:
             raise SetupError(f"setting the password for {user} failed: {pw.stderr.strip()}")
-    say(f"  OS users {settings.asof_app_user}, {settings.asof_editor_user}, {settings.asof_analyst_user} and "
-        f"{settings.asof_mart_user} ready (passwords from .env)")
+    say(f"  OS users {settings.asof_app_user}, {settings.asof_editor_user}, {settings.asof_review_user}, "
+        f"{settings.asof_analyst_user} and {settings.asof_mart_user} ready (passwords from .env)")
     return True
 
 
@@ -201,7 +203,8 @@ def find_db2_container(preferred: str) -> str | None:
 def _manual_user_help(settings: Settings) -> bool:
     say("  Db2 authenticates against operating-system users on the Db2 server. Create them there:")
     for user, key in ((settings.asof_app_user, "ASOF_APP_PASSWORD"), (settings.asof_editor_user, "ASOF_EDITOR_PASSWORD"),
-                      (settings.asof_analyst_user, "ASOF_ANALYST_PASSWORD")):
+                      (settings.asof_review_user, "ASOF_REVIEW_PASSWORD"),
+                      (settings.asof_analyst_user, "ASOF_ANALYST_PASSWORD"), (settings.asof_mart_user, "ASOF_MART_PASSWORD")):
         say(f"    useradd --no-create-home --shell /sbin/nologin {user} && passwd {user}   # password = {key} in .env")
     say("  Setup continues; the grants work without the OS users, but the app cannot log in until they exist.")
     return False
@@ -311,8 +314,8 @@ def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False
     say(f"  generated {', '.join(filled)} and saved to .env (not shown)" if filled else "  already set in .env")
     get_settings.cache_clear()
     settings = get_settings()
-    settings.require("db2_admin_password", "asof_app_password", "asof_editor_password", "asof_analyst_password",
-                     "asof_mart_password")
+    settings.require("db2_admin_password", "asof_app_password", "asof_editor_password", "asof_review_password",
+                     "asof_analyst_password", "asof_mart_password")
     say(f"  chain-head anchor key: {ensure_anchor_key(settings)}")
     get_settings.cache_clear()
     settings = get_settings()
@@ -354,10 +357,11 @@ def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False
 
         say("7/9 Least-privilege grants")
         g = schema.apply_grants(conn, settings.asof_app_user, settings.asof_editor_user, target,
-                                analyst_user=settings.asof_analyst_user, mart_user=settings.asof_mart_user)
+                                analyst_user=settings.asof_analyst_user, mart_user=settings.asof_mart_user,
+                                review_user=settings.asof_review_user)
         say(f"  {g['applied']} grants and revokes applied"
-            + (f"; PUBLIC already lacked {g['already_revoked']} of the 5 defaults setup revokes"
-               if g["already_revoked"] else ""))
+            + (f"; {g['already_revoked']} revokes found nothing to revoke (PUBLIC defaults already gone, or a "
+               "fresh install)" if g["already_revoked"] else ""))
 
     say("8/9 Optimizer statistics (RUNSTATS)")
     say("  " + collect_statistics(settings, target))

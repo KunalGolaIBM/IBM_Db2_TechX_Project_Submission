@@ -58,7 +58,8 @@ def test_an_uncertain_route_is_held_and_the_specialist_picks_the_document(settin
         assert entry["verdicts"]["route"]["method"] == "ask" and entry["model_info"] == "router:ask"
         assert ledger.verify_chain(conn, routed).status == "OK"
     other = "FERNHOLLOW-FEES" if r.leader == "AURELIA-CSP" else "AURELIA-CSP"
-    done = review.resolve(gate, held.ledger_id, "An overdraft fee is charged for each item we pay.", doc_id="FERNHOLLOW-FEES")
+    done = review.resolve(gate, held.ledger_id, "An overdraft fee is charged for each item we pay.", doc_id="FERNHOLLOW-FEES",
+                          connect=lambda: db.connect(settings, "review"))  # as the API sends it: the reviewer account
     assert done.outcome == "SPECIALIST_CHECKED"
     with db.connection(settings, "app") as conn:
         assert ledger.get_entry(conn, done.ledger_id, routed)["doc_id"].strip() == "FERNHOLLOW-FEES"

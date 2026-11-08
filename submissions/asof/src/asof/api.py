@@ -19,6 +19,7 @@ from collections import defaultdict, deque
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from datetime import date, datetime
+from pathlib import Path as PathlibPath  # fastapi's Path is the route parameter
 from typing import Annotated, Any, Literal
 
 from fastapi import FastAPI, Header, HTTPException, Path, Query, Request
@@ -71,8 +72,10 @@ def required_role(method: str, path: str) -> str | None:
     if method == "GET" and (path.startswith("/api/policy/") or path == "/api/whoami"):
         return None
     return "auditor"
+
+
 COSTLY_GET_SUFFIXES = ("/evidence",)  # evidence packs run VERIFY_CHAIN too
-UI_DIR = __import__("pathlib").Path(__file__).with_name("ui")
+UI_DIR = PathlibPath(__file__).with_name("ui")
 LOCAL_CLIENTS = {"127.0.0.1", "::1"}
 NO_MODEL = ("No language model is configured: add OPENROUTER_API_KEY to .env, or set LLM_PROVIDER=ollama with Ollama "
             "running, or LLM_PROVIDER=replay to replay the built-in scenarios, then restart AsOf.")
@@ -307,15 +310,19 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     def app_conn():
         return pool.connect()
 
+    start_lock = threading.Lock()  # sync routes run in a thread pool: two first requests must not build two gates
+
     def components() -> tuple[Gate, DemoAssistant]:
         if state["gate"] is None or state["assistant"] is None:
-            if not settings.llm_ready:  # a plain answer for the person setting it up, without server paths
-                raise HTTPException(503, NO_MODEL)
-            llm = build_llm(settings)
-            emb = get_embeddings(settings.embedding_model)
-            state["gate"] = state["gate"] or Gate(llm, emb, app_conn, schema, deadline_s=settings.asof_check_deadline_s,
-                                                  anchors=anchors)
-            state["assistant"] = state["assistant"] or DemoAssistant(llm, emb, app_conn, schema)
+            with start_lock:
+                if state["gate"] is None or state["assistant"] is None:
+                    if not settings.llm_ready:  # a plain answer for the person setting it up, without server paths
+                        raise HTTPException(503, NO_MODEL)
+                    llm = build_llm(settings)
+                    emb = get_embeddings(settings.embedding_model)
+                    state["gate"] = state["gate"] or Gate(llm, emb, app_conn, schema,
+                                                          deadline_s=settings.asof_check_deadline_s, anchors=anchors)
+                    state["assistant"] = state["assistant"] or DemoAssistant(llm, emb, app_conn, schema)
         return state["gate"], state["assistant"]
 
     def intake_llm():
@@ -886,7 +893,8 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         require_local_reviewer(request)
         g, _ = components()
         try:
-            done = review.resolve(g, ledger_id, body.reply, body.note, body.doc_id, requested_by(request))
+            done = review.resolve(g, ledger_id, body.reply, body.note, body.doc_id, requested_by(request),
+                                  connect=lambda: db.connect(settings, "review"))
         except review.ReviewError as exc:
             return review_refused(exc, held_date(ledger_id), body.reply)
         return jsonable_encoder({"escalated_ledger_id": ledger_id, "ledger_id": done.ledger_id, "row_hash": done.row_hash,
@@ -918,7 +926,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     def notice_decision(notice_id: Annotated[int, Path(ge=1, le=10**12)], body: NoticeDecision, request: Request):
         """A specialist approves a notice for sending (it is marked SENT; AsOf sends nothing itself) or rejects it."""
         require_local_reviewer(request)
-        conn = app_conn()
+        conn = db.connect(settings, "review")  # the reviewer account: the runtime user cannot decide notices
         try:
             notices.decide(conn, notice_id, body.approve, requested_by(request), schema)
         except db.DatabaseError as exc:

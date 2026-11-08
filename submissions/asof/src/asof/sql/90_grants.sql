@@ -1,5 +1,6 @@
 -- Least-privilege grants. Applied after the schema exists and seed data is loaded.
--- ASOF_APP_USER, ASOF_EDITOR_USER and ASOF_ANALYST_USER are replaced by the validated user names
+-- ASOF_APP_USER, ASOF_EDITOR_USER, ASOF_REVIEW_USER, ASOF_ANALYST_USER and ASOF_MART_USER are replaced by the
+-- validated user names
 -- from .env.
 -- "ASOF." is replaced by the target schema. REVOKEs that find nothing to revoke are skipped.
 
@@ -137,16 +138,18 @@ GRANT SELECT ON TABLE ASOF.POLICY_DRAFT TO USER ASOF_APP_USER
 GRANT SELECT ON TABLE ASOF.POLICY_DRAFT_ITEM TO USER ASOF_APP_USER
 @
 
--- Specialist inbox: the runtime user reads the queue and appends a specialist's reply only through
--- RESOLVE_ESCALATION, which writes the REVIEWED ledger row and the link in one transaction.
+-- Specialist inbox: the runtime user reads the queue and checks a reply; only the reviewer user (below) appends a
+-- specialist's reply, through RESOLVE_ESCALATION, which writes the REVIEWED ledger row and the link in one
+-- transaction.
 -- grant: APP_SELECT_ESCALATION_REVIEW
 GRANT SELECT ON TABLE ASOF.ESCALATION_REVIEW TO USER ASOF_APP_USER
 @
 -- grant: APP_SELECT_V_REVIEW_QUEUE
 GRANT SELECT ON TABLE ASOF.V_REVIEW_QUEUE TO USER ASOF_APP_USER
 @
--- grant: APP_EXECUTE_RESOLVE_ESCALATION
-GRANT EXECUTE ON PROCEDURE ASOF.RESOLVE_ESCALATION TO USER ASOF_APP_USER
+-- Installs before 8 Nov 2026 granted this to the runtime user; a person's actions now run as the reviewer user.
+-- grant: APP_REVOKE_RESOLVE_ESCALATION
+REVOKE EXECUTE ON PROCEDURE ASOF.RESOLVE_ESCALATION FROM USER ASOF_APP_USER RESTRICT
 @
 
 -- Correction notices: the runtime user stores the agent's drafts and records a specialist's decision, only
@@ -157,8 +160,8 @@ GRANT SELECT ON TABLE ASOF.CORRECTION_NOTICE TO USER ASOF_APP_USER
 -- grant: APP_EXECUTE_ADD_NOTICE
 GRANT EXECUTE ON PROCEDURE ASOF.ADD_NOTICE TO USER ASOF_APP_USER
 @
--- grant: APP_EXECUTE_DECIDE_NOTICE
-GRANT EXECUTE ON PROCEDURE ASOF.DECIDE_NOTICE TO USER ASOF_APP_USER
+-- grant: APP_REVOKE_DECIDE_NOTICE
+REVOKE EXECUTE ON PROCEDURE ASOF.DECIDE_NOTICE FROM USER ASOF_APP_USER RESTRICT
 @
 
 -- Roles (database-wide, shared by every AsOf schema). Created if missing; need SECADM.
@@ -175,6 +178,21 @@ CREATE ROLE ASOF_ANALYST
 -- It holds SECADM and could drop the masks, but that is a catalog change, not a silent read.
 -- grant: TEXT_READER_APP
 GRANT ROLE ASOF_TEXT_READER TO USER ASOF_APP_USER
+@
+-- Reviewer: a specialist's decisions, kept apart from the account the model-facing check runs as, as policy changes
+-- are (the editor). Connect, read the ledger text (RESOLVE_ESCALATION refuses a caller who would see it masked),
+-- and two procedures; no table privileges at all.
+-- grant: REVIEW_CONNECT
+GRANT CONNECT ON DATABASE TO USER ASOF_REVIEW_USER
+@
+-- grant: TEXT_READER_REVIEW
+GRANT ROLE ASOF_TEXT_READER TO USER ASOF_REVIEW_USER
+@
+-- grant: REVIEW_EXECUTE_RESOLVE_ESCALATION
+GRANT EXECUTE ON PROCEDURE ASOF.RESOLVE_ESCALATION TO USER ASOF_REVIEW_USER
+@
+-- grant: REVIEW_EXECUTE_DECIDE_NOTICE
+GRANT EXECUTE ON PROCEDURE ASOF.DECIDE_NOTICE TO USER ASOF_REVIEW_USER
 @
 -- Read-only analyst: connect, and SELECT on the audit and analytics views. No tables, no
 -- procedures, and not in ASOF_TEXT_READER, so the ledger's free text comes back masked.

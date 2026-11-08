@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     asof_app_password: SecretStr | None = None
     asof_editor_user: str = Field("asofedit", pattern=r"^[a-z][a-z0-9]{0,7}$")
     asof_editor_password: SecretStr | None = None
+    # Specialist decisions (inbox replies, correction notices): CONNECT, the text-reader role and EXECUTE on
+    # RESOLVE_ESCALATION and DECIDE_NOTICE only, apart from the runtime user the model-facing check runs as.
+    asof_review_user: str = Field("asofrev", pattern=r"^[a-z][a-z0-9]{0,7}$")
+    asof_review_password: SecretStr | None = None
     # Read-only analyst ("Ask the ledger"): SELECT on the audit views only, ledger text masked.
     asof_analyst_user: str = Field("asofread", pattern=r"^[a-z][a-z0-9]{0,7}$")
     asof_analyst_password: SecretStr | None = None
@@ -77,7 +81,7 @@ class Settings(BaseSettings):
     asof_editor_token: SecretStr | None = None
     # "local": the server binds to localhost; the optional shared ASOF_API_TOKEN below applies. "users": every
     # /api/ request needs a personal token from ASOF.API_USER (python -m asof.users) holding the route's role
-    # (checker, auditor, editor); the shared tokens are then not used.
+    # (checker, auditor, editor, reviewer); the shared tokens are then not used.
     asof_auth: Literal["local", "users"] = "local"
     # Optional API token. When set, every /api/ request needs "Authorization: Bearer <token>"
     # (constant-time compare); /healthz and the static UI stay open. Unset: localhost binding only.

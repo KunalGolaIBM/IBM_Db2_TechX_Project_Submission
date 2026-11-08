@@ -261,8 +261,11 @@ def final_text(reply: str, result: GateResult) -> str:
 
 
 def resolve(gate: Gate, ledger_id: int, reply: str, note: str | None = None, doc_id: str | None = None,
-            reviewer: str | None = None) -> Resolved:
-    """Check the reply and, if it may be sent, append it to the ledger through RESOLVE_ESCALATION. Commits."""
+            reviewer: str | None = None, connect: Callable[[], ibm_db_dbi.Connection] | None = None) -> Resolved:
+    """Check the reply and, if it may be sent, append it to the ledger through RESOLVE_ESCALATION. Commits.
+
+    `connect` opens the connection that calls RESOLVE_ESCALATION: the reviewer's Db2 account in the API, since the
+    runtime user the check runs as holds no EXECUTE on it. It defaults to the gate's own connection."""
     conn = gate.connect()
     try:
         entry = held_entry(conn, ledger_id, gate.schema)
@@ -287,7 +290,7 @@ def resolve(gate: Gate, ledger_id: int, reply: str, note: str | None = None, doc
     params = (ledger_id, str(uuid.uuid4()), doc, _fit(redact(reply).text), _fit(redact(final).text),
               result.reason_code, note or "", reviewer or "", result.model_info[:200], gate.domain(doc).prompt_version,
               int(result.latency_ms), ledger.verdicts_json(verdicts), 0, " " * 64, " " * 40)
-    conn = gate.connect()
+    conn = (connect or gate.connect)()
     try:
         db.use_schema(conn, gate.schema)
         cur = conn.cursor()

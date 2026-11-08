@@ -304,7 +304,7 @@ def review_scenarios() -> list[dict[str, Any]]:
     return out
 
 
-def run_reviews(gate) -> list[dict[str, Any]]:
+def run_reviews(gate, connect=None) -> list[dict[str, Any]]:
     """Hold each built-in draft, then send the built-in reply through the inbox (the reply's check is what records)."""
     from . import review
     from .gate import GateRequest
@@ -314,7 +314,7 @@ def run_reviews(gate) -> list[dict[str, Any]]:
         held = gate.check(GateRequest(sc["question"], sc["draft"], date.fromisoformat(sc["as_of"]), sc["doc_id"], "chat"))
         rec = {"question": sc["question"], "held": held.reason_code, "outcome": None, "refused": None}
         try:
-            rec["outcome"] = review.resolve(gate, held.ledger_id, sc["reply"], sc["note"]).outcome
+            rec["outcome"] = review.resolve(gate, held.ledger_id, sc["reply"], sc["note"], connect=connect).outcome
         except review.ReviewError as exc:
             rec["refused"] = str(exc)
         out.append(rec)
@@ -359,7 +359,7 @@ def record(settings) -> int:
         checks.append(sc | {"draft_checked": draft, "decision": r.decision, "reason_code": r.reason_code})
         print(f"  {r.decision:<9} {r.reason_code:<24} {sc['label']}", flush=True)
 
-    reviews = run_reviews(gate)
+    reviews = run_reviews(gate, lambda: db.connect(settings, "review"))
     failed += sum(1 for r in reviews if r["refused"])
 
     asks = []
@@ -410,7 +410,7 @@ def _fresh_schema(settings, emb) -> None:
         seed.seed_published_answers(conn, REPLAY_SCHEMA)
         seed.seed_faq(conn, emb, REPLAY_SCHEMA)
         schema.apply_grants(conn, settings.asof_app_user, settings.asof_editor_user, REPLAY_SCHEMA,
-                            analyst_user=settings.asof_analyst_user)
+                            analyst_user=settings.asof_analyst_user, review_user=settings.asof_review_user)
 
 
 def record_intake(settings, recording: Recording) -> dict[str, Any]:
@@ -497,7 +497,8 @@ def record_only_reviews(settings) -> int:
     todo = [c for c in check_scenarios() if c["label"].startswith("held: ")
             and (c["doc_id"], c["question"], c["as_of"], c["draft"]) not in have]
     done = _run_checks(settings, recorder, todo)
-    reviews = run_reviews(Gate(recorder, emb, db.ConnectionPool(settings, "app").connect, REPLAY_SCHEMA))
+    reviews = run_reviews(Gate(recorder, emb, db.ConnectionPool(settings, "app").connect, REPLAY_SCHEMA),
+                          lambda: db.connect(settings, "review"))
     if any(c["reason_code"] == "ERROR_FAIL_CLOSED" for c in done) or any(r["refused"] for r in reviews):
         print("A check failed closed or a reply was refused; nothing saved. Run it again.")
         return 1

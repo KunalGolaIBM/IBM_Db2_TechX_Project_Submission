@@ -12,6 +12,7 @@ import pytest
 from fakes import ScriptedLLM, claims, judge, verdict
 
 from asof import db, ledger, policy, review, schema, seed
+from asof.config import get_settings
 from asof.gate import Gate, GateRequest
 
 pytestmark = pytest.mark.db2
@@ -48,6 +49,11 @@ def _gate(settings, embeddings, name, **queues) -> Gate:
     return Gate(ScriptedLLM(**queues), embeddings, lambda: db.connect(settings, "app"), name)
 
 
+def resolve(gate: Gate, *args, **kwargs):
+    """Send a reply as the API does: the check runs as the runtime user, RESOLVE_ESCALATION as the reviewer account."""
+    return review.resolve(gate, *args, connect=lambda: db.connect(get_settings(), "review"), **kwargs)
+
+
 def _held(settings, embeddings, name, requested_by=None) -> int:
     """One ESCALATED decision: the draft's only claim is covered by no clause."""
     gate = _gate(settings, embeddings, name, extract=[claims(UNCOVERED_CLAIM)], judge=[judge(verdict(1, "NOT_COVERED"))])
@@ -72,7 +78,7 @@ def test_a_held_decision_waits_in_the_inbox_until_a_checked_reply_answers_it(set
     gate = _gate(settings, embeddings, inbox,
                  extract=[claims(("Bereavement fares must be requested before travel begins.", "bereavement", "procedure"))],
                  judge=[judge(verdict(1, "SUPPORTED", "BRV-002", BEFORE_TRAVEL))])
-    done = review.resolve(gate, held, SUPPORTED_REPLY, reviewer="maria")
+    done = resolve(gate, held, SUPPORTED_REPLY, reviewer="maria")
 
     assert done.outcome == "SPECIALIST_CHECKED" and done.ledger_id == held + 1
     assert done.final_answer.startswith(SUPPORTED_REPLY) and "BRV-002 v1" in done.final_answer
@@ -93,7 +99,7 @@ def test_a_held_decision_waits_in_the_inbox_until_a_checked_reply_answers_it(set
 
     again = _gate(settings, embeddings, inbox)
     with pytest.raises(review.ReviewError) as refused:
-        review.resolve(again, held, SUPPORTED_REPLY)
+        resolve(again, held, SUPPORTED_REPLY)
     assert refused.value.status == 409
 
 
@@ -104,7 +110,7 @@ def test_a_reply_that_contradicts_the_policy_is_never_recorded(settings, embeddi
                  extract=[claims(("The bereavement fare can be requested after travel.", "bereavement", "eligibility"))],
                  judge=[judge(verdict(1, "CONTRADICTED", "BRV-002", "A bereavement fare cannot be applied retroactively"))])
     with pytest.raises(review.ReviewError) as refused:
-        review.resolve(gate, held, CONTRADICTING_REPLY)
+        resolve(gate, held, CONTRADICTING_REPLY)
     assert refused.value.status == 409 and refused.value.check.reason_code == "CONTRADICTED"
     assert "contradicts the policy" in str(refused.value)
     assert _count(settings, inbox) == before  # nothing written: not the reply, not its check
@@ -116,10 +122,10 @@ def test_an_uncovered_reply_needs_the_specialists_note_and_records_it(settings, 
     uncovered = dict(extract=[claims(("A 12-year-old must fly with an adult.", "other", "eligibility"))],
                      judge=[judge(verdict(1, "NOT_COVERED")), judge(verdict(1, "NOT_COVERED"))])
     with pytest.raises(review.ReviewError) as refused:
-        review.resolve(_gate(settings, embeddings, inbox, **uncovered), held, JUDGMENT_REPLY, note="ok")
+        resolve(_gate(settings, embeddings, inbox, **uncovered), held, JUDGMENT_REPLY, note="ok")
     assert refused.value.status == 422 and "note" in str(refused.value)
 
-    done = review.resolve(_gate(settings, embeddings, inbox, **uncovered), held, JUDGMENT_REPLY, note=NOTE)
+    done = resolve(_gate(settings, embeddings, inbox, **uncovered), held, JUDGMENT_REPLY, note=NOTE)
     assert done.outcome == "SPECIALIST_JUDGMENT" and done.final_answer == JUDGMENT_REPLY  # no clause to cite
     with db.connection(settings, "app") as conn:
         assert review.review_of(conn, held, inbox)["note"] == NOTE
@@ -132,7 +138,7 @@ def test_a_specialist_cannot_answer_their_own_check(settings, embeddings, inbox)
                  extract=[claims(("Bereavement fares must be requested before travel begins.", "bereavement", "procedure"))],
                  judge=[judge(verdict(1, "SUPPORTED", "BRV-002", BEFORE_TRAVEL))])
     with pytest.raises(review.ReviewError) as refused:
-        review.resolve(gate, held, SUPPORTED_REPLY, reviewer="maria")
+        resolve(gate, held, SUPPORTED_REPLY, reviewer="maria")
     assert refused.value.status == 403  # SQLSTATE 75054, from Db2
 
 
@@ -141,7 +147,7 @@ def test_only_held_decisions_reach_the_inbox(settings, embeddings, inbox):
     passed = gate.check(GateRequest("Hello", "Hi! How can I help?", MARCH, "AURELIA-CSP"))
     assert passed.decision == "PASS"
     with pytest.raises(review.ReviewError) as refused:
-        review.resolve(_gate(settings, embeddings, inbox), passed.ledger_id, SUPPORTED_REPLY)
+        resolve(_gate(settings, embeddings, inbox), passed.ledger_id, SUPPORTED_REPLY)
     assert refused.value.status == 409
     with pytest.raises(review.ReviewError) as missing:
         review.detail(lambda: db.connect(settings, "app"), embeddings, 999, inbox)
@@ -186,11 +192,12 @@ def test_db2_refuses_what_the_inbox_must_never_record(settings, embeddings, inbo
     extra = dict(extra)
     hashed = extra.pop("hashed_reason", reason)
     shape = {k: extra.pop(k) for k in ("as_of", "version", "bus_start") if k in extra}
-    with db.connection(settings, "app") as conn:
+    with db.connection(settings, "review") as conn:
         with pytest.raises(Exception) as refused:
             _call(conn, inbox, held, _verdicts(held, verdict_, hashed, **shape, **extra), reason, doc)
         conn.rollback()
         assert db.wrap_error(refused.value, "x").sqlstate == sqlstate
+    with db.connection(settings, "app") as conn:  # the queue is the runtime user's to read
         assert review.queue(conn, inbox)["counts"]["open"] == 1
 
 
@@ -214,8 +221,9 @@ def test_a_reviewed_row_can_only_come_through_resolve_escalation(settings, embed
                              "VALUES (?, ?, 'SPECIALIST_CHECKED')", (held, held))
         conn.rollback()
         assert insert.value.sqlstate == "42501"
-        out = _call(conn, inbox, held, _verdicts(held, "SUPPORTED"))
-        conn.commit()
+        with db.connection(settings, "review") as rev:  # a person's reply goes in as the reviewer account
+            out = _call(rev, inbox, held, _verdicts(held, "SUPPORTED"))
+            rev.commit()
         assert str(out[14]).strip() == "SPECIALIST_CHECKED"
         assert ledger.verify_chain(conn, inbox).status == "OK"
     db.use_schema(admin_conn, inbox)
@@ -233,17 +241,17 @@ def test_a_contradiction_the_extractor_missed_is_still_refused(settings, embeddi
     missed = dict(extract=[claims()],
                   judge=[judge(verdict(1, "CONTRADICTED", "BRV-002", "A bereavement fare cannot be applied retroactively"))])
     with pytest.raises(review.ReviewError) as refused:
-        review.resolve(_gate(settings, embeddings, inbox, **missed), held, CONTRADICTING_REPLY)
+        resolve(_gate(settings, embeddings, inbox, **missed), held, CONTRADICTING_REPLY)
     assert refused.value.status == 409 and refused.value.check.reason_code == "CONTRADICTED"
     assert [c.text for c in refused.value.check.claims] == [CONTRADICTING_REPLY]  # judged as written
     # The same sentence, which no clause covers, goes out only with the specialist's note.
     uncovered = dict(extract=[claims()], judge=[judge(verdict(1, "NOT_COVERED"))])
     with pytest.raises(review.ReviewError) as no_note:
-        review.resolve(_gate(settings, embeddings, inbox, **uncovered), held, JUDGMENT_REPLY)
+        resolve(_gate(settings, embeddings, inbox, **uncovered), held, JUDGMENT_REPLY)
     assert no_note.value.status == 422
-    done = review.resolve(_gate(settings, embeddings, inbox, **uncovered), held, JUDGMENT_REPLY, note=NOTE)
+    done = resolve(_gate(settings, embeddings, inbox, **uncovered), held, JUDGMENT_REPLY, note=NOTE)
     assert done.outcome == "SPECIALIST_JUDGMENT"
-    small_talk = review.resolve(_gate(settings, embeddings, inbox, extract=[claims()]),
+    small_talk = resolve(_gate(settings, embeddings, inbox, extract=[claims()]),
                                 _held(settings, embeddings, inbox), "Thank you for your patience. I am sorry for your loss.")
     assert small_talk.outcome == "SPECIALIST_CHECKED"  # nothing a policy decides: nothing to judge, no note needed
 
@@ -258,7 +266,7 @@ def test_a_contradiction_beside_a_supported_claim_is_still_refused(settings, emb
                  judge=[judge(verdict(1, "SUPPORTED", "BAG-001", "The first checked bag costs $35 each way")),
                         judge(verdict(1, "CONTRADICTED", "BRV-002", "A bereavement fare cannot be applied retroactively"))])
     with pytest.raises(review.ReviewError) as refused:
-        review.resolve(gate, held, reply)
+        resolve(gate, held, reply)
     check = refused.value.check
     assert refused.value.status == 409 and check.reason_code == "CONTRADICTED"
     assert [(c.claim_no, c.verdict) for c in check.claims] == [(1, "SUPPORTED"), (2, "CONTRADICTED")]
@@ -269,7 +277,7 @@ def test_the_specialists_note_is_redacted_before_it_is_hashed(settings, embeddin
     uncovered = dict(extract=[claims(("A 12-year-old must fly with an adult.", "other", "eligibility"))],
                      judge=[judge(verdict(1, "NOT_COVERED")), judge(verdict(1, "NOT_COVERED"))])
     note = "Called the customer on 514-555-0199 and at jane.doe@example.com; operations confirmed no escort service."
-    done = review.resolve(_gate(settings, embeddings, inbox, **uncovered), held, JUDGMENT_REPLY, note=note)
+    done = resolve(_gate(settings, embeddings, inbox, **uncovered), held, JUDGMENT_REPLY, note=note)
     with db.connection(settings, "app") as conn:
         stored = review.review_of(conn, held, inbox)["note"]
         hashed = ledger.get_entry(conn, done.ledger_id, inbox)["verdicts"]["review"]["note"]
@@ -289,3 +297,23 @@ def test_the_inbox_shows_each_claims_version_with_the_dates_it_was_in_force(sett
     by_clause = {c["clause_id"]: c for c in d["claims"]}
     assert str(by_clause["BRV-002"]["effective_to"]) == "2026-05-01"
     assert [c["effective_to"] for c in d["claims"] if not c.get("clause_id")] == [None]
+
+
+def test_only_the_reviewer_account_sends_replies_and_decides_notices(settings, admin_conn, inbox):
+    """A person's decisions run as their own Db2 user, apart from the runtime user the model-facing check runs as,
+    as policy changes run as the editor. The reviewer holds two procedures and no table at all."""
+    rows = db.query(admin_conn, "SELECT R.ROUTINENAME, A.GRANTEE FROM SYSCAT.ROUTINEAUTH A JOIN SYSCAT.ROUTINES R "
+                                "ON R.ROUTINESCHEMA = A.SCHEMA AND R.SPECIFICNAME = A.SPECIFICNAME "
+                                "WHERE A.SCHEMA = ? AND A.EXECUTEAUTH IN ('Y', 'G') AND A.GRANTEE IN (?, ?)",
+                    (inbox, settings.asof_app_user.upper(), settings.asof_review_user.upper()))
+    held = {}
+    for routine, grantee in rows:
+        held.setdefault(grantee.strip(), set()).add(routine.strip())
+    assert held[settings.asof_review_user.upper()] == {"RESOLVE_ESCALATION", "DECIDE_NOTICE"}
+    assert not held[settings.asof_app_user.upper()] & {"RESOLVE_ESCALATION", "DECIDE_NOTICE"}
+    with db.connection(settings, "review") as rev:
+        db.use_schema(rev, inbox)
+        for sql in ("SELECT COUNT(*) FROM ANSWER_LEDGER", "SELECT COUNT(*) FROM CORRECTION_NOTICE"):
+            with pytest.raises(db.DatabaseError) as err:
+                db.query(rev, sql)
+            assert err.value.sqlstate == "42501", sql

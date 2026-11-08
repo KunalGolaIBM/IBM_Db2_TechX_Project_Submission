@@ -117,6 +117,7 @@ def refresh_pending_mqts(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -
 
 DEFAULT_ANALYST_USER = "asofread"
 DEFAULT_MART_USER = "asofmart"
+DEFAULT_REVIEW_USER = "asofrev"
 ALREADY_GRANTED = ("42502", "01548")  # role already granted (error on some levels, warning on others)
 
 
@@ -126,14 +127,16 @@ def mart_schema(schema: str = db.SCHEMA) -> str:
 
 
 def apply_grants(conn: ibm_db_dbi.Connection, app_user: str, editor_user: str, schema: str = db.SCHEMA,
-                 analyst_user: str = DEFAULT_ANALYST_USER, mart_user: str = DEFAULT_MART_USER) -> dict[str, int]:
+                 analyst_user: str = DEFAULT_ANALYST_USER, mart_user: str = DEFAULT_MART_USER,
+                 review_user: str = DEFAULT_REVIEW_USER) -> dict[str, int]:
     """Revoke PUBLIC defaults, create the two roles and the mart schema if missing, and grant each user exactly what
     it needs."""
-    for user in (app_user, editor_user, analyst_user, mart_user):
+    for user in (app_user, editor_user, analyst_user, mart_user, review_user):
         if not USER_RE.match(user):
             raise ValueError(f"invalid Db2 user name {user!r}")
     names = {"ASOF_APP_USER": db.ident(app_user), "ASOF_EDITOR_USER": db.ident(editor_user),
-             "ASOF_ANALYST_USER": db.ident(analyst_user), "ASOF_MART_USER": db.ident(mart_user)}
+             "ASOF_ANALYST_USER": db.ident(analyst_user), "ASOF_MART_USER": db.ident(mart_user),
+             "ASOF_REVIEW_USER": db.ident(review_user)}
     mart = mart_schema(schema)
     if not db.query(conn, "SELECT 1 FROM SYSCAT.SCHEMATA WHERE SCHEMANAME = ?", (mart,)):
         db.execute(conn, f"CREATE SCHEMA {db.ident(mart)}")  # owned by the owner; dbt gets CREATEIN on it below
@@ -142,7 +145,7 @@ def apply_grants(conn: ibm_db_dbi.Connection, app_user: str, editor_user: str, s
     for st in load_statements(schema, grants=True):
         if st.kind == "role" and db.query(conn, "SELECT 1 FROM SYSCAT.ROLES WHERE ROLENAME = ?", (st.name,)):
             continue
-        sql = re.sub(r"\bASOF_(APP|EDITOR|ANALYST|MART)_USER\b", lambda m: names[m.group(0)], st.sql)
+        sql = re.sub(r"\bASOF_(APP|EDITOR|ANALYST|MART|REVIEW)_USER\b", lambda m: names[m.group(0)], st.sql)
         sql = re.sub(r"\bASOF_MART_SCHEMA\b", db.ident(mart), sql)
         sql = re.sub(r"\bASOF_TARGET_SCHEMA\b", db.ident(validate_schema(schema)), sql)
         try:

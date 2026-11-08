@@ -71,8 +71,9 @@ def test_reply_input_is_validated(local, body):
 def test_a_sent_reply_returns_its_ledger_row_and_check(local, monkeypatch):
     seen = {}
 
-    def resolve(gate, ledger_id, reply, note, doc_id, reviewer):
+    def resolve(gate, ledger_id, reply, note, doc_id, reviewer, connect=None):
         seen.update(ledger_id=ledger_id, reply=reply, note=note, doc_id=doc_id, reviewer=reviewer)
+        seen["connect"] = connect  # RESOLVE_ESCALATION runs on its own (reviewer) connection, not the runtime one
         return review.Resolved(9, "a" * 64, "SPECIALIST_CHECKED", reply + " refs", _result("ALL_SUPPORTED"))
     monkeypatch.setattr(review, "resolve", resolve)
     r = local.post("/api/reviews/3/resolve", json={"reply": "  Bereavement fares must be requested before travel. "})
@@ -80,6 +81,7 @@ def test_a_sent_reply_returns_its_ledger_row_and_check(local, monkeypatch):
     out = r.json()
     assert (out["escalated_ledger_id"], out["ledger_id"], out["outcome"]) == (3, 9, "SPECIALIST_CHECKED")
     assert out["check"]["sendable"] is True and out["check"]["as_of_date"] == "2026-03-10"
+    assert callable(seen.pop("connect"))
     assert seen == {"ledger_id": 3, "reply": "Bereavement fares must be requested before travel.", "note": None,
                     "doc_id": None, "reviewer": None}  # local mode: no named specialist
 
@@ -97,7 +99,7 @@ def test_a_refused_reply_comes_back_with_the_check_that_refused_it(local, monkey
 
 def test_only_a_reviewer_reaches_the_inbox(users, monkeypatch):
     monkeypatch.setattr(review, "queue", lambda conn, schema, limit: {"open": [], "answered": [], "counts": {}})
-    monkeypatch.setattr(review, "resolve", lambda gate, ledger_id, reply, note, doc_id, reviewer: review.Resolved(
+    monkeypatch.setattr(review, "resolve", lambda gate, ledger_id, reply, note, doc_id, reviewer, connect=None: review.Resolved(
         9, "a" * 64, "SPECIALIST_CHECKED", reply, _result("ALL_SUPPORTED")) if reviewer == "rita" else None)
     assert users.get("/api/reviews", headers=bearer(AUDITOR)).status_code == 403
     assert users.get("/api/reviews", headers=bearer(ALL)).status_code == 403  # checker, auditor and editor: not reviewer

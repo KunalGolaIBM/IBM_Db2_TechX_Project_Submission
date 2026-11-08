@@ -62,6 +62,12 @@ def stale(admin_conn, embeddings, settings):
     schema.drop(admin_conn, name)
 
 
+def _decide(settings, notice_id, approve, user, name):
+    """A specialist's decision, as the API makes it: DECIDE_NOTICE as the reviewer account."""
+    with db.connection(settings, "review") as rev:
+        notices.decide(rev, notice_id, approve, user, name)
+
+
 def _gate(settings, embeddings, name, **queues) -> Gate:
     return Gate(ScriptedLLM(**queues), embeddings, lambda: db.connect(settings, "app"), name)
 
@@ -94,11 +100,11 @@ def test_the_agent_drafts_a_checked_notice_only_for_the_answer_that_went_stale(s
     assert impactagent.draft_notices(_gate(settings, embeddings, name), "PET-001") == []
 
     with db.connection(settings, "app") as conn:
-        notices.decide(conn, n["notice_id"], True, "rita", name)
+        _decide(settings, n["notice_id"], True, "rita", name)
         [sent] = notices.list_notices(conn, "PET-001", "SENT", name)
         assert sent["decided_by_user"] == "rita" and sent["decided_at"] is not None
         with pytest.raises(db.DatabaseError) as again:
-            notices.decide(conn, n["notice_id"], False, "rita", name)
+            _decide(settings, n["notice_id"], False, "rita", name)
         assert again.value.sqlstate == "75063"
 
 
@@ -131,7 +137,7 @@ def test_db2_checks_every_claim_made_about_a_notice(settings, stale):
         with pytest.raises(db.DatabaseError) as twice:  # one open notice per answer and version
             _add(conn, name, ids["december"], check=good_check)
         assert twice.value.sqlstate == "23505"
-        notices.decide(conn, first, False, None, name)
+        _decide(settings, first, False, None, name)
         assert _add(conn, name, ids["december"], check=good_check) > first  # a rejected draft makes way
 
 
@@ -140,9 +146,9 @@ def test_a_held_correction_can_be_rejected_but_never_sent(settings, stale):
     with db.connection(settings, "app") as conn:
         held = _add(conn, name, ids["december"], decision="ESCALATED")
         with pytest.raises(db.DatabaseError) as refused:
-            notices.decide(conn, held, True, None, name)
+            _decide(settings, held, True, None, name)
         assert refused.value.sqlstate == "75064"
-        notices.decide(conn, held, False, None, name)
+        _decide(settings, held, False, None, name)
         assert notices.list_notices(conn, None, "REJECTED", name)[0]["notice_id"] == held
 
 
@@ -156,7 +162,7 @@ def test_a_notice_is_not_sent_if_the_policy_changed_again_since_it_was_drafted(s
         policy.apply_change(editor, PET_V3, embeddings, name)
     with db.connection(settings, "app") as conn:
         with pytest.raises(db.DatabaseError) as refused:
-            notices.decide(conn, pending, True, None, name)
+            _decide(settings, pending, True, None, name)
         assert refused.value.sqlstate == "75065"
 
 

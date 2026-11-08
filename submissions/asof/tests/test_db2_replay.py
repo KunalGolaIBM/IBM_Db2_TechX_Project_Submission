@@ -87,7 +87,8 @@ def test_every_built_in_specialist_reply_replays_to_its_recorded_outcome(replaye
     for sc in replay.review_scenarios():
         held = replayed.gate.check(GateRequest(sc["question"], sc["draft"], date.fromisoformat(sc["as_of"]),
                                                sc["doc_id"], "chat"))
-        out = review.resolve(replayed.gate, held.ledger_id, sc["reply"], sc["note"], reviewer="specialist-1")
+        out = review.resolve(replayed.gate, held.ledger_id, sc["reply"], sc["note"], reviewer="specialist-1",
+                             connect=lambda: db.connect(settings, "review"))
         got.append({"question": sc["question"], "held": held.reason_code, "outcome": out.outcome, "refused": None})
     assert got == recorded
     conn = db.connect(settings, "app")

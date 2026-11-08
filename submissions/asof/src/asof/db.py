@@ -32,7 +32,7 @@ from .config import ConfigError, Settings
 
 log = logging.getLogger(__name__)
 
-Role = Literal["admin", "app", "editor", "analyst", "mart"]
+Role = Literal["admin", "app", "editor", "review", "analyst", "mart"]
 SCHEMA = "ASOF"
 
 IDENT_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,127}$")
@@ -89,6 +89,9 @@ def _credentials(settings: Settings, role: Role) -> tuple[str, str]:
     if role == "editor":
         settings.require("asof_editor_password")
         return settings.asof_editor_user, settings.asof_editor_password.get_secret_value()  # type: ignore[union-attr]
+    if role == "review":
+        settings.require("asof_review_password")
+        return settings.asof_review_user, settings.asof_review_password.get_secret_value()  # type: ignore[union-attr]
     if role == "analyst":
         settings.require("asof_analyst_password")
         return settings.asof_analyst_user, settings.asof_analyst_password.get_secret_value()  # type: ignore[union-attr]
