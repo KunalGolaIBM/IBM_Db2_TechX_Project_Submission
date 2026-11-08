@@ -22,7 +22,7 @@
   },
   "ibm_db2": {
     "edition": "IBM Db2 Community Edition 12.1.5.0 (Docker)",
-    "connector": "ibm_db / ibm_db_dbi (parameter markers only), LangChain langchain-db2 (DB2VS), SQLAlchemy with ibm_db_sa, IBM's db2-sqlglot-dialect (SQLGlot), IBM's ibm-dbt-db2 adapter, the Apache Airflow IBM Db2 provider, IBM's lfx-ibm Langflow bundle",
+    "connector": "ibm_db / ibm_db_dbi (parameter markers only), LangChain langchain-db2 (DB2VS), SQLAlchemy with ibm_db_sa, IBM's db2-sqlglot-dialect (SQLGlot), IBM's ibm-dbt-db2 adapter, the Apache Airflow IBM Db2 provider, IBM's lfx-ibm Langflow bundle, langchain-ibm (IBM watsonx.ai, optional)",
     "features_used": [
       "Bitemporal tables (BUSINESS_TIME and SYSTEM_TIME periods, history table)",
       "FOR BUSINESS_TIME AS OF and FOR SYSTEM_TIME AS OF queries (as-of lookup and replay)",
@@ -53,7 +53,9 @@
       "Apache Airflow DAG with the IBM Db2 provider: nightly VERIFY_CHAIN, system-time detection of changed clauses, CHANGE_IMPACT per clause as mapped tasks",
       "SET CURRENT LOCK TIMEOUT (bound parameter) for the runtime users, so a held ledger lock fails a check closed in seconds",
       "TLS client connections (SECURITY=SSL, SSLServerCertificate pinning) for a remote Db2, tested against a GSKit-configured TLS listener (SSL_SVR_KEYDB, SSL_SVCENAME, DB2COMM=SSL,TCPIP) locally and in CI",
-      "Per-user API access in an API_USER table holding only SHA-256 token hashes, with role flags and check constraints; the runtime user may only SELECT it"
+      "Per-user API access in an API_USER table holding only SHA-256 token hashes, with role flags and check constraints; the runtime user may only SELECT it",
+      "Policy intake: an uploaded PDF stored as a BLOB with a SHA-256 computed by Db2 (HASH over the BLOB) that must match the application's, proposals in POLICY_DRAFT / POLICY_DRAFT_ITEM written only by editor procedures (ADD_POLICY_DRAFT, ADD_POLICY_DRAFT_ITEM, DECIDE_POLICY_DRAFT, APPLY_DRAFT_ITEM), approval applied through APPLY_POLICY_CHANGE (nested CALL) in one transaction, four-eyes enforced in SQL PL, provenance in each version's change note",
+      "CREATE EXTERNAL MODEL ... PROVIDER WATSONX (IBM watsonx.ai) as an option for Db2's own embedder, with the key passed as a validated literal and never stored in plain text in the catalog"
     ]
   },
   "tech_stack": {
@@ -63,18 +65,21 @@
     ],
     "frameworks": [
       "Apache Airflow",
+      "dbt",
       "FastAPI",
       "LangChain",
-      "LangGraph",
       "Langflow",
+      "LangGraph",
+      "Model Context Protocol (MCP) SDK",
       "Pydantic",
+      "pypdf",
       "SQLAlchemy",
-      "SQLGlot",
-      "dbt"
+      "SQLGlot"
     ],
     "ai_models": [
       "google/gemini-3.1-flash-lite via OpenRouter (default)",
       "qwen2.5:7b-instruct via Ollama (local, no key)",
+      "IBM watsonx.ai via langchain-ibm (optional; ibm/granite-4-h-small by default)",
       "sentence-transformers/all-MiniLM-L6-v2 (local embeddings)",
       "Replay mode: outputs of the default model recorded for the built-in scenarios, so the full check runs with no key (anything unrecorded fails closed)"
     ]
