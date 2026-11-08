@@ -160,3 +160,61 @@ def test_unit_inside_the_key_is_read(claim, clause, status):
 ])
 def test_situation_conflicts(claim, question, conflict):
     assert bool(situation_conflicts(claim, question)) == conflict
+
+
+# Lists: eligible_relations (BRV-001) and accepted_documents (BRV-003). Wording here differs from list-test's.
+@pytest.mark.parametrize("claim", [
+    "Your sister-in-law is treated as immediate family, so the bereavement fare applies.",
+    "Uncles qualify as immediate family members.",
+    "Since she was your godmother, you are eligible for the bereavement discount.",
+    "Your husband's father counts as immediate family for this fare.",
+    "Bereavement fares also cover a boyfriend or girlfriend.",
+])
+def test_a_relation_the_list_leaves_out_cannot_qualify(claim):
+    r = check(claim, rc("BRV-001"))
+    assert r.status == "MISMATCH" and "eligible_relations" in r.details[0]
+
+
+@pytest.mark.parametrize("claim", [
+    "A brother counts as immediate family.",
+    "Your late wife qualifies you for the bereavement fare.",
+    "Grandchildren are included in immediate family.",
+    "A stepdaughter is considered immediate family.",
+    "Nephews are not included, so the fare does not apply.",
+    "Friends do not qualify, however close.",
+])
+def test_listed_relations_and_correct_exclusions_agree_with_the_list(claim):
+    assert check(claim, rc("BRV-001")).status == "MATCH"
+
+
+def test_saying_a_listed_relation_does_not_qualify_is_a_mismatch():
+    r = check("A grandparent does not count as immediate family.", rc("BRV-001"))
+    assert r.status == "MISMATCH" and "does not qualify" in r.details[0]
+
+
+@pytest.mark.parametrize(("claim", "status"), [
+    ("A memorial card from the service is accepted as proof.", "MISMATCH"),
+    ("Just send a social media post announcing the death.", "MISMATCH"),
+    ("An email from a family member is sufficient documentation.", "MISMATCH"),
+    ("A letter from the funeral home is accepted.", "MATCH"),
+    ("Please provide a death certificate.", "MATCH"),
+    ("A doctor's letter works as documentation.", "MATCH"),
+    ("An obituary is not accepted as documentation.", "MATCH"),
+])
+def test_documents_are_checked_against_the_accepted_list(claim, status):
+    assert check(claim, rc("BRV-003")).status == status
+
+
+@pytest.mark.parametrize("claim", [
+    "Bereavement fares are for customers travelling because of a death in the immediate family.",  # names no relation
+    "Your mother must give us the name of the deceased.",             # a relation, but nothing about qualifying
+    "Call us and your daughter's booking will be updated.",
+    "The bereavement fare is 40% off the lowest Economy fare.",
+])
+def test_claims_that_do_not_say_who_qualifies_are_left_alone(claim):
+    assert check(claim, rc("BRV-001")).status != "MISMATCH"
+
+
+def test_list_checks_only_apply_to_the_clause_that_has_the_list():
+    # BRV-002 has no relation list: a relation claim against it is not this check's business.
+    assert check("A cousin qualifies for the bereavement fare.", rc("BRV-002")).status == "NOT_APPLICABLE"

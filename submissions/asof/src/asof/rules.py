@@ -13,6 +13,8 @@ How RULE_JSON keys are read:
 - booleans are permissions, matched against a small lexicon of how claims express them
 - "applies_when": {"delay_hours": [lo, hi]} marks the situation a tier covers, so a claim's
   "7 hours late" picks the tier instead of being compared as a policy value
+- lists (eligible_relations, accepted_documents) are checked for membership: a claim that something the list
+  leaves out qualifies, or that something it names does not, is a mismatch
 """
 
 from __future__ import annotations
@@ -203,6 +205,98 @@ def asserted_flag(claim: str, key: str) -> bool | None:
     return None
 
 
+# List parameters: what each one enumerates, written as the terms a claim may use, each mapped to the list's own
+# entry. A term mapped to something the clause's list does not contain is outside it ("mother-in-law" -> "in-law").
+# Only clear terms are here; ambiguous ones ("partner", "half-brother", "great-grandparent") are left to the judge.
+_IN_LAW = "in-law"
+_LIST_TERMS: dict[str, dict[str, str]] = {
+    "eligible_relations": {
+        **dict.fromkeys(("spouse", "husband", "wife"), "spouse"),
+        "common-law partner": "common-law partner",
+        **dict.fromkeys(("parent", "mother", "father", "mom", "mum", "dad"), "parent"),
+        **dict.fromkeys(("step-parent", "stepparent", "stepmother", "stepfather", "step-mother", "step-father"),
+                        "step-parent"),
+        **dict.fromkeys(("child", "children", "son", "daughter"), "child"),
+        **dict.fromkeys(("step-child", "stepchild", "stepchildren", "stepson", "stepdaughter"), "step-child"),
+        **dict.fromkeys(("sibling", "brother", "sister"), "sibling"),
+        **dict.fromkeys(("grandparent", "grandmother", "grandfather", "grandma", "grandpa"), "grandparent"),
+        **dict.fromkeys(("grandchild", "grandchildren", "grandson", "granddaughter"), "grandchild"),
+        **dict.fromkeys(("legal guardian", "guardian"), "legal guardian"),
+        **dict.fromkeys(("mother-in-law", "father-in-law", "son-in-law", "daughter-in-law", "brother-in-law",
+                         "sister-in-law", "in-law", "parents-in-law"), _IN_LAW),
+        **{f"{whose}'s {rel}": _IN_LAW for whose in ("partner", "spouse", "wife", "husband", "fiance", "fiancee")
+           for rel in ("mother", "father", "parent", "parents", "brother", "sister")},
+        **{t: t for t in ("aunt", "uncle", "niece", "nephew", "cousin", "friend", "best friend", "fiance", "fiancee",
+                          "fiancé", "fiancée", "boyfriend", "girlfriend", "coworker", "co-worker", "colleague",
+                          "godmother", "godfather", "godparent", "neighbor", "neighbour")},
+    },
+    "accepted_documents": {
+        "death certificate": "death certificate",
+        **dict.fromkeys(("physician letter", "physician's letter", "doctor's letter", "doctor's note",
+                         "letter from the attending physician", "letter from the physician", "letter from a physician",
+                         "letter from her attending physician", "letter from his attending physician",
+                         "letter from their attending physician", "letter from your attending physician",
+                         "letter from the doctor"), "physician letter"),
+        **dict.fromkeys(("funeral home letter", "letter from the funeral home", "letter from a funeral home"),
+                        "funeral home letter"),
+        **{t: t for t in ("obituary", "death notice", "newspaper notice", "funeral program", "memorial card",
+                          "social media post", "note from a family member", "letter from a family member",
+                          "statement from a family member", "family member's note", "family member's letter",
+                          "email from a family member")},
+    },
+}
+_LIST_PATTERN = {key: re.compile(r"\b(" + "|".join(re.escape(t) for t in sorted(terms, key=len, reverse=True))
+                                 + r")(?:e?s)?\b", re.I) for key, terms in _LIST_TERMS.items()}
+# A segment of the claim that says the thing qualifies, is accepted, or is covered.
+_LIST_CUES = {
+    "eligible_relations": re.compile(r"\b(count(?:s|ed)?\s+as|qualif\w*|eligible|considered|included|includes?|"
+                                     r"cover(?:s|ed)?|immediate family|appl(?:y|ies))\b", re.I),
+    "accepted_documents": re.compile(r"\b(accept\w*|enough|suffic\w*|works?|valid|qualif\w*|send|provide|submit|"
+                                     r"use|proof|documentation)\b", re.I),
+}
+
+
+def _list_segments(claim: str, cue: re.Pattern) -> list[tuple[str, bool]]:
+    """The parts of a claim that say something qualifies, each with whether it is negated. A part between commas
+    holding the cue counts on its own. A sentence whose cue and term sit in different parts ("Since she was your
+    godmother, you are eligible") counts as a whole, but only when nothing in it is negated."""
+    out: list[tuple[str, bool]] = []
+    for sentence in re.split(r"[;.!?]|\bbut\b|\bhowever\b", claim):
+        parts = re.split(r",\s", sentence)
+        cued = [p for p in parts if cue.search(p)]
+        out += [(p, bool(_NEGATION.search(p))) for p in cued]
+        rest = " ".join(p for p in parts if not cue.search(p))
+        if cued and rest and not _NEGATION.search(sentence):
+            out.append((rest, False))
+    return out
+
+
+def list_checks(claim: str, clause: RuleClause) -> tuple[list[Status], list[str]]:
+    """Membership in a list parameter (eligible_relations, accepted_documents). A claim that something the list
+    leaves out qualifies, or that something it names does not, is a MISMATCH; agreeing with the list is a MATCH.
+    Only a segment that says the thing qualifies or is accepted counts, and its negation is read from that segment."""
+    statuses: list[Status] = []
+    details: list[str] = []
+    for key, listed in clause.rule.items():
+        if key not in _LIST_TERMS or not isinstance(listed, list):
+            continue
+        members = {str(x).casefold() for x in listed}
+        for segment, negated in _list_segments(claim, _LIST_CUES[key]):
+            for m in _LIST_PATTERN[key].finditer(segment):
+                canonical = _LIST_TERMS[key][m.group(1).casefold()]
+                inside = canonical.casefold() in members
+                if inside != negated:
+                    statuses.append("MATCH")
+                elif inside:
+                    statuses.append("MISMATCH")
+                    details.append(f"claim says {m.group(0)} does not qualify; {clause.clause_id} {key} includes {canonical}")
+                else:
+                    statuses.append("MISMATCH")
+                    details.append(f"claim says {m.group(0)} qualifies; {clause.clause_id} {key} lists only "
+                                   + ", ".join(str(x) for x in listed))
+    return statuses, details
+
+
 def _situation(rule: dict[str, Any]) -> dict[str, tuple[float, float | None]]:
     out = {}
     for key, bounds in (rule.get("applies_when") or {}).items():
@@ -325,6 +419,11 @@ def check(claim: str, clause: RuleClause, candidates: Sequence[RuleClause] = (),
         else:
             statuses.append("MISMATCH")
             details.append(f"claim implies {key}={str(said).lower()}; {clause.clause_id} says {str(expected).lower()}")
+
+    # 4. Lists: membership in eligible_relations, accepted_documents.
+    list_statuses, list_details = list_checks(claim, clause)
+    statuses += list_statuses
+    details += list_details
 
     if "MISMATCH" in statuses:
         return RuleResult("MISMATCH", tuple(details))
