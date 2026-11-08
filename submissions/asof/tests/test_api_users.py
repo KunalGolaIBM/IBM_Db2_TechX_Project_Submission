@@ -99,6 +99,9 @@ def test_the_rate_limit_counts_per_user_not_per_address(monkeypatch):
     ("GET", "/api/ledger", "auditor"), ("GET", "/api/ledger/4/evidence", "auditor"), ("POST", "/api/ledger/ask", "auditor"),
     ("POST", "/api/ledger/receipt", "auditor"), ("GET", "/api/chain/anchors", "auditor"), ("GET", "/api/analytics", "auditor"),
     ("GET", "/api/policy/timeline", None), ("GET", "/api/whoami", None),
+    ("POST", "/api/policy/drafts", "editor"), ("POST", "/api/policy/drafts/7/decision", "editor"),
+    ("GET", "/api/policy/drafts", None), ("GET", "/api/policy/drafts/7/source", None),
+    ("POST", "/api/policy/drafts/7", "auditor"),   # no such editor route: closed, not open
     ("GET", "/api/some-future-route", "auditor"),   # not open by accident
 ])
 def test_every_route_needs_its_role(method, path, role):

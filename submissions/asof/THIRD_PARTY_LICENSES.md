@@ -36,6 +36,7 @@ It uses the following third-party software. No third-party code is copied into t
 | python-dotenv | 1.2.4 | BSD-3-Clause |
 | jinja2 | 3.1.6 | BSD-3-Clause |
 | httpx | 0.28.1 | BSD-3-Clause |
+| pypdf (policy intake: text from uploaded PDFs) | 6.21.4 | BSD-3-Clause |
 | pytest | 9.2.0 | MIT |
 
 `ibm_db` downloads the IBM Data Server Driver (clidriver) at install time, which is distributed under IBM's own licence terms.

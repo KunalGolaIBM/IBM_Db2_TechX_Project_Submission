@@ -105,7 +105,7 @@ const ICONS = {
 
 // ---------- shell ----------
 const view = $("#view");
-const routes = { playground: Playground, timeline: Timeline, ledger: Ledger, ask: Ask, impact: Impact, analytics: Analytics };
+const routes = { playground: Playground, timeline: Timeline, intake: Intake, ledger: Ledger, ask: Ask, impact: Impact, analytics: Analytics };
 async function route() {
   const [name, arg] = location.hash.replace(/^#\/?/, "").split("/");
   const key = routes[name] ? name : "playground";
@@ -125,7 +125,7 @@ async function status() {
     const { body } = await api("/healthz");
     mount($("#status"), html`
       <span class="tag ${body.db2 === "ok" ? "" : "warn"}" title="IBM Db2 connection as the least-privilege user">Db2 ${body.db2 === "ok" ? "connected" : "unavailable"}</span>
-      <span class="tag ${body.llm_ready ? (body.replay ? "warn" : "brand") : "warn"}" title="LLM provider and model">${body.llm_ready ? (body.replay ? "replay: recorded model outputs" : body.llm) : "no model configured"}</span>`);
+      <span class="tag ${body.llm_ready ? (body.replay ? "warn" : "brand") : "warn"}" title="LLM provider and model: ${body.llm}">${body.llm_ready ? (body.replay ? "replay: recorded model outputs" : String(body.llm).split("/").pop()) : "no model configured"}</span>`);
     health.replay = Boolean(body.replay);
     if (body.replay && !$("#replay-mode")) {
       const bar = document.createElement("div");
@@ -824,6 +824,219 @@ document.addEventListener("click", async (e) => {
     if (el) mount(el, html`<div class="error-box">${err.message}</div>${suggestionsView()}`);
   }
 });
+
+// ---------- Policy intake ----------
+// A policy PDF becomes a draft: the model proposes clause versions, code checks each one against the document,
+// and the editor accepts what goes into force (DECIDE_POLICY_DRAFT, then APPLY_DRAFT_ITEM -> APPLY_POLICY_CHANGE).
+const itk = { doc: AIRLINE, drafts: [], draft: null, accept: new Set(), result: null, busy: false };
+async function sendPdf(path, blob) {
+  const headers = { "content-type": "application/pdf" };
+  const token = savedToken();
+  if (token) headers.authorization = `Bearer ${token}`;
+  const res = await fetch(path, { method: "POST", body: blob, headers });
+  if (res.status === 401) { askToken(); throw new Error("This AsOf server needs an API token: enter it at the top of the page."); }
+  let body = null;
+  try { body = await res.json(); } catch { /* empty body */ }
+  if (!res.ok) throw new Error(errorText(body, res.status));
+  return body;
+}
+async function download(path, filename) {
+  const headers = {};
+  const token = savedToken();
+  if (token) headers.authorization = `Bearer ${token}`;
+  const res = await fetch(path, { headers });
+  if (!res.ok) throw new Error(`Download failed (${res.status})`);
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+// Word-level diff (longest common subsequence) between the version in force and the proposal.
+function wordDiff(before, after) {
+  const a = String(before || "").split(/(\s+)/), b = String(after || "").split(/(\s+)/);
+  const n = a.length, m = b.length, dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const outp = [];
+  let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (a[i] === b[j]) { outp.push(html`${a[i]}`); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) { if (a[i].trim()) outp.push(html`<del>${a[i]}</del>`); else outp.push(html`${a[i]}`); i++; }
+    else { if (b[j].trim()) outp.push(html`<ins>${b[j]}</ins>`); else outp.push(html`${b[j]}`); j++; }
+  }
+  while (i < n) { if (a[i].trim()) outp.push(html`<del>${a[i]}</del>`); i++; }
+  while (j < m) { outp.push(b[j].trim() ? html`<ins>${b[j]}</ins>` : html`${b[j]}`); j++; }
+  return outp;
+}
+const CHECK_ICON = { pass: "✓", fail: "✕", warn: "!" };
+const KIND_LABEL = { CHANGE: "new version", NEW: "new clause", UNCHANGED: "unchanged" };
+function ruleTable(item) {
+  const now = (item.current && item.current.rule) || {};
+  const keys = [...new Set([...Object.keys(now), ...Object.keys(item.rule || {})])];
+  if (!keys.length) return html`<p class="small muted">No checkable parameters.</p>`;
+  const show = (v) => (v === undefined ? "–" : Array.isArray(v) ? v.join(", ") : String(v));
+  return html`<table class="rule-diff"><thead><tr><th>Parameter</th>${item.kind === "NEW" ? "" : html`<th>Now</th>`}<th>Proposed</th></tr></thead><tbody>
+    ${keys.map((k) => { const changed = JSON.stringify(now[k]) !== JSON.stringify((item.rule || {})[k]);
+      return html`<tr class="${changed && item.kind !== "NEW" ? "changed" : ""}"><td><code>${k}</code></td>${item.kind === "NEW" ? "" : html`<td>${show(now[k])}</td>`}<td>${show((item.rule || {})[k])}</td></tr>`; })}
+  </tbody></table>`;
+}
+function itemCard(item, decided) {
+  const can = !decided && !item.blocked && item.kind !== "UNCHANGED";
+  const fails = item.checks.filter((c) => c.status === "fail").length;
+  return html`<div class="itk-item ${item.blocked ? "blocked" : ""} ${item.kind === "UNCHANGED" ? "same" : ""}">
+    <div class="itk-head">
+      <label class="itk-pick"><input type="checkbox" data-item="${item.item_no}" ${can ? "" : raw("disabled")} ${itk.accept.has(item.item_no) ? raw("checked") : ""}
+        aria-label="Accept item ${item.item_no}"></label>
+      <span class="pill ${item.kind === "NEW" ? "pass" : item.kind === "CHANGE" ? "corrected" : "neutral"}">${KIND_LABEL[item.kind]}</span>
+      <b class="mono">${item.clause_id}</b><span class="itk-title">${item.title}</span>
+      <span class="when">from ${fmtDate(item.effective_from)}${item.effective_to ? ` until ${fmtDate(item.effective_to)}` : ", open-ended"}${item.source_page ? ` · page ${item.source_page}` : ""}</span>
+      ${decided ? pill(item.status) : item.blocked ? html`<span class="pill escalated">blocked: ${fails} check${fails === 1 ? "" : "s"} failed</span>` : ""}
+      ${item.applied_version ? html`<span class="pill pass">in force as ${item.applied_version}</span>` : ""}
+    </div>
+    ${item.kind === "CHANGE" && item.current ? html`<div class="itk-diff"><div class="eyebrow">Text: ${item.current.version} in force on that date → proposed</div><p class="diff">${wordDiff(item.current.text, item.clause_text)}</p></div>`
+      : html`<div class="itk-diff"><div class="eyebrow">${item.kind === "NEW" ? "Proposed text" : `Same text as ${item.current ? item.current.version : "the version in force"}`}</div><p class="diff">${item.clause_text}</p></div>`}
+    <div class="itk-grid">
+      <div>${ruleTable(item)}</div>
+      <ul class="checks">${item.checks.map((c) => html`<li class="${c.status}"><span class="ci">${CHECK_ICON[c.status]}</span><span><b>${c.check}</b> ${c.detail}</span></li>`)}</ul>
+    </div>
+  </div>`;
+}
+function draftView(d) {
+  const decided = d.status !== "PENDING";
+  const appliable = d.items_detail.filter((i) => !i.blocked && i.kind !== "UNCHANGED").length;
+  return html`
+    <div class="card">
+      <div class="card-head"><h2>Draft ${d.draft_id}: ${d.source_name}</h2>${pill(d.status === "APPLIED" ? "approved" : d.status)}</div>
+      <dl class="kv">
+        <dt>Document</dt><dd>${DOC_NAME[d.doc_id] || d.doc_id} · ${d.pages} page${d.pages === 1 ? "" : "s"} · <a href="#" id="itk-src">download the file from Db2</a></dd>
+        <dt>SHA-256</dt><dd class="hash" title="computed by Db2 over the stored file (ADD_POLICY_DRAFT)">${d.sha256}</dd>
+        <dt>Proposed by</dt><dd>${d.extracted_by}</dd>
+        <dt>Uploaded</dt><dd>${fmtTs(d.created_at)}${d.uploaded_by ? ` by ${d.uploaded_by}` : ""}</dd>
+        ${decided ? html`<dt>Decided</dt><dd>${fmtTs(d.decided_at)} by ${d.decided_by_user || d.decided_by}</dd>` : ""}
+      </dl>
+    </div>
+    ${itk.result ? resultBanner(itk.result) : ""}
+    <div class="card"><div class="card-head"><h2>Proposed clause versions</h2><span class="sub">checked against the document by code; nothing is in force until approved</span></div>
+      ${d.items_detail.map((i) => itemCard(i, decided))}
+      ${decided ? "" : html`<div class="itk-actions">
+        <button class="btn" id="itk-approve" type="button" ${appliable ? "" : raw("disabled")}>Approve ${itk.accept.size} selected and apply as asofedit</button>
+        <button class="btn ghost" id="itk-preview" type="button" title="Db2 applies the draft and runs CHANGE_IMPACT in one transaction, then rolls it back">Preview impact</button>
+        <button class="btn ghost" id="itk-reject" type="button">Reject draft</button>
+        <span class="small muted">Approval runs DECIDE_POLICY_DRAFT, then APPLY_DRAFT_ITEM for each accepted item (a changed clause goes through APPLY_POLICY_CHANGE), in one transaction.</span>
+      </div>`}
+    </div>`;
+}
+function resultBanner(r) {
+  const flagged = r.applied.reduce((n, a) => n + a.published_flagged, 0);
+  const versions = r.applied.map((a) => `${a.clause_id} ${a.version}`).join(", ");
+  if (r.preview) {
+    const stale = Object.values(r.impact || {}).flat().filter((x) => x.kind === "ANSWER" && x.status === "STALE").length;
+    return html`<div class="banner fix"><strong>Preview only: nothing was saved.</strong><span>Db2 applied ${versions}, ran CHANGE_IMPACT and rolled back.
+      ${stale} released answer${stale === 1 ? "" : "s"} would become stale; ${flagged} help-centre answer${flagged === 1 ? "" : "s"} would need review.</span></div>`;
+  }
+  if (!r.approved) return html`<div class="banner"><strong>Draft rejected.</strong><span>Nothing changed in the policy.</span></div>`;
+  return html`<div class="banner ok"><strong>Approved and in force: ${versions}.</strong><span>${flagged} help-centre answer${flagged === 1 ? " was" : "s were"} flagged for review.
+    Each new version's change note names this draft and the file's SHA-256. <a href="#/timeline">See the timeline →</a> · <a href="#/impact">Change impact →</a></span></div>`;
+}
+async function Intake(arg) {
+  itk.drafts = (await api("/api/policy/drafts")).body || [];
+  const id = Number(arg) || null;
+  if (id && (!itk.draft || itk.draft.draft_id !== id)) {
+    itk.draft = (await api(`/api/policy/drafts/${id}`)).body; itk.result = null;
+    itk.accept = new Set(itk.draft.status === "PENDING" ? itk.draft.items_detail.filter((i) => !i.blocked && i.kind !== "UNCHANGED").map((i) => i.item_no) : []);
+  }
+  if (!id) itk.draft = null;
+  renderIntake();
+}
+function renderIntake() {
+  mount(view, html`
+    <div class="page-head"><div><h1>Policy intake</h1>
+      <p>Upload a policy document as the editor. The model proposes clause versions; code checks every one against the document: the clause text must appear word for word, the effective date must be quoted, and every rule value must be stated in the text. You choose what goes into force. The file is stored in Db2 with the SHA-256 Db2 computed, and every version approved from it names the draft it came from.</p></div></div>
+    <div class="tl-layout itk-layout">
+      <div class="stack">
+        <form class="card" id="itk-form" autocomplete="off">
+          <div class="field"><label for="itk-doc">Policy document</label>
+            <select id="itk-doc">${Object.entries(DOC_NAME).map(([k, v]) => html`<option value="${k}" ${k === itk.doc ? raw("selected") : ""}>${v} (${k})</option>`)}</select></div>
+          <div class="field"><label for="itk-file">PDF file</label><input id="itk-file" type="file" accept="application/pdf,.pdf">
+            <div class="hint">PDF with a text layer, at most 2 MB and 20 pages.${health.replay ? " Replay mode has a recorded extraction only for the sample." : ""}</div></div>
+          <div class="field row"><button class="btn grow" id="itk-upload" type="submit">Extract draft</button>
+            <button class="btn ghost grow" id="itk-sample" type="button" title="A fictional revision of the Aurelia Air policy, effective 1 February 2027">Use the sample</button></div>
+          <div id="itk-status" aria-live="polite"></div>
+        </form>
+        <div class="card"><div class="card-head"><h2>Drafts</h2><span class="sub">POLICY_DRAFT</span></div>
+          ${itk.drafts.length ? html`<table><tbody>${itk.drafts.map((d) => html`<tr class="click ${itk.draft && itk.draft.draft_id === d.draft_id ? "on" : ""}" data-draft="${d.draft_id}">
+            <td>#${d.draft_id}</td><td><div class="itk-name">${d.source_name}</div><div class="small muted">${pill(d.status === "APPLIED" ? "approved" : d.status)} ${fmtTs(d.created_at)} · ${d.items} item${d.items === 1 ? "" : "s"}${d.blocked_items ? `, ${d.blocked_items} blocked` : ""}</div></td></tr>`)}</tbody></table>` : html`<p class="muted">No drafts yet. Try the sample revision.</p>`}
+        </div>
+      </div>
+      <section id="itk-draft">${itk.draft ? draftView(itk.draft) : html`<div class="empty"><h3>No draft open</h3>
+        <p>Upload a policy PDF, or use the sample: a fictional Aurelia Air revision that raises the first bag fee, adds a sports equipment clause, extends travel credits from 1 March 2027 and restates one clause unchanged.</p></div>`}</section>
+    </div>`);
+  wireIntake();
+}
+function wireIntake() {
+  $("#itk-doc").addEventListener("change", (e) => { itk.doc = e.target.value; });
+  const run = async (blob, name) => {
+    if (itk.busy) return;
+    itk.busy = true;
+    $("#itk-upload").disabled = true; $("#itk-sample").disabled = true;
+    mount($("#itk-status"), html`<div class="loading small"><div class="spinner"></div>Reading the PDF, proposing clause versions, checking each one against the document...</div>`);
+    try {
+      const body = await sendPdf(`/api/policy/drafts?doc_id=${encodeURIComponent(itk.doc)}&name=${encodeURIComponent(name)}`, blob);
+      itk.draft = body.draft; itk.result = null;
+      itk.accept = new Set(body.draft.items_detail.filter((i) => !i.blocked && i.kind !== "UNCHANGED").map((i) => i.item_no));
+      location.hash = `#/intake/${body.draft.draft_id}`;
+      if (body.discarded && body.discarded.length) {
+        setTimeout(() => mount($("#itk-status"), html`<div class="banner fix"><strong>${body.discarded.length} section${body.discarded.length === 1 ? " was" : "s were"} left out.</strong><span>${body.discarded.map((x) => `${x.title}: ${x.reason}`).join("; ")}</span></div>`), 50);
+      }
+    } catch (err) {
+      mount($("#itk-status"), html`<div class="error-box">${err.message}</div>`);
+    } finally {
+      itk.busy = false;
+      const u = $("#itk-upload"), sm = $("#itk-sample");
+      if (u) u.disabled = false; if (sm) sm.disabled = false;
+    }
+  };
+  $("#itk-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const f = $("#itk-file").files[0];
+    if (!f) { mount($("#itk-status"), html`<div class="error-box">Choose a PDF first, or use the sample revision.</div>`); return; }
+    run(f, f.name);
+  });
+  $("#itk-sample").addEventListener("click", async () => {
+    try {
+      const headers = {}; const token = savedToken(); if (token) headers.authorization = `Bearer ${token}`;
+      const res = await fetch("/api/policy/intake/sample", { headers });
+      if (!res.ok) throw new Error(`Could not load the sample (${res.status})`);
+      itk.doc = AIRLINE;
+      run(await res.blob(), "aurelia-csp-revision-2027-1.pdf");
+    } catch (err) { mount($("#itk-status"), html`<div class="error-box">${err.message}</div>`); }
+  });
+  $$("[data-draft]").forEach((tr) => tr.addEventListener("click", () => { location.hash = `#/intake/${tr.dataset.draft}`; }));
+  const d = itk.draft;
+  if (!d) return;
+  $("#itk-src").addEventListener("click", (e) => { e.preventDefault(); download(`/api/policy/drafts/${d.draft_id}/source`, d.source_name).catch((err) => alert(err.message)); });
+  $$("[data-item]").forEach((cb) => cb.addEventListener("change", () => {
+    const n = Number(cb.dataset.item);
+    if (cb.checked) itk.accept.add(n); else itk.accept.delete(n);
+    const btn = $("#itk-approve"); if (btn) { btn.textContent = `Approve ${itk.accept.size} selected and apply as asofedit`; btn.disabled = !itk.accept.size; }
+  }));
+  const decide = async (body, btn) => {
+    btn.disabled = true;
+    try {
+      const { body: r } = await post(`/api/policy/drafts/${d.draft_id}/decision`, body);
+      itk.result = r; itk.draft = r.draft;
+      if (!r.preview) { tl.data = null; tl.sel = null; }
+      itk.drafts = (await api("/api/policy/drafts")).body || [];
+      renderIntake();
+    } catch (err) {
+      mount($("#itk-status"), html`<div class="error-box">${err.message}</div>`);
+      btn.disabled = false;
+    }
+  };
+  const approve = $("#itk-approve"), preview = $("#itk-preview"), reject = $("#itk-reject");
+  if (approve) approve.addEventListener("click", () => decide({ approve: true, accept: [...itk.accept] }, approve));
+  if (preview) preview.addEventListener("click", () => decide({ approve: true, accept: [...itk.accept], preview: true }, preview));
+  if (reject) reject.addEventListener("click", () => decide({ approve: false }, reject));
+}
 
 // ---------- Analytics ----------
 async function Analytics() {

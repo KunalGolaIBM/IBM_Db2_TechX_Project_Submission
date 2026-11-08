@@ -33,13 +33,14 @@ dependencies = [
   "jinja2>=3.1",
   "python-dotenv>=1.2",
   "httpx>=0.28",
+  "pypdf>=6.21",
 ]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-asof = ["data/*.json", "sql/*.sql", "eval/*.jsonl", "ui/*"]
+asof = ["data/*.json", "data/samples/*", "sql/*.sql", "eval/*.jsonl", "ui/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

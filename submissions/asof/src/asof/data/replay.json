@@ -686,6 +686,94 @@
     "claims": []
    }
   },
+  "6ce41820957e5d514b36d97a1bb8fa421c91272a1266762885caba4fcb82b95c": {
+   "kind": "structured",
+   "name": "IntakeResult",
+   "output": {
+    "clauses": [
+     {
+      "area": "baggage",
+      "clause_text": "The first checked bag costs $45 each way on Economy fares.",
+      "date_quote": "This revision of the Aurelia Air Customer Service Plan takes effect on 1 February 2027.",
+      "effective_from": "2027-02-01",
+      "effective_to": null,
+      "existing_clause_id": "BAG-001",
+      "rule": [
+       {
+        "flag": null,
+        "items": null,
+        "key": "first_bag_fee_usd",
+        "number": 45.0
+       }
+      ],
+      "title": "First checked bag fee"
+     },
+     {
+      "area": "baggage",
+      "clause_text": "One set of golf clubs, skis or a snowboard may be checked in place of a standard bag for a fee of $75 each way. The equipment may weigh up to 23 kg.",
+      "date_quote": "This revision of the Aurelia Air Customer Service Plan takes effect on 1 February 2027.",
+      "effective_from": "2027-02-01",
+      "effective_to": null,
+      "existing_clause_id": null,
+      "rule": [
+       {
+        "flag": true,
+        "items": null,
+        "key": "sports_equipment_allowed",
+        "number": null
+       },
+       {
+        "flag": null,
+        "items": null,
+        "key": "sports_equipment_fee_usd",
+        "number": 75.0
+       },
+       {
+        "flag": null,
+        "items": null,
+        "key": "max_sports_weight_kg",
+        "number": 23.0
+       }
+      ],
+      "title": "Sports equipment"
+     },
+     {
+      "area": "travel_credit",
+      "clause_text": "Travel credits are valid for 24 months from the date they are issued. The booking must be made before the credit expires, but the flight itself may take place after the expiry date.",
+      "date_quote": "This section applies to travel credits issued on or after 1 March 2027.",
+      "effective_from": "2027-03-01",
+      "effective_to": null,
+      "existing_clause_id": "CRD-001",
+      "rule": [
+       {
+        "flag": null,
+        "items": null,
+        "key": "credit_validity_months",
+        "number": 24.0
+       }
+      ],
+      "title": "Travel credit validity"
+     },
+     {
+      "area": "delay",
+      "clause_text": "Delay compensation must be claimed within 1 year of the flight date through the online claims form.",
+      "date_quote": "This revision of the Aurelia Air Customer Service Plan takes effect on 1 February 2027.",
+      "effective_from": "2027-02-01",
+      "effective_to": null,
+      "existing_clause_id": "DLY-005",
+      "rule": [
+       {
+        "flag": null,
+        "items": null,
+        "key": "claim_window_days",
+        "number": 365.0
+       }
+      ],
+      "title": "Claiming delay compensation"
+     }
+    ]
+   }
+  },
   "6f05af9325c5474c58f6e6953d8bd006fb05be720c7d56b6017854a7dabe8a4b": {
    "kind": "structured",
    "name": "LedgerAnswer",
@@ -1518,6 +1606,38 @@
     "preset": "Bank: overdraft fee to $20 from 1 Jan 2027",
     "version_label": "v3"
    }
-  ]
+  ],
+  "intake": {
+   "discarded": [],
+   "document": "aurelia-csp-revision-2027-1.pdf",
+   "items": [
+    {
+     "blocked": false,
+     "clause_id": "BAG-001",
+     "item_no": 1,
+     "kind": "CHANGE"
+    },
+    {
+     "blocked": false,
+     "clause_id": "BAG-006",
+     "item_no": 2,
+     "kind": "NEW"
+    },
+    {
+     "blocked": false,
+     "clause_id": "CRD-001",
+     "item_no": 3,
+     "kind": "CHANGE"
+    },
+    {
+     "blocked": false,
+     "clause_id": "DLY-005",
+     "item_no": 4,
+     "kind": "UNCHANGED"
+    }
+   ],
+   "live_calls": 1,
+   "sha256": "f2b41e117554093e3e3dceac0166ad28717fa6720a73b5372b21ab336ae681b4"
+  }
  }
 }

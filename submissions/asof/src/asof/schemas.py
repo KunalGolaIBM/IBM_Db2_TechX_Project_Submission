@@ -111,3 +111,60 @@ class LedgerSql(_Strict):
 
 class LedgerAnswer(_Strict):
     answer: str = Field(description="The answer to the question, written only from the rows returned.")
+
+
+# Policy intake (asof/intake.py): a policy document becomes proposed clause versions. Every value
+# here is a proposal; deterministic checks run on it, and an editor approves it, before anything
+# reaches POLICY_CLAUSE.
+MAX_INTAKE_ITEMS = 12
+
+
+class IntakeRuleParam(_Strict):
+    key: str = Field(
+        description="snake_case name. End it with the unit where there is one: _usd, _pct, _hours, _days, "
+        "_business_days, _months, _kg. Start a limit with max_ or min_. End a yes/no permission with _allowed "
+        "or _required."
+    )
+    number: float | None = Field(description="The value if it is a number, else null.")
+    flag: bool | None = Field(description="The value if it is yes or no, else null.")
+    items: list[str] | None = Field(
+        description="The values if it is a list of words or phrases copied from the clause text, else null."
+    )
+
+
+class IntakeClause(_Strict):
+    existing_clause_id: str | None = Field(
+        description="ID of the existing clause this section replaces or restates, from <existing_clauses>. "
+        "Null for a section that adds a rule no existing clause covers."
+    )
+    area: Area = Field(description="The policy area of the section.")
+    title: str = Field(description="A short title for the section.")
+    clause_text: str = Field(
+        description="The section's policy text, copied character for character from the document, complete. "
+        "Leave out the section number, the heading and any sentence that only says when the section takes effect."
+    )
+    effective_from: str = Field(description="The date the section takes effect, as YYYY-MM-DD.")
+    effective_to: str | None = Field(
+        description="The date the section stops applying, as YYYY-MM-DD, only if the document states one; else null."
+    )
+    date_quote: str = Field(
+        description="The sentence of the document that states effective_from, copied character for character."
+    )
+    rule: list[IntakeRuleParam] = Field(
+        description="Every checkable value the clause text states: amounts, percentages, time limits, weights, "
+        "counts and yes/no permissions."
+    )
+
+
+class IntakeResult(_Strict):
+    clauses: list[IntakeClause] = Field(description="One proposal per policy section, in document order.")
+
+
+class BankIntakeClause(IntakeClause):
+    area: BankArea = Field(description="The fee schedule area of the section.")  # type: ignore[assignment]
+
+
+class BankIntakeResult(IntakeResult):
+    clauses: list[BankIntakeClause] = Field(  # type: ignore[assignment]
+        description="One proposal per policy section, in document order."
+    )

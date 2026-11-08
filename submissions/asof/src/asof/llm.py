@@ -96,12 +96,13 @@ class LLMClient:
             raise LLMError(f"{self.info} call failed: {type(exc).__name__}") from exc
 
     def structured(self, schema: type[T], messages: list[tuple[str, str]],
-                   choices: dict[str, list[str]] | None = None) -> LLMResult[T]:
+                   choices: dict[str, list[str]] | None = None, max_chars: int | None = None) -> LLMResult[T]:
         """Call the model and parse its reply into `schema`, or raise LLMError.
 
         `choices` maps a field name to the only values it may take. For a local model the
         decoding grammar enforces them (see bounded_schema); hosted models are steered by the
-        prompt and checked by the gate afterwards, as before.
+        prompt and checked by the gate afterwards, as before. `max_chars` raises the local
+        grammar's string bound (MAX_STRING_CHARS) for callers that copy long text: policy intake.
 
         Each attempt runs under a hard wall-clock deadline, because client read timeouts do
         not fire while a model keeps streaming (a local model stuck in a generation loop
@@ -109,7 +110,7 @@ class LLMClient:
         gets one more attempt.
         """
         if self.provider == "ollama":
-            runnable = _bounded_ollama_runnable(self.chat_model, schema, choices)
+            runnable = _bounded_ollama_runnable(self.chat_model, schema, choices, max_chars or MAX_STRING_CHARS)
         else:
             runnable = self.chat_model.with_structured_output(
                 schema, method="json_schema", include_raw=True, strict=True)
@@ -200,9 +201,10 @@ def bounded_schema(schema: type[BaseModel], max_chars: int = MAX_STRING_CHARS,
     return walk(schema.model_json_schema())
 
 
-def _bounded_ollama_runnable(chat_model: BaseChatModel, schema: type[T], choices: dict[str, list[str]] | None = None):
+def _bounded_ollama_runnable(chat_model: BaseChatModel, schema: type[T], choices: dict[str, list[str]] | None = None,
+                             max_chars: int = MAX_STRING_CHARS):
     """Same contract as with_structured_output(include_raw=True), with a bounded grammar."""
-    bound = chat_model.bind(format=bounded_schema(schema, choices=choices))
+    bound = chat_model.bind(format=bounded_schema(schema, max_chars, choices=choices))
 
     class _Runnable:
         @staticmethod
@@ -231,6 +233,14 @@ def _non_streaming_ollama():
             return super()._chat_params(messages, stop, **kwargs)
 
     return NonStreamingChatOllama
+
+
+def structured_call(client, schema, messages, choices=None, max_chars=None):
+    """client.structured(...), passing max_chars only when a caller set it: the calls of a check are exactly
+    what they were before policy intake needed longer strings."""
+    if max_chars is None:
+        return client.structured(schema, messages, choices)
+    return client.structured(schema, messages, choices, max_chars=max_chars)
 
 
 class FallbackLLM:
@@ -278,13 +288,13 @@ class FallbackLLM:
         self._local.used.append(which)
 
     def structured(self, schema: type[T], messages: list[tuple[str, str]],
-                   choices: dict[str, list[str]] | None = None) -> LLMResult[T]:
+                   choices: dict[str, list[str]] | None = None, max_chars: int | None = None) -> LLMResult[T]:
         try:
-            result = self.primary.structured(schema, messages, choices)
+            result = structured_call(self.primary, schema, messages, choices, max_chars)
         except LLMError as first:
             log.warning("%s failed (%s); trying the fallback %s", self.primary.info, first, self.fallback.info)
             try:
-                result = self.fallback.structured(schema, messages, choices)
+                result = structured_call(self.fallback, schema, messages, choices, max_chars)
             except LLMError as second:
                 raise LLMError(f"{first}; fallback {self.fallback.info} also failed: {second}") from second
             self._mark("fallback")
@@ -311,27 +321,32 @@ class FallbackLLM:
 
 
 def build_llm(settings: Settings, provider: str | None = None, model: str | None = None,
-              fallback: bool = True) -> LLMClient | FallbackLLM:
+              fallback: bool = True, max_output_tokens: int | None = None,
+              deadline_s: float | None = None) -> LLMClient | FallbackLLM:
     """The configured model client; for a hosted primary, wrapped with the local fallback
     (LLM_FALLBACK=ollama, the default). Eval passes fallback=False to measure one provider.
-    LLM_PROVIDER=replay returns recorded outputs for the built-in scenarios instead (asof/replay.py)."""
+    LLM_PROVIDER=replay returns recorded outputs for the built-in scenarios instead (asof/replay.py).
+    `max_output_tokens` and `deadline_s` override the settings for one client: policy intake copies
+    whole clauses, so it gets a larger output cap and a longer deadline than a check."""
     if (provider or settings.llm_provider) == "replay":
         from .replay import Recording, ReplayLLM
 
         return ReplayLLM(Recording.load())  # type: ignore[return-value]
-    client = _build_one(settings, provider, model)
+    client = _build_one(settings, provider, model, deadline=deadline_s, max_out=max_output_tokens)
     if fallback and settings.llm_fallback == "ollama" and client.provider != "ollama":
-        local = _build_one(settings, "ollama", None, deadline=settings.llm_fallback_timeout_s)
+        local = _build_one(settings, "ollama", None, deadline=max(settings.llm_fallback_timeout_s, deadline_s or 0),
+                           max_out=max_output_tokens)
         return FallbackLLM(client, local)
     return client
 
 
-def _build_one(settings: Settings, provider: str | None, model: str | None, deadline: float | None = None) -> LLMClient:
+def _build_one(settings: Settings, provider: str | None, model: str | None, deadline: float | None = None,
+               max_out: int | None = None) -> LLMClient:
     """Create the configured LLM client. `provider` and `model` override settings (used by eval)."""
     provider = provider or settings.llm_provider
     attempts = 2
     deadline = deadline or settings.llm_timeout_s
-    max_out = settings.llm_max_output_tokens
+    max_out = max_out or settings.llm_max_output_tokens
 
     if provider == "ollama":
         name = model or settings.ollama_model

@@ -109,6 +109,10 @@ class Settings(BaseSettings):
     # ledger); "none" disables it. The local model is slower, hence its own deadline.
     llm_fallback: Literal["ollama", "none"] = "ollama"
     llm_fallback_timeout_s: float = Field(180.0, gt=0, le=600)
+    # Policy intake (asof/intake.py) copies whole clauses out of a document, so its one model call gets a
+    # larger output cap and a longer deadline than the calls of a check.
+    asof_intake_max_output_tokens: int = Field(4000, ge=1000, le=16000)
+    asof_intake_timeout_s: float = Field(150.0, gt=0, le=600)
     # Whole-check budget: no step of a check starts after it (the check then fails closed).
     asof_check_deadline_s: float = Field(300.0, gt=0, le=3600)
 

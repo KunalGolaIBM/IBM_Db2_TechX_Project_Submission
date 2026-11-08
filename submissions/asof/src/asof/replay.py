@@ -37,7 +37,7 @@ from langchain_core.outputs import ChatGeneration, ChatResult
 from pydantic import ValidationError
 
 from .config import REPLAY_FILE, ConfigError
-from .llm import LLMError, LLMResult
+from .llm import LLMError, LLMResult, structured_call
 
 log = logging.getLogger(__name__)
 
@@ -189,7 +189,8 @@ class ReplayLLM:
     def info(self) -> str:
         return f"replay:{self.recording.model} (recorded {self.recording.recorded_on})"
 
-    def structured(self, schema: type, messages, choices: dict[str, list[str]] | None = None) -> LLMResult:
+    def structured(self, schema: type, messages, choices: dict[str, list[str]] | None = None,
+                   max_chars: int | None = None) -> LLMResult:
         value = _validated(schema, self.recording.get(structured_key(schema, messages, choices), "structured"))
         return LLMResult(value=value, latency_ms=0, input_tokens=None, output_tokens=None, attempts=1)
 
@@ -224,11 +225,12 @@ class Recorder:
     def begin_check(self) -> None:
         getattr(self.inner, "begin_check", lambda: None)()
 
-    def structured(self, schema: type, messages, choices: dict[str, list[str]] | None = None) -> LLMResult:
+    def structured(self, schema: type, messages, choices: dict[str, list[str]] | None = None,
+                   max_chars: int | None = None) -> LLMResult:
         key = structured_key(schema, messages, choices)
         if self.recording.has(key):
             return ReplayLLM(self.recording).structured(schema, messages, choices)
-        result = self.inner.structured(schema, messages, choices)
+        result = structured_call(self.inner, schema, messages, choices, max_chars)
         self.live_calls += 1
         self.recording.put(key, "structured", schema.__name__, result.value.model_dump(mode="json"))
         return result
@@ -290,7 +292,7 @@ def next_version(timeline: list[dict[str, Any]], clause_id: str) -> str:
 
 def record(settings) -> int:
     """Run every built-in scenario against the live model in a scratch schema and save the outputs."""
-    from . import db, impactagent, policy, schema, seed
+    from . import db, impactagent, policy
     from .askledger import LedgerAsker
     from .assistant import DemoAssistant
     from .embeddings import get_embeddings
@@ -306,15 +308,7 @@ def record(settings) -> int:
     emb = get_embeddings(settings.embedding_model)
     started = time.monotonic()
     print(f"Recording with {live.info} in schema {REPLAY_SCHEMA}", flush=True)
-    with db.connection(settings, "admin") as conn:
-        schema.drop(conn, REPLAY_SCHEMA)
-        schema.install(conn, REPLAY_SCHEMA)
-        seed.seed_policy(conn, emb, REPLAY_SCHEMA)
-        seed.seed_chain_head(conn, REPLAY_SCHEMA)
-        seed.seed_published_answers(conn, REPLAY_SCHEMA)
-        seed.seed_faq(conn, emb, REPLAY_SCHEMA)
-        schema.apply_grants(conn, settings.asof_app_user, settings.asof_editor_user, REPLAY_SCHEMA,
-                            analyst_user=settings.asof_analyst_user)
+    _fresh_schema(settings, emb)
     time.sleep(1.1)  # the policy changes below must get a later system time than the seed rows
 
     app = db.ConnectionPool(settings, "app").connect
@@ -349,13 +343,71 @@ def record(settings) -> int:
                                     "check_reason": d.get("check_reason"), "error": d.get("error")} for d in drafted]})
         print(f"  impact {p['label']}: {[(d['answer_id'], d.get('check_decision')) for d in drafted]}", flush=True)
 
+    intake_summary = record_intake(settings, recording)
+    print(f"  intake {intake_summary['document']}: {[(i['clause_id'], i['kind']) for i in intake_summary['items']]}",
+          flush=True)
+
     if failed:
         print(f"{failed} scenario(s) failed closed on a live-model error; nothing saved. Run it again.")
         return 1
-    recording.scenarios = {"checks": checks, "ask": asks, "impact": impacts}
+    recording.scenarios = {"checks": checks, "ask": asks, "impact": impacts, "intake": intake_summary}
     recording.save()
     print(f"Saved {len(recording.entries)} outputs ({rec.live_calls} live calls) to {RECORDING_PATH.name} "
           f"in {time.monotonic() - started:.0f} s")
+    return 0
+
+
+def _fresh_schema(settings, emb) -> None:
+    """REPLAY_SCHEMA rebuilt from the seed data, so recordings never depend on the dev database's state."""
+    from . import db, schema, seed
+
+    with db.connection(settings, "admin") as conn:
+        schema.drop(conn, REPLAY_SCHEMA)
+        schema.install(conn, REPLAY_SCHEMA)
+        seed.seed_policy(conn, emb, REPLAY_SCHEMA)
+        seed.seed_chain_head(conn, REPLAY_SCHEMA)
+        seed.seed_published_answers(conn, REPLAY_SCHEMA)
+        seed.seed_faq(conn, emb, REPLAY_SCHEMA)
+        schema.apply_grants(conn, settings.asof_app_user, settings.asof_editor_user, REPLAY_SCHEMA,
+                            analyst_user=settings.asof_analyst_user)
+
+
+def record_intake(settings, recording: Recording) -> dict[str, Any]:
+    """Record the extraction of the sample policy revision (the policy intake demo) into `recording`.
+
+    The intake prompt lists the policy's clause IDs, titles and rule keys, not their current text, so the
+    recording replays on any database whose clauses keep those (a policy change through APPLY_POLICY_CHANGE does).
+    """
+    from . import db, intake
+    from .domains import AIRLINE
+    from .llm import build_llm
+
+    live = build_llm(settings, fallback=False, max_output_tokens=settings.asof_intake_max_output_tokens,
+                     deadline_s=settings.asof_intake_timeout_s)
+    rec = Recorder(live, recording)
+    source = intake.read_pdf(intake.SAMPLE_PDF.read_bytes(), intake.SAMPLE_PDF.name)
+    with db.connection(settings, "app") as reader:
+        proposals, discarded, _ = intake.propose(rec, source, AIRLINE.doc_id, reader, REPLAY_SCHEMA)
+    return {"document": source.name, "sha256": source.sha256, "live_calls": rec.live_calls,
+            "items": [{"item_no": p.item_no, "kind": p.kind, "clause_id": p.clause_id, "blocked": p.blocked}
+                      for p in proposals], "discarded": [d.title for d in discarded]}
+
+
+def record_only_intake(settings) -> int:
+    """Add the intake recording to the shipped one without re-recording (and so changing) any other scenario."""
+    from .embeddings import get_embeddings
+    from .llm import build_llm
+
+    recording = Recording.load()
+    live = build_llm(settings, fallback=False)
+    if live.info != recording.model:
+        print(f"The shipped recording is from {recording.model}; set that model to add to it (now: {live.info}).")
+        return 2
+    _fresh_schema(settings, get_embeddings(settings.embedding_model))
+    summary = record_intake(settings, recording)
+    recording.scenarios["intake"] = summary
+    recording.save()
+    print(f"Recorded the intake of {summary['document']}: {[(i['clause_id'], i['kind']) for i in summary['items']]}")
     return 0
 
 
@@ -363,6 +415,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m asof.replay", description=__doc__.split("\n\n")[0])
     parser.add_argument("command", choices=["record", "show"], help="record: re-record with the live model; "
                         "show: list what the shipped recording covers")
+    parser.add_argument("--only", choices=["intake"], help="record only this scenario and add it to the shipped "
+                        "recording, leaving every other recorded output as it is")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.WARNING)
     from . import db
@@ -375,6 +429,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {c['decision']:<9} {c['as_of']}  {c['label']}")
         return 0
     try:
+        if args.only == "intake":
+            return record_only_intake(get_settings())
         return record(get_settings())
     except (ConfigError, LLMError, db.DatabaseError) as exc:
         print(f"Recording failed: {exc}")

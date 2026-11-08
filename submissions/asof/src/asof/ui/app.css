@@ -60,8 +60,8 @@ p { margin: 0; }
 /* ---- top bar ---- */
 .topbar {
   position: sticky; top: 0; z-index: 20;
-  display: flex; align-items: center; gap: 28px;
-  padding: 10px 28px;
+  display: flex; align-items: center; gap: 20px;
+  padding: 10px 24px;
   background: color-mix(in srgb, var(--surface) 88%, transparent);
   backdrop-filter: saturate(1.4) blur(10px);
   border-bottom: 1px solid var(--line);
@@ -76,11 +76,11 @@ p { margin: 0; }
 .brand-text span { font-size: 11.5px; color: var(--muted); }
 .tabs { display: flex; gap: 2px; flex: 1; }
 .tabs a {
-  padding: 7px 12px; border-radius: 8px; color: var(--ink-2); font-weight: 500; font-size: 14px;
+  padding: 7px 10px; border-radius: 8px; color: var(--ink-2); font-weight: 500; font-size: 14px; white-space: nowrap;
 }
 .tabs a:hover { background: var(--surface-2); text-decoration: none; }
 .tabs a.active { background: var(--brand-soft); color: var(--brand); }
-.status { display: flex; gap: 8px; align-items: center; }
+.status { display: flex; gap: 8px; align-items: center; white-space: nowrap; }
 
 main { max-width: 1320px; margin: 0 auto; padding: 26px 28px 40px; outline: none; }
 .foot { max-width: 1320px; margin: 0 auto; padding: 18px 28px 30px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--line); }
@@ -353,3 +353,34 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .token-bar input { max-width: 280px; }
 /* Replay mode: a notice, not an error */
 .token-bar.notice { background: var(--brand-soft); border-bottom-color: var(--line-2); color: var(--ink-2); font-size: 14px; }
+
+/* Policy intake */
+.tl-layout.itk-layout { grid-template-columns: 360px 1fr; }
+tr.click.on td { background: var(--brand-soft); }
+.itk-name { font-weight: 500; word-break: break-all; }
+.itk-item { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; background: var(--surface); }
+.itk-item + .itk-item { margin-top: 10px; }
+.itk-item.blocked { border-color: var(--hold-line); background: var(--hold-bg); }
+.itk-item.same { opacity: .78; }
+.itk-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.itk-head .when { color: var(--muted); font-size: 13px; }
+.itk-title { font-weight: 600; }
+.itk-pick input { width: 17px; height: 17px; accent-color: var(--brand); margin: 0; }
+.itk-diff { margin-top: 10px; }
+.itk-diff .diff { margin: 4px 0 0; padding: 10px 12px; background: var(--surface-2); border-radius: var(--radius-sm); line-height: 1.6; }
+.diff ins { background: var(--pass-bg); color: var(--pass); text-decoration: none; border-radius: 3px; padding: 0 2px; font-weight: 600; }
+.diff del { background: var(--hold-bg); color: var(--hold); border-radius: 3px; padding: 0 2px; }
+.itk-grid { display: grid; grid-template-columns: minmax(200px, 1fr) 1.4fr; gap: 14px; margin-top: 10px; align-items: start; }
+.rule-diff { font-size: 13px; }
+.rule-diff tr.changed td { background: var(--fix-bg); }
+.checks { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+.checks li { display: flex; gap: 8px; align-items: baseline; padding: 3px 0; }
+.checks .ci { flex: 0 0 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 11px; font-weight: 700; }
+.checks li.pass .ci { background: var(--pass-bg); color: var(--pass); }
+.checks li.fail .ci { background: var(--hold-bg); color: var(--hold); }
+.checks li.warn .ci { background: var(--fix-bg); color: var(--fix); }
+.checks li.fail { color: var(--hold); }
+.itk-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+@media (max-width: 1080px) {
+  .tl-layout.itk-layout, .itk-grid { grid-template-columns: 1fr; }
+}

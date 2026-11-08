@@ -757,3 +757,213 @@ BEGIN
     WHERE ANSWER_ID = V_ANSWER AND STATUS = 'PENDING' AND SUGGESTION_ID <> P_SUGGESTION_ID;
 END
 @
+
+-- procedure: ADD_POLICY_DRAFT
+-- Stores an uploaded policy document as a pending draft. Db2 computes the SHA-256 of the file itself
+-- and refuses it if that differs from the hash the application computed, so the hash on record is
+-- Db2's own. Granted to the policy editor only. The caller adds the items, then commits.
+CREATE OR REPLACE PROCEDURE ASOF.ADD_POLICY_DRAFT (
+    IN  P_DOC_ID    VARCHAR(32),
+    IN  P_NAME      VARCHAR(200),
+    IN  P_SHA256    CHAR(64),
+    IN  P_PDF       BLOB(4M),
+    IN  P_PAGES     SMALLINT,
+    IN  P_TEXT      CLOB(256K),
+    IN  P_MODEL     VARCHAR(200),
+    IN  P_USER      VARCHAR(40),
+    OUT P_DRAFT_ID  BIGINT)
+  LANGUAGE SQL
+  MODIFIES SQL DATA
+BEGIN
+  DECLARE V_SHA CHAR(64);
+  SET V_SHA = LOWER(HEX(CAST(HASH(P_PDF, 2) AS VARBINARY(32))));
+  IF P_SHA256 IS NULL OR V_SHA <> P_SHA256 THEN
+    SIGNAL SQLSTATE '75040' SET MESSAGE_TEXT = 'The file Db2 received does not match the SHA-256 the application computed';
+  END IF;
+  INSERT INTO ASOF.POLICY_DRAFT (DOC_ID, SOURCE_NAME, SOURCE_SHA256, SOURCE_PDF, SOURCE_PAGES, SOURCE_TEXT,
+                                 EXTRACTED_BY, UPLOADED_BY)
+    VALUES (P_DOC_ID, P_NAME, V_SHA, P_PDF, P_PAGES, P_TEXT, P_MODEL, NULLIF(P_USER, ''));
+  SET P_DRAFT_ID = IDENTITY_VAL_LOCAL();
+END
+@
+
+-- procedure: ADD_POLICY_DRAFT_ITEM
+-- One proposed clause version of a pending draft. A CHANGE must name a clause the policy has; a NEW
+-- clause must use an unused ID. The checks themselves run in asof/intake.py; their results and the
+-- BLOCKED flag are stored with the item, and DECIDE_POLICY_DRAFT refuses to accept a blocked item.
+CREATE OR REPLACE PROCEDURE ASOF.ADD_POLICY_DRAFT_ITEM (
+    IN P_DRAFT_ID  BIGINT,
+    IN P_ITEM_NO   SMALLINT,
+    IN P_KIND      VARCHAR(10),
+    IN P_CLAUSE_ID VARCHAR(32),
+    IN P_AREA      VARCHAR(40),
+    IN P_TITLE     VARCHAR(200),
+    IN P_TEXT      VARCHAR(4000),
+    IN P_RULE_JSON VARCHAR(2000),
+    IN P_FROM      DATE,
+    IN P_TO        DATE,
+    IN P_QUOTE     VARCHAR(1000),
+    IN P_PAGE      SMALLINT,
+    IN P_CHECKS    VARCHAR(8000),
+    IN P_BLOCKED   SMALLINT)
+  LANGUAGE SQL
+  MODIFIES SQL DATA
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM ASOF.POLICY_DRAFT WHERE DRAFT_ID = P_DRAFT_ID AND STATUS = 'PENDING') THEN
+    SIGNAL SQLSTATE '75041' SET MESSAGE_TEXT = 'Items can only be added to a pending draft';
+  END IF;
+  IF P_KIND = 'CHANGE' AND NOT EXISTS (SELECT 1 FROM ASOF.POLICY_CLAUSE WHERE CLAUSE_ID = P_CLAUSE_ID) THEN
+    SIGNAL SQLSTATE '75011' SET MESSAGE_TEXT = 'Unknown clause';
+  END IF;
+  IF P_KIND = 'NEW' AND EXISTS (SELECT 1 FROM ASOF.POLICY_CLAUSE WHERE CLAUSE_ID = P_CLAUSE_ID) THEN
+    SIGNAL SQLSTATE '75042' SET MESSAGE_TEXT = 'A new clause needs a clause ID the policy does not use yet';
+  END IF;
+  INSERT INTO ASOF.POLICY_DRAFT_ITEM (DRAFT_ID, ITEM_NO, KIND, CLAUSE_ID, AREA, TITLE, CLAUSE_TEXT, RULE_JSON,
+                                      BUS_START, BUS_END, DATE_QUOTE, SOURCE_PAGE, CHECKS_JSON, BLOCKED)
+    VALUES (P_DRAFT_ID, P_ITEM_NO, P_KIND, P_CLAUSE_ID, P_AREA, P_TITLE, P_TEXT, P_RULE_JSON,
+            P_FROM, P_TO, P_QUOTE, NULLIF(P_PAGE, 0), P_CHECKS, P_BLOCKED);
+END
+@
+
+-- procedure: DECIDE_POLICY_DRAFT
+-- The policy editor approves a draft (with the items to accept, as a comma-separated list of item
+-- numbers) or rejects it. Claims the draft atomically, so of two editors deciding at once exactly
+-- one succeeds. A blocked or unchanged item cannot be accepted. When the draft records who uploaded
+-- it (API users), the approver must be named and must be someone else. Approval only marks the
+-- items: APPLY_DRAFT_ITEM puts each one into force in the same transaction. The caller commits.
+CREATE OR REPLACE PROCEDURE ASOF.DECIDE_POLICY_DRAFT (
+    IN  P_DRAFT_ID  BIGINT,
+    IN  P_APPROVE   SMALLINT,
+    IN  P_ACCEPT    VARCHAR(200),
+    IN  P_USER      VARCHAR(40),
+    OUT P_ACCEPTED  INTEGER)
+  LANGUAGE SQL
+  MODIFIES SQL DATA
+BEGIN
+  DECLARE V_STATUS VARCHAR(12);
+  DECLARE V_UPLOADER VARCHAR(40);
+  DECLARE V_LIST VARCHAR(210);
+  DECLARE V_LISTED INTEGER;
+  DECLARE V_BAD INTEGER;
+  DECLARE V_CLAIMED INTEGER;
+
+  SET P_ACCEPTED = 0;
+  SET V_LIST = ',' || REPLACE(COALESCE(P_ACCEPT, ''), ' ', '') || ',';
+  SELECT STATUS, UPLOADED_BY INTO V_STATUS, V_UPLOADER FROM ASOF.POLICY_DRAFT WHERE DRAFT_ID = P_DRAFT_ID;
+  IF V_STATUS IS NULL THEN
+    SIGNAL SQLSTATE '75043' SET MESSAGE_TEXT = 'Unknown draft';
+  END IF;
+  IF P_APPROVE <> 0 AND V_UPLOADER IS NOT NULL AND (NULLIF(P_USER, '') IS NULL OR P_USER = V_UPLOADER) THEN
+    SIGNAL SQLSTATE '75044' SET MESSAGE_TEXT = 'A policy document must be approved by someone other than the person who uploaded it';
+  END IF;
+  IF P_APPROVE <> 0 THEN
+    SET V_LISTED = CASE WHEN V_LIST = ',,' THEN 0 ELSE LENGTH(V_LIST) - LENGTH(REPLACE(V_LIST, ',', '')) - 1 END;
+    SET P_ACCEPTED = (SELECT COUNT(*) FROM ASOF.POLICY_DRAFT_ITEM WHERE DRAFT_ID = P_DRAFT_ID
+                      AND LOCATE(',' || RTRIM(CHAR(ITEM_NO)) || ',', V_LIST) > 0);
+    IF P_ACCEPTED = 0 THEN
+      SIGNAL SQLSTATE '75046' SET MESSAGE_TEXT = 'Accept at least one item, or reject the draft';
+    END IF;
+    IF P_ACCEPTED <> V_LISTED THEN
+      SIGNAL SQLSTATE '75045' SET MESSAGE_TEXT = 'The accepted items must be distinct items of this draft';
+    END IF;
+    SET V_BAD = (SELECT COUNT(*) FROM ASOF.POLICY_DRAFT_ITEM WHERE DRAFT_ID = P_DRAFT_ID
+                 AND LOCATE(',' || RTRIM(CHAR(ITEM_NO)) || ',', V_LIST) > 0 AND (BLOCKED = 1 OR KIND = 'UNCHANGED'));
+    IF V_BAD > 0 THEN
+      SIGNAL SQLSTATE '75045' SET MESSAGE_TEXT = 'An item that failed a check, or changes nothing, cannot be accepted';
+    END IF;
+  END IF;
+
+  UPDATE ASOF.POLICY_DRAFT
+    SET STATUS = CASE WHEN P_APPROVE <> 0 THEN 'APPLIED' ELSE 'REJECTED' END,
+        DECIDED_AT = CURRENT TIMESTAMP, DECIDED_BY = SESSION_USER, DECIDED_BY_USER = NULLIF(P_USER, '')
+    WHERE DRAFT_ID = P_DRAFT_ID AND STATUS = 'PENDING';
+  GET DIAGNOSTICS V_CLAIMED = ROW_COUNT;
+  IF V_CLAIMED = 0 THEN
+    SIGNAL SQLSTATE '75047' SET MESSAGE_TEXT = 'That draft was already decided';
+  END IF;
+  UPDATE ASOF.POLICY_DRAFT_ITEM
+    SET STATUS = CASE WHEN P_APPROVE <> 0 AND LOCATE(',' || RTRIM(CHAR(ITEM_NO)) || ',', V_LIST) > 0
+                      THEN 'APPLIED' ELSE 'REJECTED' END
+    WHERE DRAFT_ID = P_DRAFT_ID;
+END
+@
+
+-- procedure: APPLY_DRAFT_ITEM
+-- Puts one accepted item of an approved draft into force, in the transaction that approved it: a
+-- CHANGE through APPLY_POLICY_CHANGE (FOR PORTION OF BUSINESS_TIME), a NEW clause by INSERT. The
+-- text, rule and dates come from the stored item, never from the caller, so this path applies only
+-- what was reviewed, and only once. Db2 picks the next version label, and the clause row's change
+-- note names the draft, the item and the file's SHA-256. P_EMBEDDING NULL: Db2 embeds the text with
+-- the in-database model, as APPLY_POLICY_CHANGE does.
+CREATE OR REPLACE PROCEDURE ASOF.APPLY_DRAFT_ITEM (
+    IN  P_DRAFT_ID  BIGINT,
+    IN  P_ITEM_NO   SMALLINT,
+    IN  P_EMBEDDING VARCHAR(12000),
+    OUT P_VERSION   VARCHAR(20),
+    OUT P_ROWS      INTEGER,
+    OUT P_FLAGGED   INTEGER)
+  LANGUAGE SQL
+  MODIFIES SQL DATA
+BEGIN
+  DECLARE V_KIND VARCHAR(10);
+  DECLARE V_CLAUSE VARCHAR(32);
+  DECLARE V_AREA VARCHAR(40);
+  DECLARE V_TITLE VARCHAR(200);
+  DECLARE V_TEXT VARCHAR(4000);
+  DECLARE V_RULE VARCHAR(2000);
+  DECLARE V_FROM DATE;
+  DECLARE V_TO DATE;
+  DECLARE V_DOC VARCHAR(32);
+  DECLARE V_NAME VARCHAR(200);
+  DECLARE V_SHA CHAR(64);
+  DECLARE V_NOTE VARCHAR(400);
+  DECLARE V_VEC VECTOR(384, FLOAT32);
+  DECLARE S_EMBED STATEMENT;
+  DECLARE C_EMBED CURSOR FOR S_EMBED;
+
+  SET P_ROWS = 0;
+  SET P_FLAGGED = 0;
+  SELECT I.KIND, I.CLAUSE_ID, I.AREA, I.TITLE, I.CLAUSE_TEXT, I.RULE_JSON, I.BUS_START, I.BUS_END,
+         D.DOC_ID, D.SOURCE_NAME, D.SOURCE_SHA256
+    INTO V_KIND, V_CLAUSE, V_AREA, V_TITLE, V_TEXT, V_RULE, V_FROM, V_TO, V_DOC, V_NAME, V_SHA
+    FROM ASOF.POLICY_DRAFT_ITEM I JOIN ASOF.POLICY_DRAFT D ON D.DRAFT_ID = I.DRAFT_ID
+    WHERE I.DRAFT_ID = P_DRAFT_ID AND I.ITEM_NO = P_ITEM_NO
+      AND D.STATUS = 'APPLIED' AND I.STATUS = 'APPLIED' AND I.APPLIED_VERSION IS NULL;
+  IF V_KIND IS NULL THEN
+    SIGNAL SQLSTATE '75048' SET MESSAGE_TEXT = 'Only an accepted item of an approved draft can be applied, and only once';
+  END IF;
+  SET V_NOTE = RTRIM(LEFT('Policy intake: draft ' || RTRIM(CHAR(P_DRAFT_ID)) || ' item ' || RTRIM(CHAR(P_ITEM_NO))
+                          || ', ' || V_NAME || ' (sha256 ' || LEFT(V_SHA, 16) || ')', 400));  -- LEFT pads
+
+  IF V_KIND = 'CHANGE' THEN
+    SET P_VERSION = 'v' || RTRIM(CHAR(1 + (SELECT COALESCE(MAX(INTEGER(SUBSTR(VERSION_LABEL, 2))), 0) FROM (
+                      SELECT VERSION_LABEL FROM ASOF.POLICY_CLAUSE WHERE CLAUSE_ID = V_CLAUSE
+                      UNION ALL
+                      SELECT VERSION_LABEL FROM ASOF.POLICY_CLAUSE_HIST WHERE CLAUSE_ID = V_CLAUSE) AS L)));
+    CALL ASOF.APPLY_POLICY_CHANGE(V_CLAUSE, V_FROM, V_TO, P_VERSION, V_TEXT, V_RULE, P_EMBEDDING, V_NOTE,
+                                  P_ROWS, P_FLAGGED);
+  ELSE
+    IF EXISTS (SELECT 1 FROM ASOF.POLICY_CLAUSE WHERE CLAUSE_ID = V_CLAUSE) THEN
+      SIGNAL SQLSTATE '75042' SET MESSAGE_TEXT = 'A new clause needs a clause ID the policy does not use yet';
+    END IF;
+    SET P_VERSION = 'v1';
+    IF P_EMBEDDING IS NULL THEN
+      BEGIN
+        DECLARE EXIT HANDLER FOR SQLEXCEPTION
+          SIGNAL SQLSTATE '75014' SET MESSAGE_TEXT = 'In-database embedding failed: no EMBEDDER model, or the endpoint refused';
+        PREPARE S_EMBED FROM 'VALUES TO_EMBEDDING(CAST(? AS VARCHAR(4300)) USING ASOF.EMBEDDER)';
+        OPEN C_EMBED USING V_TITLE || '. ' || V_TEXT;
+        FETCH C_EMBED INTO V_VEC;
+        CLOSE C_EMBED;
+      END;
+    ELSE
+      SET V_VEC = VECTOR(P_EMBEDDING, 384, FLOAT32);
+    END IF;
+    INSERT INTO ASOF.POLICY_CLAUSE (CLAUSE_ID, DOC_ID, AREA, TITLE, VERSION_LABEL, CLAUSE_TEXT, RULE_JSON, EMBEDDING,
+                                    CHANGE_NOTE, BUS_START, BUS_END)
+      VALUES (V_CLAUSE, V_DOC, V_AREA, V_TITLE, P_VERSION, V_TEXT, V_RULE, V_VEC, V_NOTE, V_FROM, V_TO);
+    SET P_ROWS = 1;
+  END IF;
+  UPDATE ASOF.POLICY_DRAFT_ITEM SET APPLIED_VERSION = P_VERSION WHERE DRAFT_ID = P_DRAFT_ID AND ITEM_NO = P_ITEM_NO;
+END
+@

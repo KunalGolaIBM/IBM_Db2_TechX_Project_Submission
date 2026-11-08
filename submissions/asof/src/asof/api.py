@@ -23,13 +23,13 @@ from typing import Annotated, Any, Literal
 
 from fastapi import FastAPI, Header, HTTPException, Path, Query, Request
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from . import __version__, db, impactagent, ledger, policy
+from . import __version__, db, impactagent, intake, ledger, policy
 from .anchor import AnchorLog
 from .anchor import verify as verify_anchors
 from .askledger import LedgerAsker
@@ -48,7 +48,15 @@ MAX_BODY_BYTES = 64 * 1024
 # GETs that do real work in Db2 share the POST rate limit: VERIFY_CHAIN recomputes every hash in the ledger.
 COSTLY_GETS = frozenset({"/api/chain/verify", "/api/chain/anchors"})
 
-_EDITOR_POSTS = re.compile(r"^/api/(?:policy/(?:change|preview)|impact/[^/]+/suggestions|suggestions/[^/]+/decision)$")
+_EDITOR_POSTS = re.compile(r"^/api/(?:policy/(?:change|preview|drafts|drafts/[^/]+/decision)|impact/[^/]+/suggestions"
+                           r"|suggestions/[^/]+/decision)$")
+# The one route that takes more than MAX_BODY_BYTES: a policy document upload (asof/intake.py).
+UPLOAD_PATH = "/api/policy/drafts"
+UPLOAD_LIMIT = intake.MAX_PDF_BYTES
+
+
+def body_limit(method: str, path: str) -> int:
+    return UPLOAD_LIMIT if method == "POST" and path == UPLOAD_PATH else MAX_BODY_BYTES
 
 
 def required_role(method: str, path: str) -> str | None:
@@ -86,20 +94,21 @@ class BodyLimit:
     chunked body, which has no Content-Length, before the application reads more than the limit.
     """
 
-    def __init__(self, app, limit: int = MAX_BODY_BYTES):
+    def __init__(self, app, limit: int | None = None):
         self.app, self.limit = app, limit
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
         seen = 0
+        limit = self.limit or body_limit(scope.get("method", ""), scope.get("path", ""))
 
         async def limited():
             nonlocal seen
             message = await receive()
             if message["type"] == "http.request":
                 seen += len(message.get("body", b""))
-                if seen > self.limit:
+                if seen > limit:
                     raise HTTPException(413, "request body too large")
             return message
 
@@ -232,15 +241,23 @@ class ReceiptIn(BaseModel):
     row_hash: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
 
 
+class DraftDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    approve: bool
+    accept: list[Annotated[int, Field(ge=1, le=12)]] = Field(default_factory=list, max_length=12)
+    preview: bool = False
+
+
 class SuggestionDecision(BaseModel):
     model_config = ConfigDict(extra="forbid")
     approve: bool
 
 
 def create_app(settings: Settings | None = None, *, gate: Gate | None = None, assistant: DemoAssistant | None = None,
-               asker: LedgerAsker | None = None, schema: str = db.SCHEMA, rate_limit: int = 30) -> FastAPI:
+               asker: LedgerAsker | None = None, schema: str = db.SCHEMA, rate_limit: int = 30,
+               intake_model: Any = None) -> FastAPI:
     settings = settings or get_settings()
-    state: dict[str, Any] = {"gate": gate, "assistant": assistant, "asker": asker}
+    state: dict[str, Any] = {"gate": gate, "assistant": assistant, "asker": asker, "intake_llm": intake_model}
     users_mode = settings.asof_auth == "users"
     api_token = settings.asof_api_token.get_secret_value() if settings.asof_api_token and not users_mode else None
     if users_mode and (settings.asof_api_token or settings.asof_editor_token):
@@ -265,6 +282,15 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
                                                   anchors=anchors)
             state["assistant"] = state["assistant"] or DemoAssistant(llm, emb, app_conn, schema)
         return state["gate"], state["assistant"]
+
+    def intake_llm():
+        """The model for policy intake: same provider and fallback as checks, larger output cap, longer deadline."""
+        if state.get("intake_llm") is None:
+            if not settings.llm_ready:
+                raise HTTPException(503, NO_MODEL)
+            state["intake_llm"] = build_llm(settings, max_output_tokens=settings.asof_intake_max_output_tokens,
+                                            deadline_s=settings.asof_intake_timeout_s)
+        return state["intake_llm"]
 
     def ledger_asker() -> LedgerAsker:
         if state["asker"] is None:
@@ -305,7 +331,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     @app.middleware("http")
     async def guard(request: Request, call_next):
         length = request.headers.get("content-length")
-        if length and length.isdigit() and int(length) > MAX_BODY_BYTES:
+        if length and length.isdigit() and int(length) > body_limit(request.method, request.url.path):
             return JSONResponse({"error": "request body too large"}, status_code=413)
         auth = request.headers.get("authorization", "")
         given = auth[7:].strip() if auth[:7].lower() == "bearer " else None
@@ -617,6 +643,119 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
                        x_asof_editor_token: Annotated[str | None, Header()] = None):
         """The impact of a change, computed by Db2 inside a transaction that is rolled back: nothing is saved."""
         return as_editor(body, request, x_asof_editor_token, preview=True)
+
+    # ---------- policy intake (asof/intake.py) ----------
+    DRAFT_ERRORS = {"75043": 404, "75044": 403, "75045": 422, "75046": 422, "75047": 409, "75048": 409, "75042": 409,
+                    "75011": 422, "75012": 409, "75013": 422, "75040": 422}
+
+    def draft_error(exc: db.DatabaseError) -> HTTPException | None:
+        status = DRAFT_ERRORS.get(exc.sqlstate or "")
+        return HTTPException(status, str(exc).split(": ", 1)[-1]) if status else None
+
+    @app.post("/api/policy/drafts")
+    async def upload_policy_document(request: Request, doc_id: DocId,
+                                     name: Annotated[str | None, Query(max_length=200)] = None,
+                                     x_asof_editor_token: Annotated[str | None, Header()] = None):
+        """A policy PDF becomes a draft of checked clause versions. Nothing is in force until an editor approves.
+        The body is the PDF itself (Content-Type: application/pdf), at most 2 MB."""
+        require_editor(request, x_asof_editor_token)
+        if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/pdf":
+            raise HTTPException(415, "send the PDF itself as the request body, with Content-Type: application/pdf")
+        data = await request.body()
+        try:
+            source = await run_in_threadpool(intake.read_pdf, data, name)
+        except intake.IntakeError as exc:
+            raise HTTPException(422, str(exc)) from None
+        llm = intake_llm()
+
+        def work() -> dict[str, Any]:
+            conn = app_conn()
+            try:
+                proposals, discarded, model = intake.propose(llm, source, doc_id, conn, schema)
+            finally:
+                conn.close()
+            editor = db.connect(settings, "editor")
+            try:
+                draft_id = intake.store_draft(editor, source, doc_id, model, proposals, requested_by(request), schema)
+            finally:
+                editor.close()
+            reader = app_conn()  # the editor holds no SELECT on the timeline view; the runtime user reads drafts
+            try:
+                return {"draft": intake.get_draft(reader, draft_id, schema), "discarded": [d.__dict__ for d in discarded]}
+            finally:
+                reader.close()
+
+        try:
+            return await run_in_threadpool(work)
+        except intake.IntakeError as exc:
+            raise HTTPException(422, str(exc)) from None
+        except db.DatabaseError as exc:
+            raise draft_error(exc) or exc from None
+
+    @app.get("/api/policy/drafts")
+    def policy_drafts():
+        conn = app_conn()
+        try:
+            return intake.list_drafts(conn, schema)
+        finally:
+            conn.close()
+
+    @app.get("/api/policy/drafts/{draft_id}")
+    def policy_draft(draft_id: Annotated[int, Path(ge=1, le=10**12)]):
+        conn = app_conn()
+        try:
+            draft = intake.get_draft(conn, draft_id, schema)
+        finally:
+            conn.close()
+        if draft is None:
+            raise HTTPException(404, "no such draft")
+        return draft
+
+    @app.get("/api/policy/drafts/{draft_id}/source")
+    def policy_draft_source(draft_id: Annotated[int, Path(ge=1, le=10**12)]):
+        """The uploaded file, exactly as Db2 holds it (its SHA-256 is on the draft)."""
+        conn = app_conn()
+        try:
+            found = intake.source_pdf(conn, draft_id, schema)
+        finally:
+            conn.close()
+        if found is None:
+            raise HTTPException(404, "no such draft")
+        name, data = found
+        return Response(data, media_type="application/pdf",
+                        headers={"Content-Disposition": f'attachment; filename="{intake.safe_name(name)}"'})
+
+    @app.get("/api/policy/intake/sample")
+    def policy_intake_sample():
+        """The built-in sample: a fictional revision of the Aurelia Air policy (replay mode has its extraction)."""
+        return Response(intake.SAMPLE_PDF.read_bytes(), media_type="application/pdf",
+                        headers={"Content-Disposition": f'attachment; filename="{intake.SAMPLE_PDF.name}"'})
+
+    @app.post("/api/policy/drafts/{draft_id}/decision")
+    def decide_policy_draft(draft_id: Annotated[int, Path(ge=1, le=10**12)], body: DraftDecision, request: Request,
+                            x_asof_editor_token: Annotated[str | None, Header()] = None):
+        """Approve (with the items to accept), reject, or preview: preview applies the draft and runs CHANGE_IMPACT
+        in one transaction, then rolls it back."""
+        require_editor(request, x_asof_editor_token)
+        if body.preview and not body.approve:
+            raise HTTPException(422, "only an approval can be previewed")
+        editor = db.connect(settings, "editor")
+        try:
+            try:
+                out = intake.decide(editor, draft_id, body.approve, body.accept, get_embeddings(settings.embedding_model),
+                                    requested_by(request), body.preview, schema)
+            except ValueError as exc:
+                raise HTTPException(422, str(exc)) from None
+            except db.DatabaseError as exc:
+                raise draft_error(exc) or exc from None
+        finally:
+            editor.close()
+        reader = app_conn()
+        try:
+            out["draft"] = intake.get_draft(reader, draft_id, schema)
+        finally:
+            reader.close()
+        return out
 
     @app.get("/", include_in_schema=False)
     def root():

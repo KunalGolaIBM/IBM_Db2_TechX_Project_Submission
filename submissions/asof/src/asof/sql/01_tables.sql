@@ -246,3 +246,70 @@ CREATE TABLE ASOF.API_USER (
   CONSTRAINT CK_API_USER_HASH CHECK (TRANSLATE(TOKEN_SHA256, '', '0123456789abcdef') = '')
 ) IN ASOF_TS32K
 @
+
+-- table: POLICY_DRAFT
+-- A policy document uploaded for intake (asof/intake.py). The PDF itself is kept, with the SHA-256
+-- Db2 computed over it (ADD_POLICY_DRAFT refuses a file whose hash differs from the application's),
+-- so every clause version approved from it traces back to the exact file. Nothing in a draft is in
+-- force: the only way into POLICY_CLAUSE is DECIDE_POLICY_DRAFT, then APPLY_DRAFT_ITEM (which calls
+-- APPLY_POLICY_CHANGE for a changed clause) in the same transaction, as the policy editor.
+-- UPLOADED_BY and DECIDED_BY_USER are API user names (ASOF_AUTH=users); with them set, Db2 refuses an
+-- approval by the person who uploaded the document.
+CREATE TABLE ASOF.POLICY_DRAFT (
+  DRAFT_ID        BIGINT        NOT NULL GENERATED ALWAYS AS IDENTITY (NO CACHE),  -- no gaps of 20 after a restart
+  DOC_ID          VARCHAR(32)   NOT NULL,
+  SOURCE_NAME     VARCHAR(200)  NOT NULL,
+  SOURCE_SHA256   CHAR(64)      NOT NULL,
+  SOURCE_PDF      BLOB(4M)      NOT NULL,
+  SOURCE_PAGES    SMALLINT      NOT NULL,
+  SOURCE_TEXT     CLOB(256K)    NOT NULL,
+  EXTRACTED_BY    VARCHAR(200)  NOT NULL,
+  STATUS          VARCHAR(12)   NOT NULL DEFAULT 'PENDING',
+  UPLOADED_BY     VARCHAR(40),
+  CREATED_AT      TIMESTAMP     NOT NULL DEFAULT CURRENT TIMESTAMP,
+  CREATED_BY      VARCHAR(128)  NOT NULL DEFAULT SESSION_USER,
+  DECIDED_AT      TIMESTAMP,
+  DECIDED_BY      VARCHAR(128),
+  DECIDED_BY_USER VARCHAR(40),
+  CONSTRAINT PK_POLICY_DRAFT PRIMARY KEY (DRAFT_ID),
+  CONSTRAINT FK_DRAFT_DOC FOREIGN KEY (DOC_ID) REFERENCES ASOF.POLICY_DOC (DOC_ID),
+  CONSTRAINT CK_DRAFT_STATUS CHECK (STATUS IN ('PENDING', 'APPLIED', 'REJECTED')),
+  CONSTRAINT CK_DRAFT_HASH CHECK (TRANSLATE(SOURCE_SHA256, '', '0123456789abcdef') = ''),
+  CONSTRAINT CK_DRAFT_PAGES CHECK (SOURCE_PAGES BETWEEN 1 AND 50)
+) IN ASOF_TS32K
+@
+
+-- table: POLICY_DRAFT_ITEM
+-- One proposed clause version per row: CHANGE (a new version of an existing clause), NEW (a clause
+-- the policy did not have) or UNCHANGED (restated as it is; never applied). CHECKS_JSON holds the
+-- deterministic checks run on the extraction (verbatim text, quoted date, rule values found in the
+-- text); BLOCKED = 1 means one of them failed and the item cannot be accepted. APPLIED_VERSION is
+-- the version label the item became.
+CREATE TABLE ASOF.POLICY_DRAFT_ITEM (
+  DRAFT_ID        BIGINT        NOT NULL,
+  ITEM_NO         SMALLINT      NOT NULL,
+  KIND            VARCHAR(10)   NOT NULL,
+  CLAUSE_ID       VARCHAR(32)   NOT NULL,
+  AREA            VARCHAR(40)   NOT NULL,
+  TITLE           VARCHAR(200)  NOT NULL,
+  CLAUSE_TEXT     VARCHAR(4000) NOT NULL,
+  RULE_JSON       VARCHAR(2000) NOT NULL,
+  BUS_START       DATE          NOT NULL,
+  BUS_END         DATE          NOT NULL,
+  DATE_QUOTE      VARCHAR(1000) NOT NULL,
+  SOURCE_PAGE     SMALLINT,
+  CHECKS_JSON     VARCHAR(8000) NOT NULL,
+  BLOCKED         SMALLINT      NOT NULL,
+  STATUS          VARCHAR(12)   NOT NULL DEFAULT 'PENDING',
+  APPLIED_VERSION VARCHAR(20),
+  CONSTRAINT PK_POLICY_DRAFT_ITEM PRIMARY KEY (DRAFT_ID, ITEM_NO),
+  CONSTRAINT FK_ITEM_DRAFT FOREIGN KEY (DRAFT_ID) REFERENCES ASOF.POLICY_DRAFT (DRAFT_ID),
+  CONSTRAINT CK_ITEM_KIND CHECK (KIND IN ('CHANGE', 'NEW', 'UNCHANGED')),
+  CONSTRAINT CK_ITEM_STATUS CHECK (STATUS IN ('PENDING', 'APPLIED', 'REJECTED')),
+  CONSTRAINT CK_ITEM_BLOCKED CHECK (BLOCKED IN (0, 1)),
+  CONSTRAINT CK_ITEM_PERIOD CHECK (BUS_END > BUS_START),
+  CONSTRAINT CK_ITEM_RULE_JSON CHECK (JSON_EXISTS(RULE_JSON, '$')),
+  CONSTRAINT CK_ITEM_CHECKS_JSON CHECK (JSON_EXISTS(CHECKS_JSON, '$')),
+  CONSTRAINT CK_ITEM_APPLIABLE CHECK (STATUS <> 'APPLIED' OR (BLOCKED = 0 AND KIND <> 'UNCHANGED'))
+) IN ASOF_TS32K
+@
