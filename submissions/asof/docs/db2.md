@@ -148,6 +148,18 @@ What this shows, including what it does not:
 - **The benchmark caught two problems, now fixed.** The analytics query multiplied two `INTEGER`s and overflowed (SQL0802N) once one decision type passed about 450,000 rows; it now uses `BIGINT`. A partitioned `IX_LEDGER_DECISION` could not give `LEDGER_ID` order across months, and the filtered ledger page got slower (8.4 ms to 11.9 ms) until the index was made `NOT PARTITIONED`.
 - **Three Db2 rules shaped the design.** A `REFRESH IMMEDIATE` MQT cannot hold `MIN` or `MAX` (SQL20058N), so each group's first and last time comes from the ends of a four-column index. A new MQT blocks inserts into its base table until it is refreshed (SQL0668N), so setup refreshes every pending one. And column access control on the ledger makes Db2 hide every row of an MQT built over it until a row permission exists. `python -m asof.db2check` checks all three.
 
+### `VERIFY_CHAIN` at 1,000,000 decisions
+
+The partition benchmark's rows are synthetic, not a chain, so `python -m asof.chainbench` builds a real one: 1,000,000 rows appended inside Db2 through the ledger's own `APPEND_LEDGER_ROW` (a SHA-256 link and two claim citations each), then verified as the runtime user, which recomputes every row hash and checks every citation against the hashed verdicts ([full report](chain_benchmark.md); Db2 12.1.5 under Rosetta, nothing else running during the verify phase):
+
+| Rows | `VERIFY_CHAIN` | Time | Per 1,000 rows |
+|---|---|---|---|
+| 10,000 | OK | 24.3 s | 2.43 s |
+| 100,000 | OK | 245.6 s | 2.46 s |
+| 1,000,000 | OK | 2,755.8 s (46 min) | 2.76 s |
+
+The cost is linear in the ledger, a little worse per row at the largest size, and it is paid on every call. That is fine for the nightly Airflow run; it is not fine for a receipt check or an evidence pack, which call `VERIFY_CHAIN` too and would wait 46 minutes on a ledger this size. Verifying from the last verified checkpoint, so each run reads only the rows appended since, is the fix; it is not built ([limitations](limitations.md)). Loading the million rows took 1,127 s (about 1.1 ms a row, committing every 5,000 and flushing the buffer pools so dirty pages never hold the active log).
+
 ## Backup and restore, proven on a database that did not exist
 
 A ledger is only evidence if it survives losing the machine, so AsOf tests its recovery end to end, with Db2's own utilities and the ledger's own checks. `python -m asof.backup drill` ([backup.py](../src/asof/backup.py)) works in scratch databases and never touches `TESTDB` or its logging mode:

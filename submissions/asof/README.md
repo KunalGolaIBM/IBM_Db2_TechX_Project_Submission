@@ -91,7 +91,7 @@ Given an AI-generated answer and the date that matters (booking or travel date, 
 
 **Two domains, one check:** Aurelia Air's customer service plan (34 clauses, 38 versions) and Fernhollow Bank's fee schedule (18 clauses, 26 versions) share the schema, the query, the rule checker, the ledger and the agents.
 
-**How AsOf compares.** Amazon Bedrock Automated Reasoning checks, NVIDIA NeMo Guardrails and IBM watsonx.governance already check or score answers against policies or retrieved text, and AsOf does not claim to have invented that. What it adds is time, inside the customer's own system of record: effective-dated policy versions, bitemporal replay of what the database held at a moment, and change impact on past answers ([the comparison and the build status](docs/overview.md)).
+**How AsOf compares.** Amazon Bedrock Automated Reasoning checks, NVIDIA NeMo Guardrails and IBM watsonx.governance already check or score answers against policies or retrieved text; AsOf did not invent that. It adds time, inside the customer's system of record: effective-dated policy versions, bitemporal replay of what the database held at a moment, and change impact on past answers ([the comparison and the build status](docs/overview.md)).
 
 ---
 
@@ -134,7 +134,7 @@ User and clause text stay in escaped data blocks, outputs pass strict Pydantic s
 
 ### Replay mode: no model at all
 
-With `LLM_PROVIDER=replay` (what `./quickstart.sh` sets when there is no key), every model call is answered from [recorded outputs](src/asof/data/replay.json) of the hosted model, keyed by a SHA-256 of the exact input; everything else runs live in Db2. An input that was not recorded fails closed, like a provider outage, and the ledger labels replayed decisions `replay:` ([details](docs/ai.md#replay-mode-no-model-at-all)).
+With `LLM_PROVIDER=replay` (what `./quickstart.sh` sets when there is no key), every model call is answered from [recorded outputs](src/asof/data/replay.json) of the hosted model, keyed by a SHA-256 of the input; Db2 runs live. An unrecorded input fails closed, and the ledger labels replayed decisions `replay:` ([details](docs/ai.md#replay-mode-no-model-at-all)).
 
 ---
 
@@ -279,6 +279,7 @@ Db2 tests run in throwaway schemas as the real least-privilege users ([what they
 - **The evaluation is the author's,** on a fictional corpus: four of the nine frozen splits motivated a fix and are no longer blind.
 - **Synthetic, single-node demo;** Db2 runs under emulation on Apple Silicon.
 - **About 6 s per check** on the hosted model: fine before a reply is sent, not for token streaming.
+- **`VERIFY_CHAIN` reads the whole chain:** [46 minutes at 1,000,000 decisions](docs/db2.md#verify_chain-at-1000000-decisions); receipt checks and evidence packs call it, so a large ledger needs checkpointed verification.
 - **One date per check,** and policy intake reads PDFs with a text layer only (no OCR).
 - **No live demo URL:** Db2 on Cloud's free plan lacks what AsOf needs (`VECTOR`, new schemas, row and column access control), so the demo is the video, the screenshots and replay mode.
 - **Next:** incremental chain verification from a checkpoint, a larger routing split and a third document, the remaining frozen splits on watsonx.ai, and `db2audit` on the policy history.
