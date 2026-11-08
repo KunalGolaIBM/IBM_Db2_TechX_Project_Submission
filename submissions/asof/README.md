@@ -612,40 +612,16 @@ The script makes a GSKit key database whose password GSKit generates and stashes
 python -m asof.db2check      # verify the Db2 features AsOf needs (owner account)
 python -m asof.setup         # schema, users, seed data, grants, self-check
 python src/main.py           # web UI at http://127.0.0.1:8000, API docs at /docs (same as python -m asof.api)
-python -m asof.demo          # optional: record ten sample decisions (seven airline, three bank) so every screen has history
+python -m asof.demo          # optional: thirteen sample decisions (seven airline, three bank, three held for the inbox) so every screen has history
 ```
 
 - **The customer's side:** http://127.0.0.1:8000/chat is a fictional airline's help page with a chat widget. Pick a booking (its date is what the booking system sends as the as-of date) and ask. Each reply shows whether AsOf released the draft as written, corrected it from the clause (with the clause versions as sources), or passed it to a specialist; **Behind the scenes** shows the assistant's draft, the claim verdicts and the ledger receipt. Every suggested question replays without a key; the five bookings cover all three outcomes.
 - **Policy intake:** in the console, **Policy intake**, then **Use the sample**: a fictional Aurelia Air revision that raises the first bag fee from 1 February 2027, adds a sports equipment clause, extends travel credits from 1 March 2027 and restates one clause unchanged. Preview its impact, approve it, and see the new versions on the timeline.
 - **Agents:** [mcp_server/README.md](mcp_server/README.md) runs AsOf as an MCP server for any agent that speaks the Model Context Protocol.
 
-### The Moffatt scenario through the API
+### The API
 
-Ask the naive demo assistant (which answers from a stale FAQ) and let AsOf check its draft, once for a March booking and once for a June booking:
-
-```bash
-curl -s -X POST localhost:8000/api/assistant/ask -H 'content-type: application/json' \
-  -d '{"question": "My grandmother just died. Can I get the bereavement fare after I travel?", "as_of_date": "2026-03-10"}'
-```
-
-A real run with `gemini-3.1-flash-lite` (abridged):
-
-| | March booking (`2026-03-10`) | June booking (`2026-06-02`) |
-|---|---|---|
-| Assistant draft | "You can request a bereavement discount retroactively ... within 90 days of your ticket issuance." | same promise |
-| Retroactive claim | CONTRADICTED by **BRV-002 v1** (judge and rule check agree) | SUPPORTED by **BRV-002 v2** |
-| Decision | **CORRECTED**: "Bereavement fares must be requested before travel begins. A bereavement fare cannot be applied retroactively once any part of the journey has been flown, and no refund of the fare difference is available after travel. Policy references: BRV-002 v1 (in effect from 2026-01-01)." | **PASS** with **BRV-002 v2** references when the draft is accurate, **CORRECTED** when it overstates the refund |
-| Naive-bot draft, 5 consecutive live runs (2 for March, 3 for June) | CORRECTED 2 of 2 | PASS 2 of 3, CORRECTED 1 of 3 |
-
-Other stale FAQ entries are caught the same way: a July question about the first bag fee is corrected from $35 to $40 (BAG-001 v2), and "you can transfer your ticket for a $50 name change fee" is corrected from CHG-004.
-
-**Resetting the ledger for a demo (demo only).** The ledger is append-only by design: no user, not even the owner, can update or delete its rows. To start a recording from ledger entry 1, setup can drop and recreate the ledger tables as the owner (and the change-impact agent's drafted corrections, which cite ledger rows), which deletes every recorded decision and starts a new hash chain. Policy clauses, their history and the help-centre answers are kept. Never do this outside a demo.
-
-```bash
-python -m asof.setup --reset-ledger      # asks you to type "reset"; add --yes to skip
-```
-
-`python -m asof.setup --reset` goes further and rebuilds the whole schema from the seed data, including undoing policy changes made in the demo.
+Every route, below, is JSON over HTTP; [docs/api.md](docs/api.md) walks through the Moffatt scenario with `curl` (the March and June bookings, with the decisions a real run returned) and shows how to reset the demo ledger. FastAPI serves the interactive schema at `/docs`.
 
 **API**
 
