@@ -124,6 +124,11 @@ jobs:
           done
           docker logs db2server | tail -80
           exit 1
+      # IBM's entrypoint turns on archive logging with 13 primary and 12 secondary log files. The suite installs and
+      # drops about a hundred throwaway schemas, and twice a burst of them filled the active log (SQL0964C) in a run
+      # that passed on the next commit. More secondary files, allocated only when a burst needs them:
+      - name: Give testdb's transaction log room for the suite's throwaway schemas
+        run: docker exec db2server su - db2inst1 -c "db2 connect to testdb > /dev/null && db2 update db cfg for testdb using LOGSECOND 100 && db2 terminate > /dev/null"
       - name: Db2 feature check
         run: python -m asof.db2check
       - name: Setup (schema, users in the container, seed, grants, self-check)
@@ -160,7 +165,11 @@ jobs:
         if: failure()
         run: |
           docker logs db2server 2>&1 | tail -150
-          docker exec db2server bash -c 'tail -120 /database/config/db2inst1/sqllib/db2dump/DIAG0000/db2diag.log' || true
+          df -h / || true
+          docker exec db2server su - db2inst1 -c "db2 get db cfg for testdb | grep -i -E 'LOGFILSIZ|LOGPRIMARY|LOGSECOND|LOGARCHMETH1|NUM_LOG_SPAN'" || true
+          # A full log names the application holding it (ADM1823E); the tail is usually archive messages.
+          docker exec db2server bash -c 'grep -B4 -A12 -E "ADM1823E|ADM1822W|SQL0964" /database/config/db2inst1/sqllib/db2dump/DIAG0000/db2diag.log | tail -80' || true
+          docker exec db2server bash -c 'grep -v -E "ADM184[46]I|sqlpgArchiveLogFile|archive for log file" /database/config/db2inst1/sqllib/db2dump/DIAG0000/db2diag.log | tail -120' || true
 
   quickstart:
     name: One-command quick start on a bare runner (./quickstart.sh, Compose path)
