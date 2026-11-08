@@ -128,7 +128,9 @@ CREATE INDEX ASOF.IX_LEDGER_CREATED ON ASOF.ANSWER_LEDGER (CREATED_AT)
 
 -- index: IX_LEDGER_DECISION
 -- The ledger page filtered by decision: WHERE DECISION = ? ORDER BY LEDGER_ID DESC (a reverse scan).
-CREATE INDEX ASOF.IX_LEDGER_DECISION ON ASOF.ANSWER_LEDGER (DECISION, LEDGER_ID)
+-- NOT PARTITIONED: one index over every month gives LEDGER_ID order across partitions; partitioned, the
+-- optimizer read the primary key backwards instead (8.4 ms became 11.9 ms at 1,000,000 rows, asof.ledgerbench).
+CREATE INDEX ASOF.IX_LEDGER_DECISION ON ASOF.ANSWER_LEDGER (DECISION, LEDGER_ID) NOT PARTITIONED
 @
 
 -- index: IX_LEDGER_GROUP_CREATED

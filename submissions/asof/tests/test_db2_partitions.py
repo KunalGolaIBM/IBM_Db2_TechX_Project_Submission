@@ -97,6 +97,9 @@ def test_rows_land_in_their_month_and_never_outside_a_partition(admin_conn, scra
     parts = db.query(admin_conn, "SELECT COUNT(*) FROM SYSCAT.DATAPARTITIONS WHERE TABSCHEMA = ? AND TABNAME = 'ANSWER_LEDGER'",
                      (scratch,))[0][0]
     assert parts == 26  # 24 months of 2026 and 2027, plus the two open-ended partitions
+    partitioned = {r[0].strip() for r in db.query(admin_conn, "SELECT DISTINCT INDNAME FROM SYSCAT.INDEXPARTITIONS "
+                                                  "WHERE INDSCHEMA = ? AND TABNAME = 'ANSWER_LEDGER'", (scratch,))}
+    assert partitioned == {"IX_LEDGER_CREATED", "IX_LEDGER_GROUP_CREATED"}  # the rest are global, IX_LEDGER_DECISION too
 
 
 def test_db2_refuses_to_detach_a_ledger_partition(settings, admin_conn, scratch):
