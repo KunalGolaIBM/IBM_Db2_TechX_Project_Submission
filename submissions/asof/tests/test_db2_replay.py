@@ -48,6 +48,23 @@ def replayed(admin_conn, embeddings, settings):
     schema.drop(admin_conn, name)
 
 
+def test_the_sample_policy_revision_replays_through_the_db2_timeline(replayed, settings):
+    """Policy intake in replay mode: the model's proposal comes from the recording, the clauses it is compared
+    with come from Db2's timeline view, and the checks run live. First in the module: a later test applies the
+    BAG-001 preset ($45 from 1 Jan 2027), after which the sample's $45 section is, rightly, UNCHANGED."""
+    from asof import intake
+
+    source = intake.read_pdf(intake.SAMPLE_PDF.read_bytes(), intake.SAMPLE_PDF.name)
+    conn = db.connect(settings, "app")
+    try:
+        proposals, discarded, model = intake.propose(replayed.llm, source, "AURELIA-CSP", conn, replayed.schema)
+    finally:
+        conn.close()
+    assert model.startswith("replay:") and not discarded
+    assert [(p.clause_id, p.kind, p.blocked) for p in proposals] == [
+        ("BAG-001", "CHANGE", False), ("BAG-006", "NEW", False), ("CRD-001", "CHANGE", False),
+        ("DLY-005", "UNCHANGED", False)]
+
 def test_every_built_in_check_replays_to_its_recorded_decision(replayed):
     got = []
     for c in RECORDING.scenarios["checks"]:
@@ -109,3 +126,4 @@ def test_analytics_counts_what_the_rule_check_said_about_every_draft_claim(repla
     assert rc["match"] + rc["mismatch"] + rc["not_applicable"] == claims > 0
     assert rc["mismatch"] == mismatches > 0  # the replayed scenarios include wrong amounts the rules catch
     assert rc["mismatch_judge_agreed"] <= rc["mismatch"]
+
