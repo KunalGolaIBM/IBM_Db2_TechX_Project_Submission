@@ -533,6 +533,7 @@ All settings are environment variables, read from `.env` ([.env.example](.env.ex
 | `ASOF_INTAKE_MAX_OUTPUT_TOKENS`, `ASOF_INTAKE_TIMEOUT_S` | Policy intake's one model call copies whole clauses, so it gets a larger output cap (4000) and a longer deadline (150 s) than a check's calls |
 | `LLM_TIMEOUT_S`, `LLM_MAX_OUTPUT_TOKENS` | Hard per-call deadline and output cap; the gate fails closed when hit. Use `LLM_TIMEOUT_S=180` for Ollama on a laptop (the value the recorded Ollama run used). |
 | `ASOF_CHECK_DEADLINE_S` | Whole-check budget (300 s): no step of a check starts after it, and the check fails closed |
+| `ASOF_ROUTER_AGENT` | `auto` (default): the routing agent looks at close calls only with a model measured on the pinned routing split; `on`: with any model; `off`: close calls always go to a person ([routing](#routing-which-policy-a-draft-is-about)) |
 | `ASOF_ALLOWED_HOSTS` | Host headers the API answers to (default `127.0.0.1,localhost,::1`), against DNS rebinding |
 
 ### IBM watsonx.ai
