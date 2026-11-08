@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Db2 Cortex</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#161616;--mut:#6f7787;--line:#e3e8ef;--blue:#0f62fe;--lb:#edf5ff;--ok:#0e8a4f;--bad:#da1e28}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink);display:flex;min-height:100vh}
+aside{width:270px;background:#fff;border-right:1px solid var(--line);padding:22px;display:flex;flex-direction:column;gap:18px;position:sticky;top:0;height:100vh}
+.logo{font-weight:800;font-size:20px;color:var(--blue)}.logo small{display:block;color:var(--mut);font-weight:500;font-size:12px;margin-top:2px}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;background:var(--lb);color:var(--blue);font-size:12px;font-weight:600}
+h4{margin:0 0 8px;font-size:11px;letter-spacing:.08em;color:var(--mut);text-transform:uppercase}
+.ex{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:7px;font-size:13px;cursor:pointer;color:var(--ink)}
+.ex:hover{border-color:var(--blue);background:var(--lb)}
+select{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff}
+main{flex:1;padding:26px 34px;max-width:1100px}
+.tabs{display:flex;gap:6px;margin-bottom:18px}.tab{padding:8px 16px;border-radius:99px;border:1px solid var(--line);background:#fff;cursor:pointer;font-weight:600;font-size:13px}.tab.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.bar{display:flex;gap:10px;margin-bottom:18px}.bar input{flex:1;padding:14px 16px;border:1px solid var(--line);border-radius:12px;font-size:15px;background:#fff}
+.bar input:focus{outline:2px solid var(--lb);border-color:var(--blue)}
+.btn{background:var(--blue);color:#fff;border:0;border-radius:12px;padding:0 24px;font-weight:700;cursor:pointer}.btn:disabled{opacity:.5}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.card h3{margin:0 0 12px;font-size:14px}
+.steps{display:flex;flex-wrap:wrap;gap:8px}.st{border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-size:12px;background:#fafcff;min-width:150px}
+.st b{display:block;color:var(--blue)}.st i{color:var(--mut);font-style:normal;display:block;margin-top:2px}
+pre{margin:0;background:#f7f9fc;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:12.5px;overflow:auto;white-space:pre-wrap}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}th{background:#f7f9fc;color:var(--mut);font-size:12px}
+.wrap{overflow:auto;max-height:340px}.tag{font-size:11px;padding:2px 8px;border-radius:99px;font-weight:700}
+.ok{background:#e6f6ee;color:var(--ok)}.bad{background:#ffe9ea;color:var(--bad)}.hit{background:var(--lb);color:var(--blue)}
+.insight{font-size:15px;line-height:1.5}.hide{display:none}.err{color:var(--bad);font-weight:600}
+</style></head><body>
+<aside>
+  <div class="logo">Db2 Cortex<small>Governed multi-agent analytics</small></div>
+  <div><h4>Status</h4><span class="pill" id="st">connecting…</span></div>
+  <div><h4>Role</h4><select id="role"><option value="analyst">Analyst (PII masked)</option><option value="admin">Admin (full access)</option></select></div>
+  <div><h4>Try asking</h4>
+    <button class="ex">Which branches have the highest loan default rate?</button>
+    <button class="ex">Show monthly transaction volume trend</button>
+    <button class="ex">Fraud rate by channel</button>
+    <button class="ex">Top 10 customers by balance</button>
+    <button class="ex">Delete all customers</button>
+  </div>
+</aside>
+<main>
+  <div class="tabs"><div class="tab on" data-t="ask">Ask</div><div class="tab" data-t="audit">Audit trail</div></div>
+  <section id="ask">
+    <div class="bar"><input id="q" placeholder="Ask your data anything…" autofocus><button class="btn" id="go">Ask</button></div>
+    <div id="out"></div>
+  </section>
+  <section id="audit" class="hide">
+    <div class="card"><h3>Tamper-evident audit log (SHA-256 chain in Db2) <button class="btn" style="padding:6px 14px;margin-left:10px" id="ver">Verify chain</button> <span id="vr"></span></h3>
+      <div class="wrap"><table id="at"></table></div></div>
+  </section>
+</main>
+<script>
+const $=s=>document.querySelector(s),sid=Math.random().toString(36).slice(2,10);let chart;
+const esc=s=>String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+fetch("/api/health").then(r=>r.json()).then(h=>$("#st").textContent=h.db2==="unreachable"?"Db2 unreachable - run seed.py?":`Db2 ✓ · ${h.llm} · ${h.embeddings}`).catch(()=>$("#st").textContent="Db2 unreachable");
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x==t));$("#ask").classList.toggle("hide",t.dataset.t!="ask");$("#audit").classList.toggle("hide",t.dataset.t!="audit");if(t.dataset.t=="audit")loadAudit()});
+document.querySelectorAll(".ex").forEach(b=>b.onclick=()=>{$("#q").value=b.textContent;ask()});
+$("#go").onclick=ask;$("#q").onkeydown=e=>{if(e.key=="Enter")ask()};
+async function ask(){const q=$("#q").value.trim();if(!q)return;$("#go").disabled=true;$("#out").innerHTML='<div class="card">Agents working…</div>';
+ try{const res=await fetch("/api/ask",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,role:$("#role").value,session:sid})});const r=await res.json();if(!res.ok)$("#out").innerHTML='<div class="card err">'+esc(typeof r.detail==="string"?r.detail:"Invalid request (question must be 3-500 characters)")+'</div>';else render(r)}
+ catch(e){$("#out").innerHTML='<div class="card err">Request failed: '+esc(e)+'</div>'}$("#go").disabled=false}
+function render(r){let h="";
+ h+=`<div class="card"><h3>Agent pipeline ${r.cached?'<span class="tag hit">semantic cache hit</span>':''} ${r.error?'<span class="tag bad">blocked / error</span>':'<span class="tag ok">verified</span>'}</h3><div class="steps">`+r.trace.map(t=>`<div class="st"><b>${esc(t.agent)} · ${t.ms}ms</b><i>${esc(t.detail)}</i></div>`).join("")+`</div></div>`;
+ if(r.error)h+=`<div class="card err">${esc(r.error)}</div>`;
+ if(r.insight)h+=`<div class="card insight"><h3>Insight</h3>${esc(r.insight)}</div>`;
+ if(r.sql)h+=`<div class="card"><h3>Generated SQL (Db2)</h3><pre>${esc(r.sql)}</pre></div>`;
+ if(r.chart&&r.chart.labels)h+=`<div class="card"><h3>Chart</h3><canvas id="cv" height="110"></canvas></div>`;
+ if(r.rows.length)h+=`<div class="card"><h3>Results (${r.rows.length} rows)</h3><div class="wrap"><table><tr>${r.cols.map(c=>`<th>${esc(c)}</th>`).join("")}</tr>${r.rows.map(x=>`<tr>${x.map(v=>`<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</table></div></div>`;
+ if(r.audit_hash)h+=`<div style="color:#6f7787;font-size:12px">Audit hash: ${r.audit_hash}</div>`;
+ $("#out").innerHTML=h;
+ if(r.chart&&r.chart.labels){chart&&chart.destroy();chart=new Chart($("#cv"),{type:r.chart.type,data:{labels:r.chart.labels,datasets:[{label:r.chart.label,data:r.chart.data,backgroundColor:"#0f62fe",borderColor:"#0f62fe",tension:.3}]},options:{plugins:{legend:{display:false}}}})}}
+async function loadAudit(){const a=await (await fetch("/api/audit")).json();$("#at").innerHTML=`<tr>${a.cols.map(c=>`<th>${c}</th>`).join("")}</tr>`+a.rows.map(r=>`<tr>${r.map((v,i)=>`<td>${esc(i==7?String(v).slice(0,12)+"…":v)}</td>`).join("")}</tr>`).join("")}
+$("#ver").onclick=async()=>{const v=await (await fetch("/api/audit/verify")).json();$("#vr").innerHTML=v.valid?`<span class="tag ok">chain valid · ${v.checked} rows</span>`:`<span class="tag bad">broken at #${v.broken_at}</span>`}
+</script></body></html>

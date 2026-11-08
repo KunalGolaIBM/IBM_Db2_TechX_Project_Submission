@@ -1,0 +1,17 @@
+ibm_db>=3.2
+fastapi>=0.110
+uvicorn>=0.29
+pydantic>=2
+python-dotenv
+sqlglot>=25
+langgraph>=0.2
+langchain-core
+langchain-community
+langchain-db2
+fastembed>=0.3
+# optional LLM providers (pick one, set LLM_PROVIDER in .env)
+# langchain-ibm
+# langchain-openai
+# langchain-ollama
+# langchain-google-genai
+# langchain-huggingface sentence-transformers   (EMBEDDINGS=hf)
