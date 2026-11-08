@@ -4,7 +4,8 @@
     python scripts/smoke_check.py                  # http://127.0.0.1:8000
     python scripts/smoke_check.py http://host:port
 
-1. /healthz: Db2 reachable as the runtime user, a model (or replay mode) configured.
+1. /healthz (retried for up to 2 minutes while the app starts): Db2 reachable as the runtime user, a model
+   (or replay mode) configured.
 2. The Moffatt question for a March booking, through the demo assistant and the check. With a live
    model it must not be released as written; in replay mode (what ./quickstart.sh picks without a key)
    the decision must equal the recorded one, and the ledger row must say "replay:".
@@ -20,6 +21,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 import httpx
@@ -27,6 +29,25 @@ import httpx
 ROOT = Path(__file__).resolve().parents[1]
 MOFFATT = "My grandmother just died. Can I get the bereavement fare after I travel?"
 MARCH = "2026-03-10"
+
+
+STARTUP_WAIT_S = 120  # the app loads the embedding model before it answers, which takes a while on first run
+
+
+def wait_until_up(client: httpx.Client) -> dict | None:
+    """/healthz once the app answers, retrying for up to STARTUP_WAIT_S: the README starts the app in the
+    background on the line before this script, so the first attempts may find nothing listening yet."""
+    deadline = time.monotonic() + STARTUP_WAIT_S
+    while True:
+        try:
+            r = client.get("/healthz", timeout=10.0)
+            if r.status_code == 200:
+                return r.json()
+        except httpx.HTTPError:
+            pass
+        if time.monotonic() > deadline:
+            return None
+        time.sleep(2)
 
 
 def fail(msg: str) -> int:
@@ -38,7 +59,9 @@ def main(base: str) -> int:
     token = os.environ.get("ASOF_API_TOKEN", "")  # only needed when the API token is switched on
     client = httpx.Client(base_url=base, timeout=httpx.Timeout(360.0, connect=10.0),
                           headers={"Authorization": f"Bearer {token}"} if token else {})
-    health = client.get("/healthz").json()
+    health = wait_until_up(client)
+    if health is None:
+        return fail(f"no answer from {base}/healthz within {STARTUP_WAIT_S} s: is `python src/main.py` running?")
     print("healthz:", {k: health.get(k) for k in ("status", "db2", "llm", "llm_ready", "replay", "replay_model")})
     if health.get("db2") != "ok" or not health.get("llm_ready"):
         return fail("Db2 is not reachable as the runtime user, or no model is configured")
