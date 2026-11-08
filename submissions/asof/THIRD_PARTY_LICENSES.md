@@ -58,6 +58,14 @@ It uses the following third-party software. No third-party code is copied into t
 |---|---|---|
 | icr.io/db2_community/db2:12.1.5.0 | IBM Db2 Community Edition, base of `docker/db2/Dockerfile` | IBM Db2 Community Edition licence (accepted with `LICENSE=accept`) |
 
+## Web UI fonts (`src/asof/ui/fonts/`)
+
+| Asset | Use | Licence |
+|---|---|---|
+| IBM Plex Sans 1.1.0 (Light, Regular, SemiBold) and IBM Plex Mono 1.1.0 (Regular), WOFF2 | The console and customer chat typefaces, served by the app itself (the CSP allows only `self`) | SIL Open Font License 1.1, full text in [src/asof/ui/fonts/OFL.txt](src/asof/ui/fonts/OFL.txt) |
+
+The console follows IBM's Carbon Design System colour tokens (Gray 10 and Gray 100 themes), like the slide deck.
+
 ## Slide deck (`docs/slides/AsOf_slides.pdf`)
 
 | Asset | Use | Licence or terms |

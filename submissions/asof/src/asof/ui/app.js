@@ -85,7 +85,14 @@ const period = (from, to) => (to ? `${fmtDate(from)} → ${String(to).startsWith
 const lower = (s) => String(s || "").toLowerCase();
 const today = () => new Date().toISOString().slice(0, 10);
 const shortHash = (h) => (h || "").slice(0, 12);
-const pill = (value, cls) => html`<span class="pill ${cls || lower(value)}">${String(value).replaceAll("_", " ")}</span>`;
+// Carbon tags use sentence case. Only enum values (CONTRADICTED, NEEDS_REVIEW) are recased; free text keeps its own case.
+const sentence = (v) => {
+  const s = String(v);
+  if (!/^[A-Z0-9_ ]+$/.test(s)) return s.charAt(0).toUpperCase() + s.slice(1);
+  const t = s.replaceAll("_", " ").toLowerCase();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+};
+const pill = (value, cls) => html`<span class="pill ${cls || lower(value)}">${sentence(value)}</span>`;
 function clauseRef(id, version, from, to) {
   return html`<span class="clause-ref"><b>${id}</b><i>${version}</i><span>${period(from, to)}</span></span>`;
 }
@@ -124,7 +131,7 @@ async function status() {
   try {
     const { body } = await api("/healthz");
     mount($("#status"), html`
-      <span class="tag ${body.db2 === "ok" ? "" : "warn"}" title="IBM Db2 connection as the least-privilege user">Db2 ${body.db2 === "ok" ? "connected" : "unavailable"}</span>
+      <span class="tag db2 ${body.db2 === "ok" ? "ok" : "warn"}" title="IBM Db2 connection as the least-privilege user"><i aria-hidden="true"></i><span class="label">Db2 ${body.db2 === "ok" ? "connected" : "unavailable"}</span></span>
       <span class="tag ${body.llm_ready ? (body.replay ? "warn" : "brand") : "warn"}" title="LLM provider and model: ${body.llm}">${body.llm_ready ? (body.replay ? "replay: recorded model outputs" : String(body.llm).split("/").pop()) : "no model configured"}</span>`);
     health.replay = Boolean(body.replay);
     if (body.replay && !$("#replay-mode")) {
@@ -416,10 +423,10 @@ function renderTimeline() {
                 <div class="tl-track">
                   ${ticks.map((t) => html`<i class="tl-grid" data-left="${t.left}"></i>`)}
                   <i class="tl-marker" data-left="${markerLeft}"></i>
-                  ${c.versions.map((v) => {
+                  ${c.versions.map((v, i) => {
                     const l = pos(toMs(v.from)); const w = Math.max(0.6, pos(toMs(v.to)) - l);
                     const sel = tl.sel.id === c.clause_id && tl.sel.version === v.version;
-                    return html`<button type="button" class="tl-seg ${v.version} ${sel ? "selected" : ""}" data-left="${l.toFixed(3)}" data-width="${w.toFixed(3)}"
+                    return html`<button type="button" class="tl-seg tone${(i % 4) + 1} ${sel ? "selected" : ""}" data-left="${l.toFixed(3)}" data-width="${w.toFixed(3)}"
                       data-clause="${c.clause_id}" data-version="${v.version}" title="${c.clause_id} ${v.version}: ${period(v.from, v.to)}">
                       <span>${v.version}</span><span>${keyParam(v)}</span>${String(v.to).startsWith("9999") ? html`<span class="open">→</span>` : ""}</button>`;
                   })}
@@ -529,7 +536,7 @@ async function Ledger(id) {
       <div class="row"><input id="rc-id" type="number" min="1" placeholder="Ledger #" required><input id="rc-hash" class="grow code" type="text" pattern="[0-9a-fA-F]{64}" placeholder="64-character row hash" required>
       <button class="btn ghost" type="submit">Check</button></div><div id="rc-out"></div></form>
     <div class="card"><div class="card-head"><div class="chips" id="dec-filter">
-      ${[null, "PASS", "CORRECTED", "ESCALATED", "REVIEWED"].map((d) => html`<button type="button" class="chip ${led.decision === d ? "on" : ""}" data-dec="${d || ""}">${d ? d.toLowerCase() : "all decisions"}</button>`)}
+      ${[null, "PASS", "CORRECTED", "ESCALATED", "REVIEWED"].map((d) => html`<button type="button" class="chip ${led.decision === d ? "on" : ""}" data-dec="${d || ""}">${d ? sentence(d) : "All decisions"}</button>`)}
     </div></div><div id="ledger-table"><div class="loading"><div class="spinner"></div>Loading ledger...</div></div></div>`);
   $("#verify").addEventListener("click", verifyChain);
   $("#receipt-form").addEventListener("submit", async (e) => {
@@ -549,12 +556,14 @@ async function Ledger(id) {
   $("#dec-filter").addEventListener("click", (e) => { const b = e.target.closest("[data-dec]"); if (b) { led.decision = b.dataset.dec || null; Ledger(); } });
   verifyChain();
   const q = led.decision ? `?limit=100&decision=${led.decision}` : "?limit=100";
-  const rows = (await api(`/api/ledger${q}`)).body;
+  let rows;
+  try { rows = (await api(`/api/ledger${q}`)).body; }
+  catch (err) { mount($("#ledger-table"), html`<div class="error-box">${err.message}</div>`); return; }  // keep the page and its controls
   mount($("#ledger-table"), rows.length ? html`
     <table><thead><tr><th>#</th><th>Recorded</th><th>Customer date</th><th>Decision</th><th>Reason</th><th>Question</th><th>Row hash</th></tr></thead>
     <tbody>${rows.map((r) => html`<tr class="click" data-id="${r.ledger_id}">
       <td class="num"><a href="#/ledger/${r.ledger_id}">${r.ledger_id}</a></td><td>${fmtTs(r.created_at)}</td><td>${fmtDate(r.as_of_date)}</td>
-      <td>${pill(r.decision)}</td><td class="small muted">${r.reason_code.replaceAll("_", " ").toLowerCase()}</td>
+      <td>${pill(r.decision)}</td><td class="small muted">${sentence(r.reason_code)}</td>
       <td class="trunc" title="${r.question_redacted}">${r.question_redacted}</td><td class="hash">${shortHash(r.row_hash)}</td></tr>`)}</tbody></table>`
     : html`<div class="empty"><h3>No decisions recorded yet</h3><p>Check an answer in the <a href="#/playground">Playground</a>.</p></div>`);
   $("#ledger-table").addEventListener("click", (e) => { const tr = e.target.closest("tr[data-id]"); if (tr) location.hash = `#/ledger/${tr.dataset.id}`; });
@@ -690,6 +699,7 @@ async function Inbox(id) {
       <div class="inbox-items">${q.answered.slice(0, 12).map((i) => inboxItem(i, true))}</div></div>` : ""}`);
   loadInboxNotices();
   if (inb.id) await renderReview();
+  else if (!q.open.length) mount($("#inbox-detail"), html`<div class="empty"><h3>Nothing to review</h3><p>Every check so far was released or already answered. Held answers come from the playground, the customer chat and the API whenever a check could not release a draft.</p></div>`);
 }
 async function loadInboxNotices(message) {
   const el = $("#inbox-notices");
@@ -1132,7 +1142,7 @@ function wordDiff(before, after) {
   return outp;
 }
 const CHECK_ICON = { pass: "✓", fail: "✕", warn: "!" };
-const KIND_LABEL = { CHANGE: "new version", NEW: "new clause", UNCHANGED: "unchanged" };
+const KIND_LABEL = { CHANGE: "New version", NEW: "New clause", UNCHANGED: "Unchanged" };
 function ruleTable(item) {
   const now = (item.current && item.current.rule) || {};
   const keys = [...new Set([...Object.keys(now), ...Object.keys(item.rule || {})])];
@@ -1318,19 +1328,19 @@ async function Analytics() {
         ${["PASS", "CORRECTED", "ESCALATED", "REVIEWED"].map((k) => { const d = a.decisions.find((x) => x.decision === k) || { count: 0, avg_latency_ms: 0 };
           return html`<div class="bar-row"><span>${pill(k)}</span><div class="bar"><i class="${lower(k)}" data-width="${pct(d.count, total)}"></i></div><span class="num">${d.count}</span></div>`; })}
       </div>${a.replayed_decisions ? html`<p class="small muted">${a.replayed_decisions} of these ${total} decisions were made in replay mode, from recorded model outputs, so their latency leaves out model time.</p>` : ""}<div class="sep"></div><table><thead><tr><th>Reason</th><th class="num">Decisions</th></tr></thead><tbody>
-        ${a.reasons.map((r) => html`<tr><td>${r.reason.replaceAll("_", " ").toLowerCase()}</td><td class="num">${r.count}</td></tr>`)}</tbody></table></div>
+        ${a.reasons.map((r) => html`<tr><td>${sentence(r.reason)}</td><td class="num">${r.count}</td></tr>`)}</tbody></table></div>
       <div class="card"><div class="card-head"><h2>Claims in drafts, by area</h2></div>
-        <div class="legend"><span><i class="supported"></i>supported</span><span><i class="contradicted"></i>contradicted</span><span><i class="not_covered"></i>not covered</span></div>
+        <div class="legend"><span><i class="supported"></i>Supported</span><span><i class="contradicted"></i>Contradicted</span><span><i class="not_covered"></i>Not covered</span></div>
         <div class="bars">${a.areas.map((x) => html`<div class="bar-row"><span>${AREA_LABEL[x.area] || x.area}</span>
           <div class="bar"><i class="supported" data-width="${pct(x.supported, maxArea)}"></i><i class="contradicted" data-width="${pct(x.contradicted, maxArea)}"></i><i class="not_covered" data-width="${pct(x.not_covered, maxArea)}"></i></div>
           <span class="num">${x.claims}</span></div>`)}</div></div>
     </div>
     <div class="card"><div class="card-head"><h2>Deterministic rule check</h2><span class="sub">numbers, limits, delay tiers and permissions in each claim, against the clause's RULE_JSON, whatever the judge said</span></div>
       ${(() => { const rc = a.rule_checks || { match: 0, mismatch: 0, mismatch_judge_agreed: 0, not_applicable: 0 };
-        return html`<div class="bars"><div class="bar-row"><span>mismatch</span><div class="bar"><i class="contradicted" data-width="${pct(rc.mismatch, rc.match + rc.mismatch + rc.not_applicable)}"></i></div><span class="num">${rc.mismatch}</span></div>
-        <div class="bar-row"><span>match</span><div class="bar"><i class="supported" data-width="${pct(rc.match, rc.match + rc.mismatch + rc.not_applicable)}"></i></div><span class="num">${rc.match}</span></div>
-        <div class="bar-row"><span>nothing to compare</span><div class="bar"><i class="not_covered" data-width="${pct(rc.not_applicable, rc.match + rc.mismatch + rc.not_applicable)}"></i></div><span class="num">${rc.not_applicable}</span></div></div>
-        <p class="small muted">Claims in drafts. The judge also said contradicted in ${rc.mismatch_judge_agreed} of the ${rc.mismatch} mismatches; where it said supported, the rule check overruled it (below).</p>`; })()}
+        return html`<div class="bars"><div class="bar-row"><span>Mismatch</span><div class="bar"><i class="contradicted" data-width="${pct(rc.mismatch, rc.match + rc.mismatch + rc.not_applicable)}"></i></div><span class="num">${rc.mismatch}</span></div>
+        <div class="bar-row"><span>Match</span><div class="bar"><i class="supported" data-width="${pct(rc.match, rc.match + rc.mismatch + rc.not_applicable)}"></i></div><span class="num">${rc.match}</span></div>
+        <div class="bar-row"><span>Nothing to compare</span><div class="bar"><i class="not_covered" data-width="${pct(rc.not_applicable, rc.match + rc.mismatch + rc.not_applicable)}"></i></div><span class="num">${rc.not_applicable}</span></div></div>
+        <p class="small muted bars-note">Claims in drafts. The judge also said contradicted in ${rc.mismatch_judge_agreed} of the ${rc.mismatch} mismatches; where it said supported, the rule check overruled it (below).</p>`; })()}
       <div class="sep"></div><h3>Where the rule check overruled the judge</h3>
       ${a.rule_overrides.length ? html`<table><thead><tr><th>Entry</th><th>Customer date</th><th>Claim</th><th>Clause</th></tr></thead><tbody>
         ${a.rule_overrides.map((r) => html`<tr><td><a href="#/ledger/${r.ledger_id}">#${r.ledger_id}</a></td><td>${fmtDate(r.as_of_date)}</td><td>${r.claim}</td><td><code>${r.clause_id}</code> ${r.version}</td></tr>`)}

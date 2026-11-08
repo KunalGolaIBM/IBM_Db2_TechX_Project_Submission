@@ -31,6 +31,19 @@ def test_the_chat_page_is_served_under_the_strict_csp_and_linked_from_the_consol
     assert 'href="chat.html"' in (UI / "index.html").read_text(encoding="utf-8")
 
 
+def test_every_font_the_stylesheets_ask_for_is_bundled_and_served_from_self():
+    """The CSP allows only 'self', so a missing font would silently fall back; each one must ship with the app."""
+    c = client()
+    for sheet in ("app.css", "chat.css"):
+        urls = re.findall(r'url\("(fonts/[^"]+)"\)', (UI / sheet).read_text(encoding="utf-8"))
+        assert urls, sheet
+        for url in urls:
+            assert (UI / url).is_file(), url
+            r = c.get(f"/ui/{url}")
+            assert r.status_code == 200 and r.headers["content-type"] == "font/woff2", url
+    assert "SIL Open Font License" in (UI / "fonts" / "OFL.txt").read_text(encoding="utf-8")
+
+
 def test_the_page_has_no_inline_script_style_or_handlers():
     page = (UI / "chat.html").read_text(encoding="utf-8")
     assert not re.search(r"<script(?![^>]*\bsrc=)", page) and "<style" not in page

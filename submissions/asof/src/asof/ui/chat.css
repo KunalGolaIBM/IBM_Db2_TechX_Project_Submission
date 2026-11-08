@@ -1,4 +1,8 @@
-/* Customer chat demo (chat.html): a fictional airline's help page with the AsOf-checked assistant. */
+/* Customer chat demo (chat.html): a fictional airline's help page with the AsOf-checked assistant. It keeps the
+   airline's own teal brand (it stands for a customer's website, not AsOf), set in IBM Plex like the console. */
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-style: normal; font-display: swap; src: url("fonts/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-style: normal; font-display: swap; src: url("fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-weight: 400; font-style: normal; font-display: swap; src: url("fonts/IBMPlexMono-Regular.woff2") format("woff2"); }
 :root {
   --bg: #f4f7f8; --surface: #ffffff; --surface-2: #f6f9fa; --ink: #0f1d24; --ink-2: #33464f; --muted: #66777f;
   --line: #e1e8eb; --line-2: #cfd9dd;
@@ -7,8 +11,8 @@
   --fix: #9a5800; --fix-bg: #fff4e0; --fix-line: #f6d39a;
   --hold: #5b4fc4; --hold-bg: #efedff; --hold-line: #d3cdfb;
   --bad: #b42318; --bad-bg: #fdecea;
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --shadow-lg: 0 24px 60px rgba(9, 40, 52, .16), 0 2px 6px rgba(9, 40, 52, .06);
   color-scheme: light;
 }
@@ -24,7 +28,8 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
-body { font: 15px/1.5 var(--sans); color: var(--ink); background: var(--bg); min-height: 100vh; }
+body { font: 15px/1.5 var(--sans); letter-spacing: .16px; color: var(--ink); background: var(--bg); min-height: 100vh; }
+:focus-visible { outline: 2px solid var(--sea); outline-offset: 2px; }
 a { color: var(--sea-2); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
@@ -42,7 +47,7 @@ a { color: var(--sea-2); }
 .air-brand rect { fill: var(--sea); }
 .air-brand path { fill: #fff; }
 .air-brand b { color: var(--sea); }
-.air-top nav { display: flex; gap: 22px; color: var(--muted); font-weight: 500; font-size: 14px; }
+.air-top nav { display: flex; gap: 22px; color: var(--muted); font-weight: 400; font-size: 14px; }
 .air-top nav .on { color: var(--ink); border-bottom: 2px solid var(--sun); padding-bottom: 2px; }
 
 .air-main { max-width: 1240px; margin: 0 auto; padding: 32px 28px 48px; display: grid; grid-template-columns: 1fr 440px;
@@ -90,10 +95,10 @@ a { color: var(--sea-2); }
 .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 
 .cites { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
-.cites-k { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
+.cites-k { font-size: 10.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
 .cite { display: inline-flex; align-items: center; border: 1px solid var(--line-2); border-radius: 7px; overflow: hidden; font-size: 12px; }
 .cite b { background: var(--ink); color: var(--surface); padding: 2px 7px; font-family: var(--mono); font-weight: 600; }
-.cite i { font-style: normal; color: var(--sea-2); padding: 2px 6px; font-weight: 700; border-right: 1px solid var(--line-2); }
+.cite i { font-style: normal; color: var(--sea-2); padding: 2px 6px; font-weight: 600; border-right: 1px solid var(--line-2); }
 .cite span { padding: 2px 7px; color: var(--muted); }
 
 .strip { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; padding: 8px 10px; border-radius: 10px; font-size: 12.5px;
@@ -107,12 +112,12 @@ a { color: var(--sea-2); }
 
 .behind { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line-2); display: grid; gap: 8px; font-size: 12.5px; }
 .behind[hidden] { display: none; }
-.bh-k { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.bh-k { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
 .bh-row p { margin: 0; color: var(--ink-2); }
 .bh-draft.struck { text-decoration: line-through; text-decoration-color: var(--bad); color: var(--muted); }
 .bh-claims { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
 .bh-claims li { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; color: var(--ink-2); }
-.bh-claims .v { font-size: 10px; font-weight: 700; letter-spacing: .05em; padding: 1px 6px; border-radius: 999px; }
+.bh-claims .v { font-size: 10px; font-weight: 600; letter-spacing: .05em; padding: 1px 6px; border-radius: 999px; }
 .v.supported { background: var(--pass-bg); color: var(--pass); }
 .v.contradicted { background: var(--bad-bg); color: var(--bad); }
 .v.not_covered { background: var(--hold-bg); color: var(--hold); }
