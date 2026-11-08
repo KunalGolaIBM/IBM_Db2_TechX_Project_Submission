@@ -21,7 +21,7 @@
 | **Db2 does the work** | Bitemporal tables queried `FOR BUSINESS_TIME AS OF` with `VECTOR_DISTANCE` in the same statement ([retriever.py](src/asof/retriever.py)), a SQL PL ledger with SHA-256 computed in SQL ([03_procedures.sql](src/asof/sql/03_procedures.sql)), `JSON_TABLE`, column masks ([05_masks.sql](src/asof/sql/05_masks.sql)) and `CREATE EXTERNAL MODEL`; `python -m asof.db2check` runs 29 of 29 feature checks. |
 | **Tamper evidence** | Triggers stop even the owner; `VERIFY_CHAIN` finds an edited row; receipts and chain-head anchors kept outside Db2 catch a ledger its owner rebuilt ([anchor.py](src/asof/anchor.py)). |
 | **Policy intake** | Upload a policy PDF and the model proposes clause versions; code checks each one against the document (the text word for word, the effective date quoted, every rule value stated), Db2 stores the file with a SHA-256 it computes itself, and an editor approves what goes into force through `DECIDE_POLICY_DRAFT` and `APPLY_POLICY_CHANGE`. On a frozen 11-item evaluation: 10 proposed correctly, the 1 wrong proposal blocked, nothing taken from an injected instruction ([details](#policy-intake-a-pdf-into-the-bitemporal-table)). |
-| **Where it plugs in** | The HTTP API, a LangChain runnable, a customer chat page whose every reply AsOf checks, an MCP server any agent can call ([mcp_server/](mcp_server/)), and a Langflow component. IBM watsonx.ai can be the model (`LLM_PROVIDER=watsonx`) or Db2's own embedder (`CREATE EXTERNAL MODEL ... PROVIDER WATSONX`). |
+| **Where it plugs in** | The HTTP API, a LangChain runnable, a customer chat page whose every reply AsOf checks, an MCP server any agent can call ([mcp_server/](mcp_server/)), and a Langflow component. IBM watsonx.ai can be the model (`LLM_PROVIDER=watsonx`) or Db2's own embedder (`CREATE EXTERNAL MODEL ... PROVIDER WATSONX`), both run on a real account: on the airline split IBM Granite released 1 of 26 wrong drafts, against 0 for the default model ([watsonx.ai results](#on-ibm-watsonxai)). |
 | **Engineering** | A LangGraph check with fixed edges that fails closed ([checkgraph.py](src/asof/checkgraph.py)), per-user API roles, optional TLS to Db2, 732 tests (plus 14 for the MCP server), and three CI jobs including IBM's stock Db2 image. |
 
 > **Fictional data.** "Aurelia Air", "Fernhollow Bank" and every policy, fee schedule, FAQ and help-centre answer in this repository are invented for the demo. The airline is modelled on the kind of policy at issue in *Moffatt v. Air Canada*; neither describes a real company.
@@ -106,7 +106,7 @@ Given an AI-generated answer and the date that matters (booking or travel date, 
 | Second domain (a bank fee schedule) with its own frozen split; extractor-injection split | Done, evaluated |
 | Row and column access control; "Ask the ledger" (SQL chain as a read-only analyst, SQLGlot gate) | Done, tested against Db2 |
 | Policy intake (PDF to draft to approval), customer chat page, MCP server | Done, tested against Db2 and in a browser; intake measured on a frozen evaluation; the MCP server run against a live AsOf |
-| IBM watsonx.ai as the model and as Db2's embedder | Built and tested up to IBM's sign-in with a dummy key (the SDK and Db2 both reach IBM Cloud IAM, which refuses it); not yet run with a real watsonx.ai account |
+| IBM watsonx.ai as the model and as Db2's embedder | Done and run on a real (Lite) account: the airline split and the intake evaluation on `ibm/granite-4-h-small`, and Db2 embedding on watsonx.ai ([results](#on-ibm-watsonxai)) |
 | dbt marts, Airflow nightly audit, Langflow component, cookbook recipe, one-command quick start | Done and run for real: dbt and Airflow against Db2 in CI; the quick start in CI from a bare runner; the Langflow flow against a live AsOf on 6 Nov (its component tests run in CI); the cookbook notebook against Db2 on 7 Nov |
 
 ### How AsOf compares
@@ -242,7 +242,7 @@ Things worth knowing:
     KEY '...' PROJECT_ID '...'
   ```
 
-  On our Db2 12.1.5 the statement is accepted, and with a dummy key `TO_EMBEDDING` reaches IBM and comes back with "Provided API key could not be found" (SQL20592N): the path works up to authentication. It has not been run with a real watsonx.ai account; setup's agreement check (cosine against the local vector) would be the first real call. watsonx.ai lists both of its 384-dimension embedding models as deprecated, to be withdrawn on 12 January 2027. `TEXT_GENERATION` models register on watsonx.ai as well; AsOf uses none, because each model call in a check needs a strict schema, a deadline, a fallback and fail-closed handling, which the application gives it.
+  Run on a real watsonx.ai account (us-south, Sat 7 Nov): Db2's vector for setup's test sentence matched the local one exactly (cosine 1.0 in three calls, 1.0 to 1.4 s each), and `APPLY_POLICY_CHANGE` embedded a new clause version inside Db2 through watsonx.ai with no local model involved, after which the as-of query found it (`tests/test_watsonx.py`, run with `ASOF_RUN_NETWORK_TESTS=1`). watsonx.ai lists both of its 384-dimension embedding models as deprecated, to be withdrawn on 12 January 2027. `TEXT_GENERATION` models register on watsonx.ai as well; AsOf uses none, because each model call in a check needs a strict schema, a deadline, a fallback and fail-closed handling, which the application gives it.
 
 ### Analytics marts with dbt
 
@@ -455,7 +455,7 @@ LLM_PROVIDER=watsonx                              # watsonx.ai checks the answer
 ASOF_INDB_PROVIDER=watsonx                        # Db2 itself embeds policy text on watsonx.ai (no extra package; re-run python -m asof.setup)
 ```
 
-Either line can be used without the other. With `LLM_PROVIDER=watsonx`, a wrong key or unreachable region is reported when AsOf starts, and the key never appears in the message. Both paths are tested up to IBM's sign-in, which refuses a dummy key; neither has been run with a real watsonx.ai account. `python -m asof.eval --split test --provider watsonx` measures it on the frozen split once a key is set.
+Either line can be used without the other. With `LLM_PROVIDER=watsonx`, a wrong key or unreachable region is reported when AsOf starts, and the key never appears in the message. Both paths have run on a real account; the results are [below](#on-ibm-watsonxai). `python -m asof.eval --split test --provider watsonx --model <id>` measures any watsonx.ai chat model on the frozen split. On the Lite plan, mind the monthly token allowance: a check costs about 4,200 tokens, so one 40-case split is about 170,000.
 
 ### Per-user API access
 
@@ -646,6 +646,27 @@ An independent review of the first version found that an added sentence counted 
 
 On the same pinned split after the change (`822608e`): **0 of 12 released, 0 of 8 correct drafts stopped, ideal decisions 75% to 85%**; after the review fixes (`a4cb55f`): 0 of 12 released, 1 of 8 held, ideal 85%. The second check did not fire in any split; it is a backstop for the SU02 pattern. `situation-test2` stopped being blind with the run that motivated the change, so `bank-test2` is now the one split never used to choose a change: 0 of 14 released. The other splits were run before and after changes their failures motivated, so they show the check holding up, not a blind estimate.
 
+### On IBM watsonx.ai
+
+Run on a real watsonx.ai account (Lite plan, us-south) on Sat 7 Nov at `ac86d09`, the same check as the OpenRouter runs above.
+
+- **Model choice.** Four watsonx.ai chat models were tried on four airline dev cases (never test cases): `ibm/granite-4-h-small`, `meta-llama/llama-3-3-70b-instruct`, `mistralai/mistral-small-3-1-24b-instruct-2503` and `openai/gpt-oss-120b`. None released a wrong draft; Llama, Mistral and gpt-oss made the ideal decision in 4 of 4 and Granite in 3 of 4 (the fourth held for a person, which is safe). Granite was the fastest (median 5.1 s; gpt-oss took 53 s) and used the fewest tokens, and it is IBM's own model, so it ran the frozen split. The Lite plan's monthly token allowance covered one 40-case split, so the other seven are not run on watsonx.ai.
+- **The airline `test` split on `ibm/granite-4-h-small`:**
+
+| | watsonx.ai `ibm/granite-4-h-small` (`ac86d09`) | OpenRouter `gemini-3.1-flash-lite` (`a4cb55f`) | Ollama `qwen2.5:7b-instruct` (`a4cb55f`) |
+|---|---|---|---|
+| False allow (wrong drafts released) | **1 of 26** (3.8%) | **0 of 26** | **0 of 26** |
+| False block (correct drafts held or rewritten) | 3 of 14 | 1 of 14 | 5 of 14 |
+| Safe / ideal decisions | 90.0% / 85.0% | 97.5% / 97.5% | 87.5% / 67.5% |
+| Citation accuracy | 97.1% | 100% | 91.4% |
+| Latency per answer, p50 | 5.7 s | 7.2 s | 40.5 s |
+| Model calls / tokens per check | 4.1 / about 4,200 | 4.0 / not recorded | 4.6 / local |
+
+- **The miss that matters: T20.** The draft says a mother-in-law counts as immediate family; BRV-001's list does not include in-laws. Granite judged the claim supported and quoted BRV-001's real list sentence, so the verbatim-quote rule could not catch it, and the rule check does not yet test membership in a list. It is the same misreading local Ollama made in its first run of this split. The default model got it right in every run.
+- **The three holds:** T02 and T05 were held because Granite's claims left out a detail the draft stated (the coverage check); T33 because Granite judged a premise about the customer not covered. All three went to a person; nothing wrong was released.
+- **Policy intake on Granite** (the frozen 11-item evaluation): 0 of 11 items came back right, and every wrong proposal was blocked (6), or missing (5). The checks kept anything wrong from being acceptable, but three proposals that matched no expected item passed them: Granite proposed the revised BRV-001 and CRD-002 as new clauses instead of changes to the existing ones. A second extraction of one document came back largely right, so Granite varies from run to run here. Use the default model for intake ([docs/intake_eval.md](docs/intake_eval.md)).
+- **What this shows:** AsOf runs end to end on IBM's stack (Db2 for the policy, the as-of retrieval and the ledger, watsonx.ai for the model and the embeddings), and the model matters: the deterministic layer caught most of a weaker model's mistakes but not a misread list. The same check, same cases and same safeguards produced 0 false allows on the default model and 1 on Granite.
+
 ### Why the date matters, measured
 
 `python -m asof.eval --ablation current-policy` runs AsOf's own check with every case's date replaced by 7 Nov 2026: a stand-in for a checker that only knows the current policy, scored against the same labels. Both arms ran at the same commit (`a4cb55f`, the current check), one run each. The comparison that matters is on the 25 of 155 frozen cases in the seven original splits whose key clause changed between the customer's date and 7 Nov 2026. That is a stress set, not a production rate: the splits were written around version changes, many on the last day of a version.
@@ -818,11 +839,12 @@ Both policy documents run through the same screens: the playground has two bank 
   - **The evaluation is the author's.** The cases were written by the author against a fictional corpus. Splits whose failures motivated a change are no longer blind; two splits (21 wrong drafts) were never used to choose one.
   - **Platforms.** The Python side needs Python 3.12 and does not install on Intel Macs (no PyTorch 2.15 wheel); on Windows, use WSL 2.
   - **Policy intake** reads PDFs with a text layer only (no OCR), finds dates written as "1 February 2027", "February 1, 2027" or "2027-02-01", and takes at most 12 sections per document. A blocked item cannot be edited on the review screen; fix the document, or enter the change in **Change impact**. A rule value whose unit the rule checker cannot read (for example `_years`) is flagged and left unchecked, as it would be in a check.
-  - **watsonx.ai** is wired and tested up to IBM's sign-in, not run with a real account; its two 384-dimension embedding models are deprecated for withdrawal on 12 January 2027.
+  - **watsonx.ai** ran one frozen split (the Lite plan's allowance) and released 1 of 26 wrong drafts with Granite, against 0 on the default model; Granite is not reliable for policy intake. Its two 384-dimension embedding models are deprecated for withdrawal on 12 January 2027.
   - **The chat page is a demo**: it calls the same API as everything else, so with `ASOF_AUTH=users` it needs a checker token, and a real deployment would put it behind the company's own customer sign-in.
 - **Done since the Round 1 proposal** (each behind tests): person names are redacted before the LLM and the ledger; the chain head is anchored outside Db2 after every append, so a rebuilt ledger is caught without receipts; optional TLS to a remote Db2; per-user API tokens and roles kept in Db2; fewer needless holds, measured on new frozen splits, plus a check of the premises a draft states about the customer; policy intake from PDFs with a frozen evaluation; a customer chat page; an MCP server; IBM watsonx.ai as the model or as Db2's embedder.
 - **Next Steps** (the residual risks in [architecture.md](architecture.md#threat-model), in the order they matter):
-  - Run the frozen splits on IBM watsonx.ai (`--provider watsonx`) once an account is set up, and report them next to OpenRouter and Ollama.
+  - Run the other seven frozen splits on watsonx.ai (the Lite plan's monthly tokens covered one), and try `meta-llama/llama-3-3-70b-instruct`, which made the ideal decision on every dev case it saw.
+  - A deterministic check of eligibility against list parameters such as `eligible_relations`, the gap T20 showed on watsonx.ai and on Ollama.
   - Test TLS against Db2 on Cloud itself (tested so far against the local container and in CI).
   - Db2 audit (`db2audit`) on the policy history table, and the anchor log on write-once storage by default.
   - A way for the calling system to state facts the policy needs but the customer did not (the cause of a delay, from the operations system), so fewer premises have to go to a person.

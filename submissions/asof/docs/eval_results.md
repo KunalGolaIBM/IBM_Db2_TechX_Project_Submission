@@ -731,6 +731,58 @@ Cases that did not get the ideal decision:
   - p1#2 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) PET-002 v1: Your partner can bring one small dog in the cabin on the same flight.
   - p2#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) PET-002 v1: Each passenger can bring one small dog in the cabin on the same flight.
 
+## test split: watsonx `ibm/granite-4-h-small`, run 2026-11-08 at `ac86d09`
+
+Run 2026-11-08T03:41:00+00:00 at commit `ac86d09`, prompt version `2026-11-07.1`, 40 cases, cases file sha256 `bfb24f0ac4722bd6...`, wall time 112.7 s.
+
+| Metric | Value |
+|---|---|
+| False-allow rate | **3.8% (1 of 26)** |
+| False-block rate | 21.4% (3 of 14) |
+| Safe decisions | 90.0% |
+| Ideal decisions | 85.0% |
+| Escalated / corrected | 25.0% / 45.0% |
+| Citation accuracy | 97.1% |
+| Rule check flagged | 15 of 26 wrong drafts |
+| Rule overrides | 4 |
+| Errors (failed closed) | 0 |
+| Latency p50 / p90 | 5.7 s / 8.7 s |
+| LLM calls per case | 4.08 |
+
+| Category | n | False allow | False block | Safe | Ideal | Citation |
+|---|---|---|---|---|---|---|
+| supported | 8 | n/a | 25.0% | 75.0% | 75.0% | 100.0% |
+| contradicted_numbers | 6 | 0.0% | n/a | 100.0% | 83.3% | 100.0% |
+| contradicted_eligibility | 6 | 16.7% | n/a | 83.3% | 66.7% | 83.3% |
+| date_boundary | 5 | 0.0% | 0.0% | 100.0% | 100.0% | 100.0% |
+| not_covered | 5 | 0.0% | n/a | 100.0% | 100.0% | n/a |
+| counts | 4 | 0.0% | 0.0% | 100.0% | 100.0% | 100.0% |
+| multi_claim | 3 | 0.0% | 100.0% | 66.7% | 66.7% | 100.0% |
+| prompt_injection | 3 | 0.0% | n/a | 100.0% | 100.0% | 100.0% |
+
+Cases that did not get the ideal decision:
+
+- `T02` (supported, 2026-08-28): expected PASS, got **ESCALATED** (UNCHECKED_DETAILS) (false block)
+  - p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) RFD-004 v1: When Aurelia Air cancels a flight, you can receive a full refund of the unused part of you
+- `T05` (supported, 2026-01-27): expected PASS, got **ESCALATED** (UNCHECKED_DETAILS) (false block)
+  - p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) BAG-004 v1: Free carry‑on bag up to 10 kg
+  - p1#2 SUPPORTED (llm SUPPORTED, rule MATCH) BAG-004 v1: Free personal item
+- `T10` (contradicted_numbers, 2026-07-30): expected CORRECTED, got **ESCALATED** (CORRECTION_FAILED)
+  - p1#1 CONTRADICTED (llm SUPPORTED, rule MISMATCH) BAG-003 v1: Checked bags up to 25 kg travel at no extra cost
+  - p1#2 CONTRADICTED (llm CONTRADICTED, rule MATCH) BAG-003 v1: Anything heavier is accepted for a $100 overweight fee
+  - p2#1 CONTRADICTED (llm SUPPORTED, rule MISMATCH) BAG-003 v1: Each checked bag may weigh up to 23 kg for free.
+  - p2#2 SUPPORTED (llm SUPPORTED, rule MATCH) BAG-003 v1: Bags from 23 kg up to 32 kg are accepted for a $100 overweight fee each way.
+  - p2#3 SUPPORTED (llm SUPPORTED, rule MATCH) BAG-003 v1: Bags heavier than 32 kg are not accepted.
+- `T15` (contradicted_eligibility, 2026-06-08): expected CORRECTED, got **ESCALATED** (NOT_COVERED)
+  - p1#1 NOT_COVERED (llm CONTRADICTED, rule NOT_APPLICABLE) -: Any Aurelia Air airport ticket counter can book a bereavement fare for you.
+- `T20` (contradicted_eligibility, 2026-07-07): expected CORRECTED, got **PASS** (ALL_SUPPORTED) **FALSE ALLOW**
+  - p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) BRV-001 v1: A mother-in-law counts as immediate family, so you qualify for the bereavement fare.
+- `T33` (multi_claim, 2026-07-11): expected PASS, got **ESCALATED** (NOT_COVERED) (false block)
+  - p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) DLY-003 v1: $400
+  - p1#2 SUPPORTED (llm SUPPORTED, rule MATCH) DLY-005 v1: within 1 year of the flight date
+  - p1#3 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) DLY-005 v1: claim using our online claims form
+  - p1#4 NOT_COVERED (llm SUPPORTED, rule NOT_APPLICABLE) -: Because the delay was within our control and you arrived 10 hours late, you are entitled t
+
 ## escalation-test split: openrouter `google/gemini-3.1-flash-lite`, run 2026-11-07 at `a4cb55f`
 
 Run 2026-11-07T22:54:07+00:00 at commit `a4cb55f`, prompt version `2026-11-07.1 + bank-2026-11-07.1`, 33 cases, cases file sha256 `fecf976029234894...`, wall time 53.2 s.
