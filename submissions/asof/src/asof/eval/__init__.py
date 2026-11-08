@@ -115,6 +115,8 @@ class CountingLLM:
     def __init__(self, inner):
         self.inner = inner
         self.calls = 0
+        self.input_tokens = 0   # as the provider reports them; 0 where it reports none
+        self.output_tokens = 0
 
     @property
     def info(self) -> str:
@@ -125,11 +127,18 @@ class CountingLLM:
 
     def structured(self, schema: type[BaseModel], messages, choices=None):
         self.calls += 1
-        return self.inner.structured(schema, messages, choices)
+        result = self.inner.structured(schema, messages, choices)
+        self.input_tokens += result.input_tokens or 0
+        self.output_tokens += result.output_tokens or 0
+        return result
 
     def tool_round(self, messages, tools):
         self.calls += 1
-        return self.inner.tool_round(messages, tools)
+        msg = self.inner.tool_round(messages, tools)
+        usage = getattr(msg, "usage_metadata", None) or {}
+        self.input_tokens += usage.get("input_tokens") or 0
+        self.output_tokens += usage.get("output_tokens") or 0
+        return msg
 
     def run(self, fn):
         self.calls += 1

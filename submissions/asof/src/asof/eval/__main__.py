@@ -180,7 +180,8 @@ def main(argv: list[str] | None = None) -> int:
         gate = Gate(counting, embeddings, connections.connect, EVAL_SCHEMA)
         as_of = ABLATION_DATE if args.ablation == "current-policy" else case.as_of
         result = gate.check(GateRequest(case.question, case.draft, as_of, case.doc_id or domain.doc_id, "eval"))
-        rec = score(case, result) | {"llm_calls": counting.calls}
+        rec = score(case, result) | {"llm_calls": counting.calls, "input_tokens": counting.input_tokens,
+                                     "output_tokens": counting.output_tokens}
         flag = "ok  " if rec["safe"] else "MISS"
         print(f"  {flag} {case.id} {case.category:<24} expected {case.expected:<9} got {rec['decision']:<9} "
               f"{rec['latency_ms'] / 1000:5.1f}s" + ("  FALSE ALLOW" if rec["false_allow"] else ""), flush=True)
@@ -195,7 +196,8 @@ def main(argv: list[str] | None = None) -> int:
     o = summary["overall"]
     print(f"\nfalse-allow {_pct(o['false_allow_rate'])}  false-block {_pct(o['false_block_rate'])}  "
           f"safe {_pct(o['safe_rate'])}  ideal {_pct(o['ideal_rate'])}  citation {_pct(o['citation_accuracy'])}  "
-          f"p50 {o['latency_p50_ms'] / 1000:.1f}s  wall {wall}s")
+          f"p50 {o['latency_p50_ms'] / 1000:.1f}s  wall {wall}s  "
+          f"tokens {sum(r['input_tokens'] for r in records)} in / {sum(r['output_tokens'] for r in records)} out")
     with db.connection(settings, "app") as conn:
         from ..ledger import verify_chain
         chain = verify_chain(conn, EVAL_SCHEMA)

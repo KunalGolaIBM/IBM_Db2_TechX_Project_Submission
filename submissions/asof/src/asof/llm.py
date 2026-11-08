@@ -435,8 +435,13 @@ def _watsonx_chat(settings: Settings, name: str, deadline: float, max_out: int) 
     try:
         client = APIClient(credentials=Credentials(url=settings.watsonx_url, api_key=settings.watsonx_api_key.get_secret_value()),
                            project_id=project, space_id=space, httpx_client=timeout, async_httpx_client=timeout)
+        # The output cap and a server-side time limit go in the model's own parameters: given only to ChatWatsonx,
+        # watsonx.ai ignored the cap and used its 1024-token default (found on the first live call).
+        params = {"max_tokens": max_out, "time_limit": int(deadline * 1000)}
+        if settings.llm_temperature is not None:
+            params["temperature"] = settings.llm_temperature
         inference = ModelInference(model_id=name, api_client=client, project_id=project, space_id=space,
-                                   max_retries=settings.llm_max_retries)
+                                   max_retries=settings.llm_max_retries, params=params)
         return ChatWatsonx(watsonx_model=inference, max_tokens=max_out, temperature=settings.llm_temperature)
     except Exception as exc:  # noqa: BLE001 - the SDK raises its own types; none may carry the key out
         raise ConfigError(f"watsonx.ai refused the configuration or could not be reached ({type(exc).__name__}); "

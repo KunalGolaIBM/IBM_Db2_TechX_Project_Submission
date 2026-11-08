@@ -43,8 +43,9 @@ def fake_sdk(monkeypatch):
                 raise RuntimeError(f"IAM said no to {credentials}")
 
     class ModelInference:
-        def __init__(self, model_id, api_client, project_id, space_id, max_retries):
+        def __init__(self, model_id, api_client, project_id, space_id, max_retries, params):
             seen["inference"] = {"model_id": model_id, "project_id": project_id, "max_retries": max_retries}
+            seen["params"] = params
 
     from langchain_core.language_models.fake_chat_models import FakeListChatModel
 
@@ -100,11 +101,13 @@ def test_the_client_is_built_with_asofs_deadline_retries_and_output_cap(fake_sdk
     assert timeout.read == 45 and timeout.connect == 10  # not the SDK's 1800 s
     assert fake_sdk["inference"] == {"model_id": "ibm/granite-4-h-small", "project_id": PROJECT, "max_retries": 1}
     assert fake_sdk["chat"]["max_tokens"] == 900 and fake_sdk["credentials"] == ("https://us-south.ml.cloud.ibm.com", KEY)
+    assert fake_sdk["params"] == {"max_tokens": 900, "time_limit": 45000}  # in the model's parameters, or ignored
 
 
 def test_intake_gets_its_own_output_cap_and_deadline_on_watsonx_too(fake_sdk):
     build_llm(wx(), max_output_tokens=4000, deadline_s=150)
     assert fake_sdk["chat"]["max_tokens"] == 4000 and fake_sdk["timeout"].read == 150
+    assert fake_sdk["params"]["max_tokens"] == 4000
 
 
 def test_a_hosted_watsonx_primary_falls_back_to_local_ollama(fake_sdk):
@@ -178,7 +181,45 @@ def test_the_real_ibm_packages_take_the_arguments_asof_passes():
     assert {"credentials", "project_id", "space_id", "httpx_client", "async_httpx_client"} <= set(
         inspect.signature(APIClient.__init__).parameters)
     assert {"url", "api_key"} <= set(inspect.signature(Credentials.__init__).parameters)
-    assert {"model_id", "api_client", "project_id", "space_id", "max_retries"} <= set(
+    assert {"model_id", "api_client", "project_id", "space_id", "max_retries", "params"} <= set(
         inspect.signature(ModelInference.__init__).parameters)
     assert "timeout" in inspect.signature(HttpClientConfig.__init__).parameters
     assert "function_calling" in str(inspect.signature(lc.ChatWatsonx.with_structured_output))
+
+
+@pytest.mark.db2
+@pytest.mark.network
+def test_db2_embeds_policy_text_on_watsonx_and_matches_the_local_model(admin_conn, embeddings, settings):
+    """Live: Db2 itself calls watsonx.ai (PROVIDER WATSONX). Needs WATSONX_* in .env and ASOF_RUN_NETWORK_TESTS=1."""
+    from datetime import date
+
+    from asof import db as asof_db
+    from asof import policy, seed
+    from asof.retriever import clauses_as_of
+
+    if not settings.watsonx_ready:
+        pytest.skip("WATSONX_API_KEY and WATSONX_PROJECT_ID are not set")
+    name = f"ASOF_X{uuid.uuid4().hex[:6].upper()}"
+    cfg = settings.model_copy(update={"asof_indb_provider": "watsonx"})
+    schema.install(admin_conn, name)
+    try:
+        seed.seed_policy(admin_conn, embeddings, name)
+        seed.seed_faq(admin_conn, embeddings, name)
+        schema.apply_grants(admin_conn, settings.asof_app_user, settings.asof_editor_user, name)
+        indb.register(admin_conn, cfg, name)
+        probe = indb.probe(admin_conn, embeddings, name)  # Db2's vector against the local one, same sentence
+        assert probe.agreement >= indb.MIN_AGREEMENT
+        change = policy.PolicyChange(
+            clause_id="PET-001", effective_from=date(2026, 12, 1), version_label="v2",
+            clause_text="Small cats and dogs may travel in the cabin if the pet and its carrier together weigh no more "
+                        "than 8 kg. The pet fee is $125 each way.",
+            rule={"max_pet_weight_kg": 8, "pet_fee_usd": 125}, change_note="Pet fee rises to $125 (watsonx test)")
+        with asof_db.connection(settings, "editor") as editor:
+            out = policy.apply_change(editor, change, None, name)  # no local model: Db2 must embed it on watsonx.ai
+        assert out["embedded_in"] == "db2"
+        with asof_db.connection(settings, "app") as reader:
+            found = clauses_as_of(reader, embeddings.embed_query("How much is the pet fee in the cabin?"),
+                                  date(2026, 12, 15), "AURELIA-CSP", 3, None, name)
+        assert found[0].clause_id == "PET-001" and found[0].version_label == "v2"
+    finally:
+        schema.drop(admin_conn, name)
