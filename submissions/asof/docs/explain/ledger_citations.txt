@@ -52,7 +52,7 @@ Plan Details:
 		CPUCACHE: (Per-thread CPU cache size)
 			0
 		HEAPUSE : (Maximum Statement Heap Usage)
-			128 Pages
+			176 Pages
 		PLANID  : (Access plan identifier)
 			f83d5c6ad7d7a8fb
 		PREPTIME: (Statement prepare time)

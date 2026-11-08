@@ -80,7 +80,7 @@ Plan Details:
 		PLANID  : (Access plan identifier)
 			fd1dd7ecfda9a22e
 		PREPTIME: (Statement prepare time)
-			         7 milliseconds
+			         6 milliseconds
 		SEMEVID : (Semantic environment identifier)
 			03584f1d775a74f4
 		STMTHEAP: (Statement heap size)

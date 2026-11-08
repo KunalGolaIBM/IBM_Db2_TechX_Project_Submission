@@ -4,32 +4,32 @@
 
 Access Plan:
 -----------
-	Total Cost: 		0.00848325
+	Total Cost: 		0.00175215
 	Query Degree:		1
 
 
-              Rows 
-             RETURN
-             (   1)
-              Cost 
-               I/O 
-               |
-                0 
-             FILTER
-             (   2)
-           0.00840092 
-                0 
-               |
-                0 
-             FETCH 
-             (   3)
-           0.00756101 
-                0 
-          /----+----\
-         0             0 
-      IXSCAN    TABLE: ASOF    
-      (   4)     ANSWER_LEDGER
-    0.00739266        Q1
+               Rows 
+              RETURN
+              (   1)
+               Cost 
+                I/O 
+                |
+                 0 
+              FILTER
+              (   2)
+            0.00166982 
+                 0 
+                |
+                 0 
+              FETCH 
+              (   3)
+            0.000829917 
+                 0 
+          /-----+------\
+         0                0 
+      IXSCAN     DP-TABLE: ASOF    
+      (   4)        ANSWER_LEDGER
+    0.000829917          Q1
          0 
         |
          0 
@@ -42,13 +42,13 @@ Plan Details:
 
 
 	1) RETURN: (Return Result)
-		Cumulative Total Cost: 		0.00848325
-		Cumulative CPU Cost: 		45855
+		Cumulative Total Cost: 		0.00175215
+		Cumulative CPU Cost: 		9471
 		Cumulative I/O Cost: 		0
-		Cumulative Re-Total Cost: 	0.00192291
-		Cumulative Re-CPU Cost: 	10394
+		Cumulative Re-Total Cost: 	0.00151072
+		Cumulative Re-CPU Cost: 	8166
 		Cumulative Re-I/O Cost: 	0
-		Cumulative First Row Cost: 	0.00848325
+		Cumulative First Row Cost: 	0.00175215
 		Estimated Bufferpool Buffers: 	1
 
 		Arguments:
@@ -58,11 +58,11 @@ Plan Details:
 		CPUCACHE: (Per-thread CPU cache size)
 			0
 		HEAPUSE : (Maximum Statement Heap Usage)
-			176 Pages
+			240 Pages
 		PLANID  : (Access plan identifier)
-			0246013e9ed4506a
+			4ec9c8c8f588efc7
 		PREPTIME: (Statement prepare time)
-			        10 milliseconds
+			         7 milliseconds
 		SEMEVID : (Semantic environment identifier)
 			03584f1d775a74f4
 		STMTHEAP: (Statement heap size)
@@ -94,13 +94,13 @@ Plan Details:
 
 
 	2) FILTER: (Filter)
-		Cumulative Total Cost: 		0.00840092
-		Cumulative CPU Cost: 		45410
+		Cumulative Total Cost: 		0.00166982
+		Cumulative CPU Cost: 		9026
 		Cumulative I/O Cost: 		0
-		Cumulative Re-Total Cost: 	0.00184058
-		Cumulative Re-CPU Cost: 	9949
+		Cumulative Re-Total Cost: 	0.0014284
+		Cumulative Re-CPU Cost: 	7721
 		Cumulative Re-I/O Cost: 	0
-		Cumulative First Row Cost: 	0.00840092
+		Cumulative First Row Cost: 	0.00166982
 		Estimated Bufferpool Buffers: 	1
 
 		Predicates:
@@ -165,25 +165,31 @@ Plan Details:
 
 
 	3) FETCH : (Fetch)
-		Cumulative Total Cost: 		0.00756101
-		Cumulative CPU Cost: 		40870
+		Cumulative Total Cost: 		0.000829917
+		Cumulative CPU Cost: 		4486
 		Cumulative I/O Cost: 		0
-		Cumulative Re-Total Cost: 	0.00100067
-		Cumulative Re-CPU Cost: 	5409
+		Cumulative Re-Total Cost: 	0.00058849
+		Cumulative Re-CPU Cost: 	3181
 		Cumulative Re-I/O Cost: 	0
-		Cumulative First Row Cost: 	0.00756101
+		Cumulative First Row Cost: 	0.000829917
 		Estimated Bufferpool Buffers: 	1
 
 		Arguments:
 		---------
 		CUR_COMM: (Currently Committed)
 			TRUE
+		GLOBLOCK: (Global Lock intent)
+			INTENT SHARE
 		LCKAVOID: (Lock Avoidance)
 			TRUE
 		MAXPAGES: (Maximum pages for prefetch)
 			1
+		OVERHEAD: (Overhead value)
+			6.725001
+		PFTCHSZ : (Prefetchsize value)
+			32
 		PREFETCH: (Type of Prefetch)
-			SEQUENTIAL,READAHEAD
+			SEQUENTIAL          
 		ROWLOCK : (Row Lock intent)
 			SHARE (CS/RS)
 		SKIP_INS: (Skip Inserted Rows)
@@ -200,6 +206,8 @@ Plan Details:
 			FALSE
 		WRAPPING: (Scan may start anywhere and wrap)
 			FALSE
+		XFERRATE: (Transferrate value)
+			0.320000
 
 		Input Streams:
 		-------------
@@ -249,19 +257,23 @@ Plan Details:
 
 
 	4) IXSCAN: (Index Scan)
-		Cumulative Total Cost: 		0.00739266
-		Cumulative CPU Cost: 		39960
+		Cumulative Total Cost: 		0.000829917
+		Cumulative CPU Cost: 		4486
 		Cumulative I/O Cost: 		0
-		Cumulative Re-Total Cost: 	0.000832322
-		Cumulative Re-CPU Cost: 	4499
+		Cumulative Re-Total Cost: 	0.00058849
+		Cumulative Re-CPU Cost: 	3181
 		Cumulative Re-I/O Cost: 	0
-		Cumulative First Row Cost: 	0.00739266
+		Cumulative First Row Cost: 	0.000829917
 		Estimated Bufferpool Buffers: 	1
 
 		Arguments:
 		---------
 		CUR_COMM: (Currently Committed)
 			TRUE
+		DPNUMPRT: (Number of data partitions accessed)
+			26
+		GLOBLOCK: (Global Lock intent)
+			INTENT SHARE
 		LCKAVOID: (Lock Avoidance)
 			TRUE
 		MAXPAGES: (Maximum pages for prefetch)
