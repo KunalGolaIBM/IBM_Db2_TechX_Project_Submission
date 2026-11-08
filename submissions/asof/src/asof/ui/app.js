@@ -299,7 +299,7 @@ function routeBanner(rt) {
   const how = rt.method === "db2" ? "Db2's vote alone" : rt.method === "db2+agent" ? "Db2's vote, confirmed by the routing agent" : "";
   return rt.doc_id
     ? html`<div class="banner ok"><strong>Routed to ${DOC_NAME[rt.doc_id]}.</strong><span>By ${how}: nearest clause distance ${dist} (lead ${Number(rt.margin).toFixed(2)}).</span></div>`
-    : html`<div class="banner fix"><strong>Asked a person instead of guessing.</strong><span>${rt.reason}. Nearest clause distance ${dist}. Held for the <a href="#/inbox">specialist inbox</a>.</span></div>`;
+    : html`<div class="banner fix"><strong>Asked a person instead of guessing.</strong><span>${rt.reason.charAt(0).toUpperCase() + rt.reason.slice(1)}. Nearest clause distance ${dist}. Held for the <a href="#/inbox">specialist inbox</a>.</span></div>`;
 }
 function resultView(r, asOf) {
   const first = r.claims.filter((c) => c.pass_no === 1);
@@ -320,7 +320,7 @@ function resultView(r, asOf) {
     </div>
     <div class="card">
       <div class="card-head"><h2>Claims in the draft</h2><span class="sub">checked against the clauses in force on ${fmtDate(asOf)}</span></div>
-      ${first.length ? html`<div class="claims">${first.map(claimCard)}</div>` : html`<p class="muted">No policy claims found.</p>`}
+      ${first.length ? html`<div class="claims">${first.map(claimCard)}</div>` : html`<p class="muted">${r.reason_code === "ROUTE_UNCERTAIN" ? "No check ran: the specialist picks the policy document first." : "No policy claims found."}</p>`}
     </div>
     ${second.length ? html`<div class="card">
       <div class="card-head"><h2>Re-check of the corrected answer</h2><span class="sub">every claim must be supported before it is released</span></div>
