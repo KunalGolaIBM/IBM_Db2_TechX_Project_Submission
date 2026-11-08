@@ -418,15 +418,6 @@ class Gate:
         return [self._settle(n, claim, found, pool, by_no.get(i), question)
                 for i, (n, claim, found) in enumerate(zip(numbers, claims, per_claim, strict=True), start=1)]
 
-    def evaluate(self, question: str, answer: str, as_of: date, doc_id: str) -> list[ClaimOutcome]:
-        """One pass without the agent: extract, retrieve, judge, then the quote and rule checks."""
-        domain = self.domain(doc_id)
-        extracted = self.extract(question, answer, domain)
-        if not extracted:
-            return []
-        per_claim = self.retrieve(extracted, as_of, doc_id)
-        return self.judge(extracted, per_claim, pool_of(per_claim), as_of, domain=domain, question=question)
-
     def _settle(self, no: int, claim: ExtractedClaim, found: list[RetrievedClause], pool: dict[str, RetrievedClause],
                 v: ClaimVerdict | None, question: str = "") -> ClaimOutcome:
         base: dict[str, Any] = dict(claim_no=no, text=claim.text, area=claim.area, claim_type=claim.claim_type,

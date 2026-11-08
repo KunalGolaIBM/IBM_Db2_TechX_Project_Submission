@@ -77,16 +77,17 @@ ignore = [
 "tests/*" = ["S105", "S106"]  # dummy credentials in test fixtures
 
 [tool.mypy]
-# Run from this folder: `mypy` (CI does the same). Strict everywhere, relaxed below for the modules that are mostly
-# glue (FastAPI routes, LangGraph state, benchmarks, CLIs), which are still fully type-checked, bodies included.
+# Run from this folder: `mypy` (CI does the same). Strict on 40 of 46 modules; relaxed below for six that are mostly
+# glue around untyped libraries (FastAPI routes, LangChain's SQL chain, the model clients, replay, the SQL-file loader,
+# the evaluation's counting wrapper), which are still fully type-checked, bodies included.
 python_version = "3.12"
 files = ["src/asof"]  # mcp_server/ has its own environment; CI checks it there with --strict
 plugins = ["pydantic.mypy"]
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["asof.api", "asof.askledger", "asof.checkgraph", "asof.eval", "asof.eval.__main__", "asof.eval.intake_eval",
-          "asof.impactagent", "asof.llm", "asof.replay", "asof.schema", "asof.seed", "asof.setup", "asof.vectorbench"]
+module = ["asof.api", "asof.askledger", "asof.eval",
+          "asof.llm", "asof.replay", "asof.schema"]
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 disallow_untyped_calls = false

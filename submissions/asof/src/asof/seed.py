@@ -1,10 +1,11 @@
-"""Load the fictional Aurelia Air data into Db2. Every loader is a no-op when its table
+"""Load the fictional Aurelia Air and Fernhollow Bank data into Db2. Every loader is a no-op when its table
 already has data, so setup can be re-run without duplicating or rewriting history."""
 
 from __future__ import annotations
 
 import json
 from importlib import resources
+from typing import Any
 
 import ibm_db_dbi
 from langchain_core.embeddings import Embeddings
@@ -35,8 +36,9 @@ SQL_INSERT_PUBLISHED = ("INSERT INTO PUBLISHED_ANSWER (ANSWER_ID, DOC_ID, QUESTI
 assert DIM == 384, "SQL_INSERT_CLAUSE is written for 384-dimension embeddings"
 
 
-def _data(name: str) -> dict:
-    return json.loads((resources.files("asof") / "data" / name).read_text(encoding="utf-8"))
+def _data(name: str) -> dict[str, Any]:
+    out: dict[str, Any] = json.loads((resources.files("asof") / "data" / name).read_text(encoding="utf-8"))
+    return out
 
 
 def _count(conn: ibm_db_dbi.Connection, schema: str, sql: str) -> int:
@@ -101,7 +103,7 @@ def seed_published_answers(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA)
     return len(answers)
 
 
-def faq_store(conn: ibm_db_dbi.Connection, embeddings: Embeddings, schema: str = db.SCHEMA):
+def faq_store(conn: ibm_db_dbi.Connection, embeddings: Embeddings, schema: str = db.SCHEMA) -> Any:
     """The naive assistant's knowledge base, stored with the official langchain-db2 DB2VS.
 
     DB2VS creates its table on first use, which only the owner can do, so setup builds it

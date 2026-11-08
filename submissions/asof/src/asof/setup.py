@@ -29,6 +29,9 @@ from datetime import date
 from pathlib import Path
 from urllib.parse import urlparse
 
+import ibm_db_dbi
+from langchain_core.embeddings import Embeddings
+
 from . import db, indb, schema, seed
 from .anchor import AnchorLog
 from .config import DEFAULT_ENV_FILE, PROJECT_ROOT, ConfigError, Settings, get_settings
@@ -139,7 +142,7 @@ def wait_for_db2(settings: Settings, timeout_s: int = 300) -> None:
             delay = min(delay * 1.5, 15)
 
 
-def _docker(args: list[str], stdin: str | None = None) -> subprocess.CompletedProcess:
+def _docker(args: list[str], stdin: str | None = None) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["docker", *args], input=stdin, capture_output=True, text=True, timeout=DOCKER_TIMEOUT_S)
 
 
@@ -210,7 +213,7 @@ def _manual_user_help(settings: Settings) -> bool:
     return False
 
 
-def register_embedder(conn, settings: Settings, embeddings, target: str) -> bool:
+def register_embedder(conn: ibm_db_dbi.Connection, settings: Settings, embeddings: Embeddings, target: str) -> bool:
     """Register Db2's own embedding model if wanted, and use it only if it agrees with the local one."""
     if not settings.indb_embeddings_wanted:
         say("  off (no API key, or ASOF_INDB_EMBEDDINGS=off): the app embeds clauses itself")
@@ -265,7 +268,7 @@ def collect_statistics(settings: Settings, target: str) -> str:
         return f"WARNING: statistics not collected ({exc.sqlstate}); Db2's automatic statistics will catch up"
 
 
-def _must_refuse(conn, user: str, statements: tuple[tuple[str, str], ...]) -> str:
+def _must_refuse(conn: ibm_db_dbi.Connection, user: str, statements: tuple[tuple[str, str], ...]) -> str:
     """Run each literal statement as `user` and require Db2 to refuse it; return what was refused, with states."""
     refused = []
     for label, sql in statements:

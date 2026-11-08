@@ -51,7 +51,7 @@ def frozen_digest() -> str:
     return h.hexdigest()
 
 
-def _value_ok(spec: dict, rule: dict[str, Any]) -> bool:
+def _value_ok(spec: dict[str, Any], rule: dict[str, Any]) -> bool:
     if "unit" in spec:
         want = float(spec["value"])
         return any(p.unit == spec["unit"] and rules._close(p.value, want, p.unit) for p in rules.rule_params(rule))
@@ -63,7 +63,7 @@ def _value_ok(spec: dict, rule: dict[str, Any]) -> bool:
     raise ValueError(f"unknown value spec {spec}")
 
 
-def _match(expect: dict, proposals: list[intake.Proposal], used: set[int]) -> intake.Proposal | None:
+def _match(expect: dict[str, Any], proposals: list[intake.Proposal], used: set[int]) -> intake.Proposal | None:
     for p in proposals:
         if p.item_no in used:
             continue
@@ -75,7 +75,7 @@ def _match(expect: dict, proposals: list[intake.Proposal], used: set[int]) -> in
     return None
 
 
-def score(expect: dict, p: intake.Proposal | None) -> dict[str, Any]:
+def score(expect: dict[str, Any], p: intake.Proposal | None) -> dict[str, Any]:
     if p is None:
         return {"expected": expect["clause_id"], "outcome": "missing"}
     problems = []

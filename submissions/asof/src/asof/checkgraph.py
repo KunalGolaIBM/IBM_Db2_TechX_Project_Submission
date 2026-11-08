@@ -25,8 +25,9 @@ import json
 import logging
 import time
 import uuid
+from collections.abc import Callable
 from datetime import date
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, Protocol, TypedDict
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import StructuredTool
@@ -63,20 +64,20 @@ class CheckState(TypedDict, total=False):
     question: str  # redacted
     text: str  # what this pass checks: the redacted draft, then the rewrite
     pass_no: int
-    claims: list
-    per_claim: list
-    pool: dict
-    outcomes: list
-    first: list
-    second: list
+    claims: list[Any]  # the domain's claim model: ExtractedClaim or its bank variant
+    per_claim: list[list[RetrievedClause]]
+    pool: dict[str, RetrievedClause]
+    outcomes: list[ClaimOutcome]
+    first: list[ClaimOutcome]
+    second: list[ClaimOutcome]
     rewrite: str | None
     decision: Decision | Literal["REWRITE"]  # REWRITE only between the first pass and the rewrite node
     reason: str
     final: str
     error: str | None
-    investigation: list
+    investigation: list[dict[str, Any]]
     tool_calls_left: int
-    unchecked: list  # details in the text that no extracted claim stated
+    unchecked: list[str]  # details in the text that no extracted claim stated
     n_extracted: int  # claims[:n_extracted] came from the extractor; the rest are premise sentences
 
 
@@ -115,7 +116,13 @@ class _Tools:
         return [StructuredTool.from_function(self.search_policy), StructuredTool.from_function(self.clause_versions)]
 
 
-def tool_loop(gate: Gate, messages: list, tools: _Tools, left: int, pass_no: int,
+class _Node(Protocol):
+    """A graph node: LangGraph calls it with the state as a keyword argument named `state`."""
+
+    def __call__(self, state: CheckState) -> dict[str, Any]: ...
+
+
+def tool_loop(gate: Gate, messages: list[Any], tools: _Tools, left: int, pass_no: int,
               known: set[str]) -> tuple[list[dict[str, Any]], int]:
     """Let the model call the Db2 tools: at most `left` calls over at most MAX_ROUNDS rounds.
 
@@ -150,20 +157,21 @@ def tool_loop(gate: Gate, messages: list, tools: _Tools, left: int, pass_no: int
     return trace, left
 
 
-def build(gate: Gate, req: GateRequest, deadline_at: float | None = None, rewrite_contradictions: bool = True):
+def build(gate: Gate, req: GateRequest, deadline_at: float | None = None, rewrite_contradictions: bool = True) -> Any:
     """Compile the graph for one request (nodes close over the gate and the request).
     `deadline_at` (time.monotonic()) is when the check's budget runs out: no node starts after it.
     Without `rewrite_contradictions` (a specialist's reply), a contradiction ends the check: the person
     who wrote the reply fixes it, the model does not."""
     domain = gate.domain(req.doc_id)  # from the validated doc_id, never from the model
 
-    def guarded(fn):
+    def guarded(fn: Callable[[CheckState], dict[str, Any]]) -> _Node:
         def node(state: CheckState) -> dict[str, Any]:
             if deadline_at is not None and time.monotonic() > deadline_at:
                 log.warning("check failed closed: its %.0f s budget ran out before %s", gate.deadline_s, fn.__name__)
                 return {"error": f"the check's {gate.deadline_s:.0f} s budget ran out", "reason": "ERROR_FAIL_CLOSED"}
             try:
-                return fn(state)
+                out: dict[str, Any] = fn(state)
+                return out
             except TooManyClaims as exc:
                 return {"error": str(exc), "reason": "TOO_MANY_CLAIMS"}
             except (LLMError, db.DatabaseError) as exc:
@@ -242,7 +250,7 @@ def build(gate: Gate, req: GateRequest, deadline_at: float | None = None, rewrit
         return out
 
     # ---- routing: deterministic, from state only ----------------------------------------------
-    def after(step: str):
+    def after(step: str) -> Callable[[CheckState], str]:
         def route(state: CheckState) -> str:
             if state.get("error"):
                 return "fail_closed"

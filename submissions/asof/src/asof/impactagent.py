@@ -21,6 +21,7 @@ import logging
 from datetime import date
 from typing import Any, Protocol, TypedDict
 
+import ibm_db_dbi
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 
@@ -44,12 +45,12 @@ SQL_IN_FORCE = ("SELECT CLAUSE_ID, AREA, TITLE, VERSION_LABEL, CLAUSE_TEXT, RULE
 
 
 class ImpactState(TypedDict, total=False):
-    targets: list  # stale help-centre answers still to handle
-    current: dict
-    results: list
+    targets: list[dict[str, Any]]  # stale help-centre answers still to handle
+    current: dict[str, Any]
+    results: list[dict[str, Any]]
 
 
-def _clause_in_force(conn, clause_id: str, on: date, schema: str) -> RetrievedClause | None:
+def _clause_in_force(conn: ibm_db_dbi.Connection, clause_id: str, on: date, schema: str) -> RetrievedClause | None:
     import json
 
     db.use_schema(conn, schema)
@@ -141,7 +142,8 @@ def _run(find: _Step, handle: _Step, limit: int) -> list[dict[str, Any]]:
     g.add_edge("next_target", "handle")
     g.add_conditional_edges("handle", more, ["next_target", END])
     out = g.compile().invoke({}, {"recursion_limit": 5 + 3 * limit})
-    return out.get("results", [])
+    results: list[dict[str, Any]] = out.get("results", [])
+    return results
 
 
 def draft_notices(gate: Gate, clause_id: str, requested_by: str | None = None) -> list[dict[str, Any]]:

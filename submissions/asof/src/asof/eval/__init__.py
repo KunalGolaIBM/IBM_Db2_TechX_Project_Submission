@@ -122,7 +122,7 @@ def load_cases(split: str) -> list[Case]:
 class CountingLLM:
     """Passes calls through to the real client and counts them, per case."""
 
-    def __init__(self, inner):
+    def __init__(self, inner: Any) -> None:
         self.inner = inner
         self.calls = 0
         self.input_tokens = 0   # as the provider reports them; 0 where it reports none
