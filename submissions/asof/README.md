@@ -639,7 +639,7 @@ mypy                                     # type check (configuration in pyprojec
 pytest -q --cov=asof --cov-report=term   # line coverage of src/asof
 ```
 
-**Types and coverage** (Sun 8 Nov 2026). `mypy` 2.4 with the Pydantic plugin finds no issues in the 38 modules. It runs `--strict` on 25 of them, every module on the path from a draft to the ledger among them: the check (`gate.py`), the rule checker, redaction, the ledger, the anchors, policy changes, intake, the Db2 layer and the configuration. The other 13 are glue (FastAPI routes, LangGraph state, CLIs, benchmarks). They are still fully type-checked, but may leave parameters unannotated. The MCP server passes `--strict` in its own environment. The full suite against Db2, the backup drill included, covers **76% of the lines in `src/asof`** (6,018 statements), including:
+**Types and coverage** (Sun 8 Nov 2026). `mypy` 2.4 with the Pydantic plugin finds no issues in the 38 modules. It runs `--strict` on 25 of them, every module on the path from a draft to the ledger among them: the check (`gate.py`), the rule checker, redaction, the ledger, the anchors, policy changes, intake, the Db2 layer and the configuration. The other 13 are glue (FastAPI routes, LangGraph state, CLIs, benchmarks). They are still fully type-checked, but may leave parameters unannotated. The MCP server passes `--strict` in its own environment. The full suite against Db2, the backup drill included, covers **76% of the lines in `src/asof`** (6,018 statements; 76.1% in CI on IBM's image), including:
 
 | Module | Coverage |
 |---|---|
