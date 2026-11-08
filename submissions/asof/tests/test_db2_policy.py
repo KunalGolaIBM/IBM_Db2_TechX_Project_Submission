@@ -141,3 +141,16 @@ def test_the_bank_fee_schedule_has_its_own_versions_and_never_mixes_with_the_air
     assert all(not c.clause_id.startswith(("BRV", "BAG", "RFD")) for c in bank)  # the same query, one document
     airline = clauses_as_of(app_conn, vec, day, DOC, 4, schema=test_schema)
     assert airline and not {c.clause_id for c in airline} & {c.clause_id for c in bank}
+
+
+def test_the_timeline_view_turns_both_documents_rule_parameters_into_columns(app_conn, test_schema):
+    """V_POLICY_TIMELINE reads RULE_JSON with JSON_TABLE for the airline and the bank alike, so the analyst behind Ask
+    the ledger can filter on a bank fee as on an airline fee."""
+    db.use_schema(app_conn, test_schema)
+    rows = db.query(app_conn, "SELECT CLAUSE_ID, VERSION_LABEL, OVERDRAFT_FEE_USD, FOREIGN_TRANSACTION_FEE_PCT, PET_FEE_USD "
+                              "FROM V_POLICY_TIMELINE WHERE CLAUSE_ID IN ('OVD-001', 'FXF-001', 'PET-001') "
+                              "ORDER BY CLAUSE_ID, BUS_START")
+    got = {(r[0].strip(), r[1].strip()): tuple(None if v is None else float(v) for v in r[2:]) for r in rows}
+    assert got[("OVD-001", "v1")][0] == 35.0 and got[("OVD-001", "v2")][0] == 25.0
+    assert got[("FXF-001", "v1")][1] == 3.0 and got[("FXF-001", "v2")][1] == 1.0
+    assert got[("PET-001", "v1")] == (None, None, 100.0)  # an airline row has no bank parameters

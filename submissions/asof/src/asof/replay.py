@@ -478,6 +478,40 @@ def record_only_chat(settings) -> int:
     return 0
 
 
+def record_only_ask(settings) -> int:
+    """Re-record the Ask-the-ledger examples (after a change to the views they describe), leaving every other output as
+    it is. The built-in checks replay first, from the recording, so the ledger the questions read is not empty."""
+    from .askledger import LedgerAsker
+    from .embeddings import get_embeddings
+    from .llm import build_llm
+
+    recording = Recording.load()
+    live = build_llm(settings, fallback=False)
+    if live.info != recording.model:
+        print(f"The shipped recording is from {recording.model}; set that model to add to it (now: {live.info}).")
+        return 2
+    emb = get_embeddings(settings.embedding_model)
+    _fresh_schema(settings, emb)
+    recorder = Recorder(live, recording)
+    _run_checks(settings, recorder, check_scenarios())
+    if recorder.live_calls:
+        print(f"{recorder.live_calls} check output(s) were not in the recording; nothing saved.")
+        return 1
+    asks = []
+    asker = LedgerAsker(recorder, settings, REPLAY_SCHEMA)
+    for q in load_scenarios()["ask_examples"]:
+        res = asker.ask(q)
+        asks.append({"question": q, "status": res.status, "sql": res.sql})
+        print(f"  ask {res.status:<9} {q}", flush=True)
+    if any(a["status"] != "ANSWERED" for a in asks):
+        print("An example did not get a checked query; nothing saved. Run it again.")
+        return 1
+    recording.scenarios["ask"] = asks
+    recording.save()
+    print(f"Saved {recorder.live_calls} new outputs to {RECORDING_PATH.name}")
+    return 0
+
+
 def record_only_reviews(settings) -> int:
     """Add the held drafts and the inbox's replies to the shipped recording, leaving every other output as it is."""
     from . import db
@@ -530,7 +564,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m asof.replay", description=__doc__.split("\n\n")[0])
     parser.add_argument("command", choices=["record", "show"], help="record: re-record with the live model; "
                         "show: list what the shipped recording covers")
-    parser.add_argument("--only", choices=["intake", "chat", "reviews"], help="record only these scenarios and add them to the "
+    parser.add_argument("--only", choices=["intake", "chat", "reviews", "ask"],
+                        help="record only these scenarios and add them to the "
                         "shipped recording, leaving every other recorded output as it is")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.WARNING)
@@ -550,6 +585,8 @@ def main(argv: list[str] | None = None) -> int:
             return record_only_chat(get_settings())
         if args.only == "reviews":
             return record_only_reviews(get_settings())
+        if args.only == "ask":
+            return record_only_ask(get_settings())
         return record(get_settings())
     except (ConfigError, LLMError, db.DatabaseError) as exc:
         print(f"Recording failed: {exc}")

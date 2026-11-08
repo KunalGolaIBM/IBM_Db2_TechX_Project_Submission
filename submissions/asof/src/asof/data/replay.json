@@ -114,6 +114,14 @@
     ]
    }
   },
+  "10a74d4a1490031ba852470da48e9a5810c0709abdd8f6da0fe5f7011f647083": {
+   "kind": "structured",
+   "name": "LedgerSql",
+   "output": {
+    "explanation": "This query counts the number of contradicted claims for each clause ID and version, returning them in descending order of frequency.",
+    "sql": "SELECT clause_id, clause_version, COUNT(*) AS contradicted_count FROM v_audit_claims WHERE verdict = 'CONTRADICTED' GROUP BY clause_id, clause_version ORDER BY contradicted_count DESC"
+   }
+  },
   "129e38b6a39b26b00bc4805267f0ba8fc14d7454b53b2899b8334bfba2916932": {
    "kind": "structured",
    "name": "ExtractionResult",
@@ -224,6 +232,13 @@
       "text": "The overdraft fee is $35 for each item we pay."
      }
     ]
+   }
+  },
+  "2926e1013fe2bcb0131e914873aa57d0ab6bd393fd72bb7165da2c81b519efc8": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "The share of checks for March 2026 travel dates that were escalated is 0.4."
    }
   },
   "2aa27435e95c30fcee4545ec1ce6215caef4c13865bc142d5fa95ae710a345b7": {
@@ -516,6 +531,14 @@
     ]
    }
   },
+  "489f07f2974374b2cf1b40a8c61565b352bb81a79c6b5c6d1b58ef02e036777c": {
+   "kind": "structured",
+   "name": "LedgerSql",
+   "output": {
+    "explanation": "This query calculates the proportion of audit decisions for March 2026 as-of-dates that resulted in an ESCALATED status.",
+    "sql": "SELECT CAST(SUM(CASE WHEN decision = 'ESCALATED' THEN 1 ELSE 0 END) AS DOUBLE) / NULLIF(COUNT(*), 0) AS escalation_share FROM v_audit_decisions WHERE as_of_date >= DATE('2026-03-01') AND as_of_date <= DATE('2026-03-31')"
+   }
+  },
   "4d6459ee5afdacb575032b0bb10316c1ee8fb93bda9468f6afb173d5e1b3a483": {
    "kind": "structured",
    "name": "RewriteResult",
@@ -600,6 +623,14 @@
       "name": "search_policy"
      }
     ]
+   }
+  },
+  "556ccae014ff26cf091166e91882849d4e40f8dd9d15c8967b6026473fdb97be": {
+   "kind": "structured",
+   "name": "LedgerSql",
+   "output": {
+    "explanation": "This query identifies the specific claim texts, clause IDs, and versions where the deterministic rule check ('MISMATCH') produced a different outcome than the model's judgment.",
+    "sql": "SELECT DISTINCT claim_text, clause_id, clause_version FROM v_audit_claims WHERE rule_check = 'MISMATCH' AND llm_verdict <> verdict"
    }
   },
   "55823d6f4a2ed397889986df96cf3e8ab7d90ed56d51568ab104012d6133692d": {
@@ -717,6 +748,13 @@
       "name": "search_policy"
      }
     ]
+   }
+  },
+  "58d1ae17b756efb028840da79bda950f7c7405f011b019ccec5387a9e70b3c07": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "In the demo channel, there were 7 corrected decisions, 4 escalated decisions, and 6 pass decisions."
    }
   },
   "5a0daeba3b8d7ccd08259762fb0d8c7932986faca07d3f13b495956ca7816fbf": {
@@ -1161,6 +1199,14 @@
       "text": "overdraft fees are refunded automatically within a few days"
      }
     ]
+   }
+  },
+  "8cfafe8d1a9000c24805664df2b450bdf298963d9098a4d534458d8b482ef42e": {
+   "kind": "structured",
+   "name": "LedgerSql",
+   "output": {
+    "explanation": "This query aggregates the total number of decisions by channel and decision type using the v_decision_stats view.",
+    "sql": "SELECT channel, decision, SUM(decisions) AS total_decisions FROM v_decision_stats GROUP BY channel, decision"
    }
   },
   "917907f092aad1cce5962b84d40e17c75596ed104d4b615452227d23f25e46da": {
@@ -1656,6 +1702,13 @@
     ]
    }
   },
+  "da2163f83591e4525ba9836b5e36676dc4674cb179258f2264d3b07c9acd23f9": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "The customer's questions and our replies are masked for all four escalated decisions returned."
+   }
+  },
   "dd641aa899bfd57fde0c2e0a64795ec099f3a53a3012cbe134ae983bb9318f4c": {
    "kind": "chat",
    "name": "chat",
@@ -1778,6 +1831,14 @@
    "name": "chat",
    "output": "I am so incredibly sorry for your loss. You can certainly request a 40% bereavement discount retroactively as long as you provide the required documentation within 90 days of your ticket's issuance. Simply send us a death certificate or a letter from the funeral home or physician, and we will happily refund the fare difference for you."
   },
+  "e99b051591634ce40a47050cd473089b3416587d583ab2f9b53184c908925970": {
+   "kind": "structured",
+   "name": "LedgerSql",
+   "output": {
+    "explanation": "This query retrieves the masked question and answer text for all audit records where the final decision was set to ESCALATED.",
+    "sql": "SELECT question_redacted, final_answer FROM v_audit_decisions WHERE decision = 'ESCALATED'"
+   }
+  },
   "eaaadebddc43c98f8a9425d554ca98cf942c02c72c5e477ae84d76692ba57706": {
    "kind": "structured",
    "name": "ExtractionResult",
@@ -1897,7 +1958,7 @@
   "ask": [
    {
     "question": "How many decisions of each kind were made, per channel?",
-    "sql": "SELECT channel, decision, COUNT(*) AS count FROM v_audit_decisions GROUP BY channel, decision FETCH FIRST 201 ROWS ONLY",
+    "sql": "SELECT channel, decision, SUM(decisions) AS total_decisions FROM v_decision_stats GROUP BY channel, decision FETCH FIRST 201 ROWS ONLY",
     "status": "ANSWERED"
    },
    {
@@ -1907,12 +1968,12 @@
    },
    {
     "question": "Where did the rule check overrule the model judge?",
-    "sql": "SELECT DISTINCT ledger_id, claim_no, claim_text, clause_id, clause_version FROM v_audit_claims WHERE rule_check = 'MISMATCH' FETCH FIRST 201 ROWS ONLY",
+    "sql": "SELECT DISTINCT claim_text, clause_id, clause_version FROM v_audit_claims WHERE rule_check = 'MISMATCH' AND llm_verdict <> verdict FETCH FIRST 201 ROWS ONLY",
     "status": "ANSWERED"
    },
    {
     "question": "What share of checks for March 2026 travel dates were escalated?",
-    "sql": "SELECT 1.0 * SUM(CASE WHEN decision = 'ESCALATED' THEN 1 ELSE 0 END) / COUNT(*) FROM v_audit_decisions WHERE as_of_date >= DATE('2026-03-01') AND as_of_date <= DATE('2026-03-31') FETCH FIRST 201 ROWS ONLY",
+    "sql": "SELECT CAST(SUM(CASE WHEN decision = 'ESCALATED' THEN 1 ELSE 0 END) AS DOUBLE) / NULLIF(COUNT(*), 0) AS escalation_share FROM v_audit_decisions WHERE as_of_date >= DATE('2026-03-01') AND as_of_date <= DATE('2026-03-31') FETCH FIRST 201 ROWS ONLY",
     "status": "ANSWERED"
    },
    {

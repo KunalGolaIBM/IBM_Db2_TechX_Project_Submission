@@ -1,15 +1,22 @@
 -- Views for the policy timeline and analytics. The runtime user reads these with SELECT.
 
 -- view: V_POLICY_TIMELINE
--- Every clause version with its key rule parameters as relational columns, read out of
--- RULE_JSON with JSON_TABLE. This is how the timeline shows "first bag $35 -> $40".
+-- Every clause version of both documents with its key rule parameters as relational columns, read out of
+-- RULE_JSON with JSON_TABLE (the airline's first, then the bank's). This is how the timeline shows
+-- "first bag $35 -> $40", and what Ask the ledger's analyst can filter on.
 CREATE OR REPLACE VIEW ASOF.V_POLICY_TIMELINE AS
   SELECT C.CLAUSE_ID, C.DOC_ID, C.AREA, C.TITLE, C.VERSION_LABEL, C.BUS_START, C.BUS_END,
          C.CHANGED_BY, C.CHANGE_NOTE, C.SYS_START, C.CLAUSE_TEXT, C.RULE_JSON,
          J.FIRST_BAG_FEE_USD, J.SECOND_BAG_FEE_USD, J.CHANGE_FEE_USD, J.PET_FEE_USD, J.CANCELLATION_FEE_USD,
          J.COMPENSATION_USD, J.DISCOUNT_PCT, J.REQUEST_WINDOW_DAYS, J.FREE_CANCEL_WINDOW_HOURS,
          J.MIN_DAYS_BEFORE_DEPARTURE, J.CREDIT_VALIDITY_MONTHS, J.MAX_PASSENGERS, J.RETROACTIVE_ALLOWED,
-         J.TRANSFER_ALLOWED, J.CHANGES_ALLOWED
+         J.TRANSFER_ALLOWED, J.CHANGES_ALLOWED,
+         J.OVERDRAFT_FEE_USD, J.MAX_OVERDRAFT_FEES_PER_DAY, J.MAX_NO_FEE_OVERDRAFT_USD, J.OVERDRAFT_TRANSFER_FEE_USD,
+         J.AUTOMATIC_REFUND, J.COURTESY_REFUNDS_PER_YEAR, J.COURTESY_PERIOD_MONTHS, J.ERROR_REFUND_BUSINESS_DAYS,
+         J.MONTHLY_FEE_USD, J.MIN_DAILY_BALANCE_USD, J.PAPER_STATEMENT_FEE_USD, J.ELECTRONIC_STATEMENT_FEE_USD,
+         J.FOREIGN_TRANSACTION_FEE_PCT, J.DOMESTIC_WIRE_FEE_USD, J.INTERNATIONAL_WIRE_FEE_USD, J.INCOMING_WIRE_FEE_USD,
+         J.OUT_OF_NETWORK_ATM_FEE_USD, J.MAX_DAILY_WITHDRAWAL_USD, J.REPORT_WINDOW_DAYS, J.PROVISIONAL_CREDIT_BUSINESS_DAYS,
+         J.EARLY_CLOSURE_FEE_USD, J.EARLY_CLOSURE_WINDOW_DAYS, J.STOP_PAYMENT_FEE_USD, J.STOP_PAYMENT_VALIDITY_MONTHS
   FROM ASOF.POLICY_CLAUSE C,
        JSON_TABLE(C.RULE_JSON, 'strict $'
          COLUMNS (FIRST_BAG_FEE_USD         DECIMAL(9, 2) PATH '$.first_bag_fee_usd',
@@ -26,7 +33,31 @@ CREATE OR REPLACE VIEW ASOF.V_POLICY_TIMELINE AS
                   MAX_PASSENGERS            INTEGER       PATH '$.max_passengers',
                   RETROACTIVE_ALLOWED       VARCHAR(5)    PATH '$.retroactive_allowed',
                   TRANSFER_ALLOWED          VARCHAR(5)    PATH '$.transfer_allowed',
-                  CHANGES_ALLOWED           VARCHAR(5)    PATH '$.changes_allowed')
+                  CHANGES_ALLOWED           VARCHAR(5)    PATH '$.changes_allowed',
+                  OVERDRAFT_FEE_USD                 DECIMAL(9, 2) PATH '$.overdraft_fee_usd',
+                  MAX_OVERDRAFT_FEES_PER_DAY        INTEGER       PATH '$.max_overdraft_fees_per_day',
+                  MAX_NO_FEE_OVERDRAFT_USD          DECIMAL(9, 2) PATH '$.max_no_fee_overdraft_usd',
+                  OVERDRAFT_TRANSFER_FEE_USD        DECIMAL(9, 2) PATH '$.overdraft_transfer_fee_usd',
+                  AUTOMATIC_REFUND                  VARCHAR(5)    PATH '$.automatic_refund',
+                  COURTESY_REFUNDS_PER_YEAR         INTEGER       PATH '$.courtesy_refunds_per_year',
+                  COURTESY_PERIOD_MONTHS            INTEGER       PATH '$.courtesy_period_months',
+                  ERROR_REFUND_BUSINESS_DAYS        INTEGER       PATH '$.error_refund_business_days',
+                  MONTHLY_FEE_USD                   DECIMAL(9, 2) PATH '$.monthly_fee_usd',
+                  MIN_DAILY_BALANCE_USD             DECIMAL(11, 2) PATH '$.min_daily_balance_usd',
+                  PAPER_STATEMENT_FEE_USD           DECIMAL(9, 2) PATH '$.paper_statement_fee_usd',
+                  ELECTRONIC_STATEMENT_FEE_USD      DECIMAL(9, 2) PATH '$.electronic_statement_fee_usd',
+                  FOREIGN_TRANSACTION_FEE_PCT       DECIMAL(5, 2) PATH '$.foreign_transaction_fee_pct',
+                  DOMESTIC_WIRE_FEE_USD             DECIMAL(9, 2) PATH '$.domestic_wire_fee_usd',
+                  INTERNATIONAL_WIRE_FEE_USD        DECIMAL(9, 2) PATH '$.international_wire_fee_usd',
+                  INCOMING_WIRE_FEE_USD             DECIMAL(9, 2) PATH '$.incoming_wire_fee_usd',
+                  OUT_OF_NETWORK_ATM_FEE_USD        DECIMAL(9, 2) PATH '$.out_of_network_atm_fee_usd',
+                  MAX_DAILY_WITHDRAWAL_USD          DECIMAL(11, 2) PATH '$.max_daily_withdrawal_usd',
+                  REPORT_WINDOW_DAYS                INTEGER       PATH '$.report_window_days',
+                  PROVISIONAL_CREDIT_BUSINESS_DAYS  INTEGER       PATH '$.provisional_credit_business_days',
+                  EARLY_CLOSURE_FEE_USD             DECIMAL(9, 2) PATH '$.early_closure_fee_usd',
+                  EARLY_CLOSURE_WINDOW_DAYS         INTEGER       PATH '$.early_closure_window_days',
+                  STOP_PAYMENT_FEE_USD              DECIMAL(9, 2) PATH '$.stop_payment_fee_usd',
+                  STOP_PAYMENT_VALIDITY_MONTHS      INTEGER       PATH '$.stop_payment_validity_months')
          ERROR ON ERROR) AS J
 @
 
