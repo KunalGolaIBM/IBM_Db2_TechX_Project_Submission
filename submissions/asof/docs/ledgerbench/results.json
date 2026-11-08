@@ -1,0 +1,254 @@
+{
+ "rows": 1000000,
+ "citations": 2000000,
+ "ran_at": "2026-11-08T06:17:51+00:00",
+ "git_commit": "ee41c4e",
+ "load_s": {
+  "LBFLAT": 92.7,
+  "LBPART": 95.8
+ },
+ "append_ms": {
+  "LBFLAT": 2.8,
+  "LBPART": 3.3
+ },
+ "queries": {
+  "analytics_decisions": {
+   "what": "Analytics page: decisions and mean latency by outcome (V_DECISION_STATS)",
+   "LBFLAT": {
+    "median_ms": 425.5,
+    "rows": 3,
+    "cost": 8127.17,
+    "operators": [
+     "GRPBY",
+     "RETURN",
+     "SORT",
+     "TBSCAN"
+    ],
+    "objects": [
+     "ANSWER_LEDGER (table)"
+    ]
+   },
+   "LBPART": {
+    "median_ms": 0.6,
+    "rows": 3,
+    "cost": 7.06,
+    "operators": [
+     "GRPBY",
+     "RETURN",
+     "SORT",
+     "TBSCAN"
+    ],
+    "objects": [
+     "MQT_DECISION_STATS (table)"
+    ]
+   }
+  },
+  "analytics_reasons": {
+   "what": "Analytics page: decisions by reason (V_DECISION_STATS)",
+   "LBFLAT": {
+    "median_ms": 402.3,
+    "rows": 5,
+    "cost": 8078.47,
+    "operators": [
+     "GRPBY",
+     "RETURN",
+     "SORT",
+     "TBSCAN"
+    ],
+    "objects": [
+     "ANSWER_LEDGER (table)"
+    ]
+   },
+   "LBPART": {
+    "median_ms": 0.6,
+    "rows": 5,
+    "cost": 7.06,
+    "operators": [
+     "GRPBY",
+     "RETURN",
+     "SORT",
+     "TBSCAN"
+    ],
+    "objects": [
+     "MQT_DECISION_STATS (table)"
+    ]
+   }
+  },
+  "analytics_areas": {
+   "what": "Analytics page: claim verdicts by policy area (V_CLAIM_OUTCOMES_BY_AREA)",
+   "LBFLAT": {
+    "median_ms": 551.8,
+    "rows": 8,
+    "cost": 5248.54,
+    "operators": [
+     "GRPBY",
+     "RETURN",
+     "SORT",
+     "TBSCAN"
+    ],
+    "objects": [
+     "CLAIM_CITATION (table)"
+    ]
+   },
+   "LBPART": {
+    "median_ms": 0.7,
+    "rows": 8,
+    "cost": 7.06,
+    "operators": [
+     "RETURN",
+     "SORT",
+     "TBSCAN"
+    ],
+    "objects": [
+     "MQT_CLAIM_OUTCOMES (table)"
+    ]
+   }
+  },
+  "audit_month_escalations": {
+   "what": "An auditor's question: March's escalations by reason and model (V_AUDIT_DECISIONS)",
+   "LBFLAT": {
+    "median_ms": 39.9,
+    "rows": 3,
+    "cost": 89.23,
+    "operators": [
+     "FETCH",
+     "GRPBY",
+     "IXSCAN",
+     "NLJOIN",
+     "RETURN",
+     "RIDSCN",
+     "SORT",
+     "TBSCAN"
+    ],
+    "objects": [
+     "ANSWER_LEDGER (table)",
+     "IX_LEDGER_CREATED (index)"
+    ]
+   },
+   "LBPART": {
+    "median_ms": 41.1,
+    "rows": 3,
+    "cost": 441.7,
+    "operators": [
+     "FETCH",
+     "GRPBY",
+     "IXSCAN",
+     "NLJOIN",
+     "RETURN",
+     "RIDSCN",
+     "SORT",
+     "TBSCAN"
+    ],
+    "objects": [
+     "ANSWER_LEDGER (partitioned table)"
+    ]
+   }
+  },
+  "audit_month_decisions": {
+   "what": "March's decisions by outcome (V_AUDIT_DECISIONS)",
+   "LBFLAT": {
+    "median_ms": 43.9,
+    "rows": 3,
+    "cost": 89.29,
+    "operators": [
+     "FETCH",
+     "GRPBY",
+     "IXSCAN",
+     "NLJOIN",
+     "RETURN",
+     "RIDSCN",
+     "SORT",
+     "TBSCAN"
+    ],
+    "objects": [
+     "ANSWER_LEDGER (table)",
+     "IX_LEDGER_CREATED (index)"
+    ]
+   },
+   "LBPART": {
+    "median_ms": 44.4,
+    "rows": 3,
+    "cost": 441.78,
+    "operators": [
+     "FETCH",
+     "GRPBY",
+     "IXSCAN",
+     "NLJOIN",
+     "RETURN",
+     "RIDSCN",
+     "SORT",
+     "TBSCAN"
+    ],
+    "objects": [
+     "ANSWER_LEDGER (partitioned table)"
+    ]
+   }
+  },
+  "ledger_page": {
+   "what": "The audit ledger page, newest first",
+   "LBFLAT": {
+    "median_ms": 8.3,
+    "rows": 50,
+    "cost": 51255.32,
+    "operators": [
+     "FETCH",
+     "FILTER",
+     "IXSCAN",
+     "RETURN"
+    ],
+    "objects": [
+     "ANSWER_LEDGER (table)",
+     "PK_ANSWER_LEDGER (index)"
+    ]
+   },
+   "LBPART": {
+    "median_ms": 7.9,
+    "rows": 50,
+    "cost": 48478.77,
+    "operators": [
+     "FETCH",
+     "FILTER",
+     "IXSCAN",
+     "RETURN"
+    ],
+    "objects": [
+     "PK_ANSWER_LEDGER (index)",
+     "ANSWER_LEDGER (partitioned table)"
+    ]
+   }
+  },
+  "ledger_page_by_decision": {
+   "what": "One decision type, newest first",
+   "LBFLAT": {
+    "median_ms": 7.9,
+    "rows": 50,
+    "cost": 45200.15,
+    "operators": [
+     "FETCH",
+     "FILTER",
+     "IXSCAN",
+     "RETURN"
+    ],
+    "objects": [
+     "ANSWER_LEDGER (table)",
+     "IX_LEDGER_DECISION (index)"
+    ]
+   },
+   "LBPART": {
+    "median_ms": 7.6,
+    "rows": 50,
+    "cost": 45167.21,
+    "operators": [
+     "FETCH",
+     "FILTER",
+     "IXSCAN",
+     "RETURN"
+    ],
+    "objects": [
+     "IX_LEDGER_DECISION (index)",
+     "ANSWER_LEDGER (partitioned table)"
+    ]
+   }
+  }
+ }
+}

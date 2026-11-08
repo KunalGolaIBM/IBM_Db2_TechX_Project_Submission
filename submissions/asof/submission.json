@@ -55,7 +55,10 @@
       "TLS client connections (SECURITY=SSL, SSLServerCertificate pinning) for a remote Db2, tested against a GSKit-configured TLS listener (SSL_SVR_KEYDB, SSL_SVCENAME, DB2COMM=SSL,TCPIP) locally and in CI",
       "Per-user API access in an API_USER table holding only SHA-256 token hashes, with role flags and check constraints; the runtime user may only SELECT it",
       "Policy intake: an uploaded PDF stored as a BLOB with a SHA-256 computed by Db2 (HASH over the BLOB) that must match the application's, proposals in POLICY_DRAFT / POLICY_DRAFT_ITEM written only by editor procedures (ADD_POLICY_DRAFT, ADD_POLICY_DRAFT_ITEM, DECIDE_POLICY_DRAFT, APPLY_DRAFT_ITEM), approval applied through APPLY_POLICY_CHANGE (nested CALL) in one transaction, four-eyes enforced in SQL PL, provenance in each version's change note",
-      "CREATE EXTERNAL MODEL ... PROVIDER WATSONX (IBM watsonx.ai) as an option for Db2's own embedder, with the key passed as a validated literal and never stored in plain text in the catalog"
+      "CREATE EXTERNAL MODEL ... PROVIDER WATSONX (IBM watsonx.ai) as an option for Db2's own embedder, with the key passed as a validated literal and never stored in plain text in the catalog",
+      "Monthly range partitioning of ANSWER_LEDGER on CREATED_AT (PARTITION BY RANGE ... EVERY 1 MONTH, open-ended first and last partitions; partitioned and global indexes), with DETACH refused by Db2 while CLAIM_CITATION's foreign key references the ledger (tested)",
+      "REFRESH IMMEDIATE materialized query tables (MQT_DECISION_STATS, MQT_CLAIM_OUTCOMES) behind the analytics views, refreshed by setup; MQT_DECISION_STATS gets a row permission, since column access control on its base table otherwise hides every row of it; benchmarked against the unpartitioned design at 1,000,000 decisions (asof.ledgerbench)",
+      "Online backup and restore drill: BACKUP DATABASE ... ONLINE COMPRESS INCLUDE LOGS of an archive-logging database while the app writes, RESTORE ... INTO a new database, ROLLFORWARD TO END OF BACKUP AND STOP, then VERIFY_CHAIN and chain-head anchors on the copy (asof.backup, run in CI on IBM's image)"
     ]
   },
   "tech_stack": {

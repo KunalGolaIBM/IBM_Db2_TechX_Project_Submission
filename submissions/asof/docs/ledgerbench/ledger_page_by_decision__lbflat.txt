@@ -1,0 +1,324 @@
+Access Plan:
+-----------
+	Total Cost: 		45200.2
+	Query Degree:		1
+
+
+              Rows 
+             RETURN
+             (   1)
+              Cost 
+               I/O 
+               |
+             33333.3 
+             FILTER
+             (   2)
+             45197.4 
+             6330.67 
+               |
+             333333 
+             FETCH 
+             (   3)
+             44944.8 
+             6330.67 
+           /---+----\
+       333333        1e+06 
+       IXSCAN   TABLE: LBFLAT  
+       (   4)    ANSWER_LEDGER
+       2260.12        Q1
+       304.667 
+         |
+        1e+06 
+   INDEX: LBFLAT  
+ IX_LEDGER_DECISION
+         Q1
+
+Plan Details:
+-------------
+
+
+	1) RETURN: (Return Result)
+		Cumulative Total Cost: 		45200.2
+		Cumulative CPU Cost: 		3.24648e+09
+		Cumulative I/O Cost: 		6330.67
+		Cumulative Re-Total Cost: 	424.46
+		Cumulative Re-CPU Cost: 	2.29436e+09
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	20.1741
+		Estimated Bufferpool Buffers: 	5297
+
+		Arguments:
+		---------
+		BLDLEVEL: (Build level)
+			DB2 v12.1.5.0 : special_85816
+		CPUCACHE: (Per-thread CPU cache size)
+			0
+		HEAPUSE : (Maximum Statement Heap Usage)
+			208 Pages
+		PLANID  : (Access plan identifier)
+			9979d41a5a738ff1
+		PREPTIME: (Statement prepare time)
+			         8 milliseconds
+		SEMEVID : (Semantic environment identifier)
+			11fb83c991b9f1b2
+		STMTHEAP: (Statement heap size)
+			8192
+		STMTID  : (Normalized statement identifier)
+			131b851e5f2f0024
+		TENANTID: (Compiled In Tenant ID)
+			0
+		TENANTNM: (Compiled In Tenant Name)
+			SYSTEM
+
+		Input Streams:
+		-------------
+			5) From Operator #2
+
+				Estimated number of rows: 	33333.3
+				Number of columns: 		17
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q4.LEDGER_ID(D)+Q4.ROW_HASH+Q4.PREV_HASH
+				+Q4.VERDICTS_JSON+Q4.LATENCY_MS
+				+Q4.PROMPT_VERSION+Q4.MODEL_INFO
+				+Q4.REASON_CODE+Q4.DECISION+Q4.FINAL_ANSWER
+				+Q4.DRAFT_REDACTED+Q4.QUESTION_REDACTED
+				+Q4.AS_OF_DATE+Q4.DOC_ID+Q4.CHANNEL
+				+Q4.CREATED_AT+Q4.REQUEST_ID
+
+
+	2) FILTER: (Filter)
+		Cumulative Total Cost: 		45197.4
+		Cumulative CPU Cost: 		3.23164e+09
+		Cumulative I/O Cost: 		6330.67
+		Cumulative Re-Total Cost: 	421.715
+		Cumulative Re-CPU Cost: 	2.27952e+09
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	20.174
+		Estimated Bufferpool Buffers: 	5297
+
+		Predicates:
+		----------
+		3) Residual Predicate, 
+			Comparison Operator: 		Less Than (<)
+			Subquery Input Required: 	No
+			Filter Factor: 			0.333333
+
+			Predicate Text:
+			--------------
+			($INTERNAL_FUNC$() < Q3.$C17)
+
+
+		4) Residual Predicate, 
+			Comparison Operator: 		Less Than or Equal (<=)
+			Subquery Input Required: 	No
+			Filter Factor: 			0.333333
+
+			Predicate Text:
+			--------------
+			(Q3.$C17 <= ($INTERNAL_FUNC$() + $INTERNAL_FUNC$()))
+
+
+
+		Input Streams:
+		-------------
+			4) From Operator #3
+
+				Estimated number of rows: 	333333
+				Number of columns: 		18
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q3.LEDGER_ID(D)+Q3.$C17+Q3.QUESTION_REDACTED
+				+Q3.DRAFT_REDACTED+Q3.FINAL_ANSWER
+				+Q3.VERDICTS_JSON+Q3.ROW_HASH+Q3.PREV_HASH
+				+Q3.LATENCY_MS+Q3.PROMPT_VERSION+Q3.MODEL_INFO
+				+Q3.REASON_CODE+Q3.DECISION+Q3.AS_OF_DATE
+				+Q3.DOC_ID+Q3.CHANNEL+Q3.CREATED_AT
+				+Q3.REQUEST_ID
+
+
+		Output Streams:
+		--------------
+			5) To Operator #1
+
+				Estimated number of rows: 	33333.3
+				Number of columns: 		17
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q4.LEDGER_ID(D)+Q4.ROW_HASH+Q4.PREV_HASH
+				+Q4.VERDICTS_JSON+Q4.LATENCY_MS
+				+Q4.PROMPT_VERSION+Q4.MODEL_INFO
+				+Q4.REASON_CODE+Q4.DECISION+Q4.FINAL_ANSWER
+				+Q4.DRAFT_REDACTED+Q4.QUESTION_REDACTED
+				+Q4.AS_OF_DATE+Q4.DOC_ID+Q4.CHANNEL
+				+Q4.CREATED_AT+Q4.REQUEST_ID
+
+
+	3) FETCH : (Fetch)
+		Cumulative Total Cost: 		44944.8
+		Cumulative CPU Cost: 		1.86631e+09
+		Cumulative I/O Cost: 		6330.67
+		Cumulative Re-Total Cost: 	169.126
+		Cumulative Re-CPU Cost: 	9.14186e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	14.1363
+		Estimated Bufferpool Buffers: 	5297
+
+		Arguments:
+		---------
+		CUR_COMM: (Currently Committed)
+			TRUE
+		LCKAVOID: (Lock Avoidance)
+			TRUE
+		MAXPAGES: (Maximum pages for prefetch)
+			6026
+		PREFETCH: (Type of Prefetch)
+			SEQUENTIAL,READAHEAD
+		ROWLOCK : (Row Lock intent)
+			SHARE (CS/RS)
+		SKIP_INS: (Skip Inserted Rows)
+			TRUE
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		TABLOCK : (Table Lock intent)
+			INTENT SHARE
+		TBISOLVL: (Table access Isolation Level)
+			CURSOR STABILITY
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			2) From Operator #4
+
+				Estimated number of rows: 	333333
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.LEDGER_ID(D)+Q1.$RID$+Q1.DECISION
+
+			3) From Object LBFLAT.ANSWER_LEDGER
+
+				Estimated number of rows: 	1e+06
+				Number of columns: 		15
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.ROW_HASH+Q1.PREV_HASH+Q1.VERDICTS_JSON
+				+Q1.LATENCY_MS+Q1.PROMPT_VERSION+Q1.MODEL_INFO
+				+Q1.REASON_CODE+Q1.FINAL_ANSWER
+				+Q1.DRAFT_REDACTED+Q1.QUESTION_REDACTED
+				+Q1.AS_OF_DATE+Q1.DOC_ID+Q1.CHANNEL
+				+Q1.CREATED_AT+Q1.REQUEST_ID
+
+
+		Output Streams:
+		--------------
+			4) To Operator #2
+
+				Estimated number of rows: 	333333
+				Number of columns: 		18
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q3.LEDGER_ID(D)+Q3.$C17+Q3.QUESTION_REDACTED
+				+Q3.DRAFT_REDACTED+Q3.FINAL_ANSWER
+				+Q3.VERDICTS_JSON+Q3.ROW_HASH+Q3.PREV_HASH
+				+Q3.LATENCY_MS+Q3.PROMPT_VERSION+Q3.MODEL_INFO
+				+Q3.REASON_CODE+Q3.DECISION+Q3.AS_OF_DATE
+				+Q3.DOC_ID+Q3.CHANNEL+Q3.CREATED_AT
+				+Q3.REQUEST_ID
+
+
+	4) IXSCAN: (Index Scan)
+		Cumulative Total Cost: 		2260.12
+		Cumulative CPU Cost: 		6.14848e+08
+		Cumulative I/O Cost: 		304.667
+		Cumulative Re-Total Cost: 	113.009
+		Cumulative Re-CPU Cost: 	6.10852e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	7.08825
+		Estimated Bufferpool Buffers: 	305.667
+
+		Arguments:
+		---------
+		CUR_COMM: (Currently Committed)
+			TRUE
+		LCKAVOID: (Lock Avoidance)
+			TRUE
+		MAXPAGES: (Maximum pages for prefetch)
+			304
+		PREFETCH: (Type of Prefetch)
+			SEQUENTIAL,READAHEAD
+		ROWLOCK : (Row Lock intent)
+			SHARE (CS/RS)
+		SCANDIR : (Scan Direction)
+			REVERSE
+		SKIP_INS: (Skip Inserted Rows)
+			TRUE
+		TABLOCK : (Table Lock intent)
+			INTENT SHARE
+		TBISOLVL: (Table access Isolation Level)
+			CURSOR STABILITY
+
+		Predicates:
+		----------
+		5) Start Key Predicate, 
+			Comparison Operator: 		Equal (=)
+			Subquery Input Required: 	No
+			Filter Factor: 			0.333333
+
+			Predicate Text:
+			--------------
+			(Q1.DECISION = ?)
+
+
+		5) Stop Key Predicate, 
+			Comparison Operator: 		Equal (=)
+			Subquery Input Required: 	No
+			Filter Factor: 			0.333333
+
+			Predicate Text:
+			--------------
+			(Q1.DECISION = ?)
+
+
+
+		Input Streams:
+		-------------
+			1) From Object LBFLAT.IX_LEDGER_DECISION
+
+				Estimated number of rows: 	1e+06
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.LEDGER_ID(D)+Q1.$RID$+Q1.DECISION
+
+
+		Output Streams:
+		--------------
+			2) To Operator #3
+
+				Estimated number of rows: 	333333
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.LEDGER_ID(D)+Q1.$RID$+Q1.DECISION
