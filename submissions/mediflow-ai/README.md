@@ -12,7 +12,7 @@ The application reads medicine, inventory, batch, usage and supplier lead-time r
 
 Core capabilities:
 - Inventory snapshot with stock, daily usage, supplier lead time and expiry exposure.
-- Stockout risk when estimated cover falls below supplier lead time plus a configurable three-day buffer, or stock is below reorder level.
+- Stockout risk when estimated cover falls below supplier lead time plus a three-day buffer, or stock is below reorder level.
 - Near-term expiry flags for batches expiring within 30 days.
 - Draft reorder quantity based on a target coverage window.
 - Human review boundary and an approval-event audit trail.
@@ -20,18 +20,18 @@ Core capabilities:
 
 ## IBM Db2 integration
 
-- **Edition/environment:** IBM Db2 Community Edition or a compatible Db2 instance. A live hosted Db2 environment is not bundled with this repository.
+- **Edition/environment:** IBM Db2 Community Edition using IBM's official Docker image `icr.io/db2_community/db2`. This is the intended local development/test environment; the container must be started on the developer/reviewer's machine.
 - **Connector:** Python `ibm_db` driver with bound SQL parameters.
 - **Tables:** `MEDICINES`, `SUPPLIERS`, `INVENTORY`, `BATCHES`, `USAGE_HISTORY`, `RECOMMENDATIONS`, and `APPROVAL_EVENTS`.
 - **Operations:** Read inventory and batch data; insert workflow recommendations; update review status; append review/audit events.
 - **Setup:** See `docs/DB2_SETUP.md` and `src/db/schema.sql`.
 
-Set `DATA_BACKEND=db2` to use the database adapter. The default `DATA_BACKEND=demo` uses clearly labelled synthetic in-memory records. Demo mode is not represented as Db2 integration. The live adapter and SQL are included but still require validation against an actual Db2 instance.
+The default `DATA_BACKEND=demo` uses clearly labelled synthetic in-memory records. Set `DATA_BACKEND=db2` only after the local Db2 container is running, the schema is initialised and seed rows have been inserted. The live adapter is included but has not yet been verified against a running Db2 instance.
 
 ## AI / LLM architecture
 
 - **Framework:** LangGraph state graph.
-- **MVP model strategy:** Deterministic Python risk and reorder calculations; no external LLM is called in this version. A generated narrative explanation can be added later.
+- **MVP model strategy:** Deterministic Python risk and reorder calculations; no external LLM is called in this version.
 - **Workflow:** `assess_risk → draft_recommendations`. Nodes receive validated structured records from the repository layer; agents do not have unrestricted SQL access.
 - **Human control:** Recommendations begin as `PENDING_REVIEW`; reviewer approval/rejection is a separate explicit operation.
 
@@ -47,43 +47,69 @@ Set `DATA_BACKEND=db2` to use the database adapter. The default `DATA_BACKEND=de
 ## Prerequisites
 
 - Python 3.11 or newer.
-- For demo mode: Python package installation only.
-- For Db2 mode: access to a disposable IBM Db2 database and any OS-specific Db2 client/runtime prerequisites required by `ibm_db`.
+- Docker Desktop with the Linux container engine enabled (or Docker Engine in Linux/WSL2).
+- For Db2 mode: at least 4 GB RAM available to the Db2 container and sufficient free disk space for the image and database volume.
+- IBM Db2 Community Edition Docker image is intended for non-production development/testing.
 
 ## Setup & installation
 
-```bash
+```powershell
 cd submissions/mediflow-ai
 python -m venv .venv
-# Windows PowerShell: .venv\\Scripts\\Activate.ps1
-# macOS/Linux: source .venv/bin/activate
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+Copy-Item .env.example .env
 ```
+
+Edit `.env` and set a strong local `DB2_PASSWORD`. Do not commit `.env`.
 
 ## Configuration
 
-Copy `.env.example` to `.env`. Keep the actual `.env` file local and never commit database passwords or API keys.
+For synthetic demo mode, keep `DATA_BACKEND=demo`.
 
-- Demo: `DATA_BACKEND=demo`.
-- Db2: `DATA_BACKEND=db2` and set `DB2_HOST`, `DB2_PORT`, `DB2_DATABASE`, `DB2_USER`, `DB2_PASSWORD`, and `DB2_SECURITY`.
+For Db2 mode, set:
+- `DATA_BACKEND=db2`
+- `DB2_HOST=127.0.0.1`
+- `DB2_PORT=50000`
+- `DB2_DATABASE=MEDIFLOW`
+- `DB2_USER=db2inst1`
+- `DB2_PASSWORD` to the same local password used by the Db2 container
+- `DB2_SECURITY=false` for the local non-TLS development container
 
 ## Running the project
 
-Start the Streamlit interface:
+### Start IBM Db2 Community Edition
 
-```bash
+From this project directory, after Docker Desktop is running and `.env` has been configured:
+
+```powershell
+docker compose -f docker-compose.db2.yml up -d
+docker logs -f mediflow-db2
+```
+
+Wait for the Db2 setup-complete message before proceeding. Initial startup can take several minutes.
+
+### Initialise schema and seed test data
+
+```powershell
+python -m src.db.init_db
+```
+
+Then follow the synthetic seed SQL instructions in `docs/DB2_SETUP.md`.
+
+### Start the application
+
+```powershell
 streamlit run src/ui.py
 ```
 
 Start the API in a second terminal:
 
-```bash
+```powershell
 uvicorn src.api:app --reload --port 8000
 ```
 
 API endpoints: `GET /health`, `GET /inventory`, `POST /recommendations/run`, and `POST /recommendations/{id}/review`.
-
-For Db2 mode, initialise the tables with `python -m src.db.init_db` and add synthetic seed rows as described in `docs/DB2_SETUP.md` before launching the app.
 
 ## Testing & verification
 
@@ -91,13 +117,13 @@ For Db2 mode, initialise the tables with `python -m src.db.init_db` and add synt
 python -m pytest -q
 ```
 
-The included unit tests cover stockout/expiry assessment, recommendation draft status and the demo repository review boundary. They do not prove connectivity to a live Db2 server. Test database reads and writes separately against a disposable Db2 instance.
+The included unit tests cover stockout/expiry assessment, recommendation draft status and the demo repository review boundary. They do not prove connectivity to a live Db2 server. Test database reads and writes separately against the local Db2 container before claiming live Db2 verification.
 
 ## Screenshots & demo
 
 - Live deployment: not deployed.
 - Demo recording: not recorded.
-- Capture genuine UI screenshots after running the app and save them under `docs/screenshots/`. Do not present wireframes or mockups as evidence of a running system.
+- Capture genuine UI screenshots after running the app and save them under `docs/screenshots/`.
 - Follow `docs/DEMO_SCRIPT.md` for a short walkthrough.
 
 ## Known limitations & future roadmap
@@ -110,8 +136,8 @@ The included unit tests cover stockout/expiry assessment, recommendation draft s
 
 Roadmap: validate calculations with inventory professionals, add role-based access control, evaluate demand forecasting on de-identified data, add supplier integrations, and deploy against a secured Db2 environment.
 
-## Team members & credits
+## Individual contributor
 
 | Name | GitHub | Contribution |
 |---|---|---|
-| Ayush Kumar Singh | [@DevAyushTech](https://github.com/DevAyushTech) | Project design, backend, Db2 adapter and workflow |
+| Ayush Kumar Singh | [@DevAyushTech](https://github.com/DevAyushTech) | Individual project: design, backend, Db2 adapter and workflow |
