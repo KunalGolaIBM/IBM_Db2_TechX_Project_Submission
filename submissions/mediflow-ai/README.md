@@ -144,3 +144,27 @@ Roadmap: validate calculations with inventory professionals, add role-based acce
 | Name | GitHub | Contribution |
 |---|---|---|
 | Ayush Kumar Singh | [@DevAyushTech](https://github.com/DevAyushTech) | Individual project: design, backend, Db2 adapter and workflow |
+---
+
+## Application Screenshots
+
+### 1. MediFlow AI Dashboard
+![Dashboard](docs/screenshots/01-dashboard.png)
+
+### 2. Inventory Risk Assessment
+![Risk Assessment](docs/screenshots/02-risk-assessment.png)
+
+### 3. FastAPI Inventory Endpoint
+![API Inventory](docs/screenshots/03-api-inventory.png)
+
+### 4. AI Recommendation Workflow
+![Recommendations](docs/screenshots/04-api-recommendations.png)
+
+### 5. IBM Db2 Approval Audit Trail
+![Db2 Audit](docs/screenshots/05-db2-audit.png)
+
+## Demo Video
+
+**MediFlow AI – Db2Hack 2026 Round 2**
+
+Demo recording: [Watch the MediFlow AI Demo](https://youtu.be/gKnmLqTD0a8)

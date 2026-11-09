@@ -6,7 +6,7 @@
     "short_description": "Medicine-inventory decision support that identifies stockout and expiry risks and prepares explainable, human-reviewed reorder drafts using IBM Db2 records.",
     "category": "Agentic Workflow / Data Engineering / Healthcare Operations",
     "demo_url": "",
-    "video_url": "",
+    "video_url": "https://youtu.be/gKnmLqTD0a8",
     "repo_url": "https://github.com/DevAyushTech/IBM_Db2_TechX_Project_Submission/tree/submission/mediflow-ai/submissions/mediflow-ai"
   },
   "team": {
