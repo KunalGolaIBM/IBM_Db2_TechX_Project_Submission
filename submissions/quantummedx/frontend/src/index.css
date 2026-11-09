@@ -1,0 +1,19 @@
+@import "tailwindcss";
+@theme {
+  --color-ink: #080d1b; --color-rail: #0d1426; --color-panel: #121c31; --color-lift: #19243b;
+  --color-line: #26334f; --color-blue: #3978f6; --color-quantum: #8b5cf6; --color-cyan: #22d3ee;
+  --color-ok: #22c55e; --color-warn: #f59e0b; --color-bad: #ef4444; --color-mute: #94a3b8;
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif; --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+body { background: var(--color-ink); color: #f8fafc; font-family: var(--font-sans); }
+:focus-visible { outline: 2px solid var(--color-cyan); outline-offset: 2px; }
+.field { background: var(--color-lift); border: 1px solid var(--color-line); border-radius: 6px; padding: 0.5rem 0.75rem; width: 100%; color: inherit; }
+.btn { background: var(--color-blue); border-radius: 6px; padding: 0.5rem 1rem; font-weight: 500; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-q { background: var(--color-quantum); }
+.btn-ghost { background: transparent; border: 1px solid var(--color-line); }
+.md table { border-collapse: collapse; width: 100%; font-size: 0.85rem; margin: 0.75rem 0; display: block; overflow-x: auto; }
+.md th, .md td { border: 1px solid var(--color-line); padding: 0.35rem 0.6rem; text-align: left; }
+.md h1 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.5rem; } .md h2 { font-size: 1.05rem; font-weight: 600; margin: 1.1rem 0 0.4rem; color: var(--color-cyan); }
+.md ul { list-style: disc; padding-left: 1.25rem; } .md p { margin: 0.4rem 0; line-height: 1.6; max-width: 75ch; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

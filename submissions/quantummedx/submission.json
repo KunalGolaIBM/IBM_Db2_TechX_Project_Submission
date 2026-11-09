@@ -1,0 +1,32 @@
+{
+  "project": {
+    "title": "QuantumMedX",
+    "slug": "quantummedx",
+    "short_description": "Agentic hybrid quantum-AI research platform: CrewAI agents orchestrate classical ML and a Qiskit VQC over healthcare datasets, with IBM Db2 as the central store.",
+    "category": "AI / Agentic Workflows / Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": ""
+  },
+  "team": {
+    "name": "Sirama Avinash (Individual)",
+    "members": [
+      {
+        "name": "Sirama Avinash",
+        "github": "",
+        "email": "",
+        "role": "Solo developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker)",
+    "connector": "ibm_db / ibm_db_dbi",
+    "features_used": ["Relational Tables", "Identity Columns", "Foreign Keys", "Indexing", "Transactions", "CLOB storage"]
+  },
+  "tech_stack": {
+    "languages": ["Python", "TypeScript"],
+    "frameworks": ["FastAPI", "CrewAI", "Qiskit", "scikit-learn", "React"],
+    "ai_models": ["Configurable LLM via environment variables"]
+  }
+}

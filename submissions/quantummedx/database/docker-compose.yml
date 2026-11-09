@@ -1,0 +1,31 @@
+# Db2 Community Edition plus the backend (Linux container). Create database/.env.db2 and ../.env first (see README).
+services:
+  db2:
+    image: icr.io/db2_community/db2:latest
+    container_name: quantummedx-db2
+    privileged: true
+    restart: unless-stopped
+    ports:
+      - "50000:50000"
+    env_file:
+      - .env.db2
+    volumes:
+      - db2_data:/database
+  backend:
+    build: ../backend
+    container_name: quantummedx-backend
+    depends_on:
+      - db2
+    env_file:
+      - ../.env
+    environment:
+      DB2_HOST: db2          # the Db2 container's name on the compose network
+      DB2_PORT: "50000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../database/schema:/app/database/schema:ro
+      - backend_storage:/app/backend/storage
+volumes:
+  db2_data:
+  backend_storage:
