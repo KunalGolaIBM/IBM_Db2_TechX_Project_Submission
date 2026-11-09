@@ -3,7 +3,7 @@
   "project": {
     "title": "Db2 WorkRelay Intelligence",
     "slug": "db2-workrelay-intelligence",
-    "short_description": "An operational incident triage and automated runbook retrieval platform using IBM Db2 for immutable lifecycle audit persistence, parameterized SQL execution, and deterministic knowledge retrieval.",
+    "short_description": "An operational incident triage and automated runbook retrieval platform using IBM Db2 for structured lifecycle audit persistence, parameterized SQL execution, and deterministic knowledge retrieval.",
     "category": "AI / Incident Automation / Knowledge Retrieval",
     "demo_url": "",
     "video_url": "",
@@ -21,7 +21,7 @@
     ]
   },
   "ibm_db2": {
-    "edition": "Db2 Community Edition (Docker / Cloud)",
+    "edition": "IBM Db2 Community Edition 12.1 (Docker / Linux)",
     "connector": "ibm_db / ibm_db_dbi",
     "features_used": [
       "Relational Tables with Foreign Key Cascades",
@@ -38,7 +38,7 @@
     ],
     "frameworks": [
       "FastAPI",
-      "LlamaIndex Core",
+      "LangChain Core",
       "Pydantic v2",
       "Uvicorn",
       "Pytest"

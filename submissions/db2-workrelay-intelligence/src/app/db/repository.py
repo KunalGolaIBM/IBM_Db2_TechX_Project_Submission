@@ -19,6 +19,37 @@ from app.models.incident import (
 logger = logging.getLogger("db2_repository")
 
 
+def format_db2_timestamp(dt: datetime | None) -> str | None:
+    """
+    Format a datetime object into a standard Db2/ANSI SQL timestamp string.
+    Normalizes timezone-aware timestamps to UTC and preserves microsecond precision:
+    YYYY-MM-DD HH:MM:SS.ffffff
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(timezone.utc)
+    return dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+
+
+def parse_db_timestamp(val: Any) -> datetime | None:
+    """
+    Parse a database timestamp (string from SQLite or datetime from Db2) into a UTC datetime.
+    """
+    if val is None:
+        return None
+    if isinstance(val, datetime):
+        if val.tzinfo is None:
+            return val.replace(tzinfo=timezone.utc)
+        return val.astimezone(timezone.utc)
+    if isinstance(val, str):
+        dt = datetime.fromisoformat(val)
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    return None
+
+
 class Db2IncidentRepository:
     """
     Enterprise Incident & Audit Repository for IBM Db2.
@@ -143,7 +174,8 @@ class Db2IncidentRepository:
 
     def create(self, incident: Incident) -> Incident:
         """Persist a new incident and record its creation audit event."""
-        now_str = incident.created_at.isoformat()
+        created_at_str = format_db2_timestamp(incident.created_at)
+        updated_at_str = format_db2_timestamp(incident.updated_at)
         metadata_json = json.dumps(incident.metadata)
 
         query = """
@@ -166,8 +198,8 @@ class Db2IncidentRepository:
             incident.escalation_reason,
             incident.retry_count,
             metadata_json,
-            now_str,
-            now_str,
+            created_at_str,
+            updated_at_str,
         )
 
         with self.mgr.get_cursor() as cur:
@@ -203,13 +235,8 @@ class Db2IncidentRepository:
 
         meta = json.loads(row["metadata"]) if row.get("metadata") else {}
 
-        created_at = row["created_at"]
-        if isinstance(created_at, str):
-            created_at = datetime.fromisoformat(created_at)
-
-        updated_at = row["updated_at"]
-        if isinstance(updated_at, str):
-            updated_at = datetime.fromisoformat(updated_at)
+        created_at = parse_db_timestamp(row.get("created_at")) or datetime.now(timezone.utc)
+        updated_at = parse_db_timestamp(row.get("updated_at")) or datetime.now(timezone.utc)
 
         incident = Incident(
             id=row["id"],
@@ -295,12 +322,8 @@ class Db2IncidentRepository:
         items = []
         for r in rows:
             meta = json.loads(r["metadata"]) if r.get("metadata") else {}
-            c_at = r["created_at"]
-            if isinstance(c_at, str):
-                c_at = datetime.fromisoformat(c_at)
-            u_at = r["updated_at"]
-            if isinstance(u_at, str):
-                u_at = datetime.fromisoformat(u_at)
+            c_at = parse_db_timestamp(r.get("created_at")) or datetime.now(timezone.utc)
+            u_at = parse_db_timestamp(r.get("updated_at")) or datetime.now(timezone.utc)
 
             inc = Incident(
                 id=r["id"],
@@ -325,7 +348,7 @@ class Db2IncidentRepository:
     def update(self, incident: Incident) -> Incident:
         """Update incident attributes and persist updated actions and history."""
         incident.updated_at = datetime.now(timezone.utc)
-        now_str = incident.updated_at.isoformat()
+        updated_at_str = format_db2_timestamp(incident.updated_at)
         metadata_json = json.dumps(incident.metadata)
 
         query = """
@@ -356,7 +379,7 @@ class Db2IncidentRepository:
             incident.escalation_reason,
             incident.retry_count,
             metadata_json,
-            now_str,
+            updated_at_str,
             incident.id,
         )
 
@@ -431,7 +454,7 @@ class Db2IncidentRepository:
             event.status.value,
             event.step,
             json.dumps(event.details),
-            event.timestamp.isoformat(),
+            format_db2_timestamp(event.timestamp),
         )
         with self.mgr.get_cursor() as cur:
             cur.execute(query, params)
@@ -451,9 +474,7 @@ class Db2IncidentRepository:
         events = []
         for r in rows:
             details = json.loads(r["details"]) if r.get("details") else {}
-            ts = r["timestamp"]
-            if isinstance(ts, str):
-                ts = datetime.fromisoformat(ts)
+            ts = parse_db_timestamp(r.get("timestamp")) or datetime.now(timezone.utc)
             events.append(
                 IncidentEvent(
                     event=r["event"],
@@ -470,8 +491,8 @@ class Db2IncidentRepository:
         INSERT INTO incident_actions (incident_id, name, description, status, result, started_at, completed_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
         """
-        s_at = action.started_at.isoformat() if action.started_at else None
-        c_at = action.completed_at.isoformat() if action.completed_at else None
+        s_at = format_db2_timestamp(action.started_at)
+        c_at = format_db2_timestamp(action.completed_at)
         params = (
             incident_id,
             action.name,
@@ -498,12 +519,8 @@ class Db2IncidentRepository:
 
         actions = []
         for r in rows:
-            s_at = r.get("started_at")
-            if isinstance(s_at, str):
-                s_at = datetime.fromisoformat(s_at)
-            c_at = r.get("completed_at")
-            if isinstance(c_at, str):
-                c_at = datetime.fromisoformat(c_at)
+            s_at = parse_db_timestamp(r.get("started_at"))
+            c_at = parse_db_timestamp(r.get("completed_at"))
             actions.append(
                 IncidentAction(
                     name=r["name"],

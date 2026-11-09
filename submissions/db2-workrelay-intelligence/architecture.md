@@ -1,9 +1,9 @@
 # System Architecture: Db2 WorkRelay Intelligence
 
 ## Overview
-**Db2 WorkRelay Intelligence** is an enterprise operational incident management and runbook retrieval platform. It combines FastAPI for high-throughput operational intake, **IBM Db2 Community Edition** as the authoritative relational persistence and audit layer via native `ibm_db`, and a deterministic operational knowledge retrieval engine powered by **LangChain**.
+**Db2 WorkRelay Intelligence** is an enterprise operational incident management and runbook retrieval platform. It combines **FastAPI** for high-throughput operational intake, **IBM Db2 Community Edition 12.1.5.0** as the authoritative relational persistence and audit layer via the native `ibm_db` driver, and a deterministic operational knowledge retrieval engine powered by **LangChain Core**.
 
-The platform decouples **automated triage, classification, and runbook retrieval** from **deterministic operational lifecycle execution**, ensuring that every automated mitigation step and state transition is reproducible, structured, and permanently auditable in Db2.
+The platform decouples **automated triage, classification, and runbook retrieval** from **deterministic operational lifecycle execution**, ensuring that every automated mitigation step and state transition is captured as a structured, chronological operational audit record in IBM Db2.
 
 ---
 
@@ -27,7 +27,7 @@ graph TD
     subgraph IBM Db2 Enterprise Persistence
         Coordinator -->|Parameterized SQL / ibm_db| Db2Mgr[Db2 Connection Manager]
         Workflow -->|Audit Trail & Actions| Db2Mgr
-        Db2Mgr --> Db2Main[(IBM Db2 Community Edition)]
+        Db2Mgr --> Db2Main[(IBM Db2 Community Edition 12.1)]
         Db2Main --> IncidentsTable[incidents Table]
         Db2Main --> EventsTable[incident_events Audit Log]
         Db2Main --> ActionsTable[incident_actions Execution Log]
@@ -43,6 +43,7 @@ graph TD
    - Built on FastAPI with Pydantic v2 validation.
    - Standardized REST endpoints (`/health`, `/incidents`, `/incidents/{id}`, `/knowledge/query`, `/knowledge/ingest`).
    - Structured error handling returning consistent JSON error payloads.
+   - Tested using a custom `ApiTestClient` with recursive router discovery compatible with Starlette 1.0+ (`_IncludedRouter` hierarchy).
 
 2. **Incident Coordinator & Triage (`src/app/agent/coordinator.py`)**:
    - Automatically determines incident severity (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) from telemetry patterns.
@@ -50,7 +51,7 @@ graph TD
 
 3. **Deterministic Workflow Engine (`src/app/workflows/incident_workflow.py`)**:
    - Executes multi-phase incident response: `CLASSIFYING -> INVESTIGATING -> REMEDIATING -> VERIFYING -> RESOLVED / ESCALATED`.
-   - Records each granular phase transition and operational diagnostic as an immutable audit event in Db2.
+   - Records each granular phase transition and operational diagnostic as a structured audit event in Db2.
 
 4. **LangChain Operational Runbook Retrieval Engine (`src/app/ai/knowledge_retriever.py`)**:
    - Structured operational runbooks (e.g., Db2 connection pool exhaustion, transaction log saturation, JWT auth desync) converted into native LangChain `Document` objects (`langchain_core.documents.Document`).
@@ -60,9 +61,10 @@ graph TD
    - Provides prioritized mitigation recommendations with exact operational command lines.
 
 5. **IBM Db2 Persistence Layer (`src/app/db/`)**:
-   - **`connection.py`**: Manages native `ibm_db` and `ibm_db_dbi` driver connections, transactional cursors (`commit`/`rollback`), connection health probes (`SELECT 1 FROM SYSIBM.SYSDUMMY1`), tuple-to-dictionary row mapping (`map_row`), and offline SQLite fallback for unprovisioned environments.
+   - **`connection.py`**: Manages native `ibm_db` and `ibm_db_dbi` driver connections, transactional cursors (`commit`/`rollback`), connection health probes (`SELECT 1 FROM SYSIBM.SYSDUMMY1`), tuple-to-dictionary row mapping (`map_row`), and configurable offline SQLite fallback (enabled via `DB2_USE_MOCK=true`) for unprovisioned environments.
    - **`repository.py`**: Parameterized SQL CRUD operations mapping Db2 rows to domain models, supporting Db2-compliant `OFFSET ? ROWS FETCH NEXT ? ROWS ONLY` pagination.
-   - **`schema_db2.sql`**: Native IBM Db2 DDL schema with primary keys, identity sequences, and B-tree indexes.
+   - **`schema_db2.sql`**: Native IBM Db2 DDL schema with primary keys, identity sequences (`INT GENERATED ALWAYS AS IDENTITY`), and B-tree indexes.
+   - **UTC Timestamp Normalization Architecture**: Standardized datetime handling in `repository.py`. The `format_db2_timestamp(dt: datetime | None)` helper converts Python `datetime` objects to UTC and formats them as `YYYY-MM-DD HH:MM:SS.ffffff` strings without `T` separators or timezone offset suffixes, preventing Db2 `SQL0180N` syntax errors while preserving microsecond precision across all incident and audit records. Datetime and string values retrieved from storage are parsed back into UTC `datetime` objects via the companion `parse_db_timestamp(val)` helper.
 
 ---
 
@@ -76,7 +78,8 @@ graph TD
 | **Native Db2 DDL** | **Implemented** | `schema_db2.sql` using Db2 types (`CLOB`, `INT GENERATED ALWAYS AS IDENTITY`). |
 | **Test Environment Fallback** | **Implemented** | In-memory SQLite mode providing zero-crash local unit test execution. |
 | **LangChain Runbook Retrieval** | **Implemented** | Curated runbooks converted to LangChain Documents and queried via custom LangChain BaseRetriever. |
-| **Live Db2 Execution** | **Environment-Dependent** | Validated against Docker/Cloud Db2 when connection credentials and native drivers are present. |
+| **Live Db2 Execution** | **Verified & Operational** | Fully verified against local IBM Db2 Community Edition 12.1.5.0 container on Ubuntu WSL2 via native `ibm_db`. |
+| **UTC Timestamp Compatibility** | **Verified & Operational** | Centralized UTC `YYYY-MM-DD HH:MM:SS.ffffff` formatting resolving Db2 `SQL0180N`. |
 | **Native Db2 Vector Search** | **Planned / Future** | Roadmap item for Db2 12.1+ native vector embeddings (`VECTOR(n, FLOAT32)`). |
 | **LLM Inference Integration** | **Planned / Future** | Roadmap item for IBM watsonx.ai Granite / external LLM generative synthesis. |
 
@@ -96,7 +99,7 @@ sequenceDiagram
     Client->>API: POST /incidents (title, service, description)
     API->>AI: Query runbooks for matching symptoms
     AI-->>API: Relevant post-mortems & mitigation advice
-    API->>DB: INSERT into incidents & incident_events
+    API->>DB: INSERT into incidents & incident_events (UTC timestamp)
     API->>WF: Execute lifecycle workflow
     WF->>DB: Record investigation diagnostics
     WF->>DB: Record remediation actions & outcomes

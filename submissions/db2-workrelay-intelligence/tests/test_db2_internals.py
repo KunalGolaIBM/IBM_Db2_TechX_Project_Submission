@@ -103,3 +103,65 @@ def test_audit_log_persistence_on_status_change():
     assert fetched.status == IncidentStatus.RESOLVED
     assert fetched.resolution == "Resolved successfully"
 
+
+
+def test_db2_timestamp_formatting_utc():
+    """Verify that timezone-aware UTC datetimes format to standard Db2 TIMESTAMP syntax."""
+    from datetime import datetime, timezone
+    from app.db.repository import format_db2_timestamp, parse_db_timestamp
+
+    dt = datetime(2026, 11, 8, 14, 25, 30, 123456, tzinfo=timezone.utc)
+    formatted = format_db2_timestamp(dt)
+    assert formatted == "2026-11-08 14:25:30.123456"
+    assert "T" not in formatted
+    assert "+" not in formatted
+
+    parsed = parse_db_timestamp(formatted)
+    assert parsed == dt
+    assert parsed.tzinfo == timezone.utc
+
+
+def test_db2_timestamp_formatting_non_zero_offset():
+    """Verify that datetimes with non-zero offsets are normalized to UTC for Db2."""
+    from datetime import datetime, timezone, timedelta
+    from app.db.repository import format_db2_timestamp, parse_db_timestamp
+
+    tz_offset = timezone(timedelta(hours=5, minutes=30))
+    dt_offset = datetime(2026, 11, 8, 19, 55, 30, 654321, tzinfo=tz_offset)
+    formatted = format_db2_timestamp(dt_offset)
+    # 19:55:30.654321 +05:30 is 14:25:30.654321 UTC
+    assert formatted == "2026-11-08 14:25:30.654321"
+
+    parsed = parse_db_timestamp(formatted)
+    expected_utc = dt_offset.astimezone(timezone.utc)
+    assert parsed == expected_utc
+    assert parsed.tzinfo == timezone.utc
+
+
+def test_db2_timestamp_formatting_microseconds_preserved():
+    """Verify microsecond preservation and boundary precision."""
+    from datetime import datetime, timezone
+    from app.db.repository import format_db2_timestamp, parse_db_timestamp
+
+    dt_micro = datetime(2026, 1, 1, 0, 0, 0, 999999, tzinfo=timezone.utc)
+    formatted = format_db2_timestamp(dt_micro)
+    assert formatted == "2026-01-01 00:00:00.999999"
+
+    parsed = parse_db_timestamp(formatted)
+    assert parsed.microsecond == 999999
+
+
+def test_db2_timestamp_none_and_native_handling():
+    """Verify safe handling of None and native Db2 datetime objects."""
+    from datetime import datetime, timezone
+    from app.db.repository import format_db2_timestamp, parse_db_timestamp
+
+    assert format_db2_timestamp(None) is None
+    assert parse_db_timestamp(None) is None
+
+    # Native naive datetime from ibm_db_dbi
+    native_dt = datetime(2026, 11, 8, 12, 0, 0, 500000)
+    parsed = parse_db_timestamp(native_dt)
+    assert parsed.tzinfo == timezone.utc
+    assert parsed.hour == 12
+    assert parsed.microsecond == 500000

@@ -22,11 +22,19 @@ class ApiTestClient:
     def __init__(self, app):
         self.app = app
         self.routes = {}
-        for r in app.routes:
-            if hasattr(r, "path") and hasattr(r, "endpoint"):
-                methods = getattr(r, "methods", {"GET"})
-                for m in methods:
-                    self.routes[(m.upper(), r.path)] = r.endpoint
+
+        def _collect(routes):
+            for r in routes:
+                if hasattr(r, "path") and hasattr(r, "endpoint") and r.path is not None:
+                    methods = getattr(r, "methods", {"GET"})
+                    for m in methods:
+                        self.routes[(m.upper(), r.path)] = r.endpoint
+                elif hasattr(r, "original_router"):
+                    _collect(r.original_router.routes)
+                elif hasattr(r, "routes"):
+                    _collect(r.routes)
+
+        _collect(app.routes)
 
     def get(self, path: str, **params):
         if path.startswith("/incidents/"):
