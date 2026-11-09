@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "ClaimGuard AI",
+    "slug": "claimguard-ai",
+    "short_description": "Agentic Intelligence for Smarter Insurance Claim Verification.",
+    "category": "AI / Relational Verification / Fraud Detection",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/Nitesh0517/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "ClaimGuard AI",
+    "members": [
+      {
+        "name": "Nitesh Kumar Barnwal",
+        "github": "Nitesh0517",
+        "email": "nitesh99540@gmail.com",
+        "role": "Full-Stack & AI Engineer / IBM Db2 Developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker) / Cloud",
+    "connector": "ibm_db / SQLAlchemy / LangChain",
+    "features_used": [
+      "Relational Tables & Schema Enforcement",
+      "Parameterized SQL & Transactions",
+      "Audit Logging & Verification Trails",
+      "Indexing for Fast Fraud & Claim Lookups",
+      "Vector & Semantic Pattern Matching"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "JavaScript"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "React",
+      "LangChain",
+      "LangGraph",
+      "Vite",
+      "TailwindCSS"
+    ],
+    "ai_models": [
+      "Google Gemini 3.6 Flash"
+    ]
+  }
+}
