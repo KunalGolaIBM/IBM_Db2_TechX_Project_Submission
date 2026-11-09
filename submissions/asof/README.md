@@ -9,7 +9,7 @@
 
 ![The same draft checked for two customer dates: for 10 March 2026 the retroactive bereavement claim is contradicted by BRV-002 v1 and the answer is corrected; for 2 June 2026 it is supported by BRV-002 v2 and released as written](docs/screenshots/00-same-draft-two-dates.png)
 
-*The same draft, two customer dates: contradicted by the March policy and corrected, supported by the June policy and released ([five live runs of each](docs/live-runs/same-draft-two-dates.json)).*
+*The same draft, two customer dates: contradicted by the March policy and corrected in 5 of 5 live runs, supported by the June policy and released in 4 of 5 (one was held for a person) ([the runs](docs/live-runs/same-draft-two-dates.json)).*
 
 **At a glance** (latest runs, 7 and 8 Nov 2026):
 
@@ -164,7 +164,9 @@ Install commands per platform: [docs/setup.md](docs/setup.md#prerequisites).
 
 ## Setup & Installation
 
-**One command** (from `submissions/asof`): `./quickstart.sh`. It creates `.venv` and `.env`, uses the Db2 on `localhost:50000` (paths A and B) or starts AsOf's Compose service (path C), runs setup and serves the app; CI runs it on a bare runner on every push. The steps it automates:
+**Get the code:** `git clone https://github.com/JustJay7/asof.git && cd asof` (the standalone repo), or `cd submissions/asof` in a clone of the IBM submission repo.
+
+**One command:** `./quickstart.sh`. It creates `.venv` and `.env`, uses the Db2 on `localhost:50000` (paths A and B) or starts AsOf's Compose service (path C), runs setup and serves the app; CI runs it on a bare runner on every push. The steps it automates:
 
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate
@@ -198,6 +200,8 @@ Every detail, including remote Db2 and the Rosetta fix: [docs/setup.md](docs/set
 
 ## Configuration
 
+> **Security warning:** `.env` holds real passwords and keys. It is gitignored: never commit it, and never put a real value in `.env.example`.
+
 All settings come from `.env` ([.env.example](.env.example) lists every one, with no secret values). The ones that matter first:
 
 | Setting | Meaning |
@@ -218,7 +222,7 @@ The other settings, IBM watsonx.ai, per-user API access and TLS: [docs/setup.md]
 python -m asof.db2check      # verify the Db2 features AsOf needs (owner account)
 python -m asof.setup         # schema, users, seed data, grants, self-check
 python src/main.py           # web UI at http://127.0.0.1:8000, API docs at /docs
-python -m asof.demo          # optional: thirteen sample decisions, three held for the inbox, so every screen has history
+python -m asof.demo          # optional: thirteen sample decisions, three of them drafts written to be held for the inbox (a live answer can be held too), so every screen has history
 ```
 
 - **The console** (http://127.0.0.1:8000) and **the customer chat** (http://127.0.0.1:8000/chat), whose every reply AsOf checks ([every screen](docs/screenshots.md)).
@@ -236,7 +240,7 @@ python -m asof.demo          # optional: thirteen sample decisions, three held f
 ## Testing & Verification
 
 ```bash
-pytest -q                                 # 904 tests; 9 need an opt-in flag, 3 need TLS on (CI turns it on)
+pytest -q                                 # 904 tests; 9 need an opt-in flag, 3 need TLS on and 1 the watsonx.ai extra (CI provides both)
 pytest -q -m "not db2"                    # unit tests only, no database needed
 python scripts/audit_deps.py && mypy      # dependency audit, type check
 python -m asof.eval --split test          # the frozen airline split (needs a model)
@@ -268,6 +272,9 @@ Db2 tests run in throwaway schemas as the real least-privilege users ([what they
 |---|---|
 | ![The playground: the Moffatt draft for a March booking contradicted by BRV-002 v1 and corrected from the clause](docs/screenshots/01-playground-moffatt-march.png) | ![Ledger replay: the row the decision used, what Db2 held at that moment, and what applies today](docs/screenshots/05-replay-after-change.png) |
 | ![The specialist inbox: a held decision, its claims and the policy in force, and a reply that contradicts BRV-002 v1 refused](docs/screenshots/20-specialist-inbox.png) | ![The customer chat: a reply corrected before sending, with its source clause version](docs/screenshots/18-customer-chat-corrected.png) |
+
+- **Live Demo Link:** none, on purpose. Db2 on Cloud's free plan has no `VECTOR`, no new schemas and no row and column access control, and hosting AsOf's write paths publicly would expose a writable database or a funded API key ([Known Limitations](#known-limitations--future-roadmap)). The video, the screenshots and replay mode (one command, no key) cover it.
+- **Demo Video Link:** to be added with the video on Mon 9 Nov.
 
 **Demo walkthrough:** the chat corrects the March bereavement answer from `BRV-002` v1; a policy PDF becomes checked versions; the pet-fee change finds the customer told the old fee and drafts a notice; the inbox answers a held decision; the ledger replays a decision. Every screen: [docs/screenshots.md](docs/screenshots.md).
 
