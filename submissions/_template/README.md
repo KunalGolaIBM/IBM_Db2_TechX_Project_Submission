@@ -1,136 +1,121 @@
-# [Project Title]
 
-> **One-Line Pitch:** A concise 1–2 sentence summary explaining what your project does and the primary value it delivers.
+# CyberAware AI
+## An AI-Powered Cybersecurity Awareness and Education Platform
 
----
+### One-Line Pitch
+CyberAware AI helps people understand online threats, recognize scams and phishing messages, and learn how to protect themselves online through lessons, quizzes, and an AI assistant.
 
-## Table of Contents
-- [Problem Statement](#problem-statement)
-- [Solution Overview](#solution-overview)
-- [IBM Db2 Integration](#ibm-db2-integration)
-- [AI / LLM Architecture (if applicable)](#ai--llm-architecture-if-applicable)
-- [Tech Stack](#tech-stack)
-- [Prerequisites](#prerequisites)
-- [Setup & Installation](#setup--installation)
-- [Configuration](#configuration)
-- [Running the Project](#running-the-project)
-- [Testing & Verification](#testing--verification)
-- [Screenshots & Demo](#screenshots--demo)
-- [Known Limitations & Future Roadmap](#known-limitations--future-roadmap)
-- [Team Members & Credits](#team-members--credits)
+## 1. Problem Statement
+Many people use mobile money, social media, and online services without knowing how to identify cyber threats. They may receive fraudulent messages, fake links, and calls requesting money or personal information.
 
----
+CyberAware AI addresses this problem by making cybersecurity education simple and accessible.
 
-## Problem Statement
-- Describe the specific problem or challenge your project solves.
-- Who is your target audience / end user (e.g., enterprise analysts, database administrators, developers, students)?
-- Why is existing tooling insufficient?
+### Target Users
+- Students and young people
+- Parents
+- Small business owners
+- Mobile money users
+- People with limited cybersecurity knowledge
 
----
+## 2. Solution Overview
 
-## Solution Overview
-- Describe how your application solves the problem.
-- Outline the core features and capabilities of your solution.
+CyberAware AI is a web application with four main features:
 
----
+1. Cybersecurity lessons explaining online safety.
+2. Interactive quizzes to test cybersecurity knowledge.
+3. An AI assistant that answers cybersecurity awareness questions.
+4. A scam awareness library containing examples of common online scams and prevention tips.
 
-## IBM Db2 Integration
-- **Db2 Edition & Environment:** (e.g. Db2 Community Edition on Docker, Db2 on IBM Cloud, watsonx.data Db2 engine)
-- **Connector / Driver Used:** (e.g. `ibm_db`, SQLAlchemy `ibm_db_sa`, LangChain Db2 wrapper, JDBC)
-- **Database Schema / Data Models:** Explain the tables, indexes, or vector/JSON documents stored in Db2.
-- **Key Queries & Operations:** Highlight how the application queries, aggregates, or manages transactions in Db2.
+## 3. IBM Db2 Integration
 
----
+IBM Db2 is used as the application's database.
 
-## AI / LLM Architecture (if applicable)
-- **Framework:** (e.g. LangChain, LlamaIndex, CrewAI, Haystack, or custom agent flow)
-- **Model Provider & Model:** (e.g. IBM watsonx.ai `granite-13b`, OpenAI `gpt-4o`, Google Gemini, Ollama local model)
-- **RAG / Tool Calling Workflow:** Explain how retrieved context from Db2 is combined with LLM prompts.
+It stores:
+- Cybersecurity lessons.
+- Quiz questions and answers.
+- Learning progress.
+- Educational resources.
 
----
+Python connects the application to IBM Db2 using the ibm_db driver.
 
-## Tech Stack
-- **Backend / Core:** (e.g. Python 3.11 / FastAPI, Node.js / Express, Java Spring Boot)
-- **Database:** IBM Db2
-- **Frontend / UI:** (e.g. React, Next.js, Streamlit, CLI)
-- **Libraries & Tools:** (e.g. Docker, LangChain, TailwindCSS)
+## 4. AI Architecture
 
----
+Framework: LangChain.
 
-## Prerequisites
-List software and tools required before starting:
-- Docker (for local Db2 container) or access to a running Db2 instance
-- Programming language runtime (e.g. Python >= 3.10, Node.js >= 18)
-- Package manager (e.g. `pip`, `npm`, `poetry`)
+The AI assistant receives questions from users and uses relevant cybersecurity educational information to generate understandable answers.
 
----
+The application retrieves educational information from IBM Db2 and provides it as context to the AI model.
 
-## Setup & Installation
+## 5. Tech Stack
+
+- Backend: Python
+- Database: IBM Db2
+- AI Framework: LangChain
+- Frontend: HTML, CSS and JavaScript
+- Database Connector: ibm_db
+
+## 6. Prerequisites
+
+- Python 3.10 or later
+- IBM Db2 database access
+- Required Python packages
+- An AI model provider and API key
+
+## 7. Setup and Installation
+
+Install the dependencies:
 
 ```bash
-# 1. Clone repository and navigate to your submission directory
-cd submissions/<project-slug>
-
-# 2. Install dependencies (e.g., Python)
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-
-# Or if using Node.js:
-# npm install
 ```
 
----
+Create a `.env` file using `.env.example` as a guide.
 
-## Configuration
+Configure your IBM Db2 connection and AI provider credentials.
 
-Copy `.env.example` to `.env` and fill in your local or test credentials:
+## 8. Running the Project
 
-```bash
-cp .env.example .env
-```
-
-> **Security Warning:** Never commit `.env` or any real API keys or database passwords to Git!
-
----
-
-## Running the Project
+Run the application using:
 
 ```bash
-# Example running backend or script
 python src/main.py
-
-# Or example running frontend:
-# npm run dev
 ```
 
----
+## 9. Testing and Verification
 
-## Testing & Verification
-Explain how reviewers can test and verify your project:
+Run the tests using:
+
 ```bash
-# Run unit tests or verification scripts
 pytest tests/
 ```
 
----
+## 10. Screenshots and Demo
 
-## Screenshots & Demo
-- **Live Demo Link:** [Insert URL if hosted]
-- **Demo Video Link:** [Insert YouTube / Loom / Drive link]
-- Add screenshots in `docs/screenshots/` and embed them below:
-  ![Dashboard Screenshot](docs/screenshots/demo.png)
+Screenshots will be added to:
 
----
+`docs/screenshots/`
 
-## Known Limitations & Future Roadmap
-- **Current Limitations:** (e.g., limited error recovery on network drops, mocked external API)
-- **Next Steps:** (e.g., support for multi-tenant Db2 instances, fine-tuned domain models)
+Demo video link: To be added.
 
----
+## 11. Known Limitations and Future Roadmap
 
-## Team Members & Credits
-| Name | GitHub Handle | Role / Contribution |
-|---|---|---|
-| Contributor 1 | [@username](https://github.com/username) | Backend & Db2 Integration |
-| Contributor 2 | [@username](https://github.com/username) | Frontend & AI Workflow |
+- Initial lessons cover a limited number of cyber threats.
+- AI answers depend on the available educational information.
+- Future versions will support more languages.
+- Future versions will include more scam examples relevant to African communities.
+
+## 12. Team Members and Credits
+
+Project Creator: NGELI MALIKA MARIE
+
+GitHub: @ngelimalika-ops
+
+Role: Project design, development, and documentation.
+ 
+flask
+ibm_db
+python-dotenv
+langchain
+langchain-core
+langchain-ollama
+pytest
