@@ -1,0 +1,7 @@
+flask
+ibm_db
+python-dotenv
+langchain
+langchain-core
+langchain-ollama
+pytest
