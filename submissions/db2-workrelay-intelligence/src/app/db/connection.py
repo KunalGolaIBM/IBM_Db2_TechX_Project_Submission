@@ -4,6 +4,7 @@ import logging
 import os
 import sqlite3
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any, Generator
 
 logger = logging.getLogger("db2_connection")
@@ -16,6 +17,21 @@ except ImportError:
     ibm_db = None
     ibm_db_dbi = None
     IBM_DB_AVAILABLE = False
+
+try:
+    from dotenv import find_dotenv, load_dotenv
+
+    _env_path = find_dotenv(usecwd=True)
+    if not _env_path:
+        _sub_env = Path(__file__).resolve().parents[3] / ".env"
+        if _sub_env.exists():
+            _env_path = str(_sub_env)
+    if _env_path:
+        load_dotenv(_env_path, override=False)
+    else:
+        load_dotenv(override=False)
+except ImportError:
+    pass
 
 
 class Db2ConnectionManager:
