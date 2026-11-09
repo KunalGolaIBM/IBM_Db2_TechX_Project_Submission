@@ -43,7 +43,7 @@ Then open http://127.0.0.1:8000 (console) and http://127.0.0.1:8000/chat (custom
 |---|---|
 | IBM Db2 integration & depth | [IBM Db2 Integration](#ibm-db2-integration), [the full Db2 page](docs/db2.md), the SQL in [src/asof/sql/](src/asof/sql/), `python -m asof.db2check`, [the DDL as Db2 holds it](docs/ddl/asof_schema_db2look.sql) |
 | Innovation & real-world impact | [Problem Statement](#problem-statement), [why the date matters, measured](docs/evaluation.md#why-the-date-matters-measured), [how AsOf compares](docs/overview.md#how-asof-compares), [the specialist inbox and correction notices](docs/db2.md#the-specialist-inbox-and-correction-notices) |
-| Technical architecture & AI | [architecture.md](architecture.md) (diagrams, design decisions, threat model), [AI / LLM Architecture](#ai--llm-architecture-if-applicable), [routing, measured](docs/routing_eval.md) |
+| Technical architecture & AI | [architecture.md](architecture.md) (diagrams, design decisions, threat model summary; in full: [design decisions](docs/design-decisions.md), [threat model](docs/threat-model.md), [schema](docs/schema.md)), [AI / LLM Architecture](#ai--llm-architecture-if-applicable), [routing, measured](docs/routing_eval.md) |
 | Security | [architecture.md: Security & Secrets Management](architecture.md#security--secrets-management), each rubric point mapped to code and tests |
 | Reproducibility & code quality | the quick path above, [Setup & Installation](#setup--installation), [Testing & Verification](#testing--verification), [the frozen evaluation](docs/evaluation.md), CI badge |
 | Documentation & presentation | [Screenshots & Demo](#screenshots--demo), [every screen](docs/screenshots.md), [slides](docs/slides/AsOf_slides.pdf) |
