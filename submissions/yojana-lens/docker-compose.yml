@@ -1,0 +1,59 @@
+# YojanaLens - one command to a working demo.
+#
+#   docker compose up --build
+#   open http://localhost:8000
+#
+# The Db2 container initialises itself on first boot (3-6 minutes). The app
+# container waits for the database, creates the schema, seeds the corpus and
+# then serves the API.
+
+services:
+  db2:
+    image: icr.io/db2_community/db2:12.1.5.0
+    container_name: yojanalens-db2
+    privileged: true
+    restart: unless-stopped
+    ports:
+      - "50000:50000"
+    environment:
+      LICENSE: accept
+      DB2INSTANCE: db2inst1
+      DB2INST1_PASSWORD: ${DB2_INSTANCE_PASSWORD:-change-me-locally}
+      DBNAME: ${DB_NAME:-YOJANADB}
+      BLU: "false"
+      ENABLE_ORACLE_COMPATIBILITY: "false"
+      UPDATEAVAIL: "NO"
+    volumes:
+      - db2data:/database
+    healthcheck:
+      test: ["CMD-SHELL", "su - db2inst1 -c 'db2 connect to YOJANADB' > /dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 15s
+      retries: 40
+      start_period: 150s
+
+  app:
+    build: .
+    container_name: yojanalens-app
+    restart: unless-stopped
+    depends_on:
+      db2:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: db2
+      DB_PORT: "50000"
+      DB_NAME: ${DB_NAME:-YOJANADB}
+      DB_USER: db2inst1
+      DB_PASSWORD: ${DB2_INSTANCE_PASSWORD:-change-me-locally}
+      EMBEDDING_MODEL: sentence-transformers/all-MiniLM-L6-v2
+      EMBEDDING_DIM: "384"
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai_compatible}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.groq.com/openai/v1}
+      LLM_MODEL: ${LLM_MODEL:-llama-3.3-70b-versatile}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      RETRIEVER_TOP_K: "8"
+
+volumes:
+  db2data:

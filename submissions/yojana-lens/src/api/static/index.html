@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>YojanaLens — auditable scheme eligibility</title>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#111a33; --panel-2:#0e1730; --line:#22315a;
+    --ink:#e8eefc; --muted:#93a4c8; --accent:#6d8cff;
+    --ok:#2ecc9a; --near:#f5b544; --clarify:#63b3ed; --no:#e5617a;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 10% -10%,#1b2a55 0%,transparent 60%),var(--bg);
+       color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+  a{color:var(--accent)}
+  header{padding:22px 28px 10px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#6d8cff,#2ecc9a);
+        display:grid;place-items:center;font-weight:800;color:#0b1020}
+  h1{font-size:19px;margin:0;letter-spacing:.2px}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-size:12px;color:var(--muted)}
+  .chip b{color:var(--ink)}
+  .chip.dot::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;
+        background:var(--muted);margin-right:7px;vertical-align:1px}
+  .chip.dot.ok::before{background:var(--ok)} .chip.dot.warn::before{background:var(--near)}
+  main{display:grid;grid-template-columns:400px 1fr;gap:22px;padding:14px 28px 60px;align-items:start}
+  @media(max-width:980px){main{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .panel h2{font-size:13px;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);margin:0 0 12px}
+  textarea{width:100%;min-height:150px;resize:vertical;background:var(--panel-2);color:var(--ink);
+    border:1px solid var(--line);border-radius:12px;padding:12px;font:14px/1.6 inherit;outline:none}
+  textarea:focus{border-color:var(--accent)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--ink);padding:9px 14px}
+  button:hover{border-color:#3b5490}
+  button.primary{background:linear-gradient(135deg,#6d8cff,#4f6ef0);border:none;color:#fff;font-weight:600;
+    padding:11px 18px;width:100%;margin-top:12px}
+  button.primary:disabled{opacity:.6;cursor:progress}
+  .samples{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+  .sample{font-size:11.5px;padding:6px 9px;border-radius:8px;background:transparent;border:1px dashed var(--line);color:var(--muted)}
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:12px 14px}
+  .stat span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}
+  .stat b{font-size:22px}
+  .stat.ok b{color:var(--ok)} .stat.near b{color:var(--near)}
+  .stat.clarify b{color:var(--clarify)} .stat.no b{color:var(--no)}
+  .card{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);
+        border-radius:14px;padding:16px 18px;margin-bottom:12px}
+  .card.ok{border-left-color:var(--ok)} .card.near_miss{border-left-color:var(--near)}
+  .card.clarify{border-left-color:var(--clarify)} .card.not_eligible{border-left-color:var(--no)}
+  .card h3{margin:0;font-size:15.5px;display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  .badge{font-size:10.5px;letter-spacing:.7px;text-transform:uppercase;padding:3px 8px;border-radius:999px;
+    border:1px solid currentColor}
+  .ok .badge{color:var(--ok)} .near_miss .badge{color:var(--near)}
+  .clarify .badge{color:var(--clarify)} .not_eligible .badge{color:var(--no)}
+  .meta{color:var(--muted);font-size:12px;margin:4px 0 9px}
+  .nar{margin:8px 0 10px}
+  .bar{height:5px;background:var(--panel-2);border-radius:4px;overflow:hidden;margin:10px 0 4px}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,#4f6ef0,#2ecc9a)}
+  .kv{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .kv code{background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:3px 7px;font:11.5px var(--mono);color:#bcd0ff}
+  details{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+  summary{cursor:pointer;color:var(--muted);font-size:12.5px}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12.5px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #1b2748;vertical-align:top}
+  th{color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.6px}
+  .pill{font:11px var(--mono);padding:1px 6px;border-radius:5px;border:1px solid currentColor}
+  .pill.PASS{color:var(--ok)} .pill.FAIL{color:var(--no)} .pill.UNKNOWN{color:var(--near)}
+  .quote{border-left:2px solid var(--line);padding:2px 0 2px 10px;color:#c5d2ea;font-size:12.5px;margin-top:8px}
+  .empty{color:var(--muted);text-align:center;padding:60px 20px;border:1px dashed var(--line);border-radius:16px}
+  .drawer{position:fixed;inset:0;background:rgba(4,8,20,.72);display:none;z-index:50}
+  .drawer.open{display:block}
+  .drawer-inner{position:absolute;right:0;top:0;bottom:0;width:min(760px,100%);background:var(--bg);
+    border-left:1px solid var(--line);padding:22px 26px;overflow:auto}
+  .close{float:right;background:transparent;border:none;color:var(--muted);font-size:24px;line-height:1}
+  .mono{font-family:var(--mono);font-size:12px}
+  .sqlbox{background:#080d1c;border:1px solid var(--line);border-radius:10px;padding:12px;
+    font:11.5px/1.55 var(--mono);color:#9fb6e6;white-space:pre-wrap;overflow:auto;max-height:260px}
+  footer{color:var(--muted);font-size:12px;padding:0 28px 30px}
+  .spin{display:inline-block;width:13px;height:13px;border:2px solid #ffffff55;border-top-color:#fff;
+    border-radius:50%;animation:r .7s linear infinite;margin-right:8px;vertical-align:-2px}
+  @keyframes r{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">YL</div>
+    <div>
+      <h1>YojanaLens</h1>
+      <div class="sub">Auditable scheme eligibility · Db2 decides, the model explains</div>
+    </div>
+  </div>
+  <div class="chips" id="chips">
+    <div class="chip dot" id="dbchip">Db2: checking…</div>
+    <div class="chip" id="corpuschip">corpus: …</div>
+    <div class="chip" id="enginechip">engine: …</div>
+  </div>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>Describe the household</h2>
+    <textarea id="input" placeholder="Age, state, occupation, income, land, house, family, category…"></textarea>
+    <div class="samples">
+      <button class="sample" data-sample="widow">Widow farmer, UP</button>
+      <button class="sample" data-sample="artisan">Artisan, MP</button>
+      <button class="sample" data-sample="student">SC student</button>
+    </div>
+    <button class="primary" id="go">Check eligibility</button>
+    <div class="row" style="margin-top:14px">
+      <button id="auditLast" disabled>Open last audit record</button>
+    </div>
+    <p class="sub" style="margin-top:14px">
+      Verdicts are computed by SQL rules in Db2. The language model only narrates
+      the result and may cite nothing beyond the retrieved clauses.
+    </p>
+  </section>
+
+  <section id="results">
+    <div class="empty" id="empty">
+      Nothing evaluated yet. Paste a situation on the left, or load a sample.
+    </div>
+    <div id="content" style="display:none">
+      <div class="summary" id="summary"></div>
+      <div id="cards"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  IBM Db2 12.1.5 · native <span class="mono">VECTOR(384, FLOAT32)</span> ·
+  <span class="mono">VECTOR_DISTANCE(…, COSINE)</span> ·
+  rule matrix produced by <span class="mono">SP_RECORD_TRACE</span>
+</footer>
+
+<div class="drawer" id="drawer">
+  <div class="drawer-inner">
+    <button class="close" id="closeDrawer">×</button>
+    <h2 style="margin-top:0">Audit record</h2>
+    <div id="auditBody" class="sub">Loading…</div>
+  </div>
+</div>
+
+<script>
+const SAMPLES = {
+  widow: "I am a 34-year-old widow from a village in Uttar Pradesh. We are an OBC household. I farm two acres of our own land, our house is kutcha, and the household income is about 1.8 lakh a year. My daughter is in class 12. I have a bank account and a ration card.",
+  artisan: "I am a 41-year-old carpenter from a town in Madhya Pradesh. I am an artisan by trade and earn about 1.4 lakh a year. I have a bank account and my family is below the poverty line.",
+  student: "I am a 20-year-old Scheduled Caste student from Bihar, currently enrolled in a graduate course. My family income is around 1.2 lakh per year and I do not pay income tax. I have a bank account."
+};
+
+const LABEL_TEXT = {ELIGIBLE:"eligible", NEAR_MISS:"near miss", CLARIFY:"needs info", NOT_ELIGIBLE:"not eligible"};
+let lastRunId = null;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const human = (s) => String(s ?? "").replace(/_/g, " ");
+const money = (n) => n == null ? "" : (n >= 100000 ? (n/100000).toFixed(n % 100000 ? 1 : 0) + " lakh" : Number(n).toLocaleString("en-IN"));
+
+function threshold(rule){
+  if (rule.rule_op === "lte") return "max " + money(rule.value_num);
+  if (rule.rule_op === "gte") return "min " + money(rule.value_num);
+  if (rule.rule_op === "in") return "one of: " + String(rule.value_text || "").split(",").join(", ");
+  return String(rule.value_text || "");
+}
+
+async function boot(){
+  try{
+    const h = await fetch("/api/health").then(r => r.json());
+    const db = $("dbchip");
+    db.textContent = h.db === "connected" ? "Db2 connected" : "Db2 unreachable";
+    db.className = "chip dot " + (h.db === "connected" ? "ok" : "warn");
+    $("enginechip").textContent = "engine: " + h.engine + " · " + h.llm_mode;
+  }catch(e){ $("dbchip").textContent = "api unreachable"; }
+  try{
+    const s = await fetch("/api/stats").then(r => r.json());
+    $("corpuschip").innerHTML = `<b>${s.active_schemes ?? 0}</b> schemes ·
+      <b>${s.total_rules ?? 0}</b> rules · <b>${s.total_clauses ?? 0}</b> clauses`;
+  }catch(e){ $("corpuschip").textContent = "corpus: seed the database"; }
+}
+
+document.querySelectorAll(".sample").forEach(b => b.onclick = () => {
+  $("input").value = SAMPLES[b.dataset.sample];
+});
+
+$("go").onclick = async () => {
+  const text = $("input").value.trim();
+  if (text.length < 10){ $("input").focus(); return; }
+  const btn = $("go");
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Evaluating rules in Db2…';
+  try{
+    const res = await fetch("/api/ask", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({text})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail?.message || data.detail?.error || "request failed");
+    lastRunId = data.run_id;
+    $("auditLast").disabled = !lastRunId;
+    render(data);
+  }catch(err){
+    $("content").style.display = "none";
+    $("empty").style.display = "block";
+    $("empty").textContent = "Could not complete the run: " + err.message;
+  }finally{
+    btn.disabled = false; btn.textContent = "Check eligibility";
+  }
+};
+
+function render(data){
+  const c = data.counts || {};
+  $("summary").innerHTML = `
+    <div class="stat ok"><span>Eligible</span><b>${c.eligible || 0}</b></div>
+    <div class="stat near"><span>Near miss</span><b>${c.near_miss || 0}</b></div>
+    <div class="stat clarify"><span>Needs info</span><b>${c.clarify || 0}</b></div>
+    <div class="stat no"><span>Not eligible</span><b>${c.not_eligible || 0}</b></div>`;
+
+  const facts = Object.entries(data.facts || {});
+  let html = `<div class="panel" style="margin-bottom:14px">
+    <h2>Facts extracted</h2>
+    <div class="kv">${facts.length ? facts.map(([k,v]) =>
+      `<code>${esc(human(k))}=${esc(typeof v === "number" ? money(v) : v)}</code>`).join("") :
+      "<span class='sub'>none</span>"}</div>
+    ${data.notes && data.notes.length ? `<p class="sub" style="margin:10px 0 0">${data.notes.map(esc).join(" · ")}</p>` : ""}
+    ${data.filtered_by_residency ? `<p class="sub" style="margin:8px 0 0">
+      ${data.filtered_by_residency} state-specific scheme(s) excluded by the residency pre-filter in SQL.</p>` : ""}
+    <p class="sub" style="margin:8px 0 0">run <span class="mono">${esc(data.run_id)}</span> ·
+      ${data.duration_ms} ms · ${esc(data.llm_mode)} narration · ${esc(data.engine)}</p>
+  </div>`;
+
+  if (!data.results || !data.results.length){
+    html += `<div class="empty">${esc(data.message || "No scheme could be evaluated.")}</div>`;
+  }else{
+    html += data.results.map(card).join("");
+  }
+  $("cards").innerHTML = html;
+  $("empty").style.display = "none";
+  $("content").style.display = "block";
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function card(r){
+  const cls = String(r.label).toLowerCase();
+  const rules = r.rules || [];
+  const rows = rules.map(rule => `
+    <tr>
+      <td>${esc(human(rule.criterion_code))}${rule.mandatory ? "" : " <span class='sub'>(advisory)</span>"}</td>
+      <td>${esc(rule.observed_value ?? "—")}</td>
+      <td>${esc(threshold(rule))}</td>
+      <td><span class="pill ${esc(rule.verdict)}">${esc(rule.verdict)}</span></td>
+      <td class="mono">${esc(rule.clause_ref)}</td>
+    </tr>`).join("");
+
+  const clause = (r.citations || []).length
+    ? rules.find(x => x.chunk_id === r.citations[0]) : null;
+
+  return `<article class="card ${cls}">
+    <h3>${esc(r.name)} <span class="badge">${esc(LABEL_TEXT[r.label] || r.label)}</span></h3>
+    <div class="meta">${esc(r.category)} · ${esc(r.gov_level)} · ${esc(r.state_code)} · readiness ${r.readiness}%</div>
+    <div class="bar"><i style="width:${r.readiness}%"></i></div>
+    ${r.narrative ? `<p class="nar">${esc(r.narrative)}</p>` : ""}
+    ${clause && clause.chunk_text ? `<div class="quote">“${esc(clause.chunk_text).slice(0, 320)}…” <span class="mono">${esc(clause.clause_ref)}</span></div>` : ""}
+    <details>
+      <summary>Rule trace · ${rules.filter(x => x.verdict === "PASS").length}/${rules.length} criteria pass</summary>
+      <table><thead><tr><th>Criterion</th><th>Observed</th><th>Requirement</th><th>Verdict</th><th>Clause</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    </details>
+    ${r.source_url ? `<div class="meta" style="margin-top:8px"><a href="${esc(r.source_url)}" target="_blank" rel="noopener">official source</a></div>` : ""}
+  </article>`;
+}
+
+$("auditLast").onclick = () => { if (lastRunId) openAudit(lastRunId); };
+$("closeDrawer").onclick = () => $("drawer").classList.remove("open");
+$("drawer").onclick = (e) => { if (e.target.id === "drawer") $("drawer").classList.remove("open"); };
+
+async function openAudit(runId){
+  $("drawer").classList.add("open");
+  $("auditBody").textContent = "Loading audit record…";
+  try{
+    const data = await fetch("/api/runs/" + encodeURIComponent(runId)).then(r => r.json());
+    if (data.detail) throw new Error(data.detail.message || data.detail);
+    const run = data.run || {};
+    const events = data.audit_events || [];
+    const trace = data.trace || [];
+    $("auditBody").innerHTML = `
+      <table>
+        <tr><th>Run</th><td class="mono">${esc(run.run_id)}</td></tr>
+        <tr><th>Status</th><td>${esc(run.status)}</td></tr>
+        <tr><th>Model</th><td class="mono">${esc(run.model)} · prompt ${esc(run.prompt_version)}</td></tr>
+        <tr><th>Started</th><td class="mono">${esc(run.started_at)}</td></tr>
+        <tr><th>Finished</th><td class="mono">${esc(run.finished_at)}</td></tr>
+        <tr><th>Latency</th><td>${esc(run.latency_ms)} ms</td></tr>
+        <tr><th>Rule rows</th><td>${esc(run.rules_evaluated)} evaluated · ${esc(run.rules_passed)} passed</td></tr>
+        <tr><th>Retrieved</th><td>top ${esc(run.retriever_top_k)} clauses via VECTOR_DISTANCE</td></tr>
+        <tr><th>Audit events</th><td>${esc(run.audit_events)}</td></tr>
+      </table>
+      <h2 style="margin-top:22px">Decision trace (stored in Db2)</h2>
+      <table><thead><tr><th>Scheme</th><th>Criterion</th><th>Observed</th><th>Verdict</th><th>Clause</th><th>Chunk</th></tr></thead>
+      <tbody>${trace.map(t => `<tr>
+        <td class="mono">${esc(t.scheme_id)}</td>
+        <td>${esc(human(t.criterion_code))}</td>
+        <td>${esc(t.observed_value ?? "—")}</td>
+        <td><span class="pill ${esc(t.verdict)}">${esc(t.verdict)}</span></td>
+        <td class="mono">${esc(t.clause_ref)}</td>
+        <td class="mono" style="font-size:10.5px">${esc(t.chunk_id || "—")}</td>
+      </tr>`).join("")}</tbody></table>
+      <h2 style="margin-top:22px">Event log</h2>
+      <table><thead><tr><th>#</th><th>Actor</th><th>Action</th><th>Detail</th><th>SQL hash</th></tr></thead>
+      <tbody>${events.map(e => `<tr>
+        <td class="mono">${esc(e.audit_id)}</td><td>${esc(e.actor)}</td>
+        <td class="mono">${esc(e.action)}</td><td>${esc(e.detail)}</td>
+        <td class="mono" style="font-size:10.5px">${esc(e.sql_hash || "—")}</td>
+      </tr>`).join("")}</tbody></table>
+      <h2 style="margin-top:22px">The query that ranked the clauses</h2>
+      <div class="sqlbox">WITH candidate AS (
+  SELECT s.scheme_id
+  FROM schemes s
+  WHERE s.status = 'ACTIVE'
+    AND s.state_code IN ('ALL', :state)
+)
+SELECT c.chunk_id, c.scheme_id,
+       VECTOR_DISTANCE(c.embedding,
+         VECTOR(CAST(:query_vec AS VARCHAR(32672)), 384, FLOAT32),
+         COSINE) AS distance
+FROM scheme_chunks c
+JOIN candidate s ON s.scheme_id = c.scheme_id
+ORDER BY distance ASC
+FETCH FIRST 12 ROWS ONLY</div>`;
+  }catch(err){
+    $("auditBody").textContent = "Could not load the audit record: " + err.message;
+  }
+}
+
+boot();
+</script>
+</body>
+</html>

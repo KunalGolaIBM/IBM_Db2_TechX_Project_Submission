@@ -1,0 +1,46 @@
+{
+  "project": {
+    "title": "YojanaLens — Auditable Scheme Eligibility Agent",
+    "slug": "yojana-lens",
+    "short_description": "An agent that decides Indian welfare-scheme eligibility with deterministic SQL rules inside IBM Db2, using native vector search to ground every explanation. The LLM never decides, citations are validated, and every verdict is replayable from a stored decision trace.",
+    "category": "AI / RAG",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/Aditya02-cpu/IBM_Db2_TechX_Project_Submission/tree/submission/yojana-lens"
+  },
+  "team": {
+    "name": "Aditya Lobhe — solo submission",
+    "members": [
+      {
+        "name": "Aditya Lobhe",
+        "github": "Aditya02-cpu",
+        "email": "adityalobhe4@gmail.com",
+        "role": "Full stack, data, Db2 schema, agent, tests and docs"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1.5.0 (Docker, Linux/amd64)",
+    "connector": "ibm_db 3.2.3 (Python DB2 CLI driver)",
+    "features_used": [
+      "Relational Tables",
+      "Indexing",
+      "Foreign Keys with ON DELETE CASCADE",
+      "Identity Columns",
+      "Vector / JSON Search (native VECTOR(384, FLOAT32) and VECTOR_DISTANCE with COSINE)",
+      "SQL PL Stored Procedure (SP_RECORD_TRACE)",
+      "Set-based INSERT ... SELECT aggregation",
+      "Transactions (explicit commit / rollback)",
+      "SYSCAT catalog introspection",
+      "CURRENT TIMESTAMP"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "SQL", "JavaScript", "HTML/CSS"],
+    "frameworks": ["LangGraph", "FastAPI", "Uvicorn"],
+    "ai_models": [
+      "sentence-transformers/all-MiniLM-L6-v2 (384-dim embeddings, ONNX via fastembed)",
+      "Any OpenAI-compatible LLM for narration (default: llama-3.3-70b-versatile; IBM Granite supported via the same client)"
+    ]
+  }
+}

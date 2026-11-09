@@ -1,0 +1,832 @@
+{
+  "version": 1,
+  "meta": {
+    "description": "Curated eligibility corpus for YojanaLens. Each scheme carries hand-extracted structured rules and the source clauses those rules were derived from.",
+    "disclaimer": "Rules were curated from public scheme guidelines for demonstration purposes only. Always verify against the official scheme portal before relying on an outcome.",
+    "rule_ops": {
+      "eq": "fact_text equals value_text (case-insensitive)",
+      "in": "fact_text is a member of the comma-separated value_text list",
+      "lte": "fact_num <= value_num",
+      "gte": "fact_num >= value_num"
+    },
+    "criterion_vocabulary": [
+      "age", "gender", "income_annual", "land_holding_acres", "marital_status",
+      "bpl_status", "residence", "house_type", "category", "occupation",
+      "business_type", "education_level", "has_girl_child", "girl_age",
+      "has_bank_account", "income_tax_payer"
+    ]
+  },
+  "schemes": [
+    {
+      "scheme_id": "pm-kisan",
+      "name": "Pradhan Mantri Kisan Samman Nidhi (PM-KISAN)",
+      "ministry": "Ministry of Agriculture and Farmers Welfare",
+      "level": "central",
+      "state_code": "ALL",
+      "category": "agriculture",
+      "status": "ACTIVE",
+      "source_url": "https://pmkisan.gov.in/",
+      "benefit_summary": "Income support of Rs 6,000 per year, paid in three equal instalments directly to the bank account of eligible landholding farmer families.",
+      "rules": [
+        {
+          "criterion_code": "occupation",
+          "op": "eq",
+          "text": "farmer",
+          "mandatory": true,
+          "clause_ref": "Para 2(i)",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "land_holding_acres",
+          "op": "lte",
+          "num": 5,
+          "mandatory": true,
+          "clause_ref": "Para 2(ii)",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "age",
+          "op": "gte",
+          "num": 18,
+          "mandatory": true,
+          "clause_ref": "Para 2(iii)",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "income_tax_payer",
+          "op": "eq",
+          "text": "no",
+          "mandatory": true,
+          "clause_ref": "Para 3(iv)",
+          "source_page": 2
+        }
+      ],
+      "chunks": [
+        {
+          "clause_ref": "Para 2(i)-(ii)",
+          "section": "Eligibility",
+          "page_no": 1,
+          "text": "All landholding farmer families are eligible for the scheme, subject to the exclusion criteria in Para 3. A landholding farmer family means a family comprising husband, wife and minor children which owns cultivable land in its own name. There is no minimum landholding requirement, but holdings above five hectares are excluded from the benefit."
+        },
+        {
+          "clause_ref": "Para 3(iv)",
+          "section": "Exclusions",
+          "page_no": 2,
+          "text": "The following categories of beneficiaries shall not be eligible: institutional landholders, farmer families holding constitutional posts, serving or retired government employees (except Group D and multi-tasking staff), professionals such as doctors, engineers and lawyers with registered practice, and income tax payers. Retired pensioners drawing more than Rs 10,000 per month are also excluded."
+        },
+        {
+          "clause_ref": "Para 5",
+          "section": "Benefit",
+          "page_no": 3,
+          "text": "The benefit of Rs 6,000 per annum is transferred in three instalments of Rs 2,000 each, spaced approximately four months apart, directly into the Aadhaar-seeded bank account of the beneficiary through the Public Financial Management System. Land records are re-verified before each instalment."
+        }
+      ]
+    },
+    {
+      "scheme_id": "pmjay",
+      "name": "Ayushman Bharat Pradhan Mantri Jan Arogya Yojana (PM-JAY)",
+      "ministry": "Ministry of Health and Family Welfare",
+      "level": "central",
+      "state_code": "ALL",
+      "category": "health",
+      "status": "ACTIVE",
+      "source_url": "https://pmjay.gov.in/",
+      "benefit_summary": "Cashless secondary and tertiary hospitalisation cover of Rs 5 lakh per family per year at empanelled public and private hospitals.",
+      "rules": [
+        {
+          "criterion_code": "income_annual",
+          "op": "lte",
+          "num": 250000,
+          "mandatory": true,
+          "clause_ref": "Section 3.1",
+          "source_page": 2
+        },
+        {
+          "criterion_code": "bpl_status",
+          "op": "eq",
+          "text": "yes",
+          "mandatory": false,
+          "clause_ref": "Section 3.2",
+          "source_page": 2
+        }
+      ],
+      "chunks": [
+        {
+          "clause_ref": "Section 3.1",
+          "section": "Eligibility",
+          "page_no": 2,
+          "text": "Families with annual household income of Rs 2.5 lakh or less, as recorded in the Socio-Economic Caste Census or the relevant state database, are eligible for the scheme. Eligibility is family based, not individual based, and the entitlement is shared across all members of the family."
+        },
+        {
+          "clause_ref": "Section 3.2",
+          "section": "Eligibility - priority groups",
+          "page_no": 2,
+          "text": "Priority is given to households without a pucca house, households with no adult member between 16 and 59 years, female-headed households with no adult male member, households with a disabled member, landless households deriving income from manual labour, and households automatically included in the rural deprivation list."
+        },
+        {
+          "clause_ref": "Section 6.4",
+          "section": "Benefit coverage",
+          "page_no": 7,
+          "text": "The scheme provides cover of Rs 5,00,000 per family per year for secondary and tertiary care hospitalisation, including pre and post hospitalisation expenses of 3 and 15 days respectively. There is no cap on family size or age, and no waiting period. Benefits are cashless at the point of service."
+        }
+      ]
+    },
+    {
+      "scheme_id": "ujjwala",
+      "name": "Pradhan Mantri Ujjwala Yojana 2.0",
+      "ministry": "Ministry of Petroleum and Natural Gas",
+      "level": "central",
+      "state_code": "ALL",
+      "category": "welfare",
+      "status": "ACTIVE",
+      "source_url": "https://www.pmuy.gov.in/",
+      "benefit_summary": "Free LPG connection with first refill and stove for adult women from poor households, who do not already own an LPG connection.",
+      "rules": [
+        {
+          "criterion_code": "gender",
+          "op": "eq",
+          "text": "female",
+          "mandatory": true,
+          "clause_ref": "Para 2.1",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "age",
+          "op": "gte",
+          "num": 18,
+          "mandatory": true,
+          "clause_ref": "Para 2.1",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "bpl_status",
+          "op": "eq",
+          "text": "yes",
+          "mandatory": true,
+          "clause_ref": "Para 2.2",
+          "source_page": 1
+        }
+      ],
+      "chunks": [
+        {
+          "clause_ref": "Para 2.1",
+          "section": "Eligibility",
+          "page_no": 1,
+          "text": "Any adult woman of eighteen years or above, belonging to a poor household and not already having an LPG connection in her name or in the name of any adult member of her household, is eligible to apply for a new connection under the scheme."
+        },
+        {
+          "clause_ref": "Para 2.2",
+          "section": "Eligibility - documentation",
+          "page_no": 1,
+          "text": "Applicants must produce an Aadhaar card, a bank account in the applicant's name, a ration card or any of the listed family eligibility documents such as SC/ST certificate, PMAY letter, disability pension order, or a self-declaration of poverty. Migrant families can self-declare their address."
+        },
+        {
+          "clause_ref": "Para 4.3",
+          "section": "Benefit",
+          "page_no": 3,
+          "text": "The first refill and a hot plate are provided free of cost. Subsequent refills are at market rates, with an optional subsidy continuing for beneficiaries covered under the earlier phase. Connections are released through the nearest distributor after KYC verification."
+        }
+      ]
+    },
+    {
+      "scheme_id": "sukanya-samriddhi",
+      "name": "Sukanya Samriddhi Yojana (SSY)",
+      "ministry": "Ministry of Finance",
+      "level": "central",
+      "state_code": "ALL",
+      "category": "savings",
+      "status": "ACTIVE",
+      "source_url": "https://www.nsiindia.gov.in/",
+      "benefit_summary": "Small savings account for a girl child with the highest sovereign interest rate among small savings schemes, plus full tax exemption on contribution, interest and maturity.",
+      "rules": [
+        {
+          "criterion_code": "has_girl_child",
+          "op": "eq",
+          "text": "yes",
+          "mandatory": true,
+          "clause_ref": "Rule 4(1)",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "girl_age",
+          "op": "lte",
+          "num": 10,
+          "mandatory": true,
+          "clause_ref": "Rule 4(1)",
+          "source_page": 1
+        }
+      ],
+      "chunks": [
+        {
+          "clause_ref": "Rule 4(1)",
+          "section": "Who may open an account",
+          "page_no": 1,
+          "text": "A parent or legal guardian may open an account in the name of a girl child who has not attained the age of ten years. Only the amount deposited is irrevocable. Proof of age of the girl child and birth certificate are required at the time of opening the account."
+        },
+        {
+          "clause_ref": "Rule 6",
+          "section": "Deposits and maturity",
+          "page_no": 2,
+          "text": "Deposits may be made in multiples of one hundred rupees, with a minimum of two hundred and fifty rupees and a maximum of one lakh fifty thousand rupees in a financial year. The account matures twenty-one years from the date of opening, or at the time of the girl's marriage after she attains eighteen years."
+        },
+        {
+          "clause_ref": "Rule 9",
+          "section": "Withdrawal",
+          "page_no": 3,
+          "text": "A partial withdrawal of up to fifty per cent of the balance is permitted after the girl child attains eighteen years of age, for the purpose of pursuing higher education. The withdrawal requires a request from the guardian together with documentary proof of admission to an educational institution."
+        }
+      ]
+    },
+    {
+      "scheme_id": "pmay-g",
+      "name": "Pradhan Mantri Awas Yojana - Gramin",
+      "ministry": "Ministry of Rural Development",
+      "level": "central",
+      "state_code": "ALL",
+      "category": "housing",
+      "status": "ACTIVE",
+      "source_url": "https://pmayg.nic.in/",
+      "benefit_summary": "Assistance for construction of a pucca house with basic amenities for houseless and kutcha-house rural families, with additional support for toilets, electricity and LPG.",
+      "rules": [
+        {
+          "criterion_code": "residence",
+          "op": "eq",
+          "text": "rural",
+          "mandatory": true,
+          "clause_ref": "Para 2.1",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "house_type",
+          "op": "eq",
+          "text": "kutcha",
+          "mandatory": true,
+          "clause_ref": "Para 2.2",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "income_annual",
+          "op": "lte",
+          "num": 300000,
+          "mandatory": true,
+          "clause_ref": "Para 2.3",
+          "source_page": 1
+        }
+      ],
+      "chunks": [
+        {
+          "clause_ref": "Para 2.1-2.2",
+          "section": "Beneficiary eligibility",
+          "page_no": 1,
+          "text": "A beneficiary family must be a rural household that is either houseless or living in a kutcha house, as recorded in the housing deprivation parameters of the Socio-Economic Caste Census. Families that already own a pucca house anywhere in the country are not eligible."
+        },
+        {
+          "clause_ref": "Para 2.3",
+          "section": "Income and exclusion",
+          "page_no": 1,
+          "text": "Households with an annual income above Rs 3 lakh, households with a motorised four wheeled vehicle, members with a government job, and households paying income tax or professional tax are excluded from assistance. Verification is performed by the Gram Panchayat."
+        },
+        {
+          "clause_ref": "Para 7",
+          "section": "Assistance",
+          "page_no": 5,
+          "text": "Assistance is provided in instalments directly to the bank account of the beneficiary, tied to geo-tagged construction milestones. The unit assistance is higher for hilly and difficult areas, and an additional incentive is available for MGNREGA labour convergence."
+        }
+      ]
+    },
+    {
+      "scheme_id": "nsap-widow",
+      "name": "Indira Gandhi National Widow Pension Scheme (IGNWPS)",
+      "ministry": "Ministry of Rural Development",
+      "level": "central",
+      "state_code": "ALL",
+      "category": "pension",
+      "status": "ACTIVE",
+      "source_url": "https://nsap.nic.in/",
+      "benefit_summary": "Monthly pension for widows living below the poverty line, payable from the age of forty and credited to the beneficiary's bank account.",
+      "rules": [
+        {
+          "criterion_code": "marital_status",
+          "op": "eq",
+          "text": "widow",
+          "mandatory": true,
+          "clause_ref": "Para 3.1",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "age",
+          "op": "gte",
+          "num": 40,
+          "mandatory": true,
+          "clause_ref": "Para 3.2",
+          "source_page": 2
+        },
+        {
+          "criterion_code": "bpl_status",
+          "op": "eq",
+          "text": "yes",
+          "mandatory": true,
+          "clause_ref": "Para 3.3",
+          "source_page": 2
+        }
+      ],
+      "chunks": [
+        {
+          "clause_ref": "Para 3.1-3.2",
+          "section": "Eligibility",
+          "page_no": 1,
+          "text": "The scheme applies to widows in the age group of forty to seventy-nine years who belong to a household living below the poverty line. The age of eligibility is forty years. The pension is payable for life, and the beneficiary must remain on the BPL list of the relevant local body."
+        },
+        {
+          "clause_ref": "Para 3.3",
+          "section": "BPL requirement",
+          "page_no": 2,
+          "text": "Applicants must be listed in the BPL list of the Gram Panchayat or urban local body. A copy of the BPL certificate, a death certificate of the husband, an age proof and a bank passbook copy are required with the application submitted to the local authority."
+        },
+        {
+          "clause_ref": "Para 5.2",
+          "section": "Disbursement",
+          "page_no": 3,
+          "text": "The central assistance is credited to the beneficiary's bank or post office account through the Direct Benefit Transfer mechanism. State governments may top up the amount, and the pension is not payable concurrently with another NSAP pension covering the same contingency."
+        }
+      ]
+    },
+    {
+      "scheme_id": "post-matric-scst",
+      "name": "Post-Matric Scholarship for SC and ST Students",
+      "ministry": "Ministry of Social Justice and Empowerment",
+      "level": "central",
+      "state_code": "ALL",
+      "category": "education",
+      "status": "ACTIVE",
+      "source_url": "https://scholarships.gov.in/",
+      "benefit_summary": "Scholarship covering tuition, maintenance and non-refundable fees for SC and ST students pursuing post-matriculation courses.",
+      "rules": [
+        {
+          "criterion_code": "category",
+          "op": "in",
+          "text": "sc,st",
+          "mandatory": true,
+          "clause_ref": "Para 2.1",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "income_annual",
+          "op": "lte",
+          "num": 250000,
+          "mandatory": true,
+          "clause_ref": "Para 2.3",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "education_level",
+          "op": "in",
+          "text": "12th,graduate,postgraduate,diploma",
+          "mandatory": true,
+          "clause_ref": "Para 2.2",
+          "source_page": 1
+        }
+      ],
+      "chunks": [
+        {
+          "clause_ref": "Para 2.1-2.2",
+          "section": "Eligibility",
+          "page_no": 1,
+          "text": "The scholarship is open to students belonging to Scheduled Castes and Scheduled Tribes who have passed the matriculation or higher secondary examination and are pursuing a post-matriculation course in a recognised institution. Students must be enrolled in a regular, full-time course."
+        },
+        {
+          "clause_ref": "Para 2.3",
+          "section": "Income ceiling",
+          "page_no": 1,
+          "text": "The annual income of the parents or guardian must not exceed Rs 2.5 lakh. Income certificates issued by the competent revenue authority are required. Scholarships are not admissible to students who are receiving another scholarship for the same course."
+        },
+        {
+          "clause_ref": "Para 6",
+          "section": "Components",
+          "page_no": 4,
+          "text": "The scholarship comprises a maintenance allowance paid for the duration of the course, a book grant, and reimbursement of compulsory non-refundable fees charged by the institution. Claims are submitted through the National Scholarship Portal with Aadhaar-based eKYC."
+        }
+      ]
+    },
+    {
+      "scheme_id": "nfsa-phh",
+      "name": "National Food Security Act - Priority Household Entitlement",
+      "ministry": "Department of Food and Public Distribution",
+      "level": "central",
+      "state_code": "ALL",
+      "category": "food",
+      "status": "ACTIVE",
+      "source_url": "https://dfpd.gov.in/",
+      "benefit_summary": "Subsidised foodgrain of 5 kg per person per month for priority households under the Targeted Public Distribution System.",
+      "rules": [
+        {
+          "criterion_code": "income_annual",
+          "op": "lte",
+          "num": 150000,
+          "mandatory": true,
+          "clause_ref": "Section 3(1)",
+          "source_page": 2
+        },
+        {
+          "criterion_code": "residence",
+          "op": "in",
+          "text": "rural,urban",
+          "mandatory": true,
+          "clause_ref": "Section 3(1)",
+          "source_page": 2
+        }
+      ],
+      "chunks": [
+        {
+          "clause_ref": "Section 3(1)",
+          "section": "Coverage",
+          "page_no": 2,
+          "text": "Priority households are entitled to receive five kilograms of foodgrain per person per month at subsidised prices. Eligibility is determined by the state government using parameters such as household income, asset ownership and social category, and the final list is displayed at the fair price shop."
+        },
+        {
+          "clause_ref": "Section 3(4)",
+          "section": "Exclusions",
+          "page_no": 3,
+          "text": "Households with any member who is an income tax payer, owns a motorised four-wheeler, owns more than the prescribed land holding, or holds a government job are excluded from priority household coverage in most states."
+        }
+      ]
+    },
+    {
+      "scheme_id": "kanya-sumangala",
+      "name": "Mukhyamantri Kanya Sumangala Yojana",
+      "ministry": "Department of Women and Child Development, Uttar Pradesh",
+      "level": "state",
+      "state_code": "UP",
+      "category": "girl_child",
+      "status": "ACTIVE",
+      "source_url": "https://mksy.up.gov.in/",
+      "benefit_summary": "Staged financial assistance of Rs 25,000 for a girl child in Uttar Pradesh, released in six instalments linked to birth, immunisation, enrolment and progression through school.",
+      "rules": [
+        {
+          "criterion_code": "has_girl_child",
+          "op": "eq",
+          "text": "yes",
+          "mandatory": true,
+          "clause_ref": "Para 3(i)",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "girl_age",
+          "op": "lte",
+          "num": 18,
+          "mandatory": true,
+          "clause_ref": "Para 3(ii)",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "income_annual",
+          "op": "lte",
+          "num": 300000,
+          "mandatory": true,
+          "clause_ref": "Para 3(iii)",
+          "source_page": 2
+        }
+      ],
+      "chunks": [
+        {
+          "clause_ref": "Para 3(i)-(ii)",
+          "section": "Eligibility",
+          "page_no": 1,
+          "text": "The scheme covers girl children who are permanent residents of Uttar Pradesh and who have not attained eighteen years of age. At least one instalment must be claimed before the child attains eighteen years. Families with two or more girls receive a higher total entitlement."
+        },
+        {
+          "clause_ref": "Para 3(iii)",
+          "section": "Income limit",
+          "page_no": 2,
+          "text": "The annual family income from all sources must not exceed Rs 3 lakh. Families holding a ration card under the priority household category or an Antyodaya card are treated as satisfying the income requirement without a separate income certificate."
+        },
+        {
+          "clause_ref": "Para 5",
+          "section": "Instalments",
+          "page_no": 3,
+          "text": "The assistance is released in six stages: at birth, at one year after full immunisation, on admission to class one, on admission to class six, on admission to class nine, and on admission to class twelve or its equivalent. Each claim is made through the state portal with the girl's Aadhaar and bank details."
+        }
+      ]
+    },
+    {
+      "scheme_id": "ladli-behna",
+      "name": "Mukhyamantri Ladli Behna Yojana",
+      "ministry": "Department of Women and Child Development, Madhya Pradesh",
+      "level": "state",
+      "state_code": "MP",
+      "category": "girl_child",
+      "status": "ACTIVE",
+      "source_url": "https://cmladlibahna.mp.gov.in/",
+      "benefit_summary": "Monthly financial assistance of Rs 1,250 for women of Madhya Pradesh aged 21 to 60, credited directly to the bank account.",
+      "rules": [
+        {
+          "criterion_code": "gender",
+          "op": "eq",
+          "text": "female",
+          "mandatory": true,
+          "clause_ref": "Para 2.1",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "age",
+          "op": "gte",
+          "num": 21,
+          "mandatory": true,
+          "clause_ref": "Para 2.2",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "age",
+          "op": "lte",
+          "num": 60,
+          "mandatory": false,
+          "clause_ref": "Para 2.2",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "income_annual",
+          "op": "lte",
+          "num": 250000,
+          "mandatory": true,
+          "clause_ref": "Para 2.3",
+          "source_page": 2
+        }
+      ],
+      "chunks": [
+        {
+          "clause_ref": "Para 2.1-2.2",
+          "section": "Eligibility",
+          "page_no": 1,
+          "text": "All women who are permanent residents of Madhya Pradesh, aged between twenty-one and sixty years, and who hold a bank account seeded with Aadhaar are eligible. Married, widowed, divorced and abandoned women are all covered, subject to the income limit."
+        },
+        {
+          "clause_ref": "Para 2.4",
+          "section": "Exclusions",
+          "page_no": 2,
+          "text": "Families that are income tax payers, families with any member in a government job, and families holding more than five acres of irrigated land are excluded. Beneficiaries must not be receiving a similar monthly pension from another state scheme."
+        }
+      ]
+    },
+    {
+      "scheme_id": "pm-svanidhi",
+      "name": "PM Street Vendor's AtmaNirbhar Nidhi (PM SVANidhi)",
+      "ministry": "Ministry of Housing and Urban Affairs",
+      "level": "central",
+      "state_code": "ALL",
+      "category": "livelihood",
+      "status": "ACTIVE",
+      "source_url": "https://pmsvanidhi.mohua.gov.in/",
+      "benefit_summary": "Collateral-free working capital loans to urban street vendors, starting at Rs 10,000 with interest subsidy and progressively higher tranches on repayment.",
+      "rules": [
+        {
+          "criterion_code": "occupation",
+          "op": "eq",
+          "text": "street_vendor",
+          "mandatory": true,
+          "clause_ref": "Para 2.1",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "residence",
+          "op": "eq",
+          "text": "urban",
+          "mandatory": true,
+          "clause_ref": "Para 2.1",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "age",
+          "op": "gte",
+          "num": 18,
+          "mandatory": true,
+          "clause_ref": "Para 2.2",
+          "source_page": 1
+        }
+      ],
+      "chunks": [
+        {
+          "clause_ref": "Para 2.1",
+          "section": "Eligibility",
+          "page_no": 1,
+          "text": "Street vendors in urban local body jurisdictions, including those holding a certificate of vending or a letter of recommendation from the urban local body, are eligible. Vendors who were vending on or before the cut-off date and have been identified in the survey are covered."
+        },
+        {
+          "clause_ref": "Para 4.2",
+          "section": "Loan tranches",
+          "page_no": 3,
+          "text": "The first tranche is a working capital loan of up to Rs 10,000. On timely repayment, the vendor becomes eligible for a second tranche of up to Rs 20,000 and a third of up to Rs 50,000. Interest subsidy of seven per cent per annum is credited quarterly."
+        }
+      ]
+    },
+    {
+      "scheme_id": "apy",
+      "name": "Atal Pension Yojana (APY)",
+      "ministry": "Ministry of Finance",
+      "level": "central",
+      "state_code": "ALL",
+      "category": "pension",
+      "status": "ACTIVE",
+      "source_url": "https://www.npscra.nsdl.co.in/",
+      "benefit_summary": "Guaranteed monthly pension of Rs 1,000 to Rs 5,000 after age sixty for subscribers in the unorganised sector, with the corpus returned to the nominee.",
+      "rules": [
+        {
+          "criterion_code": "age",
+          "op": "gte",
+          "num": 18,
+          "mandatory": true,
+          "clause_ref": "Para 2.1",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "age",
+          "op": "lte",
+          "num": 40,
+          "mandatory": true,
+          "clause_ref": "Para 2.1",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "has_bank_account",
+          "op": "eq",
+          "text": "yes",
+          "mandatory": true,
+          "clause_ref": "Para 2.2",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "income_tax_payer",
+          "op": "eq",
+          "text": "no",
+          "mandatory": true,
+          "clause_ref": "Para 2.3",
+          "source_page": 2
+        }
+      ],
+      "chunks": [
+        {
+          "clause_ref": "Para 2.1",
+          "section": "Eligibility",
+          "page_no": 1,
+          "text": "Any citizen between eighteen and forty years of age may join the scheme through a bank or post office where an individual savings account is held. The subscriber chooses a guaranteed pension amount between one thousand and five thousand rupees per month, payable from the age of sixty."
+        },
+        {
+          "clause_ref": "Para 2.3",
+          "section": "Exclusions",
+          "page_no": 2,
+          "text": "Income tax payers are not eligible to join the scheme. Members of the Employees' Provident Fund, the Employees' State Insurance Corporation and the National Pension System are also excluded, so that the benefit is targeted at the unorganised sector."
+        },
+        {
+          "clause_ref": "Para 6",
+          "section": "Co-contribution",
+          "page_no": 4,
+          "text": "For subscribers who joined before the cut-off date and are not covered under any statutory social security scheme, the government co-contributes fifty per cent of the contribution or one thousand rupees per annum, whichever is lower, for a period of five years."
+        }
+      ]
+    },
+    {
+      "scheme_id": "pmkvy",
+      "name": "Pradhan Mantri Kaushal Vikas Yojana 4.0",
+      "ministry": "Ministry of Skill Development and Entrepreneurship",
+      "level": "central",
+      "state_code": "ALL",
+      "category": "skill",
+      "status": "ACTIVE",
+      "source_url": "https://www.pmkvyofficial.org/",
+      "benefit_summary": "Free short-term skill training with certification and placement assistance for unemployed youth and school dropouts.",
+      "rules": [
+        {
+          "criterion_code": "age",
+          "op": "gte",
+          "num": 15,
+          "mandatory": true,
+          "clause_ref": "Para 2.1",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "age",
+          "op": "lte",
+          "num": 45,
+          "mandatory": true,
+          "clause_ref": "Para 2.1",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "education_level",
+          "op": "in",
+          "text": "below_10th,10th,12th",
+          "mandatory": true,
+          "clause_ref": "Para 2.2",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "occupation",
+          "op": "eq",
+          "text": "unemployed",
+          "mandatory": true,
+          "clause_ref": "Para 2.3",
+          "source_page": 2
+        }
+      ],
+      "chunks": [
+        {
+          "clause_ref": "Para 2.1-2.2",
+          "section": "Eligibility",
+          "page_no": 1,
+          "text": "Candidates aged between fifteen and forty-five years who have discontinued formal education and are seeking employment are eligible for short-term training. Preference is given to candidates with educational attainment up to class twelve, women, and persons with disabilities."
+        },
+        {
+          "clause_ref": "Para 2.3",
+          "section": "Target group",
+          "page_no": 2,
+          "text": "The scheme targets unemployed youth, school and college dropouts, and candidates from economically weaker sections. Candidates already enrolled in a regular full-time course or in government employment are not eligible for stipend-bearing training."
+        }
+      ]
+    },
+    {
+      "scheme_id": "pm-vishwakarma",
+      "name": "PM Vishwakarma Scheme",
+      "ministry": "Ministry of Micro, Small and Medium Enterprises",
+      "level": "central",
+      "state_code": "ALL",
+      "category": "livelihood",
+      "status": "ACTIVE",
+      "source_url": "https://pmvishwakarma.gov.in/",
+      "benefit_summary": "Toolkit incentive, skill training stipend, collateral-free credit and digital transaction incentives for traditional artisans and craftspeople.",
+      "rules": [
+        {
+          "criterion_code": "occupation",
+          "op": "eq",
+          "text": "artisan",
+          "mandatory": true,
+          "clause_ref": "Para 3.1",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "age",
+          "op": "gte",
+          "num": 18,
+          "mandatory": true,
+          "clause_ref": "Para 3.2",
+          "source_page": 1
+        }
+      ],
+      "chunks": [
+        {
+          "clause_ref": "Para 3.1",
+          "section": "Eligibility",
+          "page_no": 1,
+          "text": "Artisans and craftspeople engaged in one of the eighteen listed traditional trades, such as carpenter, blacksmith, potter, sculptor, boat maker, cobbler and tailor, are eligible. The applicant must be self-employed in the trade and must not have availed a similar credit-linked subsidy in the last five years."
+        },
+        {
+          "clause_ref": "Para 3.2",
+          "section": "Age and family",
+          "page_no": 1,
+          "text": "The applicant must be at least eighteen years of age on the date of registration. Only one member per family may register, and registration is through a gram panchayat or urban local body verification process leading to a Vishwakarma certificate and identity card."
+        }
+      ]
+    },
+    {
+      "scheme_id": "fasal-bima",
+      "name": "Pradhan Mantri Fasal Bima Yojana (PMFBY)",
+      "ministry": "Ministry of Agriculture and Farmers Welfare",
+      "level": "central",
+      "state_code": "ALL",
+      "category": "agriculture",
+      "status": "ACTIVE",
+      "source_url": "https://pmfby.gov.in/",
+      "benefit_summary": "Crop insurance against yield loss from non-preventable natural risks, with premium capped at two per cent for kharif food and oilseed crops.",
+      "rules": [
+        {
+          "criterion_code": "occupation",
+          "op": "eq",
+          "text": "farmer",
+          "mandatory": true,
+          "clause_ref": "Para 2.1",
+          "source_page": 1
+        },
+        {
+          "criterion_code": "land_holding_acres",
+          "op": "lte",
+          "num": 5,
+          "mandatory": false,
+          "clause_ref": "Para 2.2",
+          "source_page": 1
+        }
+      ],
+      "chunks": [
+        {
+          "clause_ref": "Para 2.1",
+          "section": "Eligibility",
+          "page_no": 1,
+          "text": "All farmers growing notified crops in a notified area during the season are eligible, including sharecroppers and tenant farmers. Enrolment must be completed before the notified cut-off date for the season, either through the bank or the crop insurance portal."
+        },
+        {
+          "clause_ref": "Para 2.2",
+          "section": "Premium",
+          "page_no": 1,
+          "text": "The farmer's premium share is capped at two per cent of the sum insured for kharif food and oilseed crops, one and a half per cent for rabi food and oilseed crops, and five per cent for commercial and horticultural crops. The balance of the actuarial premium is shared by the central and state governments."
+        }
+      ]
+    }
+  ]
+}
