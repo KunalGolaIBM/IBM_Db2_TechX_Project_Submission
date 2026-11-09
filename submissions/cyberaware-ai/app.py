@@ -1,7 +1,10 @@
+
 from flask import Flask, render_template, request, jsonify
+from ai import get_ai_response
 import os
 
 app = Flask(__name__)
+
 
 @app.route("/")
 def home():
@@ -10,22 +13,24 @@ def home():
 
 @app.route("/api/ask", methods=["POST"])
 def ask():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     question = data.get("question", "").strip()
 
     if not question:
-        return jsonify({"answer": "Please enter a question."}), 400
+        return jsonify({
+            "answer": "Please enter a question."
+        }), 400
 
-    answer = """
-    Cybersecurity Tip:
+    if len(question) > 2000:
+        return jsonify({
+            "answer": "Your question is too long. Please shorten it."
+        }), 400
 
-    Never share your passwords, PINs or mobile money codes.
-    Avoid clicking suspicious links.
-    Verify messages before sending money.
-    Use strong passwords and enable two-factor authentication.
-    """
+    answer = get_ai_response(question)
 
-    return jsonify({"answer": answer})
+    return jsonify({
+        "answer": answer
+    })
 
 
 @app.route("/api/health")
@@ -40,5 +45,5 @@ if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 5000)),
-        debug=True
+        debug=False
     )
