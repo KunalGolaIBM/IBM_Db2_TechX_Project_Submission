@@ -5,52 +5,45 @@ from langchain_ollama import ChatOllama
 load_dotenv()
 
 
-def get_ai_response(question, educational_context=""):
+def get_ai_response(question):
+    model_name = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:0.5b")
+    base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
-    model = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
+    # Retrieve educational information from IBM Db2
+    try:
+        from lessons import get_lesson_context
+        lesson_context = get_lesson_context()
+    except Exception:
+        lesson_context = "No Db2 lessons are currently available."
 
-    base_url = os.getenv(
-        "OLLAMA_BASE_URL",
-        "http://localhost:11434"
-    )
+    prompt = f"""
+You are CyberAware AI, a friendly cybersecurity education assistant.
+
+Explain cybersecurity in simple language.
+Give practical safety advice.
+Never ask users to share passwords, PINs, or verification codes.
+
+Use these lessons from the IBM Db2 database when relevant:
+
+{lesson_context}
+
+User question: {question}
+
+Give a clear, helpful answer.
+"""
 
     try:
-        llm = ChatOllama(
-            model=model,
+        model = ChatOllama(
+            model=model_name,
             base_url=base_url,
-            temperature=0.2
+            temperature=0.3
         )
 
-        prompt = f"""
-        You are CyberAware AI, a cybersecurity education assistant.
-
-        Help users understand cybersecurity in simple English.
-
-        Focus on:
-        - Phishing messages
-        - Online scams
-        - Fake links
-        - Mobile money fraud
-        - Password security
-        - Online privacy
-
-        Educational information:
-        {educational_context}
-
-        User question:
-        {question}
-
-        Give a clear, practical and safe answer.
-        Never ask users to reveal passwords or PINs.
-        """
-
-        response = llm.invoke(prompt)
-
+        response = model.invoke(prompt)
         return response.content
 
     except Exception:
         return (
-            "The AI service is currently unavailable. "
-            "Please try again later. Meanwhile, never share "
-            "your passwords, PINs or verification codes."
+            "The AI assistant is temporarily unavailable. "
+            "Please make sure Ollama is running and the required model is installed."
         )
