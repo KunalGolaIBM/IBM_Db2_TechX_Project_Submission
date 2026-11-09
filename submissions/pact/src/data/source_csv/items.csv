@@ -1,0 +1,21 @@
+id,sku,catalogue,item_label,unit,list_price
+1,SK-04353,stores_catalogue,"Safety gloves, pair",pair,3.20
+2,SK-02192,stores_catalogue,"Nitrile gloves, box of 100",box,9.50
+3,SK-33357,stores_catalogue,Safety goggles,each,6.40
+4,SK-88154,stores_catalogue,"Cable ties, pack of 100",pack,4.80
+5,SK-39839,stores_catalogue,"Hex bolt M10, box of 50",box,18.50
+6,SK-25513,stores_catalogue,"Cutting disc 125 mm, box of 25",box,21.00
+7,SK-90147,stores_catalogue,Pallet wrap roll,roll,9.90
+8,SK-96050,stores_catalogue,Packing tape roll,roll,2.10
+9,SK-71382,stores_catalogue,"Label roll, 500",roll,14.30
+10,SK-70002,stores_catalogue,"A4 copy paper, ream",ream,4.60
+11,SK-55401,stores_catalogue,Toner cartridge,each,58.00
+12,SK-15697,stores_catalogue,LED tube light,each,7.80
+13,SK-20446,stores_catalogue,"Hydraulic oil, 20 L",drum,64.00
+14,SK-58822,stores_catalogue,"Degreaser, 5 L",can,17.50
+15,SK-61947,stores_catalogue,"Welding wire, 15 kg",spool,76.00
+16,SK-13131,stores_catalogue,Bearing 6204,each,8.90
+17,SK-61366,stores_catalogue,"V-belt, A section",each,11.40
+18,SK-52780,stores_catalogue,Wooden pallet,each,12.00
+19,SK-35032,stores_catalogue,"Forklift battery water, 5 L",can,6.20
+20,SK-66909,stores_catalogue,Fire extinguisher refill,each,29.00
