@@ -148,7 +148,7 @@ UPDATE ASOF.POLICY_CLAUSE FOR PORTION OF BUSINESS_TIME FROM P_FROM TO P_TO
 
 | Db2 user | Used by | Holds |
 |---|---|---|
-| `db2inst1` (owner) | `python -m asof.setup`, `python -m asof.db2check` | Everything; reads the ledger's text as `[masked]` like everyone but the runtime user |
+| `db2inst1` (owner) | `python -m asof.setup`, `python -m asof.db2check` | Everything; reads the ledger's text as `[masked]` like everyone but the runtime user and the reviewer |
 | `asofapp` (runtime) | API, gate, UI, agents, inbox, eval | `CONNECT`; `SELECT` on the policy, ledger, help-centre, suggestion, policy-draft, FAQ, API-user, inbox and notice tables and five views; `EXECUTE` on `APPEND_LEDGER`, `VERIFY_CHAIN`, `CHANGE_IMPACT`, `ADD_SUGGESTION`, `ADD_NOTICE`; role `ASOF_TEXT_READER`. No `INSERT`, `UPDATE`, `DELETE` or DDL, no `EXECUTE` on `APPEND_LEDGER_ROW`, and none on the two procedures a person's decisions use. |
 | `asofrev` (reviewer) | Sending a specialist's reply, approving or rejecting a correction notice | `CONNECT`; role `ASOF_TEXT_READER`; `EXECUTE` on `RESOLVE_ESCALATION` and `DECIDE_NOTICE`. No table privileges at all. |
 | `asofedit` (policy editor) | `POST /api/policy/change`, approving drafted corrections, policy intake | `CONNECT`; `SELECT` on the policy, suggestion and policy-draft tables; `EXECUTE` on `APPLY_POLICY_CHANGE`, `CHANGE_IMPACT`, `DECIDE_SUGGESTION`, `ADD_POLICY_DRAFT`, `ADD_POLICY_DRAFT_ITEM`, `DECIDE_POLICY_DRAFT`, `APPLY_DRAFT_ITEM`; `USAGE` on the `EMBEDDER` model. No direct `INSERT`, `UPDATE` or `DELETE`. |

@@ -10,7 +10,7 @@ The status of each part, and where AsOf stands next to existing tools. The short
 | LLM layer: provider switch, strict schemas, batched judge, hard deadlines | Done, tested |
 | Claim pipeline, deterministic rule checks, redaction, hash-chained ledger, API, LangChain runnable | Done, tested (incl. live LLM) |
 | Policy changes (`APPLY_POLICY_CHANGE`), change impact (`CHANGE_IMPACT`), JSON_TABLE views, web UI | Done, tested, checked in a browser |
-| Evaluation: nine frozen splits (191 cases) | Done for OpenRouter on all nine; the airline split also on Ollama and watsonx.ai; results below |
+| Evaluation: nine frozen splits (191 cases) | Done for OpenRouter on all nine; the airline split also on Ollama and watsonx.ai; results in [evaluation.md](evaluation.md) |
 | LangGraph check graph with an investigating agent; change-impact agent drafting corrections for approval | Done, tested, evaluated |
 | Second domain (a bank fee schedule) with its own frozen split; extractor-injection split | Done, evaluated |
 | Row and column access control; "Ask the ledger" (SQL chain as a read-only analyst, SQLGlot gate) | Done, tested against Db2 |

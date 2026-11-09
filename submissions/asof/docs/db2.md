@@ -33,7 +33,7 @@ Every Db2 feature AsOf relies on, with the SQL, the measurements and the tests. 
   - dbt's user `asofmart` (optional marts): `CONNECT`; `SELECT` on the four tables the marts read; `CREATETAB`, confined to its own schema `ASOF_MART`, the only one where it holds `CREATEIN`.
 
   The procedures run with the owner's authority. Setup revokes Db2's default `PUBLIC` database privileges, and `PUBLIC`'s `CREATEIN` on the AsOf schema, which Db2 grants on a schema it creates implicitly.
-- **Row and column access control (RCAC):** column masks on `ANSWER_LEDGER` return `[masked]` for the customer's question, the draft, the released answer and the verdict JSON to every user without the role `ASOF_TEXT_READER`. Only the runtime user holds it; the owner, the policy editor and the analyst all read `[masked]`. The ledger triggers are `SECURED`, as Db2 requires on a table with column access control, and `VERIFY_CHAIN` refuses to run for a user who would only see masked text (SQLSTATE 75030) instead of reporting a false break.
+- **Row and column access control (RCAC):** column masks on `ANSWER_LEDGER` return `[masked]` for the customer's question, the draft, the released answer and the verdict JSON to every user without the role `ASOF_TEXT_READER`. Only the runtime user and the reviewer hold it; the owner, the policy editor and the analyst all read `[masked]`. The ledger triggers are `SECURED`, as Db2 requires on a table with column access control, and `VERIFY_CHAIN` refuses to run for a user who would only see masked text (SQLSTATE 75030) instead of reporting a false break.
 
 ## Ask the ledger: questions for auditors, as a read-only Db2 user
 
@@ -131,7 +131,7 @@ What this means for AsOf, and two things we learned about Db2 along the way:
 
 The ledger grows with every check, so its storage is built for a large one. `ANSWER_LEDGER` is range-partitioned by month of `CREATED_AT` ([01_tables.sql](../src/asof/sql/01_tables.sql)). Two `REFRESH IMMEDIATE` materialized query tables sit behind the analytics views ([04_views.sql](../src/asof/sql/04_views.sql)), and Db2 updates them in the same transaction as every insert. The views kept their exact columns and values (`test_views_over_the_mqts_match_the_group_by_they_replaced`). Because of that, "Ask the ledger" shows the model the same schema, and its recorded examples still replay.
 
-`python -m asof.ledgerbench` installs the full schema twice and loads the same synthetic year into both: 1,000,000 decisions (about 2,700 a day) and 2,000,000 claim citations. One copy has the earlier design (unpartitioned, views as `GROUP BY` over the base tables), the other the shipped one. It then explains and times the app's own statements ([full report and plans](ledger_benchmark.md); Db2 12.1.5 under Rosetta, at `ee41c4e`, medians of 5):
+`python -m asof.ledgerbench` installs the full schema twice and loads the same synthetic year into both: 1,000,000 decisions (about 2,700 a day) and 2,000,000 claim citations. One copy has the earlier design (unpartitioned, views as `GROUP BY` over the base tables), the other the shipped one. It then explains and times the app's own statements ([full report and plans](ledger_benchmark.md); Db2 12.1.5 under Rosetta, at `3a5c92a`, recorded in the results as `ee41c4e`, the identical tree before a history rewrite; medians of 5):
 
 | Query | Before | After |
 |---|---|---|

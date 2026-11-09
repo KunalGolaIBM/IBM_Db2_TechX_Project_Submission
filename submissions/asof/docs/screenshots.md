@@ -3,8 +3,8 @@
 Every screen of the console and the customer chat page. The demo walkthrough is in the [README](../README.md#screenshots--demo).
 
 - **Slides:** [docs/slides/AsOf_slides.pdf](slides/AsOf_slides.pdf), a 14-slide deck in IBM's Carbon design (problem, solution, agentic AI, Db2 integration, workflow, architecture, security, evaluation, impact and status).
-- **Live demo:** not hosted, on purpose. AsOf's core flows write to Db2 (the ledger, policy changes) and call a paid LLM; hosting them publicly would mean exposing a writable database or a funded API key, and a read-only snapshot would hide exactly the flows that matter. The setup above runs it locally with one command (`./quickstart.sh`).
-- **Screenshots:** all taken from a clean demo run (`python -m asof.setup --reset --yes`, then `python -m asof.demo`). The playground is at the top of this README.
+- **Live demo:** not hosted, on purpose. AsOf's core flows write to Db2 (the ledger, policy changes) and call a paid LLM; hosting them publicly would mean exposing a writable database or a funded API key, and a read-only snapshot would hide exactly the flows that matter. The [README's setup](../README.md#setup--installation) runs it locally with one command (`./quickstart.sh`).
+- **Screenshots:** all taken from a clean demo run (`python -m asof.setup --reset --yes`, then `python -m asof.demo`). The playground is also at the top of the [README](../README.md).
 
 ## The web UI, screen by screen
 

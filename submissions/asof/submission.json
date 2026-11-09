@@ -68,7 +68,8 @@
   "tech_stack": {
     "languages": [
       "Python",
-      "SQL"
+      "SQL",
+      "JavaScript"
     ],
     "frameworks": [
       "Apache Airflow",
