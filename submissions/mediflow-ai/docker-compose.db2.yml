@@ -18,8 +18,11 @@ services:
       TO_CREATE_SAMPLEDB: "false"
       REPODB: "false"
       IS_OSXFS: "false"
-      PERSISTENT_HOME: "true"
+      PERSISTENT_HOME: "false"
       HADR_ENABLED: "false"
+      ETCD_ENDPOINT: ""
+      ETCD_USERNAME: ""
+      ETCD_PASSWORD: ""
     volumes:
       - mediflow-db2-data:/database
     shm_size: 1gb
