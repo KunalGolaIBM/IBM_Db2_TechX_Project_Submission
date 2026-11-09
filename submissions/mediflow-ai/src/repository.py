@@ -90,6 +90,7 @@ class Db2Repository:
         if not rows:
             raise KeyError("Recommendation not found")
         row = rows[0]
+        quantity = int(row["suggested_quantity"]) if quantity is None else quantity
         update_sql = "UPDATE recommendations SET status=?, suggested_quantity=? WHERE recommendation_id=?"
         stmt = self.ibm_db.prepare(self.conn, update_sql)
         for index, value in enumerate([status, quantity, recommendation_id], start=1):
