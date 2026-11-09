@@ -5,7 +5,9 @@ from src.agent import run_workflow
 st.set_page_config(page_title="MediFlow AI", page_icon="M", layout="wide")
 st.title("MediFlow AI")
 st.caption("Medicine inventory readiness · IBM Db2 + LangGraph")
-repo = get_repository()
+if "mediflow_repository" not in st.session_state:
+    st.session_state["mediflow_repository"] = get_repository()
+repo = st.session_state["mediflow_repository"]
 source = "IBM Db2" if repo.__class__.__name__ == "Db2Repository" else "Synthetic demo data"
 st.info(f"Data source: {source}. Inventory decision-support prototype; not a clinical system.")
 items = repo.list_inventory()
