@@ -25,7 +25,7 @@ def review_recommendation(recommendation_id: str, payload: ReviewRequest):
     existing = getattr(repo, "recommendations", {}).get(recommendation_id)
     if repo.__class__.__name__ == "DemoRepository" and not existing:
         raise HTTPException(status_code=404, detail="Run the workflow first; recommendation not found.")
-    quantity = payload.edited_quantity if payload.edited_quantity is not None else (existing.suggested_quantity if existing else 0)
+    quantity = payload.edited_quantity if payload.edited_quantity is not None else (existing.suggested_quantity if existing else None)
     status = "APPROVED" if payload.action == "approve" else "REJECTED"
     try:
         result = repo.review_recommendation(recommendation_id, status, payload.reviewer, quantity)
