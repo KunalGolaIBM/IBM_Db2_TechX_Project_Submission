@@ -6,7 +6,7 @@
     "short_description": "Governed, self-auditing multi-agent analytics copilot: LangGraph agents use Db2 VECTOR search, a Db2 semantic cache, session memory and a SHA-256 hash-chained audit log to answer business questions safely.",
     "category": "AI / Agentic Text-to-SQL / Analytics",
     "demo_url": "",
-    "video_url": "PASTE_VIDEO_LINK",
+    "video_url": "",
     "repo_url": "https://github.com/Pavan3030-pr/IBM_Db2_TechX_Project_Submission/tree/submission/db2-cortex/submissions/db2-cortex"
   },
   "team": {
@@ -15,7 +15,7 @@
       {
         "name": "Chandra Pavansai",
         "github": "Pavan3030-pr",
-        "email": "PASTE_EMAIL",
+        "email": "pavan2053010@gmail.com",
         "role": "Solo: Backend, Db2 and AI Developer"
       }
     ]
