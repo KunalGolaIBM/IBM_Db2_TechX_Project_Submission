@@ -332,8 +332,8 @@ Per hackathon integrity rules, all operational parameters are reported with comp
 
 ## 18. Developer Information
 
-- **Developer:** Nitesh Barnwal
+- **Developer:** Nitesh Kumar Barnwal
 - **GitHub:** [@Nitesh0517](https://github.com/Nitesh0517)
-- **Email:** niteshbarnwal517@gmail.com
+- **Email:** nitesh99540@gmail.com
 - **Role:** Individual Participant (Lead Architect, Full-Stack & IBM Db2 Developer, AI Workflow Design)
 - **Hackathon:** IBM Db2Hack 2026
