@@ -24,9 +24,10 @@ Core capabilities:
 - **Connector:** Python `ibm_db` driver with bound SQL parameters.
 - **Tables:** `MEDICINES`, `SUPPLIERS`, `INVENTORY`, `BATCHES`, `USAGE_HISTORY`, `RECOMMENDATIONS`, and `APPROVAL_EVENTS`.
 - **Operations:** Read inventory and batch data; insert workflow recommendations; update review status; append review/audit events.
+- **Live verification (9 Nov 2026):** Successfully connected from Windows/Python 3.11 to a running local Db2 Community Edition container; created all seven application tables; read three seeded inventory records; generated recommendations through Streamlit and FastAPI; approved and rejected recommendations; and verified persisted recommendation rows and approval-event audit rows with Db2 SQL queries.
 - **Setup:** See `docs/DB2_SETUP.md` and `src/db/schema.sql`.
 
-The default `DATA_BACKEND=demo` uses clearly labelled synthetic in-memory records. Set `DATA_BACKEND=db2` only after the local Db2 container is running, the schema is initialised and seed rows have been inserted. The live adapter is included but has not yet been verified against a running Db2 instance.
+The default `DATA_BACKEND=demo` uses clearly labelled synthetic in-memory records. Set `DATA_BACKEND=db2` only after the local Db2 container is running, the schema is initialised and seed rows have been inserted. Live integration was verified locally; reviewers should repeat the documented steps in their own environment.
 
 ## AI / LLM architecture
 
@@ -100,13 +101,15 @@ Then follow the synthetic seed SQL instructions in `docs/DB2_SETUP.md`.
 ### Start the application
 
 ```powershell
+$env:PYTHONPATH = (Get-Location).Path
 streamlit run src/ui.py
 ```
 
-Start the API in a second terminal:
+Start the API in a second terminal from the same project directory (activate the venv and set `PYTHONPATH` there too):
 
 ```powershell
-uvicorn src.api:app --reload --port 8000
+$env:PYTHONPATH = (Get-Location).Path
+python -m uvicorn src.api:app --reload --port 8000
 ```
 
 API endpoints: `GET /health`, `GET /inventory`, `POST /recommendations/run`, and `POST /recommendations/{id}/review`.
@@ -117,12 +120,12 @@ API endpoints: `GET /health`, `GET /inventory`, `POST /recommendations/run`, and
 python -m pytest -q
 ```
 
-The included unit tests cover stockout/expiry assessment, recommendation draft status and the demo repository review boundary. They do not prove connectivity to a live Db2 server. Test database reads and writes separately against the local Db2 container before claiming live Db2 verification.
+The included unit tests cover stockout/expiry assessment, recommendation draft status and the demo repository review boundary. On 9 Nov 2026, all four tests passed and `python -m compileall src` completed successfully. Separately, manual live-Db2 integration checks verified connection, schema creation, inventory reads, recommendation writes, review updates and approval-event audit writes. These live checks are environment-specific and are not part of the automated pytest suite.
 
 ## Screenshots & demo
 
-- Live deployment: not deployed.
-- Demo recording: not recorded.
+- Live deployment: not deployed; the application was run locally against Db2 Community Edition.
+- Demo recording: not recorded yet.
 - Capture genuine UI screenshots after running the app and save them under `docs/screenshots/`.
 - Follow `docs/DEMO_SCRIPT.md` for a short walkthrough.
 
@@ -130,7 +133,7 @@ The included unit tests cover stockout/expiry assessment, recommendation draft s
 
 - Sample data is synthetic and not validated against a real facility.
 - Demand rate is a simple average input, not a statistically validated forecast.
-- Live Db2 connectivity still needs environment-specific integration testing.
+- Live Db2 connectivity has been verified locally, but a fresh environment must repeat the documented setup and integration checks.
 - Authentication, role-based permissions and production deployment are not included.
 - No procurement order is placed and no clinical recommendation is made.
 
