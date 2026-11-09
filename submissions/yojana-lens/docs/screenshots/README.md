@@ -12,3 +12,13 @@ Drop the captures for the submission here. Filenames referenced by the README:
 
 Capture at 1440 px wide or more; keep the browser chrome out of the frame where
 possible. PNG, not JPEG.
+
+## Preview captures (Db2 stubbed)
+
+`preview-1-results.png`, `preview-2-rule-trace.png` and `preview-3-audit.png` are
+UI previews captured before the Docker/Db2 path was available. They run the real
+LangGraph agent and the real rule engine over `data/schemes.json`, with only the
+four Db2 calls replaced by in-memory stand-ins; the interface carries a banner
+that says so. They are **not** the submission captures — replace them with the
+five files above once `docker compose up --build` has been run end to end.
+
