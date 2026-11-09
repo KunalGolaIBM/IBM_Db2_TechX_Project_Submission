@@ -1,0 +1,6 @@
+# Optional LLM provider packages (install only the one you use). Versions verified to import
+# and construct on Python 3.13; calls to the hosted providers were NOT exercised (no credentials).
+-r requirements.txt
+langchain-openai==1.7.4
+langchain-anthropic==1.7.10
+langchain-ibm==1.1.2

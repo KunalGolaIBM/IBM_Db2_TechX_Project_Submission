@@ -1,0 +1,30 @@
+# Official submission validator | 2026-11-09T18:07:47Z | scripts/validate_submission.py, unmodified, run from the repository root: first on our folder alone, then exactly as the CI workflow runs it (no arguments: every submission folder)
+
+$ python3 scripts/validate_submission.py submissions/civiclens-ai
+Validating 1 submission folder(s)...
+
+Checking: submissions/civiclens-ai
+  ✅ PASSED all validation checks.
+
+==================================================
+ALL VALIDATION CHECKS PASSED.
+(exit code 0)
+
+$ python3 scripts/validate_submission.py
+Validating 4 submission folder(s)...
+
+Checking: submissions/crewai
+  ✅ PASSED all validation checks.
+
+Checking: submissions/db2-multilingual-voice-rag
+  ✅ PASSED all validation checks.
+
+Checking: submissions/civiclens-ai
+  ✅ PASSED all validation checks.
+
+Checking: submissions/db2-governed-rag
+  ✅ PASSED all validation checks.
+
+==================================================
+ALL VALIDATION CHECKS PASSED.
+(exit code 0)

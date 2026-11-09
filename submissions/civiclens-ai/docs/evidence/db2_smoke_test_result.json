@@ -1,0 +1,107 @@
+{
+  "target_host": "localhost",
+  "database": "CIVICDB",
+  "schema": "CIVICLENS",
+  "tls": false,
+  "steps": [
+    {
+      "step": "connect",
+      "server": {
+        "dbms_name": "DB2/LINUXX8664",
+        "dbms_ver": "12.01.0500",
+        "db_name": "CIVICDB"
+      }
+    },
+    {
+      "step": "migrate",
+      "created": [],
+      "skipped": [
+        "TABLE CIVICLENS.COMPLAINTS",
+        "INDEX CIVICLENS.IX_COMPLAINTS_CAT_TIME",
+        "INDEX CIVICLENS.IX_COMPLAINTS_CELL_TIME",
+        "INDEX CIVICLENS.IX_COMPLAINTS_FINGERPRINT",
+        "INDEX CIVICLENS.IX_COMPLAINTS_STATUS",
+        "TABLE CIVICLENS.INVESTIGATIONS",
+        "TABLE CIVICLENS.INVESTIGATION_EVIDENCE",
+        "TABLE CIVICLENS.RECOMMENDATIONS",
+        "INDEX CIVICLENS.IX_REC_INV_STATUS",
+        "TABLE CIVICLENS.RECOMMENDATION_EVIDENCE",
+        "TABLE CIVICLENS.REVIEW_DECISIONS",
+        "INDEX CIVICLENS.UX_DECISIONS_REC",
+        "TABLE CIVICLENS.AUDIT_LOG",
+        "INDEX CIVICLENS.IX_AUDIT_INV_TIME",
+        "COLUMN CIVICLENS.RECOMMENDATIONS.GENERATOR_TYPE"
+      ]
+    },
+    {
+      "step": "catalog_tables",
+      "tables": [
+        "AUDIT_LOG",
+        "COMPLAINTS",
+        "INVESTIGATIONS",
+        "INVESTIGATION_EVIDENCE",
+        "RECOMMENDATIONS",
+        "RECOMMENDATION_EVIDENCE",
+        "REVIEW_DECISIONS"
+      ]
+    },
+    {
+      "step": "insert_and_read_back",
+      "complaint_id": 1681,
+      "geo_cell": "C5499_15535",
+      "reported_at": "2026-11-09 09:24:47.919930"
+    },
+    {
+      "step": "duplicate_detection",
+      "query_id": 1682,
+      "candidates": [
+        {
+          "complaint_id": 1681,
+          "title": "[SMOKE TEST] Synthetic pothole",
+          "distance_m": 0.0,
+          "text_similarity": 1.0,
+          "score": 1.0
+        },
+        {
+          "complaint_id": 142,
+          "title": "Large pothole near bus stop",
+          "distance_m": 76.5,
+          "text_similarity": 0.125,
+          "score": 0.4096
+        },
+        {
+          "complaint_id": 146,
+          "title": "Large pothole near bus stop",
+          "distance_m": 102.2,
+          "text_similarity": 0.125,
+          "score": 0.3581
+        }
+      ]
+    },
+    {
+      "step": "hotspot_aggregation",
+      "hotspots": [
+        {
+          "geo_cell": "C5499_15535",
+          "category": "POTHOLE",
+          "complaint_count": 4,
+          "avg_severity": 3.75,
+          "center_latitude": 27.495974,
+          "center_longitude": 77.676233,
+          "first_reported_at": "2026-11-08T17:00:00",
+          "last_reported_at": "2026-11-09T09:24:47.948204"
+        }
+      ]
+    },
+    {
+      "step": "audit_write",
+      "audit_id": 1641
+    },
+    {
+      "step": "cleanup_transaction",
+      "deleted_rows": 2
+    }
+  ],
+  "elapsed_seconds": 1.164,
+  "result": "PASS"
+}

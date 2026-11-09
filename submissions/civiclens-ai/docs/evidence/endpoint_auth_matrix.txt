@@ -1,0 +1,43 @@
+# Endpoint authorization matrix, measured on the running API (FastAPI + live Db2) | 2026-11-09T17:59:06Z
+# One row per operation in the API's own OpenAPI document. Statuses are HTTP codes returned for:
+#   none      no Authorization header
+#   bad       'Bearer not-a-real-token'
+#   analyst   a valid analyst token        reviewer   a valid reviewer token
+#   db-down   no token, against a second API process whose Db2 port is deliberately wrong (proves auth runs before any database connection)
+# Probe requests use a non-existent id (999999999) and an empty JSON body on POSTs, so a request that passes authorization ends in 404 or 422 and can never write.
+# Tokens are read from the untracked environment file and are never printed.
+
+operation                                                         none   bad  analyst  reviewer  db-down  access (derived from the statuses)
+GET /api/complaints                                                200   200      200       200      503  public
+POST /api/complaints                                               401   401      422       403      401  analyst only
+GET /api/complaints/{complaint_id}                                 404   404      404       404      503  public
+GET /api/health                                                    200   200      200       200      200  public
+GET /api/health/db                                                 200   200      200       200      503  public
+GET /api/hotspots                                                  200   200      200       200      503  public
+GET /api/investigations                                            401   401      200       200      401  any signed-in role
+POST /api/investigations                                           401   401      422       403      401  analyst only
+GET /api/investigations/{investigation_id}                         401   401      404       404      401  any signed-in role
+GET /api/investigations/{investigation_id}/audit                   401   401      404       404      401  any signed-in role
+GET /api/investigations/{investigation_id}/evidence                401   401      404       404      401  any signed-in role
+POST /api/investigations/{investigation_id}/evidence               401   401      422       403      401  analyst only
+GET /api/investigations/{investigation_id}/recommendations         401   401      404       404      401  any signed-in role
+POST /api/investigations/{investigation_id}/recommendations        401   401      422       403      401  analyst only
+POST /api/investigations/{investigation_id}/run                    401   401      404       403      401  analyst only
+GET /api/me                                                        401   401      200       200      401  any signed-in role
+GET /api/overview                                                  401   401      200       200      401  any signed-in role
+GET /api/recommendations                                           401   401      200       200      401  any signed-in role
+GET /api/recommendations/{recommendation_id}                       401   401      404       404      401  any signed-in role
+POST /api/recommendations/{recommendation_id}/decision             401   401      403       422      401  reviewer only
+
+20 operations: 15 require a token (401 without one), 5 are public.
+
+Public operations (all are reads; none can change data):
+  GET /api/complaints
+  GET /api/complaints/{complaint_id}
+  GET /api/health
+  GET /api/health/db
+  GET /api/hotspots
+
+Checks: bad token -> 401 on every protected operation; no database connection is attempted before authorization (db-down column is 401);
+        valid tokens are never refused with 401; analyst-only and reviewer-only operations answer 403 to the other role.
+Verdict: PASS

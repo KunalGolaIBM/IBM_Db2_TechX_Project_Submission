@@ -1,0 +1,18 @@
+# Dependency audit | 2026-11-09T17:44:51Z | known-vulnerability databases queried through the sandbox proxy; nothing is uploaded except package names and versions
+
+$ pip-audit -r src/backend/requirements.txt   (pip-audit 2.10.1)
+No known vulnerabilities found
+
+$ pip-audit -r src/backend/requirements-llm.txt   (pip-audit 2.10.1)
+No known vulnerabilities found
+
+$ pip-audit -r src/backend/requirements-dev.txt   (pip-audit 2.10.1)
+No known vulnerabilities found
+
+$ npm audit --omit=dev   (shipped dependencies)
+found 0 vulnerabilities
+
+$ npm audit   (all dependencies, including the dev/test toolchain)
+vulnerabilities by severity: {'info': 0, 'low': 0, 'moderate': 10, 'high': 0, 'critical': 0} | total 10
+  advisory GHSA-g3hv-75wg-m249 (moderate) in minimatch: minimatch has potential denial of service via globparts amplification
+  affected packages are all in the lint chain (eslint, typescript-eslint, minimatch): dev-only, not part of the built bundle

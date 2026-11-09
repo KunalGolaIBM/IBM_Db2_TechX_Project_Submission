@@ -1,0 +1,26 @@
+# Backend line coverage of src/backend/civiclens | 2026-11-09T17:51:37Z | the whole suite against live Db2 (CIVICLENS_DB2_TESTS=1) | pytest-cov 7.1.0 (installed in the verification environment only; not a project dependency)
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.13.18-final-0 _______________
+
+Name                                             Stmts   Miss  Cover   Missing
+------------------------------------------------------------------------------
+src/backend/civiclens/agent/fallback.py             39      2    95%   38, 64
+src/backend/civiclens/agent/investigate.py          92      6    93%   80-81, 176-179
+src/backend/civiclens/agent/llm.py                  61      3    95%   46, 91, 135
+src/backend/civiclens/agent/runner.py              112      3    97%   90, 146, 186
+src/backend/civiclens/agent/tools.py                81      4    95%   152-155
+src/backend/civiclens/api/investigations.py         68      2    97%   54, 152
+src/backend/civiclens/api/main.py                   67      1    99%   139
+src/backend/civiclens/auth.py                       76      1    99%   68
+src/backend/civiclens/config.py                     75      1    99%   117
+src/backend/civiclens/db/connection.py              86      2    98%   119, 147
+src/backend/civiclens/db/investigation_repo.py     172     14    92%   50, 104-111, 167, 221, 255, 413, 445, 466, 472, 492, 560
+src/backend/civiclens/db/migrate.py                 64      6    91%   34, 81, 99-100, 106-107
+src/backend/civiclens/db/repository.py              92      4    96%   129-130, 138-139
+------------------------------------------------------------------------------
+TOTAL                                             1533     49    97%
+
+14 files skipped due to complete coverage.
+=========================== short test summary info ============================
+SKIPPED [1] tests/integration/test_llm_provider_live.py:34: real-LLM test: set CIVICLENS_LLM_TESTS=1, LLM_PROVIDER, LLM_MODEL and the provider key
+149 passed, 1 skipped in 49.40s
