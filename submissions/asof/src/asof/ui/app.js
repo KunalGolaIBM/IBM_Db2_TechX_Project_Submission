@@ -887,7 +887,7 @@ async function Impact() {
         <div class="sep"></div>
         <div class="field"><label for="imp-clause">Clause</label>
           <select id="imp-clause">${tl.data.map((x) => html`<option value="${x.clause_id}" ${x.clause_id === imp.clause ? raw("selected") : ""}>${x.clause_id} · ${x.title}</option>`)}</select>
-          <div class="hint">${c.versions.map((v) => `${v.version}: ${period(v.from, v.to)}`).join(" · ")}</div></div>
+          <div class="hint" id="imp-versions">${c.versions.map((v) => `${v.version}: ${period(v.from, v.to)}`).join(" · ")}</div></div>
         <div class="field row"><div class="grow"><label for="imp-from">Effective from</label><input id="imp-from" type="date" value="${f.from}" required></div>
           <div class="grow"><label for="imp-to">Until (optional)</label><input id="imp-to" type="date" value="${f.to}"></div>
           <div><label for="imp-ver">Version</label><input id="imp-ver" type="text" value="${f.version}" size="4" required></div></div>
@@ -945,6 +945,12 @@ async function Impact() {
       imp.result = body.impact; imp.applied = body;
       tl.data = null; tl.sel = null;
       tl.data = (await api("/api/policy/timeline")).body;
+      // The clause now has one more version: show it, and offer the next label for another change.
+      const fresh = tl.data.find((x) => x.clause_id === imp.clause);
+      if (fresh) {
+        $("#imp-versions").textContent = fresh.versions.map((v) => `${v.version}: ${period(v.from, v.to)}`).join(" · ");
+        imp.form.version = nextVersion(fresh); $("#imp-ver").value = imp.form.version;
+      }
       mount($("#imp-result"), impactView(imp.result, imp.applied));
       loadSuggestions();
     } catch (err) {
@@ -1163,9 +1169,9 @@ function itemCard(item, decided) {
       <span class="pill ${item.kind === "NEW" ? "pass" : item.kind === "CHANGE" ? "corrected" : "neutral"}">${KIND_LABEL[item.kind]}</span>
       <b class="mono">${item.clause_id}</b><span class="itk-title">${item.title}</span>
       <span class="when">from ${fmtDate(item.effective_from)}${item.effective_to ? ` until ${fmtDate(item.effective_to)}` : ", open-ended"}${item.source_page ? ` · page ${item.source_page}` : ""}</span>
-      ${item.applied_version ? html`<span class="pill pass">in force as ${item.applied_version}</span>`
-        : decided ? html`<span class="pill rejected">not applied</span>`
-        : item.blocked ? html`<span class="pill escalated">blocked: ${fails} check${fails === 1 ? "" : "s"} failed</span>` : ""}
+      ${item.applied_version ? html`<span class="pill pass">In force as ${item.applied_version}</span>`
+        : decided ? html`<span class="pill rejected">Not applied</span>`
+        : item.blocked ? html`<span class="pill escalated">Blocked: ${fails} check${fails === 1 ? "" : "s"} failed</span>` : ""}
     </div>
     ${item.kind === "CHANGE" && item.current ? html`<div class="itk-diff"><div class="eyebrow">Text: ${item.current.version} in force on that date → proposed</div><p class="diff">${wordDiff(item.current.text, item.clause_text)}</p></div>`
       : html`<div class="itk-diff"><div class="eyebrow">${item.kind === "NEW" ? "Proposed text" : `Same text as ${item.current ? item.current.version : "the version in force"}`}</div><p class="diff">${item.clause_text}</p></div>`}
