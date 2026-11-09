@@ -37,12 +37,12 @@ def ask(a: Ask):
         raise HTTPException(status_code=503, detail=f"Backend error (is Db2 running and seeded?): {str(e)[:200]}")
     return {"sql": out.get("sql", ""), "cols": out.get("cols", []), "rows": [[js(x) for x in r] for r in out.get("rows", [])],
             "chart": out.get("chart", {}), "insight": out.get("insight", ""), "error": out.get("error", ""),
-            "cached": out.get("cached", False), "trace": out.get("trace", []), "audit_hash": out.get("audit_hash", "")}
+            "cached": out.get("cached", False), "out_of_scope": out.get("oos", False), "trace": out.get("trace", []), "audit_hash": out.get("audit_hash", "")}
 
 
 @app.get("/api/audit")
 def audit():
-    cols, rows = db.query("SELECT ID,TS,ROLE,QUESTION,STATUS,ROWS_RETURNED,LATENCY_MS,HASH FROM CORTEX.AUDIT_LOG ORDER BY ID DESC FETCH FIRST 50 ROWS ONLY")
+    cols, rows = db.query("SELECT ID,TS,ROLE,QUESTION,SUBSTR(SQL_TEXT,1,110) AS SQL_TEXT,STATUS,ROWS_RETURNED,LATENCY_MS,HASH FROM CORTEX.AUDIT_LOG ORDER BY ID DESC FETCH FIRST 50 ROWS ONLY")
     return {"cols": cols, "rows": [[js(x) for x in r] for r in rows]}
 
 
@@ -55,6 +55,39 @@ def verify():
             return {"valid": False, "broken_at": r[0], "checked": len(rows)}
         prev = r[7].strip()
     return {"valid": True, "checked": len(rows)}
+
+
+@app.post("/api/audit/tamper-demo")
+def tamper_demo():
+    """Simulates tampering inside a transaction that is ALWAYS rolled back, then shows the chain detecting it."""
+    with db._lock:
+        before = verify()
+        if not before["checked"]:
+            return {"before": before, "after": before, "note": "Ask a question first so there is something to tamper with."}
+        cur = db.conn().cursor()
+        try:
+            cur.execute("UPDATE CORTEX.AUDIT_LOG SET QUESTION='(tampered)' WHERE ID=(SELECT MIN(ID) FROM CORTEX.AUDIT_LOG)")
+            after = verify()
+        finally:
+            db.conn().rollback()
+            cur.close()
+        return {"before": before, "after": after, "note": "Simulated edit of audit row #1 (rolled back, nothing was changed)."}
+
+
+@app.get("/api/db2/inspect")
+def inspect():
+    def one(sql):
+        try:
+            return db.query(sql)[1][0][0]
+        except Exception:
+            return 0
+    return {"version": db.version(),
+            "customers": one("SELECT COUNT(*) FROM BANKING.CUSTOMERS"), "accounts": one("SELECT COUNT(*) FROM BANKING.ACCOUNTS"),
+            "transactions": one("SELECT COUNT(*) FROM BANKING.TRANSACTIONS"), "loans": one("SELECT COUNT(*) FROM BANKING.LOANS"),
+            "semantic_layer": one("SELECT COUNT(*) FROM CORTEX.SEMANTIC_LAYER"), "glossary": one("SELECT COUNT(*) FROM CORTEX_GLOSSARY"),
+            "cache_entries": one("SELECT COUNT(*) FROM CORTEX.QUERY_CACHE"), "cache_hits": one("SELECT COALESCE(SUM(HITS),0) FROM CORTEX.QUERY_CACHE"),
+            "memory_turns": one("SELECT COUNT(*) FROM CORTEX.SESSION_MEMORY"), "audit_blocks": one("SELECT COUNT(*) FROM CORTEX.AUDIT_LOG"),
+            "audit_blocked": one("SELECT COUNT(*) FROM CORTEX.AUDIT_LOG WHERE STATUS <> 'OK'")}
 
 
 @app.get("/api/health")

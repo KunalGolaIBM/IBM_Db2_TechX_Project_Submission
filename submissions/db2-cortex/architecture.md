@@ -11,7 +11,9 @@ Db2 Cortex is a FastAPI service that runs a LangGraph pipeline of eight agents. 
 graph TD
     Client[Light-theme web UI] -->|HTTP| API[FastAPI]
     API --> M[Memory agent]
-    M --> R[Retriever agent]
+    M --> I{In domain?}
+    I -- no, polite refusal --> P
+    I -- yes --> R[Retriever agent]
     R --> C{Semantic cache hit?}
     C -- no --> W[SQL Writer agent]
     C -- yes --> GR

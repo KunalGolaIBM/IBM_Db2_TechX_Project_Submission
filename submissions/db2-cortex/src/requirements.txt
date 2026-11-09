@@ -11,7 +11,8 @@ langchain-db2
 fastembed>=0.3
 # optional LLM providers (pick one, set LLM_PROVIDER in .env)
 # langchain-ibm
-# langchain-openai
+langchain-openai   # Groq and OpenAI
 # langchain-ollama
+# langchain-anthropic
 # langchain-google-genai
 # langchain-huggingface sentence-transformers   (EMBEDDINGS=hf)

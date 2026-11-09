@@ -36,3 +36,34 @@ def test_routing():
     assert agents.after_guard({"error": "x", "attempts": 1}) == "write"
     assert agents.after_guard({"error": "x", "attempts": 3}) == "persist"
     assert agents.after_guard({"error": "Write/DDL", "attempts": 1, "fatal": True}) == "persist"
+
+
+def test_demo_followup_applies_city_to_previous_topic():
+    sql, _ = agents.plan_demo("Filter them by Jaipur", "analyst", [["Top 10 customers by balance", "SELECT 1"]])
+    assert "C.CITY = 'Jaipur'" in sql and "FETCH FIRST 10" in sql
+
+
+def test_demo_n_slot_and_pii_by_role():
+    sql, _ = agents.plan_demo("Top 5 customers by balance", "analyst", [])
+    assert "FETCH FIRST 5 ROWS ONLY" in sql and "FULL_NAME" not in sql
+
+
+def test_demo_rejects_unsupported_followup_filter():
+    sql, why = agents.plan_demo("only in Jaipur", "analyst", [["Fraud rate by channel", "SELECT 1"]])
+    assert sql is None and "cannot apply" in why
+
+
+def test_prompt_formats():
+    msg = agents.PROMPT.format(ddl=agents.SCHEMA_DDL, ctx="c", gl="g", role="analyst", hist="", err="", q="top 3 customers")
+    assert "OUT_OF_SCOPE" in msg and msg.endswith("SQL:")
+
+
+def test_live_mode_lets_llm_classify_scope_but_demo_refuses():
+    saved = agents.LLM
+    try:
+        agents.LLM = None
+        assert agents.intent({"question": "Show me revenue by month", "history": [], "trace": []}).get("oos")
+        agents.LLM = object()
+        assert not agents.intent({"question": "Show me revenue by month", "history": [], "trace": []}).get("oos")
+    finally:
+        agents.LLM = saved

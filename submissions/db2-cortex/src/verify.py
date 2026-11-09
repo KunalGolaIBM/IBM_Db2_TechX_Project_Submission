@@ -20,8 +20,8 @@ def check(name, fn):
     print(("PASS " if ok else "FAIL ") + name + (f"  [{note}]" if note else ""))
 
 
-def ask(q, role="analyst"):
-    return GRAPH.invoke({"question": q, "role": role, "session": "verify"})
+def ask(q, role="analyst", session="verify"):
+    return GRAPH.invoke({"question": q, "role": role, "session": session})
 
 
 def count(t):
@@ -68,7 +68,43 @@ for label, sql, role, want in [
     check(label, lambda s=sql, r=role, w=want: (guard.validate(s, r)[0] is w, ""))
 check("Analyst top-customers has no PII", lambda: (lambda o: (not o["error"] and "FULL_NAME" not in o["cols"], ""))(ask("Top 10 customers by balance")))
 check("Admin top-customers shows names", lambda: (lambda o: (not o["error"] and "FULL_NAME" in o["cols"] and "•" not in str(o["rows"][0][0]), ""))(ask("Top 10 customers by balance", "admin")))
-check("Out-of-scope question handled gracefully", lambda: (lambda o: (bool(o["error"]) or o["rows"] is not None, ""))(ask("What is the capital of France?")))
+def t_oos():
+    o = ask("What is the weather in Delhi?")
+    return (o.get("oos") is True and not o.get("rows") and "banking assistant" in o["error"], o["error"][:50])
+
+
+check("Out-of-domain question politely refused (no SQL, audited)", t_oos)
+
+
+def t_slot_n():
+    ask("Top 10 customers by balance")
+    o = ask("Top 5 customers by balance")
+    return (not o["error"] and "FETCH FIRST 5 ROWS ONLY" in o["sql"] and len(o["rows"]) <= 5, f"cached={o.get('cached')}")
+
+
+check("Cache never overrides constraints (top 5 vs top 10)", t_slot_n)
+
+
+def t_follow():
+    ask("Top 10 customers by balance", session="verify-fu")
+    o = ask("Filter them by Jaipur", session="verify-fu")
+    return (not o["error"] and "Jaipur" in o["sql"], o.get("sql", "")[:70])
+
+
+check("Multi-turn follow-up uses previous turn (Filter them by Jaipur)", t_follow)
+
+
+def t_topics():
+    bad = []
+    for q in ["Which branches have the highest loan default rate?", "Show monthly transaction volume trend", "Fraud rate by channel",
+              "Top 10 customers by balance", "Accounts and balance by region", "Spend by merchant category"]:
+        o = ask(q)
+        if o["error"] or not o["rows"]:
+            bad.append(q[:25] + ": " + (o["error"] or "no rows")[:50])
+    return (not bad, "; ".join(bad))
+
+
+check("All six built-in analytics topics execute on Db2", t_topics)
 
 
 def t_chain():
@@ -95,6 +131,15 @@ def t_db2vs():
 
 
 check("langchain-db2 DB2VS glossary store populated", t_db2vs)
+
+
+def t_inspect():
+    import app
+    d = app.inspect()
+    return (d["customers"] == 400 and d["semantic_layer"] >= 10 and d["audit_blocks"] >= 1, f"{d['audit_blocks']} audit blocks, {d['cache_hits']} cache hits")
+
+
+check("Live Db2 inspector reports the stored objects", t_inspect)
 
 if "--submit" in sys.argv:
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))

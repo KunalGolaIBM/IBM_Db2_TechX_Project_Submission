@@ -1,6 +1,7 @@
 services:
   db2:
     image: icr.io/db2_community/db2:latest
+    platform: linux/amd64   # required on Apple Silicon (runs under emulation)
     container_name: db2-cortex
     privileged: true
     ports: ["50000:50000"]
