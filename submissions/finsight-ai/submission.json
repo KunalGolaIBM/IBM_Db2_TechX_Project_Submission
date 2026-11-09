@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "FinSight AI — Semantic Intelligence & Financial Reconciliation Platform",
+    "slug": "finsight-ai",
+    "short_description": "Database-first financial intelligence platform transforming raw banking transactions into explainable insights via IBM Db2 12.1 native vector search, LangChain tool grounding, and memory-safe Rust API gateway.",
+    "category": "AI / RAG / Data Engineering / Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/KunalGolaIBM/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "FinSight AI Team",
+    "members": [
+      {
+        "name": "Abhinav Khokhar",
+        "github": "abhinavkhokhar-bit",
+        "email": "abhinavsinghkhokhar123@gmail.com",
+        "role": "Full-Stack AI & Database Engineer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition (Linux/x86_64 v12.1.5.0, FINDB)",
+    "connector": "ibm_db / SQLAlchemy (ibm_db_sa) / LangChain Db2 vector integration",
+    "features_used": [
+      "Relational Financial Ledger (DECIMAL 14,2 precision)",
+      "Native Db2 VECTOR Datatype (384-dimensional dense embeddings)",
+      "VECTOR_DISTANCE (COSINE) similarity queries",
+      "Strict Server-Enforced Multi-Tenant Isolation (user_id partitioning)",
+      "Transactional Session Store and Audit Logs (FINSIGHT.SESSIONS)",
+      "Deduplication & Anomaly Alert Store (FINSIGHT.ANOMALIES)"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "Rust",
+      "TypeScript",
+      "SQL"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "Axum (Rust)",
+      "React 19",
+      "LangChain",
+      "Tailwind CSS",
+      "FastEmbed / ONNX Runtime"
+    ],
+    "ai_models": [
+      "BAAI/bge-small-en-v1.5 (384-dim dense vector embeddings)",
+      "Google Gemini (gemini-3.1-flash-lite via LangChain ChatGoogleGenerativeAI)"
+    ]
+  }
+}

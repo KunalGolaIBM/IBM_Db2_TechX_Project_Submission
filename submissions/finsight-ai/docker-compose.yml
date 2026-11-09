@@ -1,0 +1,80 @@
+# ==============================================================================
+# FinSight AI — Docker Compose for IBM Db2, AI Service & Rust API Gateway
+# ==============================================================================
+
+services:
+  db2:
+    image: icr.io/db2_community/db2:latest
+    container_name: finsight-db2
+    restart: unless-stopped
+    privileged: true
+    ports:
+      - "127.0.0.1:50000:50000"
+    environment:
+      - LICENSE=accept
+      - DB2INSTANCE=db2inst1
+      - DB2INST1_PASSWORD=${DB2_PASSWORD}
+      - DBNAME=${DB2_DATABASE:-FINDB}
+      - BLU=false
+    volumes:
+      - finsight_db2_data:/database
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+
+  ai-service:
+    build:
+      context: ./src/services/ai-service
+      dockerfile: Dockerfile
+    container_name: finsight-ai-service
+    restart: unless-stopped
+    depends_on:
+      - db2
+    expose:
+      - "8000"
+    environment:
+      - DB2_HOST=db2
+      - DB2_PORT=50000
+      - DB2_DATABASE=${DB2_DATABASE:-FINDB}
+      - DB2_USER=db2inst1
+      - DB2_PASSWORD=${DB2_PASSWORD}
+      - AI_SERVICE_HOST=0.0.0.0
+      - AI_SERVICE_PORT=8000
+      - AI_SERVICE_INTERNAL_TOKEN=${AI_SERVICE_INTERNAL_TOKEN}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - LLM_MODEL=${LLM_MODEL:-gemini-3.1-flash-lite}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-BAAI/bge-small-en-v1.5}
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  rust-api:
+    build:
+      context: ./src/services/rust-api
+      dockerfile: Dockerfile
+    container_name: finsight-rust-api
+    restart: unless-stopped
+    depends_on:
+      - ai-service
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      - RUST_SERVER_HOST=0.0.0.0
+      - RUST_SERVER_PORT=8080
+      - AI_SERVICE_URL=http://ai-service:8000
+      - AI_SERVICE_INTERNAL_TOKEN=${AI_SERVICE_INTERNAL_TOKEN}
+      - CSRF_SECRET=${CSRF_SECRET:-finsight_csrf_secret_dev_32bytes_min_key_len!}
+      - SESSION_TTL_HOURS=${SESSION_TTL_HOURS:-24}
+      - COOKIE_SECURE=false
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      - RUST_LOG=info,finsight_rust_api=debug
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+volumes:
+  finsight_db2_data:
+    name: finsight_db2_data
