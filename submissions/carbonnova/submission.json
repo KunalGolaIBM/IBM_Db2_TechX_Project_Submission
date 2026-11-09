@@ -1,0 +1,39 @@
+{
+  "project": {
+    "title": "CarbonNova — AI-Powered Agricultural Carbon Intelligence & Marketplace",
+    "slug": "carbonnova",
+    "short_description": "A role-based carbon project platform where sellers register land and submit projects, buyers assess and purchase eligible demo credits, and admins govern verification — with IBM Db2 persistence, transactional credit allocation, and LangChain-assisted grounded AI workflows.",
+    "category": "AI / Sustainability / Data Engineering",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": ""
+  },
+  "team": {
+    "name": "CarbonNova Participant",
+    "members": [
+      {
+        "name": "Update with participant name",
+        "github": "update-github-handle",
+        "email": "update@example.com",
+        "role": "Full Stack / Db2 / AI Integration"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition (Docker / Db2 Developer Extension)",
+    "connector": "ibm_db (Node.js) with parameterized SQL and transactional workflows",
+    "features_used": [
+      "Relational tables with PK/FK/constraints/indexes",
+      "Parameterized SQL queries",
+      "Transactions (COMMIT/ROLLBACK) for credit purchase allocation",
+      "MERGE for balance upserts",
+      "Schema initialization/migrations",
+      "Health check via SELECT CURRENT SERVER FROM SYSIBM.SYSDUMMY1"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["JavaScript (Node.js/React)", "SQL"],
+    "frameworks": ["Express 5", "React 19", "Vite 8", "LangChain (@langchain/core, @langchain/openai)"],
+    "ai_models": ["OpenAI-compatible model via LangChain (configurable; e.g. Nebius/NVIDIA Nemotron)"]
+  }
+}

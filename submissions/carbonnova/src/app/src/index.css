@@ -1,0 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-[#F4F6F4] text-[#142A20] font-sans antialiased;
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #EBF0EC;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #BDD0C4;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #95B4A1;
+  }
+}
+
+@layer components {
+  /* Clean White Environmental Cards */
+  .cn-card {
+    @apply bg-white rounded-2xl border border-[#E3E9E3] shadow-card transition-all duration-200;
+  }
+
+  .cn-card-hover {
+    @apply cn-card hover:shadow-card-hover hover:border-[#CCD8CD];
+  }
+
+  /* Deep Forest Primary Button */
+  .btn-forest {
+    @apply inline-flex items-center justify-center gap-2 bg-[#0C3327] hover:bg-[#134737] text-white font-medium px-5 py-2.5 rounded-xl transition-all duration-150 active:scale-[0.98] shadow-sm disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* Secondary Sage Button */
+  .btn-outline-forest {
+    @apply inline-flex items-center justify-center gap-2 bg-white hover:bg-[#F2F7F4] text-[#0C3327] border border-[#CCD8CD] font-medium px-4 py-2 rounded-xl transition-all duration-150 active:scale-[0.98];
+  }
+
+  /* Soft emerald pill badge */
+  .badge-emerald {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#E7F7F0] text-[#0A7B4E] border border-[#BCE8D5];
+  }
+
+  .badge-amber {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#FEF6E6] text-[#B45309] border border-[#FDE68A];
+  }
+
+  .badge-blue {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#EEF5FC] text-[#1E40AF] border border-[#BFDBFE];
+  }
+
+  .badge-sage {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#EBF0EC] text-[#2F4F3E];
+  }
+
+  /* Input fields */
+  .cn-input {
+    @apply w-full bg-[#F8FAF8] border border-[#D5E0D7] rounded-xl px-3.5 py-2 text-sm text-[#142A20] placeholder-[#81998B] focus:bg-white focus:outline-none focus:border-[#2D6A44] focus:ring-2 focus:ring-[#2D6A44]/15 transition-all;
+  }
+
+  /* Stat cards */
+  .stat-badge {
+    @apply inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md;
+  }
+}
+
+/* Leaflet map styles */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  background-color: #0d2118 !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+}
+
+.leaflet-control-zoom a {
+  background-color: #FFFFFF !important;
+  color: #142A20 !important;
+  border-color: #E2E8E2 !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: #F4F7F4 !important;
+  color: #0C3327 !important;
+}
+
+/* Custom map popup */
+.leaflet-popup-content-wrapper {
+  background: #FFFFFF !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 24px rgba(13, 45, 32, 0.15) !important;
+  border: 1px solid #E2E8E2 !important;
+  padding: 2px !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+.leaflet-popup-tip {
+  background: #FFFFFF !important;
+}
+
+/* Draggable comparison slider styling */
+.comparison-slider-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: #FFFFFF;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  cursor: ew-resize;
+  z-index: 30;
+}
+
+.comparison-slider-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0C3327;
+}
+
+/* Animations */
+@keyframes pulseSubtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.02); }
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 3s ease-in-out infinite;
+}

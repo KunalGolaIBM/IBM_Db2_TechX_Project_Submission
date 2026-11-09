@@ -1,0 +1,25 @@
+{
+  "name": "carbonnova-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "CarbonNova backend API - monitoring, carbon estimation, AI assistant (Nebius), MRV reports",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.0",
+    "@langchain/openai": "^0.5.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.2.4",
+    "express": "^5.1.0",
+    "ibm_db": "^3.3.0",
+    "langchain": "^0.3.0",
+    "openai": "^6.10.0",
+    "pdfkit": "^0.17.2",
+    "zod": "^3.23.0"
+  }
+}
