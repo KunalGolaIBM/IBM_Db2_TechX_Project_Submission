@@ -449,10 +449,11 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
 
     @app.get("/healthz")
     def healthz():
+        clock = None
         try:
             conn = app_conn()
             try:
-                db.query(conn, "SELECT 1 FROM SYSIBM.SYSDUMMY1")
+                clock = db.utc_label(db.query(conn, "SELECT CURRENT TIMEZONE FROM SYSIBM.SYSDUMMY1")[0][0])
             finally:
                 conn.close()
             db_state = "ok"
@@ -461,6 +462,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         except db.DatabaseError as exc:
             db_state = f"error: SQLSTATE {exc.sqlstate or 'unknown'}"  # no host, user or message details
         return {"status": "ok" if db_state == "ok" and settings.llm_ready else "degraded", "db2": db_state,
+                "db2_clock": clock,  # the zone of every Db2 timestamp the UI shows
                 "llm": f"{settings.llm_provider}:{settings.llm_model_name}", "llm_ready": settings.llm_ready,
                 "replay": settings.llm_provider == "replay", "replay_model": replay_model(),
                 "anchoring": "on" if anchors is not None else "off", "db2_tls": settings.db2_ssl,
@@ -509,7 +511,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         finally:
             conn.close()
         return [{k: r[k] for k in ("ledger_id", "created_at", "channel", "as_of_date", "decision", "reason_code",
-                                   "question_redacted", "model_info", "latency_ms", "row_hash")} for r in rows]
+                                   "question_redacted", "model_info", "latency_ms", "row_hash", "uncovered")} for r in rows]
 
     @app.post("/api/ledger/ask")
     def ask_the_ledger(body: LedgerQuestionIn):

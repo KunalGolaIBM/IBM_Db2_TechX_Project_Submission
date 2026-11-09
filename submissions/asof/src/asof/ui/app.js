@@ -41,8 +41,7 @@ function askToken() {
     e.preventDefault();
     try { sessionStorage.setItem(TOKEN_KEY, $("#api-token").value.trim()); } catch { /* private mode: ask again next time */ }
     form.remove();
-    status();
-    route();
+    status().then(route);
   });
   document.body.prepend(form);
 }
@@ -77,12 +76,16 @@ function fmtDate(d) {
   const [y, m, day] = String(d).slice(0, 10).split("-").map(Number);
   return `${day} ${MONTHS[m - 1]} ${y}`;
 }
+// Db2 stamps rows with its own clock; /healthz reports its zone (CURRENT TIMEZONE), so each timestamp says which.
+const sqlTs = (t) => String(t || "").replace("T", " ").slice(0, 19);
 function fmtTs(t) {
   if (!t) return "";
-  return String(t).replace("T", " ").slice(0, 19);
+  return health.clock ? `${sqlTs(t)} ${health.clock}` : sqlTs(t);
 }
 const period = (from, to) => (to ? `${fmtDate(from)} → ${String(to).startsWith("9999") ? "open-ended" : fmtDate(to)}` : `from ${fmtDate(from)}`);  // no end known: say only the start
 const lower = (s) => String(s || "").toLowerCase();
+// Claims in quotes, without their own closing stop, so a sentence can carry them.
+const quoted = (xs) => xs.map((x) => `“${String(x).replace(/[.!?]+$/, "")}”`).join("; ");
 const today = () => new Date().toISOString().slice(0, 10);
 const shortHash = (h) => (h || "").slice(0, 12);
 // Carbon tags use sentence case. Only enum values (CONTRADICTED, NEEDS_REVIEW) are recased; free text keeps its own case.
@@ -126,7 +129,7 @@ async function route() {
 }
 window.addEventListener("hashchange", route);
 
-const health = { replay: false };
+const health = { replay: false, clock: null };
 async function status() {
   try {
     const { body } = await api("/healthz");
@@ -134,6 +137,7 @@ async function status() {
       <span class="tag db2 ${body.db2 === "ok" ? "ok" : "warn"}" title="IBM Db2 connection as the least-privilege user"><i aria-hidden="true"></i><span class="label">Db2 ${body.db2 === "ok" ? "connected" : "unavailable"}</span></span>
       <span class="tag ${body.llm_ready ? (body.replay ? "warn" : "brand") : "warn"}" title="LLM provider and model: ${body.llm}">${body.llm_ready ? (body.replay ? "replay: recorded model outputs" : String(body.llm).split("/").pop()) : "no model configured"}</span>`);
     health.replay = Boolean(body.replay);
+    health.clock = body.db2_clock || null;
     if (body.replay && !$("#replay-mode")) {
       const bar = document.createElement("div");
       bar.id = "replay-mode";
@@ -384,7 +388,12 @@ function renderTimeline() {
   const shown = tl.filter === "changed" ? changed : data;
   const start = toMs("2026-01-01");
   const latest = Math.max(...data.flatMap((c) => c.versions.map((v) => toMs(v.from))));
-  const end = Math.max(toMs("2027-03-01"), latest + 120 * DAY);
+  // End the axis on the 1st of a month between two labelled ticks (Jan, Mar, ...), so the last label never sits on
+  // the panel's edge, and the axis looks the same before and after a change near the end.
+  const e = new Date(Math.max(toMs("2027-04-01"), latest + 120 * DAY));
+  if (e.getUTCDate() !== 1) { e.setUTCDate(1); e.setUTCMonth(e.getUTCMonth() + 1); }
+  if (e.getUTCMonth() % 2 === 0) e.setUTCMonth(e.getUTCMonth() + 1);
+  const end = e.getTime();
   const pos = (ms) => Math.max(0, Math.min(100, ((ms - start) / (end - start)) * 100));
   const ticks = [];
   for (let d = new Date(start); d.getTime() <= end; d.setUTCMonth(d.getUTCMonth() + 2)) {
@@ -414,12 +423,12 @@ function renderTimeline() {
     <div class="tl-layout">
       <div class="card">
         <div class="tl">
-          <div class="tl-axis"><div class="eyebrow">Clause</div><div class="tl-scale">${ticks.map((t) => html`<span class="tl-tick" data-left="${t.left}">${t.label}</span>`)}<i class="tl-marker" data-left="${markerLeft}" data-label="as of ${fmtDate(tl.asOf)}"></i></div></div>
+          <div class="tl-axis"><div class="eyebrow">Clause</div><div class="tl-scale">${ticks.map((t) => html`<span class="tl-tick ${t.left > 94 ? "end" : ""}" data-left="${t.left}">${t.label}</span>`)}<i class="tl-marker ${markerLeft > 88 ? "end" : ""}" data-left="${markerLeft}" data-label="as of ${fmtDate(tl.asOf)}"></i></div></div>
           ${groups.map((g) => html`
             <div class="tl-area">${AREA_LABEL[g.area] || g.area}</div>
             ${g.items.map((c) => html`
               <div class="tl-row">
-                <div class="tl-name"><code>${c.clause_id}</code><span title="${c.title}">${c.title}</span></div>
+                <div class="tl-name" title="${c.clause_id} ${c.title}"><code>${c.clause_id}</code><span>${c.title}</span></div>
                 <div class="tl-track">
                   ${ticks.map((t) => html`<i class="tl-grid" data-left="${t.left}"></i>`)}
                   <i class="tl-marker" data-left="${markerLeft}"></i>
@@ -477,7 +486,7 @@ async function renderDrawer() {
     if (!target.isConnected) return;
     mount(target, hist.map((h) => html`
       <div class="hist-item ${h.current ? "current" : ""}">
-        <div class="row"><strong>${h.version}</strong><span class="muted">${period(h.from, h.to)}</span>${h.current ? pill("current", "ok") : pill("superseded", "neutral")}</div>
+        <div class="row"><strong>${h.version}</strong><span class="muted">${period(h.from, h.to)}</span>${h.current ? pill("current record", "ok") : pill("superseded record", "neutral")}</div>
         <div class="muted">held ${fmtTs(h.recorded_at)} → ${h.current ? "now" : fmtTs(h.superseded_at)} · by <code>${h.changed_by}</code></div>
       </div>`));
     renderCompare(c.clause_id, v, hist);
@@ -562,9 +571,9 @@ async function Ledger(id) {
   mount($("#ledger-table"), rows.length ? html`
     <table><thead><tr><th>#</th><th>Recorded</th><th>Customer date</th><th>Decision</th><th>Reason</th><th>Question</th><th>Row hash</th></tr></thead>
     <tbody>${rows.map((r) => html`<tr class="click" data-id="${r.ledger_id}">
-      <td class="num"><a href="#/ledger/${r.ledger_id}">${r.ledger_id}</a></td><td>${fmtTs(r.created_at)}</td><td>${fmtDate(r.as_of_date)}</td>
-      <td>${pill(r.decision)}</td><td class="small muted">${sentence(r.reason_code)}</td>
-      <td class="trunc" title="${r.question_redacted}">${r.question_redacted}</td><td class="hash">${shortHash(r.row_hash)}</td></tr>`)}</tbody></table>`
+      <td class="num"><a href="#/ledger/${r.ledger_id}">${r.ledger_id}</a></td><td class="ts">${sqlTs(r.created_at).slice(0, 10)}<br><span class="muted small">${fmtTs(r.created_at).slice(11)}</span></td><td>${fmtDate(r.as_of_date)}</td>
+      <td>${pill(r.decision)}</td><td class="small muted">${sentence(r.reason_code)}${r.uncovered && r.uncovered.length ? html`<div class="trunc reason-claim" title="No clause covers ${quoted(r.uncovered)}">${quoted(r.uncovered)}</div>` : ""}</td>
+      <td class="trunc" title="${r.question_redacted}">${r.question_redacted}</td><td class="hash nowrap">${shortHash(r.row_hash)}</td></tr>`)}</tbody></table>`
     : html`<div class="empty"><h3>No decisions recorded yet</h3><p>Check an answer in the <a href="#/playground">Playground</a>.</p></div>`);
   $("#ledger-table").addEventListener("click", (e) => { const tr = e.target.closest("tr[data-id]"); if (tr) location.hash = `#/ledger/${tr.dataset.id}`; });
 }
@@ -595,8 +604,8 @@ function anchorBanner(a) {
 function sqlBlock(createdAt, asOf, clauseId) {
   return raw(`<pre class="sql"><span class="kw">SELECT</span> VERSION_LABEL, CLAUSE_TEXT
 <span class="kw">FROM</span> ASOF.POLICY_CLAUSE
-  <span class="kw">FOR SYSTEM_TIME AS OF</span> '${esc(fmtTs(createdAt))}'   <span class="cm">-- what Db2 held when the answer was given</span>
-  <span class="kw">FOR BUSINESS_TIME AS OF</span> '${esc(String(asOf))}'           <span class="cm">-- the customer's date</span>
+  <span class="kw">FOR SYSTEM_TIME AS OF</span> '${esc(sqlTs(createdAt))}'   <span class="cm">-- what Db2 held when the answer was given${health.clock ? ` (${esc(health.clock)})` : ""}</span>
+  <span class="kw">FOR BUSINESS_TIME AS OF</span> '${esc(String(asOf))}'          <span class="cm">-- the customer's date</span>
 <span class="kw">WHERE</span> CLAUSE_ID = '${esc(clauseId)}'</pre>`);
 }
 function replayCol(title, when, row, changed) {
@@ -634,7 +643,7 @@ async function LedgerEntry(id) {
       <div class="card"><div class="eyebrow">Question (redacted)</div><div class="sep"></div><div class="answer">${e.question_redacted}</div>
         <div class="sep"></div><div class="eyebrow">Draft (redacted)</div><div class="sep"></div><div class="answer struck">${e.draft_redacted}</div></div>
       <div class="card"><div class="eyebrow">Released to the customer</div><div class="sep"></div><div class="answer final">${e.final_answer}</div>
-        <div class="sep"></div><dl class="kv"><dt>Previous hash</dt><dd class="hash">${e.prev_hash}</dd><dt>Row hash</dt><dd class="hash">${e.row_hash}</dd><dt>Reason</dt><dd>${e.reason_code}</dd></dl></div>
+        <div class="sep"></div><dl class="kv"><dt>Previous hash</dt><dd class="hash">${e.prev_hash}</dd><dt>Row hash</dt><dd class="hash">${e.row_hash}</dd><dt>Reason</dt><dd>${sentence(e.reason_code)}${e.uncovered && e.uncovered.length ? `: no clause in force on ${fmtDate(e.as_of_date)} covers ${quoted(e.uncovered)}` : ""}</dd></dl></div>
     </div>
     <div class="card"><div class="card-head"><h2>Claim citations</h2><span class="sub">CLAIM_CITATION rows, shredded from the hashed verdict JSON by JSON_TABLE</span></div>
       <table><thead><tr><th>Check</th><th>#</th><th>Claim</th><th>Verdict</th><th>Judge</th><th>Rule</th><th>Clause</th></tr></thead>
@@ -711,9 +720,12 @@ async function loadInboxNotices(message) {
     ${list.length ? list.map(noticeCard) : html`<p class="muted">No notice is waiting.</p>`}</div>`);
 }
 function inboxItem(i, done) {
+  const uncovered = !done && i.uncovered && i.uncovered.length ? quoted(i.uncovered) : "";
   return html`<a class="inbox-item ${inb.id === i.ledger_id ? "on" : ""}" href="#/inbox/${i.ledger_id}">
-    <div class="row wrap"><b>#${i.ledger_id}</b>${pill(done ? i.outcome : i.reason_code, done ? "reviewed" : "escalated")}<span class="muted small">${DOC_NAME[i.doc_id] || i.doc_id} · ${fmtDate(i.as_of_date)} · ${i.channel}</span></div>
-    <div class="trunc">${i.question}</div>
+    <div class="row"><b>#${i.ledger_id}</b>${pill(done ? i.outcome : i.reason_code, done ? "reviewed" : "escalated")}</div>
+    <div class="muted small">${DOC_NAME[i.doc_id] || i.doc_id} · ${fmtDate(i.as_of_date)} · ${i.channel}</div>
+    <div class="trunc" title="${i.question}">${i.question}</div>
+    ${uncovered ? html`<div class="trunc small reason-claim" title="No clause covers ${uncovered}">No clause covers ${uncovered}</div>` : ""}
     <div class="muted small">${done ? html`answered in ${waited(i.minutes_to_answer)} as #${i.review_ledger_id}${i.reviewer ? ` by ${i.reviewer}` : ""}` : `waiting ${waited(i.waiting_minutes)}`}</div></a>`;
 }
 function reviewClaim(c) {
@@ -733,7 +745,9 @@ async function renderReview() {
   mount(box, html`
     <div class="decision escalated"><div class="icon">${ICONS.ESCALATED}</div>
       <div><div class="row">${pill("ESCALATED")}<h2>Held decision #${d.ledger_id}</h2></div>
-        <p>${WHY_HELD[d.reason_code] || d.reason_code} Customer date ${fmtDate(d.as_of_date)}, ${DOC_NAME[d.doc_id] || d.doc_id}, via ${d.channel}.</p></div>
+        <p>${d.reason_code === "NOT_COVERED" && d.uncovered && d.uncovered.length
+          ? `No clause in force on the customer's date covers ${d.uncovered.length === 1 ? "this claim" : "these claims"}: ${quoted(d.uncovered)}.`
+          : WHY_HELD[d.reason_code] || d.reason_code} Customer date ${fmtDate(d.as_of_date)}, ${DOC_NAME[d.doc_id] || d.doc_id}, via ${d.channel}.</p></div>
       <div class="meta">held ${fmtTs(d.created_at)}<br><a href="#/ledger/${d.ledger_id}">Ledger entry #${d.ledger_id} →</a></div></div>
     <div class="cols-2">
       <div class="card"><div class="eyebrow">Customer question (redacted)</div><div class="sep"></div><div class="answer">${d.question}</div>
@@ -858,7 +872,8 @@ function askView(r) {
   return html`${head}
     ${r.answer ? html`<div class="card"><div class="eyebrow">Answer</div><div class="sep"></div><div class="answer final">${r.answer}</div>
       ${r.explanation ? html`<div class="sep"></div><p class="small muted">${r.explanation}</p>` : ""}</div>` : ""}
-    ${r.sql ? html`<div class="card"><div class="card-head"><h2>SQL that ran</h2><span class="sub">regenerated by SQLGlot from the checked parse tree</span></div><pre class="sql">${r.sql}</pre></div>` : ""}
+    ${r.sql ? html`<div class="card"><div class="card-head"><h2>SQL that ran</h2><span class="sub">regenerated by SQLGlot from the checked parse tree</span></div><pre class="sql">${r.sql}</pre>
+      ${r.limit_added ? html`<p class="small muted">AsOf appended <code>FETCH FIRST ${r.row_cap + 1} ROWS ONLY</code> because the query set no limit: at most ${r.row_cap} rows are shown, and the one extra row only tells AsOf whether there were more.</p>` : ""}</div>` : ""}
     ${r.columns && r.columns.length ? html`<div class="card"><div class="card-head"><h2>Rows</h2><span class="sub">straight from Db2; [masked] is Db2's column mask</span></div>
       <div class="scroll-x"><table><thead><tr>${r.columns.map((c) => html`<th>${c}</th>`)}</tr></thead>
       <tbody>${r.rows.map((row) => html`<tr>${row.map((v) => html`<td class="${v === "[masked]" ? "muted" : ""}">${v === null ? "null" : v}</td>`)}</tr>`)}</tbody></table></div></div>` : ""}
@@ -1361,5 +1376,4 @@ async function loadScenarios() {
   ask.question = ASK_EXAMPLES[0] || "";
 }
 
-status();
-loadScenarios().then(route);
+Promise.all([status(), loadScenarios()]).then(route);  // the first page already knows Db2's clock zone

@@ -108,6 +108,9 @@ def test_what_runs_is_the_regenerated_tree_not_the_models_text():
 
 def test_the_row_cap_is_added_when_the_query_has_none():
     assert validate("SELECT LEDGER_ID FROM V_AUDIT_DECISIONS", row_cap=10).endswith("FETCH FIRST 11 ROWS ONLY")
+    assert askledger.checked("SELECT LEDGER_ID FROM V_AUDIT_DECISIONS", row_cap=10)[1] is True  # the UI explains it
+    assert askledger.checked("SELECT LEDGER_ID FROM V_AUDIT_DECISIONS FETCH FIRST 5 ROWS ONLY", row_cap=10) == (
+        "SELECT LEDGER_ID FROM V_AUDIT_DECISIONS FETCH FIRST 5 ROWS ONLY", False)
 
 
 # --- the chain, with Db2 replaced by a recorder ---------------------------------------
@@ -145,6 +148,7 @@ def test_an_answer_comes_from_the_rows_and_only_checked_sql_runs():
     r = rec.ask("How many decisions of each kind?")
     assert (r.status, r.answer, r.columns) == ("ANSWERED", "3 passed and 1 was escalated.", ["DECISION", "N"])
     assert rec.ran == [validate(COUNT_SQL)] == [r.sql] and r.attempts[0]["checked_sql"] == r.sql
+    assert r.limit_added is True and r.row_cap == rec.row_cap  # COUNT_SQL sets no limit, so AsOf appended one
     rows_message = next(m for kind, m in llm.calls if kind is LedgerAnswer)[1][1]
     assert '"N": 3' in rows_message  # the model writes from the rows it is shown
 

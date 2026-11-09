@@ -9,7 +9,7 @@ from fakes import ScriptedLLM, ZeroEmbeddings, claims, clause, judge, verdict
 
 from asof import gate as gate_mod
 from asof.gate import HOLDING_REPLY, Gate, GateRequest, quote_is_verbatim
-from asof.ledger import Appended
+from asof.ledger import Appended, uncovered_claims
 from asof.llm import LLMError
 from asof.schemas import RewriteResult
 
@@ -109,6 +109,9 @@ def test_not_covered_claim_escalates(world):
                       judge=[judge(verdict(1, "NOT_COVERED"))])
     r = make_gate(llm).check(req(draft="Unaccompanied minors pay $150."))
     assert (r.decision, r.reason_code, r.final_answer) == ("ESCALATED", "NOT_COVERED", HOLDING_REPLY)
+    # The ledger and the inbox name the claim the hold is about; the reason code alone does not.
+    assert uncovered_claims(world["entries"][0].verdicts) == ["Unaccompanied minors pay $150."]
+    assert uncovered_claims({"claims": None, "error": "timeout"}) == uncovered_claims({}) == []
 
 
 def test_contradiction_with_an_uncovered_detail_is_rewritten(world):
@@ -123,6 +126,7 @@ def test_contradiction_with_an_uncovered_detail_is_rewritten(world):
     )
     r = make_gate(llm).check(req())
     assert r.decision == "CORRECTED" and r.final_answer.startswith(rewrite)
+    assert uncovered_claims(world["entries"][0].verdicts) == []  # only the last check that ran counts: the rewrite's
 
 
 def test_missing_verdict_escalates(world):
@@ -416,3 +420,4 @@ def test_a_released_correction_never_shows_a_redaction_placeholder(world):
     r = make_gate(llm).check(req(draft="Hi Priya, " + BAG_CLAIM, on=JULY, question="My name is Priya. How much is my bag?"))
     assert r.decision == "CORRECTED" and r.final_answer.startswith("Hello. The first checked bag costs $40")
     assert "[NAME]" not in r.final_answer
+

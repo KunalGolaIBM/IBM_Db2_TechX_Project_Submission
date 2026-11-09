@@ -97,6 +97,11 @@ class Refused(ValueError):
 
 def validate(sql: str, row_cap: int = ROW_CAP) -> str:
     """Return the only SQL that may run for `sql`, or raise Refused. Pure: no database, no model."""
+    return checked(sql, row_cap)[0]
+
+
+def checked(sql: str, row_cap: int = ROW_CAP) -> tuple[str, bool]:
+    """`validate`, plus whether AsOf appended the row limit (FETCH FIRST row_cap + 1 ROWS ONLY), so the UI can say so."""
     text = (sql or "").strip()
     while text.endswith(";"):
         text = text[:-1].rstrip()
@@ -157,9 +162,10 @@ def validate(sql: str, row_cap: int = ROW_CAP) -> str:
     order = tree.args.get("order")
     if order and any(isinstance(o.this, exp.Literal) for o in order.expressions):
         raise Refused("ORDER BY must name columns, not positions")
-    if not tree.args.get("limit"):
+    added = not tree.args.get("limit")
+    if added:
         tree = tree.limit(row_cap + 1)  # the database stops early; one extra row tells us there were more
-    return tree.sql(dialect="db2")
+    return tree.sql(dialect="db2"), added
 
 
 def _check_masked(tree: exp.Select) -> None:
@@ -214,6 +220,8 @@ class AskResult:
     columns: list[str] = field(default_factory=list)
     rows: list[list[Any]] = field(default_factory=list)
     truncated: bool = False
+    row_cap: int = ROW_CAP
+    limit_added: bool = False  # AsOf appended FETCH FIRST row_cap + 1 ROWS ONLY to the SQL that ran
     reason: str | None = None
     attempts: list[dict[str, Any]] = field(default_factory=list)
     model: str = ""
@@ -322,7 +330,7 @@ class LedgerAsker:
 
     def _query(self, state: dict[str, Any]) -> AskResult:
         question = state["question"]
-        out = AskResult(question=question, status="REFUSED", model=self.llm.info,
+        out = AskResult(question=question, status="REFUSED", model=self.llm.info, row_cap=self.row_cap,
                         runs_as=f"{self.settings.asof_analyst_user} (role ASOF_ANALYST: SELECT on the audit views only)")
         previous: tuple[str, str] | None = None
         for _ in range(MAX_ATTEMPTS):
@@ -330,21 +338,22 @@ class LedgerAsker:
             attempt: dict[str, Any] = {"proposed_sql": draft.sql[:MAX_SQL_CHARS]}
             out.attempts.append(attempt)
             try:
-                checked = validate(draft.sql, self.row_cap)
+                sql, limit_added = checked(draft.sql, self.row_cap)
             except Refused as why:
                 attempt["refused"] = str(why)
                 out.status, out.reason = "REFUSED", f"the SQL did not pass the check: {why}"
                 previous = (draft.sql[:MAX_SQL_CHARS], f"refused: {why}")
                 continue
-            attempt["checked_sql"] = checked
+            attempt["checked_sql"] = sql
             try:
-                out.columns, out.rows, out.truncated = self.run_sql(checked)
+                out.columns, out.rows, out.truncated = self.run_sql(sql)
             except db.DatabaseError as err:
                 attempt["db2_error"] = str(err)[:300]
                 out.status, out.reason = "FAILED", f"Db2 rejected the checked SQL: {str(err)[:300]}"
-                previous = (checked, f"Db2 error: {str(err)[:300]}")
+                previous = (sql, f"Db2 error: {str(err)[:300]}")
                 continue
-            out.status, out.reason, out.sql, out.explanation = "ANSWERED", None, checked, draft.explanation[:300]
+            out.status, out.reason, out.sql, out.explanation = "ANSWERED", None, sql, draft.explanation[:300]
+            out.limit_added = limit_added
             return out
         return out
 

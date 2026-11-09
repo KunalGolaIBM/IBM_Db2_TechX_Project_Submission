@@ -282,6 +282,17 @@ def server_version(conn: ibm_db_dbi.Connection) -> str:
     return f"{info.DBMS_NAME} {info.DBMS_VER}"
 
 
+def utc_label(current_timezone: Any) -> str:
+    """Db2's CURRENT TIMEZONE (a signed hhmmss duration) as the zone of its timestamps: "UTC" or "UTC-05:00".
+
+    CURRENT TIMESTAMP and the system-time columns use the server's clock, so the UI says which zone it is in."""
+    offset = int(current_timezone)
+    if offset == 0:
+        return "UTC"
+    sign, offset = ("-" if offset < 0 else "+"), abs(offset)
+    return f"UTC{sign}{offset // 10000:02d}:{offset // 100 % 100:02d}"
+
+
 def vector_literal(embedding: Sequence[float]) -> str:
     """Format an embedding for a `VECTOR(?, n, FLOAT32)` parameter, as langchain-db2 does."""
     return "[" + ",".join(f"{float(x):.8g}" for x in embedding) + "]"

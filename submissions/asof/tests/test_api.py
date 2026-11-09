@@ -79,7 +79,7 @@ def test_the_full_chain_verification_shares_the_rate_limit(monkeypatch):
     class Conn:  # what the pool and /healthz need from a connection; verify_chain itself is stubbed
         def cursor(self):
             return type("Cursor", (), {"execute": lambda self, sql, params=(): None,
-                                       "fetchall": lambda self: [(1,)], "close": lambda self: None})()
+                                       "fetchall": lambda self: [(-50000,)], "close": lambda self: None})()
 
         def rollback(self):
             pass
@@ -93,6 +93,9 @@ def test_the_full_chain_verification_shares_the_rate_limit(monkeypatch):
     codes = [c.get("/api/chain/verify").status_code for _ in range(3)]
     assert codes == [200, 200, 429]
     assert c.get("/healthz").status_code != 429  # cheap reads stay unlimited
+    # /healthz names the zone of Db2's clock (CURRENT TIMEZONE, here -05:00:00), which the UI puts on every timestamp.
+    assert c.get("/healthz").json()["db2_clock"] == "UTC-05:00"
+    assert (db.utc_label(0), db.utc_label(53000)) == ("UTC", "UTC+05:30")
 
 
 def test_unrecorded_decision_is_not_released():

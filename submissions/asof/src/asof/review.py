@@ -15,6 +15,7 @@ sent, so the ledger holds what the customer was told, not every draft the specia
 from __future__ import annotations
 
 import dataclasses
+import json
 import logging
 import re
 import uuid
@@ -40,7 +41,7 @@ SENDABLE = ("ALL_SUPPORTED", "NO_POLICY_CLAIMS", "NOT_COVERED")  # the reply che
 
 # Every statement is a literal; names are unqualified (db.use_schema binds the schema).
 SQL_OPEN = ("SELECT Q.LEDGER_ID, Q.CREATED_AT, Q.CHANNEL, Q.DOC_ID, Q.AS_OF_DATE, Q.REASON_CODE, L.QUESTION_REDACTED, "
-            "MINUTES_BETWEEN(CURRENT TIMESTAMP, Q.CREATED_AT) "
+            "MINUTES_BETWEEN(CURRENT TIMESTAMP, Q.CREATED_AT), L.VERDICTS_JSON "
             "FROM V_REVIEW_QUEUE Q JOIN ANSWER_LEDGER L ON L.LEDGER_ID = Q.LEDGER_ID "
             "WHERE Q.STATE = 'OPEN' ORDER BY Q.LEDGER_ID FETCH FIRST ? ROWS ONLY")
 SQL_ANSWERED = ("SELECT Q.LEDGER_ID, Q.CREATED_AT, Q.CHANNEL, Q.DOC_ID, Q.AS_OF_DATE, Q.REASON_CODE, L.QUESTION_REDACTED, "
@@ -83,8 +84,11 @@ def queue(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA, limit: int = 50)
     """Held decisions waiting for a specialist (oldest first) and the latest answered ones, as the runtime user."""
     db.use_schema(conn, schema)
     keys = ("ledger_id", "created_at", "channel", "doc_id", "as_of_date", "reason_code", "question")
-    open_items = [dict(zip((*keys, "waiting_minutes"), map(_strip, r), strict=True))
-                  for r in db.query(conn, SQL_OPEN, (limit,))]
+    open_items = []
+    for r in db.query(conn, SQL_OPEN, (limit,)):
+        item = dict(zip((*keys, "waiting_minutes"), map(_strip, r[:-1]), strict=True))
+        item["uncovered"] = ledger.uncovered_claims(json.loads(r[-1]))  # the card names what no clause covered
+        open_items.append(item)
     answered = [dict(zip((*keys, "minutes_to_answer", "review_ledger_id", "outcome", "reviewer", "answered_at"),
                          map(_strip, r), strict=True)) for r in db.query(conn, SQL_ANSWERED, (limit,))]
     counts = {r[0].strip(): {"count": int(r[1]), "oldest_minutes": int(r[2] or 0)} for r in db.query(conn, SQL_COUNTS)}
@@ -149,6 +153,7 @@ def detail(connect: Callable[[], ibm_db_dbi.Connection], embeddings: Embeddings,
         "doc_id": entry["doc_id"].strip(), "as_of_date": entry["as_of_date"], "reason_code": entry["reason_code"].strip(),
         "question": entry["question_redacted"], "draft": entry["draft_redacted"], "holding_reply": entry["final_answer"],
         "rewrite": verdicts.get("rewrite"), "claims": claims, "unchecked": verdicts.get("unchecked") or [],
+        "uncovered": entry["uncovered"],
         "requested_by": verdicts.get("requested_by"), "route": verdicts.get("route"),
         "cited": replayed["clauses"],
         "in_force": [{"clause_id": c.clause_id, "title": c.title, "version": c.version_label, "from": c.bus_start,

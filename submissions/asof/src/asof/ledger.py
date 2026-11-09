@@ -169,9 +169,19 @@ SQL_CLAUSE_NOW = ("SELECT CLAUSE_ID, VERSION_LABEL, CLAUSE_TEXT, RULE_JSON, BUS_
                   "CHANGED_BY FROM POLICY_CLAUSE FOR BUSINESS_TIME AS OF ? WHERE CLAUSE_ID = ?")
 
 
+def uncovered_claims(verdicts: dict[str, Any]) -> list[str]:
+    """The claims no clause in force covered, in the last check that ran: what a NOT_COVERED hold is about.
+
+    The reason code alone says only that some claim was uncovered; the ledger and the inbox name it."""
+    claims = [c for c in verdicts.get("claims") or [] if isinstance(c, dict)]
+    last = max((c.get("pass", 1) for c in claims), default=1)
+    return [str(c.get("text", "")) for c in claims if c.get("pass", 1) == last and c.get("verdict") == "NOT_COVERED"]
+
+
 def _entry(row: tuple[Any, ...]) -> dict[str, Any]:
     out = dict(zip(_ENTRY_KEYS, row, strict=True))
     out["verdicts"] = json.loads(out.pop("verdicts_json"))
+    out["uncovered"] = uncovered_claims(out["verdicts"])
     for k in ("request_id", "prev_hash", "row_hash"):
         out[k] = out[k].strip()
     return out

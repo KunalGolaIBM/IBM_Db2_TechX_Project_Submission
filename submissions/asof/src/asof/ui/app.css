@@ -281,6 +281,7 @@ mark { background: var(--mark); color: inherit; padding: 0 2px; border-radius: 0
 .tl-scale { position: relative; height: 30px; }
 .tl-scale .tl-tick { top: 14px; }
 .tl-tick { position: absolute; top: 0; transform: translateX(-50%); font-size: 11px; color: var(--muted); white-space: nowrap; }
+.tl-tick.end { transform: translateX(-100%); }  /* the last label ends at its tick instead of spilling past the panel */
 .tl-area { padding: 16px 0 4px; font-family: var(--mono); font-size: 12px; font-weight: 400; letter-spacing: .32px; color: var(--brand); }
 .tl-row { min-height: 40px; border-bottom: 1px solid var(--line); }
 .tl-row:hover { background: var(--surface-2); }
@@ -315,6 +316,7 @@ mark { background: var(--mark); color: inherit; padding: 0 2px; border-radius: 0
   content: attr(data-label); position: absolute; top: -6px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 600;
   color: var(--hold); background: var(--surface); padding: 0 4px; white-space: nowrap; border-radius: 4px;
 }
+.tl-marker.end[data-label]::before { left: auto; right: 0; transform: none; }
 .tl-layout { display: grid; grid-template-columns: 1fr 380px; gap: 18px; align-items: start; }
 .drawer { position: sticky; top: 64px; }
 .kv { display: grid; grid-template-columns: 120px 1fr; gap: 6px 12px; font-size: 13px; }
@@ -349,6 +351,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .banner strong { color: inherit; white-space: nowrap; font-weight: 600; }
 .banner + .banner { margin-top: 8px; }
 .hash { font-family: var(--mono); font-size: 11px; color: var(--muted); word-break: break-all; }
+td.ts, .hash.nowrap { white-space: nowrap; word-break: normal; }
 .replay-col { border: 1px solid var(--line); border-radius: 0; padding: 12px 14px; background: var(--surface); }
 .replay-col.changed { border-color: var(--fix-line); background: var(--fix-bg); }
 .replay-col h3 { font-size: 13px; margin-bottom: 2px; }
@@ -438,7 +441,10 @@ tr.click.on td { background: var(--brand-soft); }
 .inbox-item { display: block; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 12px; color: var(--ink); background: var(--surface); }
 .inbox-item:hover { border-color: var(--brand); text-decoration: none; }
 .inbox-item.on { border-color: var(--brand); box-shadow: inset 3px 0 0 var(--brand); }
-.inbox-item .trunc { margin: 4px 0 2px; }
+.inbox-item > * + * { margin-top: 3px; }
+.inbox-item .trunc { max-width: none; }
+.reason-claim { max-width: 240px; color: var(--ink-2); }
+.inbox-item .reason-claim { max-width: none; }
 #inbox-detail > * + * { margin-top: 14px; }
 .inbox-notices:not(:empty) { margin-top: 20px; }
 .inbox-notices > * + * { margin-top: 14px; }

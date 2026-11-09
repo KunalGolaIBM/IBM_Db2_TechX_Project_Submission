@@ -74,6 +74,9 @@ def test_a_held_decision_waits_in_the_inbox_until_a_checked_reply_answers_it(set
         q = review.queue(conn, inbox)
     assert [i["ledger_id"] for i in q["open"]] == [held] and q["counts"]["open"] == 1
     assert q["open"][0]["question"] == QUESTION and q["open"][0]["waiting_minutes"] >= 0
+    assert q["open"][0]["uncovered"] == [UNCOVERED_CLAIM[0]]  # the inbox card names what no clause covered
+    with db.connection(settings, "app") as conn:
+        assert ledger.get_entry(conn, held, inbox)["uncovered"] == [UNCOVERED_CLAIM[0]]
 
     gate = _gate(settings, embeddings, inbox,
                  extract=[claims(("Bereavement fares must be requested before travel begins.", "bereavement", "procedure"))],
