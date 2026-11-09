@@ -1,0 +1,1 @@
+"""GitMind utilities package."""

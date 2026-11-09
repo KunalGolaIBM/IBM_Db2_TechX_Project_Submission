@@ -1,0 +1,1 @@
+"""GitMind GitHub integration package"""
