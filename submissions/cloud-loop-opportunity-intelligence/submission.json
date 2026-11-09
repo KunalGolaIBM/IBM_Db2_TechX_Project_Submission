@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Cloud Loop: AI-Powered Student Opportunity Intelligence Platform",
+    "slug": "cloud-loop-opportunity-intelligence",
+    "short_description": "AI-powered discovery platform unifying 3,700+ student opportunities using IBM Db2 relational schemas, 384-dimensional vector embeddings, academic eligibility matching, and FastAPI.",
+    "category": "AI / RAG / Data Engineering / Career Tech",
+    "demo_url": "https://cloudloop.dev",
+    "video_url": "",
+    "repo_url": "https://github.com/Ayushh-Sharmaa/Cloud-Loop"
+  },
+  "team": {
+    "name": "Cloud Loop Pioneers",
+    "members": [
+      {
+        "name": "Ayush Sharma",
+        "github": "Ayushh-Sharmaa",
+        "email": "ayushsharma@users.noreply.github.com",
+        "role": "Lead Architect & Full-Stack Engineer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition (Docker) / Db2 on Cloud",
+    "connector": "ibm_db (native prepared statements, parameterized query pool, connection lifecycle)",
+    "features_used": [
+      "Relational DDL Schemas (OPPORTUNITIES, STUDENT_PROFILES, USER_OPPORTUNITY_TRACKING, INGESTION_RUNS)",
+      "Multi-Factor Academic Eligibility Verification & Ranking",
+      "384-dimensional sentence-transformers vector embeddings",
+      "FastAPI Asynchronous Ingestion & Provenance Tracking",
+      "High-Availability Unified Repository Fallback"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "TypeScript",
+      "SQL",
+      "JavaScript"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "Next.js 16 (App Router)",
+      "React 19",
+      "Tailwind CSS v4",
+      "Clerk Auth",
+      "Framer Motion",
+      "Sentence-Transformers",
+      "SQLAlchemy",
+      "Pytest"
+    ],
+    "ai_models": [
+      "sentence-transformers/all-MiniLM-L6-v2 (384-dim embeddings)",
+      "Google Gemini 1.5 Flash",
+      "Multi-Factor Deterministic Match Explainer"
+    ]
+  }
+}
