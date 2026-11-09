@@ -128,3 +128,4 @@ Where:
 - $S_{\text{vector}} = 20.0 \times \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|_2 \|\mathbf{v}\|_2}$ (Cosine similarity of 384-dim embeddings)
 - $S_{\text{domain}} = 10.0$ if category matches preferred domains
 - $S_{\text{eligibility}} = +5.0$ if academic eligibility verified, else $-15.0$
+

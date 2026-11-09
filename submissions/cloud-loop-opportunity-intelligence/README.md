@@ -108,3 +108,4 @@ Open [http://localhost:3000](http://localhost:3000).
 | **Real-World Impact** | Indexes 3,770+ live verified student opportunities solving the discovery gap. |
 | **AI Innovation** | 384-dim vector embeddings + deterministic eligibility verification + transparent match explainer. |
 | **Design & Accessibility** | Midnight/Lime high-contrast palette, zero horizontal scroll, mobile responsive, WCAG compliant. |
+
