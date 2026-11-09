@@ -21,7 +21,7 @@
     ]
   },
   "ibm_db2": {
-    "edition": "IBM Db2 Community Edition using the official Docker image icr.io/db2_community/db2 (local development/test target; instance setup pending)",
+    "edition": "IBM Db2 Community Edition using the official Docker image icr.io/db2_community/db2 (local development/test instance successfully started and integration-tested on 2026-11-09)",
     "connector": "Python ibm_db driver with parameterised SQL repository layer",
     "features_used": [
       "Relational tables and foreign keys",
