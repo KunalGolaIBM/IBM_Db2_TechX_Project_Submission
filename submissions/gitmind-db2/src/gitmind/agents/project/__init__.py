@@ -1,0 +1,1 @@
+"""GitMind project agent package."""

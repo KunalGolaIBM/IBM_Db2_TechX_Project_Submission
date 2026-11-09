@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "GitMind — Persistent Engineering Intelligence",
+    "slug": "gitmind-db2",
+    "short_description": "Persistent engineering intelligence and multi-agent knowledge system powered by IBM Db2, transforming software repositories into auditable institutional memory.",
+    "category": "AI / RAG",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/vastavikadi/gitmind-va"
+  },
+  "team": {
+    "name": "GitMind Team",
+    "members": [
+      {
+        "name": "Aditya Shukla",
+        "github": "vastavikadi",
+        "email": "adityashukla.sm26@gmail.com",
+        "role": "Project Creator & AI/Backend Architect"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker) / Db2 on Cloud",
+    "connector": "langchain-db2 / ibm_db / ibm_db_dbi",
+    "features_used": [
+      "Relational Tables",
+      "Indexing",
+      "Vector / JSON Search",
+      "Native Db2 VECTOR(768, FLOAT32)",
+      "Db2 VECTOR_DISTANCE (COSINE)",
+      "SYSTOOLS JSON/BSON Storage",
+      "Repository Knowledge Graph",
+      "Persistent Multi-Agent Memory",
+      "Append-Only Audit Trail"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "SQL"
+    ],
+    "frameworks": [
+      "LangGraph",
+      "LangChain",
+      "langchain-db2",
+      "Tree-sitter",
+      "Typer",
+      "Rich",
+      "GitPython"
+    ],
+    "ai_models": [
+      "Google Gemini (gemini-3.1-flash-lite)",
+      "OpenAI (gpt-4o)"
+    ]
+  }
+}
