@@ -244,13 +244,16 @@ All 23 tests execute against genuine IBM Db2 and verify zero data corruption on 
 
 | Capability | Screenshot Preview | Description |
 |---|---|---|
-| **1. API Endpoints** | ![Swagger UI](docs/screenshots/01_swagger_ui_endpoints.png) | Interactive Swagger UI showing all endpoints across Health, Reconciliation, and Case Triage. |
-| **2. Db2 Connectivity** | ![Db2 Health](docs/screenshots/02_db2_health_connectivity.png) | `/health/ready` verifying connection to `PACTDB` on port 50000 (Db2 v12.1). |
-| **3. 3-Way Reconciliation** | ![Reconciliation](docs/screenshots/03_reconciliation_results.png) | `POST /api/v1/reconciliation-runs` evaluating 637 rules across 91 PO lines without join inflation. |
-| **4. Case Detail & Evidence** | ![Case Detail](docs/screenshots/04_case_detail_and_evidence.png) | `GET /api/v1/cases/42` detailing `DOC-01`, `QTY-01`, `QTY-03`, `COND-01` and exact Db2 evidence references. |
-| **5. Counterfactual Simulation** | ![Simulation](docs/screenshots/05_counterfactual_simulation.png) | `POST /api/v1/cases/42/simulations` simulating +120 units delivery, clearing receipt holds with 0 source mutation. |
-| **6. Audit Trail & Reviews** | ![Audit Trail](docs/screenshots/06_audit_trail_and_reviews.png) | `GET /api/v1/cases/42/audit` showing append-only ledger entries in `AUDIT_EVENTS`. |
-| **7. Agent Investigation** | ![Agent Trace](docs/screenshots/07_agent_investigation_trace.png) | LangChain tool execution trace with 5 scoped Db2 tools and grounded record citation verification. |
+| **1. API Endpoints Overview** | ![Swagger UI Overview](docs/screenshots/01_swagger_ui_overview.png) | Interactive OpenAPI / Swagger UI showing all 8 endpoints across Health, Reconciliation, Cases, Evidence, Simulations, Audits, and Investigations. |
+| **2. Db2 Connectivity & Readiness** | ![Db2 Health](docs/screenshots/02_db2_health_readiness.png) | `GET /health/ready` verifying connection to `PACTDB` on port 50000 (Db2 v12.1.5.0, status: ok). |
+| **3. Dataset Verification Terminal** | ![Dataset Verification](docs/screenshots/03_dataset_verification_terminal.png) | Terminal audit (`db/verify_loaded_data.py`) confirming 8 tables, 492 source rows, 0 duplicate PKs, 0 orphan FKs, and 37 NULL `paid_on` values. |
+| **4. 3-Way Reconciliation Run** | ![Reconciliation Run](docs/screenshots/04_reconciliation_engine_run.png) | `POST /api/v1/reconciliation-runs` evaluating 637 rules across 91 PO lines using CTE pre-aggregation without join inflation. |
+| **5. Case Triage Queue** | ![Case Queue](docs/screenshots/05_case_triage_list_view.png) | `GET /api/v1/cases?page=1&limit=5` showing paginated discrepancy cases with priority sorting, status, and finding counts. |
+| **6. Case Detail & Rule Findings** | ![Case Detail](docs/screenshots/06_case_detail_and_rule_findings.png) | `GET /api/v1/cases/42` showing discrepancy findings: missing receipt (`DOC-01`), invoice exceeds receipt (`QTY-01`), invoiced without receipt (`QTY-03`), and uninspected goods (`COND-01`). |
+| **7. Exact Db2 Evidence Records** | ![Exact Evidence](docs/screenshots/07_exact_db2_evidence_records.png) | `GET /api/v1/cases/42/evidence` retrieving exact relational records from `po_lines`, `purchase_orders`, `goods_receipts`, and `supplier_invoices`. |
+| **8. Counterfactual Simulation Triage** | ![Simulation Triage](docs/screenshots/08_counterfactual_simulation_triage.png) | `POST /api/v1/cases/42/simulations` simulating `ADD_ACCEPTABLE_RECEIPT` (+120 units), proving hold resolution with 0 source table mutations. |
+| **9. Immutable Audit Ledger** | ![Audit Ledger](docs/screenshots/09_immutable_audit_events_ledger.png) | `GET /api/v1/cases/42/audit` showing append-only state transitions (`CASE_INITIALIZED`, `REVIEW_RECORDED`, `SIMULATION_EXECUTED`) in `AUDIT_EVENTS`. |
+| **10. LangChain Agent Tool Trace** | ![Agent Tool Trace](docs/screenshots/10_langchain_agent_tool_trace.png) | LangChain agent execution trace with 5 scoped Db2 tools, record citations, and grounded discrepancy analysis. |
 
 ---
 
