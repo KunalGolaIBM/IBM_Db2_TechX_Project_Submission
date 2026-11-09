@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "TechGaint Multi-Agent Recruiter and Governed RAG",
+    "slug": "techgaint-db2-agent",
+    "short_description": "TechGaint Multi-Agent Recruiter and Governed RAG integrating IBM Db2 and CrewAI with specialized metadata filtration layers.",
+    "category": "AI / Enterprise Recruitment",
+    "demo_url": "https://github.com/Pavan3030-pr/IBM_Db2_TechX_Project_Submission",
+    "video_url": "https://youtube.com",
+    "repo_url": "https://github.com/Pavan3030-pr/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "TechGaint Team",
+    "members": [
+      {
+        "name": "Pavan",
+        "github": "Pavan3030-pr",
+        "email": "pavan@example.com",
+        "role": "Lead Engineer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community / Cloud Edition",
+    "connector": "ibm_db / SQLAlchemy",
+    "features_used": [
+      "Metadata Filtration Layers",
+      "Relational Candidate Profiling",
+      "Governed RAG Query Engine"
+    ]
+  }
+}
