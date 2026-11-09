@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "MediFlow AI",
+    "slug": "mediflow-ai",
+    "short_description": "Agentic medicine-inventory decision support that identifies stockout and expiry risks and prepares explainable, human-reviewed reorder drafts using IBM Db2 records.",
+    "category": "Agentic AI / Data Engineering / Healthcare Operations",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/DevAyushTech/IBM_Db2_TechX_Project_Submission/tree/submission/mediflow-ai/submissions/mediflow-ai"
+  },
+  "team": {
+    "name": "Independent Submission",
+    "members": [
+      {
+        "name": "Ayush Kumar Singh",
+        "github": "DevAyushTech",
+        "email": "",
+        "role": "Project design, backend, Db2 adapter and agent workflow"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition or compatible Db2 instance (configure locally)",
+    "connector": "Python ibm_db driver with parameterised SQL repository layer",
+    "features_used": [
+      "Relational tables and foreign keys",
+      "Transactional recommendation and review writes",
+      "Indexed operational lookups",
+      "Approval audit history"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python"],
+    "frameworks": ["FastAPI", "Streamlit", "LangGraph"],
+    "ai_models": ["Deterministic workflow in MVP; LLM narrative layer planned"]
+  }
+}
