@@ -1,0 +1,15 @@
+id,supplier_name,country,payment_terms
+1,Koch and Sons,Poland,net_30
+2,Sauer Inc,Poland,net_14
+3,Weimann Group,Netherlands,net_30
+4,West - Hettinger,Germany,net_45
+5,Boehm and Sons,Poland,net_45
+6,Runolfsson LLC,Portugal,net_14
+7,Waters Inc,Germany,net_60
+8,Bauch - McKenzie,Germany,net_45
+9,Lehner Group,Italy,net_30
+10,"Beer, Franecki and Daugherty",Germany,net_30
+11,"Schmidt, Zemlak and Prosacco-Fisher",Italy,net_30
+12,Rohan - Klein,Poland,net_45
+13,Mraz - Turcotte,Italy,net_14
+14,Predovic LLC,Poland,net_30

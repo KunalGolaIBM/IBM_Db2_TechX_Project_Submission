@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "PACT — Procurement Audit & Counterfactual Triage",
+    "slug": "pact",
+    "short_description": "Enterprise procurement discrepancy triage system combining deterministic 3-way reconciliation on IBM Db2, what-if counterfactual scenario simulation, and grounded LangChain evidence investigation with an immutable audit trail.",
+    "category": "AI / Analytics / Data Governance",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/Mumuksh-Jain/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "Mumukshu Jain",
+    "members": [
+      {
+        "name": "Mumukshu Jain",
+        "github": "Mumuksh-Jain",
+        "email": "mumukshujaiin2466@gmail.com",
+        "role": "Builder"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1 (Docker)",
+    "connector": "ibm_db",
+    "database": "PACTDB",
+    "features_used": [
+      "Relational Schema Design (13 tables: 8 procurement source tables + 5 audit/case tables)",
+      "CTE Pre-aggregated 3-Way Matching (PO Lines, Receipts, Invoices)",
+      "Strict Referential Integrity & Check Constraints",
+      "Optimistic Concurrency Control (Row Versioning)",
+      "Counterfactual Simulation Ledger (SCENARIO_RUNS without source mutation)",
+      "Tamper-Evident Append-Only Audit Logging (AUDIT_EVENTS)"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "LangChain",
+      "Pydantic",
+      "Uvicorn",
+      "pytest"
+    ],
+    "ai_models": [
+      "OpenAI gpt-4o-mini",
+      "Configurable LangChain Chat Model Provider"
+    ]
+  }
+}
