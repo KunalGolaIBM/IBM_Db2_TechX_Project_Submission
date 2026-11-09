@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Db2 WorkRelay Intelligence",
+    "slug": "db2-workrelay-intelligence",
+    "short_description": "An operational incident triage and automated runbook retrieval platform using IBM Db2 for structured lifecycle audit persistence, parameterized SQL execution, and deterministic knowledge retrieval.",
+    "category": "AI / Incident Automation / Knowledge Retrieval",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/Yemmmyc/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "Db2 WorkRelay Intelligence",
+    "members": [
+      {
+        "name": "Yemmy",
+        "github": "Yemmmyc",
+        "email": "yemmmyc@users.noreply.github.com",
+        "role": "Full-Stack Developer & Backend Integration Specialist"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition 12.1 (Docker / Linux)",
+    "connector": "ibm_db / ibm_db_dbi",
+    "features_used": [
+      "Relational Tables with Foreign Key Cascades",
+      "B-Tree Performance Indexing on Status and Service",
+      "Parameterized SQL Execution & Transaction Isolation",
+      "CLOB JSON Metadata Storage & Chronological Audit Logging",
+      "Db2 Standard FETCH FIRST / OFFSET ROWS Pagination",
+      "Native Schema DDL (schema_db2.sql)"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "LangChain Core",
+      "Pydantic v2",
+      "Uvicorn",
+      "Pytest"
+    ],
+    "ai_models": [
+      "Deterministic Symptom & Keyword Runbook Engine"
+    ]
+  }
+}
