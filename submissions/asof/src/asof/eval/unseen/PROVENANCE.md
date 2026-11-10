@@ -23,3 +23,7 @@ GPT was asked to make AsOf fail. The prompt it was given, as Jay recorded it (th
 | `spr_40_test_cases.json` | 40 cases: question, customer date, assistant draft, label, reason | `18ede398f1aa11f6de903bdce5ac662d84998c881728ee31485407f688c114f0` |
 
 The text files keep GPT's punctuation, em dashes included; they are test data and are not edited to match this repository's style.
+
+## Added afterwards, by AsOf
+
+Nothing above was changed. Everything else in this folder was written for AsOf after the five files were pinned: `pdf/` holds the three policy versions as text-layer PDFs made by `pdfs.py` (tests/test_unseen_pdfs.py proves that intake's reader gets back every word of each .txt file), `onboarding/` holds the records of loading them through Policy intake, and the Python modules are the onboarding and the runner. See [docs/eval/unseen-intake.md](../../../../docs/eval/unseen-intake.md) and [docs/eval/unseen-results.md](../../../../docs/eval/unseen-results.md).
