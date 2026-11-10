@@ -60,6 +60,8 @@ flowchart LR
 | Least-privilege authorization ID | `AQREADER` | The natural-language box is safe by database permission, not only by prompt |
 | CHECK constraints | `AQ.VERDICT`, `AQ.ASK_LOG` | Only the allowed states can exist |
 | Append-only question log | `AQ.ASK_LOG` | Every natural-language request is on record; identical questions reuse checked SQL so a CPU-only model stays usable |
+| Column mask + `ACTIVATE COLUMN ACCESS CONTROL` | `AQ.ASK_LOG.QUESTION` | E-mail addresses and phone numbers that visitors type are redacted for every ID except the auditor role; the stored text is unchanged |
+| Materialized query table (`REFRESH DEFERRED`, `ENABLE QUERY OPTIMIZATION`) | `AQ.MQT_READING_DAY` | Station-pollutant-day counts; with `CURRENT REFRESH AGE ANY` the optimizer answers queries on `AQ.READING` from it (EXPLAIN cost 95 vs 46,216) |
 
 ## Runtime
 

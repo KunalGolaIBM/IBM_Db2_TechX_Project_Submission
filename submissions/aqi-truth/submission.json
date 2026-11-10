@@ -6,7 +6,7 @@
     "short_description": "IBM Db2 runs India's official CPCB AQI method on real Delhi monitor data and refuses to give an AQI when the data cannot support one, with an append-only evidence ledger, IBM Granite explanations checked by code, and a read-only natural-language question box.",
     "category": "Data Engineering / Analytics / AI",
     "demo_url": "https://debi910.github.io/aqi-truth/",
-    "video_url": "https://youtu.be/Gm_d_ZOlTV8",
+    "video_url": "https://youtu.be/sq1AwgmbHcQ",
     "repo_url": "https://github.com/debi910/aqi-truth"
   },
   "team": {
