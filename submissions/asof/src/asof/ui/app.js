@@ -116,6 +116,12 @@ const ICONS = {
 // ---------- shell ----------
 const view = $("#view");
 const routes = { playground: Playground, timeline: Timeline, intake: Intake, ledger: Ledger, inbox: Inbox, ask: Ask, impact: Impact, backtest: Backtest, analytics: Analytics };
+// A page writes into the shared view only while its route is the one shown: an Ask, a preview or a backtest poll
+// that finishes after the visitor has moved on must not paint over the next page.
+function onRoute(name) {
+  const n = location.hash.replace(/^#\/?/, "").split("/")[0];
+  return (routes[n] ? n : "playground") === name;
+}
 async function route() {
   const [name, arg] = location.hash.replace(/^#\/?/, "").split("/");
   const key = routes[name] ? name : "playground";
@@ -215,7 +221,7 @@ async function Playground() {
 }
 function renderPlayground() {
   const s = play;
-  mount(view, html`
+  onRoute("playground") && mount(view, html`
     <div class="page-head">
       <div>
         <h1>Check an answer against the policy in force on a date</h1>
@@ -396,7 +402,7 @@ function keyParam(v) {
 
 async function Timeline() {
   if (!tl.data) {
-    mount(view, html`<div class="loading"><div class="spinner"></div>Loading policy versions from Db2...</div>`);
+    onRoute("timeline") && mount(view, html`<div class="loading"><div class="spinner"></div>Loading policy versions from Db2...</div>`);
     tl.data = (await api("/api/policy/timeline")).body;
   }
   renderTimeline();
@@ -426,7 +432,7 @@ function renderTimeline() {
   }
   const groups = AREAS[tl.doc].concat(["other"]).map((a) => ({ area: a, items: shown.filter((c) => c.area === a) })).filter((g) => g.items.length);
   const markerLeft = pos(asOfMs).toFixed(3);
-  mount(view, html`<div id="tl-root">
+  onRoute("timeline") && mount(view, html`<div id="tl-root">
     <div class="page-head">
       <div><h1>Policy timeline</h1>
         <p>Every clause version on its business-time period, straight from the bitemporal <code>POLICY_CLAUSE</code> table. Key numbers come out of <code>RULE_JSON</code> through the Db2 view <code>V_POLICY_TIMELINE</code> (<code>JSON_TABLE</code>). Click a version for its text and its system-time history.</p></div>
@@ -552,7 +558,7 @@ function diffView(d) {
 const led = { decision: null };
 async function Ledger(id) {
   if (id) return LedgerEntry(Number(id));
-  mount(view, html`
+  onRoute("ledger") && mount(view, html`
     <div class="page-head">
       <div><h1>Audit ledger</h1>
         <p>Every decision, appended by the SQL PL procedure <code>APPEND_LEDGER</code>. Rows are hash-chained with SHA-256 computed inside Db2, and triggers reject any UPDATE or DELETE, even by the owner. The app's own Db2 user can only read and call the procedures.</p></div>
@@ -634,9 +640,9 @@ function replayCol(title, when, row, changed) {
       : html`<p class="muted">No row.</p>`}</div>`;
 }
 async function LedgerEntry(id) {
-  mount(view, html`<div class="loading"><div class="spinner"></div>Loading entry #${id} and replaying it in Db2...</div>`);
+  onRoute("ledger") && mount(view, html`<div class="loading"><div class="spinner"></div>Loading entry #${id} and replaying it in Db2...</div>`);
   const [{ body: e }, { body: rp }] = await Promise.all([api(`/api/ledger/${id}`), api(`/api/ledger/${id}/replay`)]);
-  mount(view, html`
+  onRoute("ledger") && mount(view, html`
     <div class="page-head">
       <div><a href="#/ledger">← Ledger</a><h1>Ledger entry #${e.ledger_id}</h1>
         <p>Recorded ${fmtTs(e.created_at)} for a customer date of ${fmtDate(e.as_of_date)} via ${e.channel}. Model <code>${e.model_info}</code>, prompt version <code>${e.prompt_version}</code>, ${(e.latency_ms / 1000).toFixed(1)} s.</p></div>
@@ -708,7 +714,7 @@ const waited = (m) => (m < 60 ? `${m} min` : m < 2880 ? `${Math.round(m / 60)} h
 async function Inbox(id) {
   const target = id ? Number(id) : null;
   if (target !== inb.id) Object.assign(inb, { id: target, reply: "", note: "", doc: null, check: null, sent: null });
-  mount(view, html`
+  onRoute("inbox") && mount(view, html`
     <div class="page-head"><div><h1>Specialist inbox</h1>
       <p>Answers AsOf held back wait here for a person. The specialist reads every claim and the clause version it was checked against, writes the reply, and AsOf checks it against the policy in force on the customer's date before it goes out. The SQL PL procedure <code>RESOLVE_ESCALATION</code> appends it to the hash-chained ledger as a <code>REVIEWED</code> decision linked to the held one. Db2 refuses a reply that contradicts the policy, and keeps the specialist's note when no clause covers it.</p></div></div>
     <div class="grid-2 inbox">
@@ -853,7 +859,7 @@ async function Ask() {
     try { ask.attacks = (await api("/api/ledger/attacks")).body; } catch { ask.attacks = []; }
   }
   const scope = ask.scopes.find((s) => s.key === ask.scope) || ask.scopes[0];
-  mount(view, html`
+  onRoute("ask") && mount(view, html`
     <div class="page-head"><div><h1>Ask the ledger</h1>
       <p>Plain-English questions for auditors, answered by a LangChain SQL chain over SQLAlchemy (<code>ibm_db_sa</code>). It runs as a read-only Db2 analyst, which can only SELECT six audit views: <code>asofread</code> for every domain, or one domain's own analyst. SQLGlot checks every generated query before it runs, Db2's column masks hide the customer's question and our reply, and Db2's row permissions return a domain analyst only that domain's decisions.</p></div></div>
     <div class="grid-2">
@@ -952,7 +958,7 @@ async function Impact() {
     imp.form = { clause: imp.clause, from: "", to: "", version: nextVersion(c), text: last.text, rule: JSON.stringify(last.rule), note: "" };
   }
   const f = imp.form;
-  mount(view, html`
+  onRoute("impact") && mount(view, html`
     <div class="page-head"><div><h1>Change impact</h1>
       <p>Preview or apply a policy change as the editor user <code>asofedit</code>. <code>APPLY_POLICY_CHANGE</code> runs <code>UPDATE ... FOR PORTION OF BUSINESS_TIME</code>, so Db2 splits the version and keeps the replaced row in history. <code>CHANGE_IMPACT</code> then finds every released answer and help-centre answer that relied on the clause, and tells stale from historically valid.</p></div></div>
     <div class="grid-2">
@@ -1303,7 +1309,7 @@ async function Intake(arg) {
   renderIntake();
 }
 function renderIntake() {
-  mount(view, html`
+  onRoute("intake") && mount(view, html`
     <div class="page-head"><div><h1>Policy intake</h1>
       <p>Upload a policy document as the editor. The model proposes clause versions; code checks every one against the document: the clause text must appear word for word, the effective date must be quoted, and every rule value must be stated in the text. You choose what goes into force. The file is stored in Db2 with the SHA-256 Db2 computed, and every version approved from it names the draft it came from.</p></div></div>
     <div class="tl-layout itk-layout">
@@ -1484,7 +1490,7 @@ function btReport(rep) {
 }
 function renderBacktest() {
   const demo = health.demo;
-  mount(view, html`
+  onRoute("backtest") && mount(view, html`
     <div class="page-head"><div><h1>Backtest</h1>
       <p>Upload past conversations as a CSV. Every row goes through the full check for its customer's date and is recorded in the ledger on channel <code>backtest</code>, kept out of the live numbers. Db2 derives each row's outcome from its ledger decision and reads the money at stake out of the cited clause version's <code>RULE_JSON</code>.</p></div></div>
     <div class="grid-2 bt-layout">
@@ -1544,12 +1550,12 @@ function wireBacktest() {
 
 // ---------- Analytics ----------
 async function Analytics() {
-  mount(view, html`<div class="loading"><div class="spinner"></div>Querying Db2 views...</div>`);
+  onRoute("analytics") && mount(view, html`<div class="loading"><div class="spinner"></div>Querying Db2 views...</div>`);
   const a = (await api("/api/analytics")).body;
   const total = a.decisions.reduce((s, d) => s + d.count, 0);
   const maxArea = Math.max(1, ...a.areas.map((x) => x.claims));
   const pct = (v, t) => (t ? (100 * v) / t : 0).toFixed(2);
-  mount(view, html`
+  onRoute("analytics") && mount(view, html`
     <div class="page-head"><div><h1>Analytics</h1><p>Straight from Db2: the views <code>V_DECISION_STATS</code>, <code>V_CLAIM_OUTCOMES_BY_AREA</code> and <code>V_RULE_OVERRIDES</code>, and a count over <code>CLAIM_CITATION</code> for the rule check.</p></div></div>
     ${total ? "" : html`<div class="empty"><h3>No decisions yet</h3><p>Check a few answers in the <a href="#/playground">Playground</a>.</p></div>`}
     <div class="cols-2">
