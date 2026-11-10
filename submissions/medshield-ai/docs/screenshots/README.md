@@ -1,0 +1,1 @@
+Place genuine screenshots here after running the application. Suggested captures: (1) dashboard before analysis, (2) HIGH interaction result for warfarin + ibuprofen, (3) saved reports and `/api/health` showing IBM Db2. Do not fabricate screenshots or claim Db2 is connected unless verified.
