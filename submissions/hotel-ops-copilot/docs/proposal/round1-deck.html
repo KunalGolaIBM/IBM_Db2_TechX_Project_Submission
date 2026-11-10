@@ -260,7 +260,7 @@
         <li><b>Quota-aware fallback chain</b> switches models mid-run, visible in the trace</li>
         <li><b>Memory in Db2</b>: earlier turns are replayed from <code>AGENT_RUNS</code></li>
         <li><b>Untrusted data</b>: review text is never treated as instructions</li>
-        <li><b>Efficient</b>: batched tool calls, 3.4 LLM calls per answer on average</li>
+        <li><b>Efficient</b>: batched tool calls, 3.9 LLM calls per answer on average (30-question evaluation)</li>
       </ul>
     </div>
   </div>
@@ -518,20 +518,21 @@ cp .env.example .env
 docker compose up -d
 <span class="c"># open http://localhost:8501</span>
 
-<span class="c"># or step by step</span>
-bash scripts/quickstart.sh
-pytest -q tests/          <span class="c"># 107 tests</span>
-python src/redteam.py     <span class="c"># 24/24</span>
-python src/evaluate.py    <span class="c"># 30/30</span></pre>
+<span class="c"># prove every claim, no API key</span>
+python src/verify.py          <span class="c"># 26/26</span>
+python src/fuzz_guardrails.py <span class="c"># 10k/10k</span>
+python src/benchmark_scale.py <span class="c"># 1M rows</span>
+pytest -q tests/              <span class="c"># 107 tests</span>
+python src/evaluate.py        <span class="c"># 30/30</span></pre>
       <p class="small muted" style="margin-top:8px">It works without an API key too: approvals, dry run, time travel, radar, red team and replay of recorded runs.</p></div>
     <div class="card"><h3>Plan and roadmap</h3>
       <ul><li>✅ Schema, temporal tables, vectors, SQL PL guardrails, RCAC</li><li>✅ LangGraph agents, tools, memory, fallback</li>
-          <li>✅ Dry run, radar, change feed, red team, evaluation, earned autonomy</li><li>✅ Docker, docs, screenshots</li>
+          <li>✅ Dry run, radar, change feed, red team, evaluation, earned autonomy</li><li>✅ Docker, docs, screenshots, demo video</li><li>✅ 26 live proofs, guardrail fuzzing, 1M-row benchmark, 5 measured Db2 findings</li>
           <li>➜ Next: PMS and channel-manager connectors, forecasting with Db2 ML / watsonx.ai, Granite as the default model, multi-property row permissions</li></ul></div>
   </div>
   <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;background:var(--ink);color:#fff;border-radius:12px;padding:16px 22px">
     <div><div style="font-size:19pt;font-weight:700">Hotel Ops Copilot</div><div style="color:#c6c6c6;font-size:12pt">AI that proposes. Db2 that decides, dry-runs and can undo.</div></div>
-    <div style="text-align:right;font-size:11.5pt;color:#c6c6c6">Clark Fernandes · solo · GitHub <b style="color:#fff">clarkf19</b><br>IBM Db2 12.1 · LangGraph · Gemini</div>
+    <div style="text-align:right;font-size:11.5pt;color:#c6c6c6">Clark Fernandes · solo · GitHub <b style="color:#fff">clarkf19</b><br>Demo: <b style="color:#fff">youtube.com/watch?v=Y4Pjs3ybs2k</b></div>
   </div>
   <div class="foot"><span>Hotel Ops Copilot · Db2Hack 2026</span><span>13</span></div>
 </section>
