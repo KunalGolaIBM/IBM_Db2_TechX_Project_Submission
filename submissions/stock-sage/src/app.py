@@ -53,6 +53,19 @@ st.markdown("""
         color: #172B4D;
     }
 
+    /* Eliminate Streamlit default top whitespace */
+    .block-container {
+        padding-top: 1.1rem !important;
+        padding-bottom: 2.5rem !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+        max-width: 100% !important;
+    }
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+        height: 2rem !important;
+    }
+
     /* Sidebar Customization */
     [data-testid="stSidebar"] {
         background-color: #FFFFFF;
@@ -62,19 +75,63 @@ st.markdown("""
         color: #172B4D !important;
     }
 
-    /* Compact, Balanced Header */
-    .main-title {
-        font-size: 1.65rem;
+    /* Sleek Top Navbar */
+    .top-navbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #FFFFFF;
+        border: 1.5px solid #172B4D;
+        border-radius: 8px;
+        padding: 8px 16px;
+        margin-bottom: 14px;
+        box-shadow: 0 1px 3px rgba(23, 43, 77, 0.05);
+    }
+    .top-navbar .brand-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .top-navbar .brand-title {
+        font-size: 1.35rem;
         font-weight: 700;
         color: #172B4D;
         letter-spacing: -0.02em;
-        margin-bottom: 0.15rem;
     }
-    .sub-title {
-        font-size: 0.95rem;
+    .top-navbar .brand-badge {
+        background-color: #E6F4EA;
+        color: #168B72;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 4px;
+        border: 1px solid #168B72;
+    }
+    .top-navbar .brand-desc {
         color: #64748B;
-        margin-bottom: 1.1rem;
+        font-size: 0.84rem;
         font-weight: 400;
+    }
+    .top-navbar .status-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .top-navbar .status-pill {
+        font-size: 0.76rem;
+        font-weight: 600;
+        padding: 3px 9px;
+        border-radius: 12px;
+    }
+    .top-navbar .status-pill.db2 {
+        color: #168B72;
+        background-color: #E6F4EA;
+        border: 1px solid #168B72;
+    }
+    .top-navbar .status-pill.ai {
+        color: #172B4D;
+        background-color: #F1F5F9;
+        border: 1px solid #CBD5E1;
     }
 
     /* KPI Metric Cards */
@@ -110,25 +167,32 @@ st.markdown("""
 
     /* Navigation Tabs */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 6px;
+        gap: 8px;
         background-color: transparent;
-        border-bottom: 1px solid #E2E8F0;
-        padding-bottom: 2px;
+        border-bottom: 2px solid #E2E8F0;
+        padding-bottom: 4px;
+        margin-bottom: 14px;
     }
     .stTabs [data-baseweb="tab"] {
         height: 38px;
-        background-color: transparent;
+        background-color: #FFFFFF;
+        border: 1px solid #E2E8F0;
         border-radius: 6px 6px 0 0;
         color: #64748B;
         font-size: 0.88rem;
         font-weight: 600;
-        padding: 0 14px;
-        border: none;
+        padding: 0 16px;
+        transition: all 0.15s ease;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #172B4D;
+        border-color: #CBD5E1;
     }
     .stTabs [aria-selected="true"] {
         background-color: #FFFFFF !important;
         color: #172B4D !important;
-        border-bottom: 2px solid #168B72 !important;
+        border: 1.5px solid #172B4D !important;
+        border-bottom: 3px solid #168B72 !important;
     }
 
     /* Status Badges */
@@ -210,29 +274,22 @@ with st.sidebar:
     st.markdown("---")
     st.caption("IBM Db2 TechX Summit 2026 • Submission `stock-sage`")
 
-# Main Header
-st.markdown('<div class="main-title">🏪 StockSage — Inventory Intelligence Assistant</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">Agentic AI & Deterministic Inventory Decision System for Small Grocery and Dairy Retailers • Powered by <b>IBM Db2</b></div>', unsafe_allow_html=True)
+# Sleek Top Navbar
+st.markdown("""
+<div class="top-navbar">
+    <div class="brand-group">
+        <span class="brand-title">🏪 StockSage</span>
+        <span class="brand-badge">IBM Db2 12.1</span>
+        <span class="brand-desc">Agentic AI & Deterministic Inventory Decision System for Grocery & Dairy</span>
+    </div>
+    <div class="status-group">
+        <span class="status-pill db2">🟢 IBM Db2 Connected</span>
+        <span class="status-pill ai">✨ Gemini AI Active</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-# Top KPI Metric Cards
-summary = get_inventory_health_summary(db_manager)
-kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
-
-with kpi1:
-    st.metric("Total Products", f"{summary['total_products']} items")
-with kpi2:
-    st.metric("Total Stock On Hand", f"{summary['total_units_in_stock']} units")
-with kpi3:
-    st.metric("Inventory Value", f"₹{summary['total_inventory_valuation']:,.2f}")
-with kpi4:
-    low_color = "normal" if summary["low_stock_count"] == 0 else "inverse"
-    st.metric("Low Stock Alerts", f"{summary['low_stock_count']} items", delta=-summary["low_stock_count"] if summary["low_stock_count"] > 0 else None, delta_color="inverse")
-with kpi5:
-    st.metric("Expiring ≤ 3 Days", f"{summary['critical_expiry_count']} batches", delta=-summary["critical_expiry_count"] if summary["critical_expiry_count"] > 0 else None, delta_color="inverse")
-
-st.divider()
-
-# Tabs for Main Application Flow
+# Navigation Tabs placed right at the top
 tab_chat, tab_alerts, tab_expiry, tab_reorder, tab_analytics = st.tabs([
     "💬 AI Assistant",
     "🚨 Low Stock & Stockout Risk",
@@ -245,6 +302,23 @@ tab_chat, tab_alerts, tab_expiry, tab_reorder, tab_analytics = st.tabs([
 # TAB 1: Conversational AI Assistant (LangGraph + Gemini)
 # -------------------------------------------------------------
 with tab_chat:
+    # Store Health KPI Metric Cards
+    summary = get_inventory_health_summary(db_manager)
+    kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
+
+    with kpi1:
+        st.metric("Total Products", f"{summary['total_products']} items")
+    with kpi2:
+        st.metric("Total Stock On Hand", f"{summary['total_units_in_stock']} units")
+    with kpi3:
+        st.metric("Inventory Value", f"₹{summary['total_inventory_valuation']:,.2f}")
+    with kpi4:
+        low_color = "normal" if summary["low_stock_count"] == 0 else "inverse"
+        st.metric("Low Stock Alerts", f"{summary['low_stock_count']} items", delta=-summary["low_stock_count"] if summary["low_stock_count"] > 0 else None, delta_color="inverse")
+    with kpi5:
+        st.metric("Expiring ≤ 3 Days", f"{summary['critical_expiry_count']} batches", delta=-summary["critical_expiry_count"] if summary["critical_expiry_count"] > 0 else None, delta_color="inverse")
+
+    st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
     st.markdown("### 💬 Ask StockSage Anything About Your Store")
     st.caption("Ask natural questions about stockouts, expiry risk, reorders, or sales trends. Powered by a single LangGraph state-graph workflow with deterministic IBM Db2 tools.")
 
