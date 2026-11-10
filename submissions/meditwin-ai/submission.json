@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "MediTwin AI",
+    "slug": "meditwin-ai",
+    "short_description": "Traceable Clinical Record Intelligence Platform converting scattered medical reports into structured, searchable, and chronological patient records backed by IBM Db2.",
+    "category": "AI / RAG / Data Engineering / Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/vipulmishra001/IBM_Db2_TechX_Project"
+  },
+  "team": {
+    "name": "MediTwin Team",
+    "members": [
+      {
+        "name": "Vipul Mishra",
+        "github": "vipulmishra001",
+        "email": "vipul2006mishra@gmail.com",
+        "role": "Solo Builder / Full-Stack AI & Database Engineer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker / Native Windows)",
+    "connector": "ibm_db",
+    "features_used": [
+      "Relational Tables (PATIENT, DOCUMENT, OBSERVATION, TIMELINE_EVENT, AUDIT_LOG)",
+      "Prepared Statements with Variable Parameter Markers",
+      "Composite Foreign Key Data Isolation (DOCUMENT_ID, PATIENT_ID)",
+      "ACID Transaction Commit and Rollback Contexts",
+      "Append-Only Audit Logging"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python"],
+    "frameworks": ["Streamlit", "Plotly", "LangChain", "LangGraph", "Pydantic v2", "PyMuPDF", "Pytest"],
+    "ai_models": ["Google Gemini 2.0 Flash"]
+  },
+  "verification": {
+    "test_command": "python -m pytest -v",
+    "total_tests": 80,
+    "pass_rate": "100%",
+    "entrypoint": "app.py"
+  }
+}
