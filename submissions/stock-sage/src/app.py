@@ -333,11 +333,29 @@ def ensure_db_ready():
 
 ensure_db_ready()
 
+# Shop Profile & Simulated Auth State
+if "current_shop" not in st.session_state:
+    st.session_state.current_shop = {
+        "store_name": "Shree Ganesh Kirana & Dairy",
+        "owner_name": "Mahima",
+        "phone": "+91-98765-43210",
+        "city": "Bengaluru",
+        "category": "Kirana & Dairy",
+    }
+
+if "show_registration" not in st.session_state:
+    st.session_state.show_registration = False
+
 # Sidebar
 with st.sidebar:
     st.image("https://img.icons8.com/fluency/96/shop.png", width=64)
-    st.markdown("### **StockSage Assistant**")
-    st.caption("AI Inventory Co-pilot for Grocery & Dairy")
+    shop = st.session_state.current_shop
+    st.markdown(f"### **{shop['store_name']}**")
+    st.caption(f"👤 {shop['owner_name']} • 📍 {shop['city']}")
+
+    if st.button("📝 Register / Switch Store", key="btn_toggle_reg", use_container_width=True):
+        st.session_state.show_registration = not st.session_state.show_registration
+        st.rerun()
 
     st.divider()
 
@@ -365,12 +383,13 @@ with st.sidebar:
     st.caption("IBM Db2 TechX Summit 2026 • Submission `stock-sage`")
 
 # Sleek Top Navbar
-st.markdown("""
+shop = st.session_state.current_shop
+st.markdown(f"""
 <div class="top-navbar">
     <div class="brand-group">
-        <span class="brand-title">🏪 StockSage</span>
+        <span class="brand-title">🏪 {shop['store_name']}</span>
         <span class="brand-badge">IBM Db2 12.1</span>
-        <span class="brand-desc">Agentic AI & Deterministic Inventory Decision System for Grocery & Dairy</span>
+        <span class="brand-desc">Owner: <b>{shop['owner_name']}</b> • {shop['city']} • {shop['category']}</span>
     </div>
     <div class="status-group">
         <span class="status-pill db2">🟢 IBM Db2 Connected</span>
@@ -378,6 +397,62 @@ st.markdown("""
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+# Shop Registration / Onboarding View (Simulated Auth & Onboarding Flow)
+if st.session_state.show_registration:
+    st.markdown("""
+    <div style="background: #FFFFFF; border: 1.5px solid #168B72; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+        <h2 style="color: #172B4D; margin: 0 0 6px 0; font-size: 1.45rem;">🏪 Hi! Let's get your store set up on StockSage</h2>
+        <p style="color: #64748B; margin: 0; font-size: 0.92rem;">Follow our 3-step setup to connect your grocery or dairy store with IBM Db2 and AI inventory intelligence.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        st.markdown("#### 1️⃣ Store & Owner Details")
+        st.caption("Set your store name, contact number, and location.")
+        new_store_name = st.text_input("Store Name", value=st.session_state.current_shop["store_name"], key="reg_store")
+        new_owner_name = st.text_input("Owner Name", value=st.session_state.current_shop["owner_name"], key="reg_owner")
+        new_city = st.text_input("City / Locality", value=st.session_state.current_shop["city"], key="reg_city")
+        new_phone = st.text_input("WhatsApp Number", value=st.session_state.current_shop["phone"], key="reg_phone")
+
+    with c2:
+        st.markdown("#### 2️⃣ Select Product Catalog")
+        st.caption("Select pre-built Indian FMCG catalogs to import into Db2.")
+        cat_dairy = st.checkbox("🥛 Fresh Dairy Pack (Milk, Curd, Paneer)", value=True, key="reg_cat_dairy")
+        cat_bakery = st.checkbox("🍞 Daily Bakery (White, Brown Bread)", value=True, key="reg_cat_bakery")
+        cat_staples = st.checkbox("🌾 Grains & Staples (Atta, Rice, Dal)", value=True, key="reg_cat_staples")
+        cat_bev = st.checkbox("🧃 Cold Beverages & Tea", value=True, key="reg_cat_bev")
+        store_type = st.selectbox("Store Format", ["Kirana & Dairy", "Superette", "Dairy Parlour", "Organic Grocery"], key="reg_type")
+
+    with c3:
+        st.markdown("#### 3️⃣ Connect Suppliers")
+        st.caption("Set fulfillment partners for 1-click WhatsApp reordering.")
+        supp_name = st.selectbox("Primary Dairy Supplier", ["Anand Regional Dairy Co-op", "Mother Dairy Distribution", "Amul Dairy Depot"], key="reg_supp")
+        lead_time = st.slider("Supplier Lead Time (Days)", min_value=1, max_value=5, value=1, key="reg_lead")
+        st.caption("Auto-calculates safety stock buffer and reorder quantities.")
+
+    col_btn1, col_btn2 = st.columns([2, 1])
+    with col_btn1:
+        if st.button("🚀 Complete Registration & Launch Store Dashboard", type="primary", use_container_width=True):
+            st.session_state.current_shop = {
+                "store_name": new_store_name,
+                "owner_name": new_owner_name,
+                "phone": new_phone,
+                "city": new_city,
+                "category": store_type,
+            }
+            st.session_state.show_registration = False
+            st.toast(f"🎉 Welcome {new_owner_name}! {new_store_name} is registered on IBM Db2.", icon="✅")
+            st.rerun()
+
+    with col_btn2:
+        if st.button("↩️ Back to Existing Store", use_container_width=True):
+            st.session_state.show_registration = False
+            st.rerun()
+
+    st.markdown("---")
 
 # Navigation Tabs placed right at the top
 tab_chat, tab_alerts, tab_expiry, tab_reorder, tab_analytics = st.tabs([
@@ -435,7 +510,7 @@ with tab_chat:
     # Session state chat messages
     if "messages" not in st.session_state:
         st.session_state.messages = [
-            {"role": "assistant", "content": "👋 Namaste! I am **StockSage**, your AI store manager. How can I help you manage your grocery and dairy inventory today?"}
+            {"role": "assistant", "content": f"👋 Namaste {st.session_state.current_shop['owner_name']}! I am **StockSage**, your AI inventory co-pilot for **{st.session_state.current_shop['store_name']}**. How can I help you manage your grocery and dairy stock today?"}
         ]
 
     # Display chat history
@@ -641,6 +716,28 @@ with tab_reorder:
             hide_index=True,
             use_container_width=True,
         )
+
+        # Action: CSV Export
+        csv_data = r_df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="📥 Download Purchase Order CSV",
+            data=csv_data,
+            file_name=f"stock_sage_purchase_orders_{date.today().strftime('%Y%m%d')}.csv",
+            mime="text/csv",
+        )
+
+        st.markdown("---")
+        st.markdown("#### **Supplier Dispatch & WhatsApp Purchase Orders**")
+        st.caption("One-click direct dispatch to suppliers via WhatsApp with formatted order quantities and cost breakdown.")
+        grouped_orders = get_reorders_grouped_by_supplier(db_manager)
+
+        for supp_name, s_data in grouped_orders.items():
+            with st.expander(f"📦 Order for {supp_name} — {s_data['total_quantity']} units (₹{s_data['total_cost']:,.2f})", expanded=False):
+                wa_text = generate_whatsapp_order_text(supp_name, s_data, store_name=st.session_state.current_shop["store_name"])
+                st.text_area("Message Preview", value=wa_text, height=130, key=f"wa_txt_{supp_name}")
+                encoded_msg = urllib.parse.quote(wa_text)
+                wa_url = f"https://api.whatsapp.com/send?text={encoded_msg}"
+                st.link_button(f"📲 Send via WhatsApp to {supp_name}", wa_url)
 
 # -------------------------------------------------------------
 # TAB 5: Sales Analytics & Velocity

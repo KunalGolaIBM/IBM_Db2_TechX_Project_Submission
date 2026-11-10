@@ -377,3 +377,77 @@ def get_category_performance_df(db: Db2ConnectionManager = db_manager) -> pd.Dat
         df["category_revenue"] = df["category_revenue"].astype(float)
     return df
 
+
+def get_all_products_lookup(db: Db2ConnectionManager = db_manager) -> List[Dict[str, Any]]:
+    """Fetch product id, name, and category for quick-action store operations."""
+    return db.execute_query("SELECT product_id, product_name, category, unit_price FROM PRODUCTS ORDER BY category, product_name")
+
+
+def record_new_inventory_batch(
+    product_id: int,
+    quantity: int,
+    expiry_date: str,
+    db: Db2ConnectionManager = db_manager,
+) -> int:
+    """Insert a newly received stock batch into INVENTORY_BATCHES in IBM Db2."""
+    rows = db.execute_query("SELECT COALESCE(MAX(batch_id), 0) + 1 AS next_id FROM INVENTORY_BATCHES")
+    next_id = int(rows[0]["next_id"]) if rows and rows[0].get("next_id") else 1
+
+    received_date = date.today().isoformat()
+    db.execute_non_query(
+        "INSERT INTO INVENTORY_BATCHES (batch_id, product_id, available_quantity, expiry_date, received_date) VALUES (?, ?, ?, ?, ?)",
+        (next_id, product_id, quantity, expiry_date, received_date),
+    )
+    return next_id
+
+
+def record_new_sale(
+    product_id: int,
+    quantity_sold: int,
+    db: Db2ConnectionManager = db_manager,
+) -> Dict[str, Any]:
+    """Record a transactional sale and decrement batch inventory using FIFO."""
+    p_rows = db.execute_query("SELECT product_id, product_name, unit_price FROM PRODUCTS WHERE product_id = ?", (product_id,))
+    if not p_rows:
+        raise ValueError(f"Product {product_id} not found.")
+
+    prod = p_rows[0]
+    unit_price = float(prod["unit_price"])
+    revenue = round(unit_price * quantity_sold, 2)
+    today_str = date.today().isoformat()
+
+    s_rows = db.execute_query("SELECT COALESCE(MAX(sale_id), 0) + 1 AS next_id FROM SALES")
+    next_sale_id = int(s_rows[0]["next_id"]) if s_rows and s_rows[0].get("next_id") else 1
+
+    db.execute_non_query(
+        "INSERT INTO SALES (sale_id, product_id, quantity_sold, sale_date, revenue) VALUES (?, ?, ?, ?, ?)",
+        (next_sale_id, product_id, quantity_sold, today_str, revenue),
+    )
+
+    b_rows = db.execute_query(
+        "SELECT batch_id, available_quantity FROM INVENTORY_BATCHES WHERE product_id = ? AND available_quantity > 0 ORDER BY expiry_date ASC",
+        (product_id,),
+    )
+
+    remaining_to_deduct = quantity_sold
+    for b in b_rows:
+        if remaining_to_deduct <= 0:
+            break
+        b_id = b["batch_id"]
+        avail = int(b["available_quantity"])
+        if avail <= remaining_to_deduct:
+            db.execute_non_query("UPDATE INVENTORY_BATCHES SET available_quantity = 0 WHERE batch_id = ?", (b_id,))
+            remaining_to_deduct -= avail
+        else:
+            new_qty = avail - remaining_to_deduct
+            db.execute_non_query("UPDATE INVENTORY_BATCHES SET available_quantity = ? WHERE batch_id = ?", (new_qty, b_id))
+            remaining_to_deduct = 0
+
+    return {
+        "sale_id": next_sale_id,
+        "product_name": prod["product_name"],
+        "quantity_sold": quantity_sold,
+        "revenue": revenue,
+        "sale_date": today_str,
+    }
+
