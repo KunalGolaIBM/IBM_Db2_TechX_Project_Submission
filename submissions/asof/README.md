@@ -123,6 +123,19 @@ Db2 12.1.5 does the work, not just the storage ([everything, with the SQL and th
 - **Five least-privilege users:** runtime `asofapp` (reads and five procedures, no writes or DDL), reviewer `asofrev` (two procedures, no table), editor `asofedit`, analyst `asofread` (audit views, text masked) and dbt's `asofmart`.
 - **Drivers:** `ibm_db` with bound parameters only, `ibm_db_sa`, `langchain-db2`'s `DB2VS`, and SQLGlot's Db2 dialect gating the one model-written query ([Ask the ledger](docs/db2.md#ask-the-ledger-questions-for-auditors-as-a-read-only-db2-user)).
 
+### What building AsOf taught us about Db2
+
+Each finding was checked on Db2 12.1.5.0 Community Edition in IBM's stock image and links to its evidence ([measurements in full](docs/db2.md#storage-the-vector-index-and-access-plans)).
+
+- **The optimizer leaves the vector index out under `FOR BUSINESS_TIME AS OF`.** At 100,000 clause versions, `FETCH APPROX` under the period is planned as the same B-tree range scan as the exact query, while without the period it reads the vector index ([with the period](docs/explain/as_of_retrieval_approx_100k.txt), [without](docs/explain/nearest_any_date_approx_100k.txt)). An optimizer guideline can force the index, but a search list above 200 with any date predicate then fails with SQL0901N ([benchmark](docs/vector_benchmark.md)).
+- **With a vector index present, `FETCH FIRST` means approximate.** A plain `FETCH FIRST 10 ROWS ONLY` reads the index ([plan](docs/explain/nearest_any_date_default_100k.txt)), so the check says `FETCH EXACT`; and `FETCH APPROX FIRST ? ROWS` never uses the index, only a constant k does ([benchmark](docs/vector_benchmark.md#a-generic-table)). Exact search under the period took 84 ms at 100,000 versions, so AsOf keeps it ([decision](docs/design-decisions.md#db2-storage-queries-and-schema)).
+- **Three of the six distance metrics can be indexed.** `VECTOR_DISTANCE` takes COSINE, EUCLIDEAN, EUCLIDEAN_SQUARED, DOT, HAMMING and MANHATTAN; `CREATE VECTOR INDEX` takes only the first three for `FLOAT32` (SQL0104N for the rest) and only the Euclidean pair for `INT8` (SQL0628N for COSINE), and a 384-dimension `FLOAT32` index does not fit a 4K page (SQL0614N) ([metrics test](tests/test_db2_vector_metrics.py), [page test](tests/test_db2_findings.py)).
+- **`FOR PORTION OF BUSINESS_TIME` does the versioning.** One `UPDATE ... FOR PORTION OF BUSINESS_TIME` in `APPLY_POLICY_CHANGE` splits the version in force at the change date, and system versioning moves the replaced row to the history table, where replay still finds it ([test](tests/test_db2_policy_change.py)).
+- **`JSON_TABLE` takes only `'strict $'` as its row path.** `'lax $.claims[*]'` fails with SQL0104N ("Expected tokens may include: "strict $"") and the `ON ERROR` clause is mandatory, so `CLAIMS_FROM_JSON` reads each array position with a literal index ([test](tests/test_db2_findings.py)).
+- **`ibm_db` cannot return a NULL integer OUT parameter.** `callproc` fails with CLI0110E (SQLSTATE 22002), while a NULL `VARCHAR` comes back as `None`, so `VERIFY_CHAIN` reports 0 for "no bad row" and `ledger.verify_chain` maps 0 back to `None` ([test](tests/test_db2_findings.py), [procedure](src/asof/sql/03_procedures.sql)).
+- **Db2 can call the embedding model itself.** With `CREATE EXTERNAL MODEL` and `TO_EMBEDDING`, the engine sends the HTTP request, one per row of an `UPDATE`, and setup uses it only when Db2's vector matches the app's local one ([indb.py](src/asof/indb.py), [details](docs/db2.md#in-database-embeddings-db2-1215)).
+- **The VS Code extension's Create Db2 instance flow switches the global Docker context** to Docker Desktop's on macOS with Colima, and then waits for an app that is not there; reported with repro steps as [IBM/db2developerextension-about#25](https://github.com/IBM/db2developerextension-about/issues/25).
+
 ---
 
 ## AI / LLM Architecture (if applicable)
