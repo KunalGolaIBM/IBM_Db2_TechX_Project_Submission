@@ -318,15 +318,15 @@ kb.similarity_search_with_score(<span class="s">"upgrade a platinum guest"</span
   <table>
     <tr><th style="width:26%">Db2 capability</th><th style="width:30%">Where</th><th>What it does for the copilot</th></tr>
     <tr><td><span class="pill">VECTOR(384, FLOAT32)</span><span class="pill">VECTOR_DISTANCE</span></td><td><code>REVIEW_CHUNKS</code>, <code>POLICY_KB</code></td><td>Sentence-level semantic review search; a complaint radar in one query (anchor vectors <code>CROSS JOIN</code>, <code>ROW_NUMBER() OVER</code>, <code>GROUPING SETS</code>)</td></tr>
-    <tr><td><span class="pill t">System-period temporal</span></td><td><code>RATE_PLAN</code>, <code>RESERVATIONS</code>, <code>ROOMS</code></td><td>"What was the rate, who changed it?"; a trigger-free change feed; one-click rollback with <code>FOR SYSTEM_TIME AS OF</code></td></tr>
+    <tr><td><span class="pill t">System-period + bitemporal</span></td><td><code>RATE_PLAN</code>, <code>RESERVATIONS</code>, <code>ROOMS</code>, <code>PROMOTIONS</code></td><td>"Who changed the rate?"; a trigger-free change feed; one-click rollback (<code>FOR SYSTEM_TIME AS OF</code>); <code>BUSINESS_TIME</code> promotions answer "what was a guest quoted before the correction?"</td></tr>
     <tr><td><span class="pill p">SQL PL procedures</span></td><td><code>SP_PROPOSE / APPLY / REJECT / ROLLBACK</code></td><td>Price band, 35% cap, no past dates, real upgrades only, free room for the whole stay, consent, duplicates, and rollback integrity</td></tr>
     <tr><td><span class="pill p">Transactional dry run</span></td><td>dedicated unit of work + <code>ROLLBACK</code></td><td>Runs the real apply procedure, diffs the impact (oversold nights, guests to move, revenue at stake), then persists nothing</td></tr>
     <tr><td><span class="pill r">RCAC masks + row permission</span></td><td><code>GUESTS</code></td><td>E-mail and phone masked for the AI; guests who withdrew consent are invisible to it (DPDP Act 2023)</td></tr>
     <tr><td><span class="pill r">Roles &amp; GRANT / REVOKE</span></td><td><code>HOTELOPS_AGENT</code></td><td>The AI can read and propose, never write. <code>CREATETAB</code> and <code>IMPLICIT_SCHEMA</code> are revoked from PUBLIC</td></tr>
     <tr><td><span class="pill">EXPLAIN PLAN</span></td><td><code>SYSTOOLS.EXPLAIN_*</code></td><td>The optimizer costs every AI-written query before it runs; runaway plans are refused (legitimate queries cost 78–2,089 timerons)</td></tr>
     <tr><td><span class="pill g">JSON_EXISTS / JSON_VALUE</span></td><td><code>AGENT_ACTIONS</code></td><td>Validated structured proposals (check constraint) parsed inside the procedures</td></tr>
-    <tr><td><span class="pill t">Views, COMMENT ON, SYSCAT, LISTAGG</span></td><td><code>V_DAILY_KPIS</code>, catalog</td><td>A semantic layer for text-to-SQL; exact column lists are fed to the agents, so they don't guess</td></tr>
-    <tr><td><span class="pill g">Audit and memory tables</span></td><td><code>AGENT_RUNS</code>, <code>AGENT_STEPS</code></td><td>Every run, tool call, model and LLM-call count stored; conversation memory; replay without an LLM</td></tr>
+    <tr><td><span class="pill t">Views, MQT, COMMENT ON, SYSCAT</span></td><td><code>V_DAILY_KPIS</code>, <code>MQT_DAILY_KPIS</code></td><td>A semantic layer for text-to-SQL; exact column lists are fed to the agents, so they don't guess</td></tr>
+    <tr><td><span class="pill g">Tamper-evident audit</span></td><td><code>AGENT_STEPS</code> trigger + <code>HASH</code></td><td>Every tool call SHA-256 hash-chained by Db2 and anchored outside it: an edited step, or even a fully rebuilt ledger, is caught; replay without an LLM</td></tr>
   </table>
   <div class="foot"><span>Hotel Ops Copilot · Db2Hack 2026</span><span>8</span></div>
 </section>
@@ -458,8 +458,8 @@ kb.similarity_search_with_score(<span class="s">"upgrade a platinum guest"</span
   <div class="grid g4" style="margin-bottom:16px">
     <div class="card b"><div class="num">30/30</div><div class="numl">accuracy evaluation: KPIs, time travel, vector search, change feed and safety, with ground truth computed in Db2</div></div>
     <div class="card b"><div class="num">24/24</div><div class="numl">red-team attacks blocked; the database is proven unchanged afterwards</div></div>
-    <div class="card b"><div class="num">106</div><div class="numl">automated tests, unit plus live Db2, none needing an LLM key</div></div>
-    <div class="card b"><div class="num">24 s</div><div class="numl">median answer time; 3.4 LLM calls per question; 8–10 per full brief</div></div>
+    <div class="card b"><div class="num">10,000</div><div class="numl">random proposals fuzzed into the Db2 guardrails: every decision matches an independent oracle</div></div>
+    <div class="card b"><div class="num">26/26</div><div class="numl">live Db2 checks of every claim (<code>verify.py</code> / Proofs tab); 106 tests, 87% coverage</div></div>
   </div>
   <div class="grid g3" style="gap:16px">
     <div><div class="shot"><img src="../screenshots/02-dry-run-rate-change.png" alt="Dry run rate change"></div>
@@ -490,9 +490,9 @@ kb.similarity_search_with_score(<span class="s">"upgrade a platinum guest"</span
   </div>
   <div class="grid g2">
     <div class="card b"><h3>Use case: Monday, 07:30, Saltwater Bay (Goa)</h3>
-      <p style="font-size:11.3pt;margin:0">The duty manager clicks <b>Morning brief</b>. In under a minute the copilot reports 62.5% occupancy, flags AC faults in rooms
+      <p style="font-size:11.3pt;margin:0">The duty manager clicks <b>Morning brief</b>. Within minutes the copilot reports tonight's occupancy, flags AC faults in rooms
         307/312 and no hot water in 512, spots zero suite pick-up for 20–23 Nov and the sold-out conference nights, and queues 6 actions: two repairs,
-        an anniversary upgrade for a Platinum guest, and three rate changes. The dry run catches one action that would oversell Deluxe. The manager approves the rest,
+        an anniversary upgrade for a Platinum guest, and three rate changes. Each action can be dry-run first (in one recorded run this caught an action that would oversell Deluxe). The manager approves,
         and can undo any of them later.</p></div>
     <div class="card"><h3>Who can use it and how it scales</h3>
       <ul><li><b>Independent and mid-size hotels</b> that lack revenue-management tools</li>
