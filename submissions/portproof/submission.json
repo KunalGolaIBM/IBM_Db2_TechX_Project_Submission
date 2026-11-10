@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "PortProof — Verified SQL Migration to Db2",
+    "slug": "portproof",
+    "short_description": "Translates PostgreSQL and MySQL SQL to Db2 and makes Db2 itself prove the result: first that it compiles (server-side PREPARE), then that it returns the same answers (differential execution over six adversarial datasets). IBM's own translator raised no error on 32 statements; Db2 rejected 13 of them, and 2 more compiled while silently changing the answer.",
+    "category": "AI / Data Engineering",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/ZENODIUM/IBM_Db2_TechX_Project_Submission/tree/submission/portproof/submissions/portproof"
+  },
+  "team": {
+    "name": "ZENODIUM",
+    "members": [
+      {
+        "name": "Vishnu",
+        "github": "ZENODIUM",
+        "email": "vishnuzeno@gmail.com",
+        "role": "Solo — Db2 schema and SQL PL, compile oracle, differential prover, LangGraph repair loop, Streamlit UI, test suite"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1.5.0 (Docker)",
+    "connector": "ibm_db / ibm_db_dbi / langchain-db2 (DB2VS)",
+    "features_used": [
+      "PREPARE as a compile oracle (DeferredPrepare=0, server-side SQLCODE)",
+      "VECTOR(384, FLOAT32) columns and VECTOR_DISTANCE(..., COSINE)",
+      "Hybrid vector + relational recall in a single statement",
+      "JSON_VALUE(... RETURNING ...) typed extraction",
+      "SQL PL stored procedures with cursor and CONTINUE HANDLER",
+      "HASH(..., 2) SHA-256 certificates computed inside the engine",
+      "System-versioned temporal tables and FOR SYSTEM_TIME AS OF",
+      "MQT with REFRESH IMMEDIATE MAINTAINED BY SYSTEM",
+      "Expression-based index on UPPER(CASE_NAME)",
+      "COLLATION_KEY_BIT('UCA500R1_S1') locale-aware comparison",
+      "CHECK constraints, UNIQUE constraints, FOREIGN KEY ON DELETE CASCADE",
+      "WLM service class, workload and SQLROWSRETURNED / ESTIMATEDSQLCOST thresholds",
+      "Two-identity least-privilege split enforced by GRANT",
+      "ADMIN_GET_TAB_COMPRESS_INFO and SYSCAT.TABLES compression measurement",
+      "ORGANIZE BY COLUMN (BLU) availability check",
+      "MON_GET_PKG_CACHE_STMT workload hotspots",
+      "SYSCAT catalog introspection"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "SQL", "SQL PL"],
+    "frameworks": ["LangChain", "LangGraph", "langchain-db2", "Streamlit", "sqlglot + db2-sqlglot-dialect", "DuckDB", "pytest"],
+    "ai_models": ["sentence-transformers/all-MiniLM-L6-v2 (local, 384-dim embeddings)", "Deterministic rule engine (default, no API key)", "Any OpenAI-compatible endpoint (optional)"]
+  }
+}
