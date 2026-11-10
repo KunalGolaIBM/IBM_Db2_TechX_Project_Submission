@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "LOTLINE — Agentic Recall Intelligence & Closed-Loop Recall Execution",
+    "slug": "lotline",
+    "short_description": "An evidence-grounded product-recall investigation and execution platform that traces raw material lots through WIP and finished goods, quantifies inventory and shipment exposure, coordinates human-reviewed actions, and maintains an auditable IBM Db2 record.",
+    "category": "AI / RAG / Data Engineering / Analytics",
+    "demo_url": "",
+    "video_url": "https://youtu.be/dummy-lotline-demo",
+    "repo_url": "https://github.com/ankush-dev-eng/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "Ankush Shahu",
+    "members": [
+      {
+        "name": "Ankush Shahu",
+        "github": "ankush-dev-eng",
+        "email": "ankushdesktop143@gmail.com",
+        "role": "Solo Developer / Lead Engineer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition v12.1.5.0 (Podman Container on Linux x86_64)",
+    "connector": "ibm_db 3.3.0",
+    "features_used": [
+      "Relational Tables (LOTLINE_APP schema)",
+      "Recursive SQL CTE Lineage Tracing",
+      "Parameterized Prepared Statements",
+      "ACID Multi-Table Atomic Transactions",
+      "Append-Only Immutable Audit Log",
+      "Material Mass Reconciliation & Integrity Checks"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "TypeScript",
+      "SQL"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "React",
+      "LangGraph",
+      "Tailwind CSS",
+      "Vite",
+      "ReportLab"
+    ],
+    "ai_models": [
+      "Google Gemini 2.5 Flash",
+      "Deterministic Fallback Engine"
+    ]
+  }
+}
