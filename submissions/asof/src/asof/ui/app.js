@@ -142,7 +142,7 @@ async function status() {
       const bar = document.createElement("div");
       bar.id = "replay-mode";
       bar.className = "token-bar notice";
-      bar.textContent = "Replay mode: no language model is called. The built-in scenarios replay the model outputs recorded "
+      bar.textContent = body.public_demo_notice || "Replay mode: no language model is called. The built-in scenarios replay the model outputs recorded "
         + `from ${body.replay_model || "a hosted model"}; Db2 retrieval, the rule checks, the decision and the ledger run live. `
         + "Any other input is held for a specialist (fail closed). To check your own answers, add OPENROUTER_API_KEY "
         + "and set LLM_PROVIDER=openrouter in .env (or use Ollama), then restart.";

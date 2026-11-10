@@ -197,6 +197,7 @@ async function start() {
   try {
     const health = await call("/healthz");
     state.replay = Boolean(health.replay);
+    state.notice = health.public_demo_notice || null;
   } catch { /* the first question will report the problem */ }
   try {
     const res = await fetch("scenarios.json");
@@ -205,7 +206,7 @@ async function start() {
   if (!state.bookings.length) state.bookings = [{ ref: "AUR-7Q2K", route: "Boston to Lisbon", booked: "2026-03-10", questions: [] }];
   log(bubble("bot", h("p", { class: "text", text: "Hi, I'm the Aurelia Air assistant. Ask me about fares, bags, refunds or travel credits for your booking." })));
   if (state.replay) {
-    log(h("div", { class: "msg note" }, h("p", { text: "Replay mode: this server answers the suggested questions from recorded model outputs, while the Db2 checks and the audit record run live. Other questions need a model (OPENROUTER_API_KEY or Ollama)." })));
+    log(h("div", { class: "msg note" }, h("p", { text: state.notice || "Replay mode: this server answers the suggested questions from recorded model outputs, while the Db2 checks and the audit record run live. Other questions need a model (OPENROUTER_API_KEY or Ollama)." })));
   }
   choose(state.bookings[0], true);
 }

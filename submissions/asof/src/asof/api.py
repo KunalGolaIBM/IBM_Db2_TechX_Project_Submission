@@ -77,6 +77,9 @@ def required_role(method: str, path: str) -> str | None:
 COSTLY_GET_SUFFIXES = ("/evidence",)  # evidence packs run VERIFY_CHAIN too
 UI_DIR = PathlibPath(__file__).with_name("ui")
 LOCAL_CLIENTS = {"127.0.0.1", "::1"}
+# What the public demo's pages say in place of the replay-mode advice to add a model key.
+PUBLIC_DEMO_NOTICE = ("Public demo: the built-in scenarios replay recorded model outputs while Db2 runs live. "
+                      "To check your own answers, run AsOf locally with ./quickstart.sh.")
 NO_MODEL = ("No language model is configured: add OPENROUTER_API_KEY to .env, or set LLM_PROVIDER=ollama with Ollama "
             "running, or LLM_PROVIDER=replay to replay the built-in scenarios, then restart AsOf.")
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
@@ -492,7 +495,8 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
                 "replay": settings.llm_provider == "replay", "replay_model": replay_model(),
                 "anchoring": "on" if anchors is not None else "off", "db2_tls": settings.db2_ssl,
                 "auth": "users" if users_mode else ("token" if api_token else "local"),
-                "public_demo": demo, "version": __version__}
+                "public_demo": demo, "public_demo_notice": PUBLIC_DEMO_NOTICE if demo else None,
+                "version": __version__}
 
     def respond(result: GateResult) -> JSONResponse:
         body = gate_out(result).model_dump(mode="json")

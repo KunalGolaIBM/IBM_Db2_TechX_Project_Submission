@@ -2,6 +2,8 @@
 anything, even though every request reaches the app from its own reverse proxy on localhost."""
 from __future__ import annotations
 
+import pathlib
+
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
@@ -116,3 +118,26 @@ def test_reads_are_limited_per_address_in_the_demo(monkeypatch):
     ip = {"x-forwarded-for": "203.0.113.7"}
     codes = [c.get("/api/whoami", headers=ip).status_code for _ in range(3)]
     assert codes == [200, 200, 429]
+
+
+def _db_down(*_a, **_k):
+    from asof import db
+    raise db.DatabaseError("Db2 is down in this test", "08001")
+
+
+@pytest.mark.parametrize(("demo_on", "notice"), [(True, "Public demo: the built-in scenarios replay recorded model outputs "
+                                                  "while Db2 runs live. To check your own answers, run AsOf locally with "
+                                                  "./quickstart.sh."), (False, None)])
+def test_the_pages_get_the_public_demo_notice_only_in_the_demo(monkeypatch, demo_on, notice):
+    monkeypatch.setattr("asof.db.connect", _db_down)
+    settings = demo_settings() if demo_on else Settings(_env_file=None, llm_provider="replay")
+    body = TestClient(create_app(settings, gate=FakeGate(), assistant=FakeAssistant())).get("/healthz").json()
+    assert body["public_demo"] is demo_on and body["public_demo_notice"] == notice
+
+
+def test_both_pages_show_the_servers_notice_instead_of_the_key_advice():
+    ui = pathlib.Path(__file__).resolve().parents[1] / "src" / "asof" / "ui"
+    assert "body.public_demo_notice ||" in (ui / "app.js").read_text()
+    chat = (ui / "chat.js").read_text()
+    assert "health.public_demo_notice" in chat and "state.notice ||" in chat
+
