@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # IBM Db2 Community Edition Database
+  db2:
+    image: icr.io/db2_community/db2:11.5.8.0
+    container_name: db2sentinel_db
+    privileged: true
+    environment:
+      - LICENSE=accept
+      - DB2INSTANCE=db2inst1
+      - DB2INST1_PASSWORD=password
+      - DBNAME=SENTINELDB
+      - BLU=false
+      - ENABLE_ORACLE_COMPATIBILITY=false
+      - UPDATE_CONFIG=true
+    ports:
+      - "50000:50000"
+    volumes:
+      - db2_data:/database
+    healthcheck:
+      test: ["CMD-SHELL", "su - db2inst1 -c 'db2 connect to SENTINELDB' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # FastAPI Backend Service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: db2sentinel_backend
+    environment:
+      - DB2_HOST=db2
+      - DB2_PORT=50000
+      - DB2_DATABASE=SENTINELDB
+      - DB2_USERNAME=db2inst1
+      - DB2_PASSWORD=password
+      - DB2_SECURITY=NONE
+      - DB2_DEMO_FALLBACK=true
+      - LLM_PROVIDER=mock
+      - BACKEND_HOST=0.0.0.0
+      - BACKEND_PORT=8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      db2:
+        condition: service_healthy
+
+  # React Frontend Service
+  frontend:
+    build:
+      context: src/frontend
+      dockerfile: Dockerfile
+    container_name: db2sentinel_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  db2_data:
