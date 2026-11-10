@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "CatalogLens",
+    "slug": "cataloglens",
+    "short_description": "An evidence-aware agentic system that explores live IBM Db2 schemas, explains database structures, and distinguishes declared relationships from inferred candidates.",
+    "category": "AI / Data Engineering / Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/Sanskritiiiiiiiii/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "CatalogLens",
+    "members": [
+      {
+        "name": "Sanskriti Pal",
+        "github": "Sanskritiiiiiiiii",
+        "email": "",
+        "role": "Solo Developer - Backend, Db2 Integration, Agent Workflow and UI"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition running locally in Docker",
+    "connector": "ibm_db Python driver",
+    "features_used": [
+      "Live system catalog metadata extraction",
+      "Relational tables and views",
+      "Declared foreign key inspection",
+      "SQL catalog queries",
+      "Schema and column metadata analysis"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "SQL"],
+    "frameworks": ["FastAPI", "Streamlit", "LangGraph"],
+    "ai_models": [
+      "Deterministic heuristic reasoning (default)",
+      "Anthropic Claude (optional integration)"
+    ]
+  }
+}
