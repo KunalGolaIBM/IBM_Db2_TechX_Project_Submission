@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Db2 Time Machine</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%234f8cff'/%3E%3Cpath d='M16 8v8l5 3' stroke='white' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0a0f1f; --panel:#111a33; --panel2:#16224a; --line:#243260; --text:#e9eeff; --muted:#93a1cb;
+  --accent:#4f8cff; --accent2:#7aa8ff; --good:#37d69a; --warn:#ffb454; --bad:#ff6b7a; --code:#0c1430;
+  --shadow:0 10px 30px rgba(0,0,0,.35);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f3f6fd; --panel:#ffffff; --panel2:#eef3ff; --line:#d5def3; --text:#14213d; --muted:#5b6b91;
+    --accent:#2467e8; --accent2:#2467e8; --good:#0f9d6b; --warn:#c27a0a; --bad:#d6334a; --code:#f1f5ff;
+    --shadow:0 8px 24px rgba(30,50,110,.10);
+  }
+}
+:root[data-theme="light"]{
+  --bg:#f3f6fd; --panel:#ffffff; --panel2:#eef3ff; --line:#d5def3; --text:#14213d; --muted:#5b6b91;
+  --accent:#2467e8; --accent2:#2467e8; --good:#0f9d6b; --warn:#c27a0a; --bad:#d6334a; --code:#f1f5ff;
+  --shadow:0 8px 24px rgba(30,50,110,.10);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14.5px;line-height:1.5}
+body{background:
+  radial-gradient(900px 400px at 85% -10%, rgba(79,140,255,.16), transparent 60%),
+  radial-gradient(700px 380px at -5% 0%, rgba(55,214,154,.08), transparent 60%), var(--bg);min-height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:16px 28px;border-bottom:1px solid var(--line);
+  position:sticky;top:0;z-index:5;backdrop-filter:blur(10px);background:color-mix(in srgb,var(--bg) 82%,transparent)}
+.logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#7a5cff);display:grid;place-items:center;box-shadow:0 6px 18px rgba(79,140,255,.45)}
+h1{font-size:19px;margin:0;letter-spacing:.2px}
+.tag{color:var(--muted);font-size:12.5px;margin-top:1px}
+.spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border:1px solid var(--line);border-radius:999px;
+  background:var(--panel);font-size:12.5px;color:var(--muted);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.dot.ok{background:var(--good);box-shadow:0 0 0 3px rgba(55,214,154,.18)} .dot.bad{background:var(--bad);box-shadow:0 0 0 3px rgba(255,107,122,.18)}
+.iconbtn{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:10px;padding:6px 10px;cursor:pointer}
+main{display:grid;grid-template-columns:370px minmax(0,1fr);gap:22px;padding:22px 28px 60px;max-width:1500px;margin:0 auto}
+@media (max-width:1050px){main{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+.card + .card,#out .card{margin-top:18px}
+.card h2{margin:0 0 12px;font-size:12.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--muted);font-weight:650}
+textarea,select{width:100%;background:var(--code);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:11px 12px;font:inherit;outline:none}
+textarea{resize:vertical;min-height:84px}
+textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,140,255,.2)}
+label{display:block;font-size:12px;color:var(--muted);margin:12px 0 5px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.chip{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:5px 10px;border-radius:999px;font-size:12px;cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:11px 16px;font:inherit;font-weight:650;cursor:pointer;color:#fff;
+  background:linear-gradient(135deg,var(--accent),#6f6bff);box-shadow:0 8px 20px rgba(79,140,255,.35)}
+.btn:disabled{opacity:.55;cursor:wait}
+.btn.block{width:100%;margin-top:14px}
+.btn.ghost{background:var(--panel2);color:var(--text);box-shadow:none;border:1px solid var(--line);font-weight:550;padding:9px 12px;text-align:left;justify-content:flex-start;width:100%}
+.btn.ghost:hover{border-color:var(--accent)}
+.btn small{display:block;color:var(--muted);font-weight:400;font-size:11.5px}
+.faults{display:grid;gap:8px;margin-top:10px}
+.muted{color:var(--muted)} .small{font-size:12px}
+.toast{margin-top:10px;font-size:12.5px;color:var(--good);min-height:18px}
+.toast.err{color:var(--bad)}
+.recent{display:grid;gap:7px;max-height:260px;overflow:auto}
+.recent button{all:unset;cursor:pointer;display:block;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+.recent button:hover{border-color:var(--accent)}
+.recent b{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.badge.confirmed{color:var(--good);border-color:rgba(55,214,154,.5)} .badge.inconclusive,.badge.no_change{color:var(--warn);border-color:rgba(255,180,84,.5)}
+/* pipeline */
+.pipe{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;position:relative}
+@media (max-width:900px){.pipe{grid-template-columns:1fr}}
+.node{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px;min-height:118px;position:relative;transition:.25s}
+.node .n{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--line);color:var(--text);margin-bottom:8px}
+.node h3{margin:0;font-size:14px}
+.node .kind{font-size:11px;color:var(--muted);margin-bottom:6px}
+.node p{margin:0;font-size:12px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.node.running{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,140,255,.22);animation:pulse 1.2s infinite}
+.node.running .n{background:var(--accent);color:#fff}
+.node.done{border-color:rgba(55,214,154,.55)} .node.done .n{background:var(--good);color:#06281c}
+.node.rejected{border-color:rgba(255,180,84,.7)} .node.rejected .n{background:var(--warn);color:#2b1a00}
+@keyframes pulse{50%{box-shadow:0 0 0 6px rgba(79,140,255,.08)}}
+.retry{margin-top:12px;font-size:12.5px;color:var(--warn);display:none;align-items:center;gap:8px}
+.retry.show{display:flex}
+.ledger{margin-top:14px;display:grid;gap:8px}
+.hyp{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:9px 12px}
+.hyp .ic{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:800}
+.hyp.ok .ic{background:var(--good);color:#06281c} .hyp.no .ic{background:var(--bad);color:#2b0509}
+.hyp b{font-size:13px} .hyp span.r{display:block;color:var(--muted);font-size:12px}
+.bar{width:110px;height:7px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)} .hyp.ok .bar i{background:var(--good)}
+/* report */
+.banner{display:flex;gap:14px;align-items:flex-start;padding:16px;border-radius:14px;border:1px solid var(--line);background:var(--panel2)}
+.banner .ic{flex:none;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:21px}
+.banner.confirmed{border-color:rgba(55,214,154,.55);background:linear-gradient(135deg,rgba(55,214,154,.12),transparent)} .banner.confirmed .ic{background:rgba(55,214,154,.2);color:var(--good)}
+.banner.inconclusive,.banner.no_change{border-color:rgba(255,180,84,.55);background:linear-gradient(135deg,rgba(255,180,84,.12),transparent)} .banner.inconclusive .ic,.banner.no_change .ic{background:rgba(255,180,84,.2);color:var(--warn)}
+.banner h3{margin:0 0 4px;font-size:18px} .banner p{margin:0;color:var(--text)}
+.meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+@media (max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}
+.kpi .l{font-size:11.5px;color:var(--muted)} .kpi .v{font-size:21px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .s{font-size:12px;color:var(--muted)} .neg{color:var(--bad)} .pos{color:var(--good)}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media (max-width:1100px){.grid2{grid-template-columns:1fr}}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:7px 12px;font-size:13.5px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;word-break:break-word}
+.mono{font-family:var(--mono);font-size:12.5px}
+.timeline{list-style:none;margin:0;padding:0 0 0 6px}
+.timeline li{position:relative;padding:0 0 14px 22px;border-left:2px solid var(--line);margin-left:6px}
+.timeline li:last-child{border-left-color:transparent;padding-bottom:0}
+.timeline li::before{content:"";position:absolute;left:-7px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--panel);border:2px solid var(--muted)}
+.timeline li.root::before{border-color:var(--bad);background:var(--bad)} .timeline li.change::before{border-color:var(--warn)}
+.timeline li.snapshot::before{border-color:var(--good)} .timeline li.now::before{border-color:var(--accent)}
+.timeline .t{font-size:11.5px;color:var(--muted);font-family:var(--mono)} .timeline b{display:block;font-size:13.5px} .timeline span.d{font-size:12.5px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:12.8px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.6px}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.scroll{overflow:auto;max-height:340px}
+details{border:1px solid var(--line);border-radius:12px;background:var(--panel2);margin-top:9px}
+summary{cursor:pointer;padding:10px 12px;font-weight:600;font-size:13px}
+details pre{margin:0;padding:12px;background:var(--code);border-top:1px solid var(--line);border-radius:0 0 12px 12px;overflow:auto;font-family:var(--mono);font-size:12px;white-space:pre-wrap;word-break:break-word}
+.copy{float:right;margin:8px 10px 0 0}
+.copy button{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:3px 9px;cursor:pointer;font-size:11.5px}
+.warn-box{margin-top:12px;border:1px solid rgba(255,180,84,.55);background:rgba(255,180,84,.09);border-radius:12px;padding:10px 12px;font-size:13px}
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tab{background:transparent;border:1px solid var(--line);color:var(--muted);padding:7px 14px;border-radius:999px;cursor:pointer;font:inherit}
+.tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.hidden{display:none !important}
+.empty{text-align:center;padding:46px 20px;color:var(--muted)}
+.empty .big{font-size:40px;margin-bottom:8px}
+svg text{fill:var(--muted);font-family:var(--sans);font-size:11px}
+.chartwrap{width:100%;overflow:hidden}
+.err-box{border:1px solid rgba(255,107,122,.6);background:rgba(255,107,122,.09);border-radius:12px;padding:12px;color:var(--text)}
+.sr{position:absolute;left:-9999px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo" aria-hidden="true">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/><path d="M3 4v4h4" /></svg>
+  </div>
+  <div>
+    <h1>Db2 Time Machine</h1>
+    <div class="tag">Why did this data change? Multi-agent root-cause analysis on Db2 temporal tables</div>
+  </div>
+  <div class="spacer"></div>
+  <span class="pill" id="dbPill"><span class="dot"></span><span>Db2: checking…</span></span>
+  <span class="pill" id="llmPill"><span class="dot"></span><span>LLM: …</span></span>
+  <button class="iconbtn" id="themeBtn" title="Toggle light/dark theme" aria-label="Toggle theme"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg></button>
+</header>
+
+<main>
+  <aside>
+    <section class="card">
+      <h2>Ask a question</h2>
+      <textarea id="q" maxlength="500" aria-label="Your question">Why did Aurora Laptop revenue change since the last KPI snapshot?</textarea>
+      <div class="chips" id="examples"></div>
+      <label for="win">Time window</label>
+      <select id="win">
+        <option value="">Since the last KPI snapshot (default)</option>
+        <option value="1">Last hour</option>
+        <option value="6">Last 6 hours</option>
+        <option value="24">Last 24 hours</option>
+      </select>
+      <button class="btn block" id="go">Investigate</button>
+      <div class="toast" id="goMsg"></div>
+    </section>
+
+    <section class="card" id="demoCard">
+      <h2>Demo controls</h2>
+      <div class="small muted">Break the data on purpose, then ask Time Machine to find out why. Every fault is one real SQL transaction on Db2.</div>
+      <div class="faults">
+        <button class="btn ghost" data-fault="reset">Reset demo data<small>Rebuild temporal tables, load baseline, take KPI snapshot</small></button>
+        <button class="btn ghost" data-fault="price">Silent price change<small>Nightly batch cuts a price from 500 to 50</small></button>
+        <button class="btn ghost" data-fault="duplicate">Duplicate load<small>An ETL job is re-run and doubles order lines</small></button>
+        <button class="btn ghost" data-fault="quantity">Bad bulk update<small>A bulk import zeroes many quantities</small></button>
+        <button class="btn ghost" data-fault="deleted">Rows deleted<small>A cleanup job removes order lines</small></button>
+      </div>
+      <div class="toast" id="demoMsg"></div>
+    </section>
+
+    <section class="card">
+      <h2>Past investigations (stored in Db2)</h2>
+      <div class="recent" id="recent"><span class="muted small">Nothing yet.</span></div>
+    </section>
+  </aside>
+
+  <section>
+    <div class="card">
+      <h2>Agent pipeline <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">· LangGraph</span></h2>
+      <div class="pipe" id="pipe"></div>
+      <div class="retry" id="retry">↺ <span id="retryTxt"></span></div>
+      <div class="ledger" id="ledger"></div>
+    </div>
+
+    <div id="out">
+      <div class="card empty" id="emptyState">
+        <div class="big">🕰️</div>
+        <b>Ask why a number changed.</b>
+        <div class="small" style="margin-top:6px">Try “Reset demo data”, inject a fault, then press Investigate.</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = v => Number(v);
+const money = v => num(v).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const signed = v => (num(v) > 0 ? "+" : "") + money(v);
+const when = s => s ? String(s).replace("T", " ").slice(0, 19) : "-";
+
+const AGENTS = [
+  {id: "detective", name: "Detective", kind: "LLM · scope & hypotheses"},
+  {id: "historian", name: "Historian", kind: "LLM plan · FOR SYSTEM_TIME"},
+  {id: "diff", name: "Diff Engine", kind: "Deterministic tool"},
+  {id: "verifier", name: "Verifier", kind: "AS OF re-run & scoring"},
+  {id: "reporter", name: "Reporter", kind: "LLM summary · saves to Db2"},
+];
+const EXAMPLES = [
+  "Why did Aurora Laptop revenue drop since this morning?",
+  "Why did Aurora Laptop revenue spike?",
+  "Aurora Laptop revenue looks too low, what happened?",
+  "Why did total revenue change in the last 6 hours?",
+];
+
+let source = null, liveAudit = [], currentRun = null, productId = null;
+
+function buildPipeline() {
+  $("#pipe").innerHTML = AGENTS.map((a, i) => `
+    <div class="node" id="node-${a.id}"><div class="n">${i + 1}</div><h3>${a.name}</h3>
+    <div class="kind">${a.kind}</div><p id="msg-${a.id}">Waiting…</p></div>`).join("");
+}
+function resetPipeline() {
+  buildPipeline(); $("#ledger").innerHTML = ""; $("#retry").classList.remove("show"); liveAudit = [];
+}
+function setNode(id, status, msg) {
+  const el = $("#node-" + id); if (!el) return;
+  el.className = "node " + status;
+  if (msg) $("#msg-" + id).textContent = msg;
+}
+
+function addHypothesis(h) {
+  const share = Math.max(0, Math.min(1, Math.abs(num(h.share))));
+  const row = document.createElement("div");
+  row.className = "hyp " + (h.confirmed ? "ok" : "no");
+  row.innerHTML = `<div class="ic">${h.confirmed ? "✓" : "✕"}</div>
+    <div><b>${esc(h.title)}</b><span class="r">${esc(h.reason)}</span></div>
+    <div title="share of the net change explained" class="bar"><i style="width:${(share * 100).toFixed(0)}%"></i></div>`;
+  $("#ledger").appendChild(row);
+}
+
+function startInvestigation() {
+  const q = $("#q").value.trim();
+  if (q.length < 3) { $("#goMsg").textContent = "Please type a question."; return; }
+  if (source) source.close();
+  resetPipeline();
+  $("#out").innerHTML = "";
+  $("#goMsg").className = "toast"; $("#goMsg").textContent = "";
+  $("#go").disabled = true; $("#go").textContent = "Investigating…";
+  const params = new URLSearchParams({question: q});
+  if ($("#win").value) params.set("hours", $("#win").value);
+  source = new EventSource("/api/investigate/stream?" + params);
+  let rejects = 0;
+  source.onmessage = ev => {
+    let e; try { e = JSON.parse(ev.data); } catch { return; }
+    if (e.type === "start") currentRun = e.run_id;
+    else if (e.type === "agent") {
+      if (e.status === "running") setNode(e.agent, "running", e.message);
+      else if (e.agent === "verifier" && e.result === "rejected") {
+        rejects++; setNode("verifier", "rejected", e.message);
+        $("#retry").classList.add("show");
+        $("#retryTxt").textContent = `Hypothesis rejected (retry ${rejects}): the graph loops back to the Detective with the evidence.`;
+      } else setNode(e.agent, "done", e.message);
+    }
+    else if (e.type === "hypothesis") addHypothesis(e);
+    else if (e.type === "audit") liveAudit.push(e);
+    else if (e.type === "report") { renderReport(e.report); loadRecent(); }
+    else if (e.type === "error") showError(e.message);
+    else if (e.type === "done") finish();
+  };
+  source.onerror = () => {  // never let the browser auto-reconnect: that would re-run the investigation
+    if (!source) return;
+    const gotReport = !!$(".banner");
+    finish();
+    if (!gotReport) showError("The connection to the server was lost before the report arrived.");
+  };
+}
+function finish() {
+  if (source) { source.close(); source = null; }
+  $("#go").disabled = false; $("#go").textContent = "Investigate";
+}
+function showError(msg) {
+  $("#out").innerHTML = `<div class="card"><div class="err-box"><b>Investigation failed.</b><br>${esc(msg)}</div></div>`;
+  finish();
+}
+
+/* ---------- report ---------- */
+function renderReport(r) {
+  productId = r.product_id;
+  const v = r.verdict, m = r.metric, rc = r.root_cause;
+  const titles = {confirmed: "Root cause found", inconclusive: "No hypothesis confirmed", no_change: "No change detected"};
+  const icons = {confirmed: "✓", inconclusive: "?", no_change: "="};
+  const heading = v.status === "confirmed" && rc ? `${titles.confirmed}: ${esc(rc.title)}` : titles[v.status];
+  const pct = m.pct === null || m.pct === undefined ? "" : ` (${m.pct > 0 ? "+" : ""}${m.pct}%)`;
+  const explained = rc ? signed(rc.impact) : "-";
+  const rootRows = rc ? `
+    <dl class="kv">
+      <dt>What</dt><dd><b>${esc(rc.title)}</b></dd>
+      <dt>When</dt><dd class="mono">${esc(when(rc.when))}</dd>
+      <dt>Who / what</dt><dd>${esc(rc.actor || "not recorded")}</dd>
+      <dt>Transaction</dt><dd class="mono">${esc(rc.transaction)}</dd>
+      <dt>Rows affected</dt><dd>${rc.rows_affected}</dd>
+      <dt>Revenue impact</dt><dd class="${num(rc.impact) < 0 ? "neg" : "pos"}"><b>${signed(rc.impact)}</b></dd>
+    </dl>` : `<div class="muted">No single change explains the movement. The history shows only normal activity, or the change happened outside the chosen window.</div>`;
+
+  const tl = r.timeline.map(t => `<li class="${esc(t.kind)}"><div class="t">${esc(when(t.at))}</div><b>${esc(t.label)}</b><span class="d">${esc(t.detail)}</span></li>`).join("");
+  const rows = r.affected_rows.map(a => {
+    const b = a.before, f = a.after;
+    const fmt = x => x ? `${x.quantity} × ${money(x.unit_price)}` : "—";
+    return `<tr><td class="mono">${a.item_id}</td><td class="mono">${esc(when(a.at).slice(11))}</td><td>${esc(a.kind)}</td>
+      <td>${fmt(b)}</td><td>${fmt(f)}</td><td class="num ${num(a.impact) < 0 ? "neg" : "pos"}">${signed(a.impact)}</td></tr>`;
+  }).join("");
+  const sql = r.evidence_sql.map((e, i) => `
+    <details><summary>${esc(e.label)}</summary>
+    <div class="copy"><button data-copy="${i}">Copy</button></div><pre>${esc(e.sql)}</pre></details>`).join("");
+  const warns = r.warnings.map(w => `<div class="warn-box">⚠ ${esc(w)}</div>`).join("");
+  const tested = r.hypotheses_tested.length;
+
+  $("#out").innerHTML = `
+  <div class="card">
+    <div class="tabs"><button class="tab on" data-tab="rep">Incident report</button>
+      <button class="tab" data-tab="aud">Db2 audit log</button></div>
+    <div id="tab-rep">
+      <div class="banner ${esc(v.status)}"><div class="ic">${icons[v.status]}</div>
+        <div><h3>${heading}</h3><p>${esc(r.narrative)}</p>
+        <div class="meta"><span class="badge ${esc(v.status)}">${esc(v.status)}</span>
+          <span class="badge">confidence: ${esc(v.confidence)}</span>
+          <span class="badge">${tested} hypothes${tested === 1 ? "is" : "es"} tested</span>
+          <span class="badge">${esc(r.window.label)}</span><span class="badge">${esc(r.llm)}</span>
+          <span class="badge mono">run ${esc(r.run_id)}</span></div></div></div>
+      <div class="kpis">
+        <div class="kpi"><div class="l">Revenue at window start</div><div class="v">${money(m.start)}</div><div class="s">Db2 AS OF the start</div></div>
+        <div class="kpi"><div class="l">Revenue now</div><div class="v">${money(m.end)}</div><div class="s">Db2 AS OF the end</div></div>
+        <div class="kpi"><div class="l">Net change</div><div class="v ${num(m.delta) < 0 ? "neg" : "pos"}">${signed(m.delta)}</div><div class="s">${esc(pct)}</div></div>
+        <div class="kpi"><div class="l">Caused by root cause</div><div class="v ${rc && num(rc.impact) < 0 ? "neg" : "pos"}">${explained}</div>
+          <div class="s">${r.reconciliation.ok ? "reconciles exactly ✓" : "does not reconcile"}</div></div>
+      </div>
+      ${warns}
+      <h2 style="margin-top:20px">Time travel · revenue AS OF each moment</h2>
+      <div class="chartwrap" id="chart"><div class="muted small">Running FOR SYSTEM_TIME AS OF queries…</div></div>
+      <div class="grid2" style="margin-top:20px">
+        <div><h2>Root cause</h2>${rootRows}</div>
+        <div><h2>Timeline</h2><ul class="timeline">${tl}</ul></div>
+      </div>
+      ${rows ? `<h2 style="margin-top:20px">Affected rows${rc && rc.rows_affected > r.affected_rows.length ? ` (first ${r.affected_rows.length} of ${rc.rows_affected})` : ""}</h2>
+      <div class="scroll"><table><thead><tr><th>Item</th><th>Time</th><th>Kind</th><th>Before (qty × price)</th><th>After</th><th class="num">Impact</th></tr></thead><tbody>${rows}</tbody></table></div>` : ""}
+      <h2 style="margin-top:20px">Evidence queries</h2>
+      <div class="small muted">Every number above can be reproduced by running these read-only queries on Db2.</div>
+      ${sql}
+    </div>
+    <div id="tab-aud" class="hidden"><div class="muted small">Loading audit log…</div></div>
+  </div>`;
+
+  document.querySelectorAll(".tab").forEach(b => b.onclick = () => {
+    document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === b));
+    $("#tab-rep").classList.toggle("hidden", b.dataset.tab !== "rep");
+    $("#tab-aud").classList.toggle("hidden", b.dataset.tab !== "aud");
+  });
+  document.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => {
+    navigator.clipboard && navigator.clipboard.writeText(r.evidence_sql[b.dataset.copy].sql);
+    b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1200);
+  });
+  loadCurve(r); loadAudit(r.run_id);
+}
+
+async function loadCurve(r) {
+  const box = $("#chart"); if (!box) return;
+  try {
+    const q = new URLSearchParams({start: r.window.start, end: r.window.end, points: 18});
+    if (r.product_id !== null && r.product_id !== undefined) q.set("product_id", r.product_id);
+    const res = await fetch("/api/curve?" + q); if (!res.ok) throw new Error(await res.text());
+    drawCurve(box, (await res.json()).points, r);
+  } catch (err) { box.innerHTML = `<div class="muted small">Chart unavailable: ${esc(err.message).slice(0, 160)}</div>`; }
+}
+function drawCurve(box, pts, r) {
+  const W = 760, H = 230, L = 62, R = 18, T = 16, B = 34;
+  const t = pts.map(p => new Date(p.ts.replace(" ", "T")).getTime()), y = pts.map(p => num(p.revenue));
+  const t0 = t[0], t1 = t[t.length - 1] || t0 + 1;
+  const lo = Math.min(...y), hi = Math.max(...y), pad = (hi - lo) * 0.15 || Math.max(hi * 0.1, 1);
+  const y0 = Math.max(0, lo - pad), y1 = hi + pad;
+  const X = v => L + (v - t0) / (t1 - t0 || 1) * (W - L - R), Y = v => T + (1 - (v - y0) / (y1 - y0 || 1)) * (H - T - B);
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${X(t[i]).toFixed(1)},${Y(y[i]).toFixed(1)}`).join(" ");
+  const area = `${line} L${X(t[t.length - 1]).toFixed(1)},${H - B} L${X(t[0]).toFixed(1)},${H - B} Z`;
+  let marker = "";
+  if (r.root_cause && r.root_cause.when) {
+    const mt = new Date(r.root_cause.when.replace(" ", "T").slice(0, 23)).getTime();
+    if (mt >= t0 && mt <= t1) {
+      const x = X(mt);
+      marker = `<line x1="${x}" x2="${x}" y1="${T}" y2="${H - B}" stroke="var(--bad)" stroke-dasharray="4 4" stroke-width="1.6"/>
+        <text x="${Math.min(x + 6, W - 150)}" y="${T + 12}" style="fill:var(--bad);font-weight:600">${esc(r.root_cause.title)} · ${esc((r.root_cause.actor || "").split(",")[0])}</text>`;
+    }
+  }
+  const grid = [0, 0.25, 0.5, 0.75, 1].map(f => {
+    const v = y0 + (y1 - y0) * f, yy = Y(v);
+    return `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="var(--line)"/><text x="${L - 8}" y="${yy + 4}" text-anchor="end">${num(v).toLocaleString(undefined, {maximumFractionDigits: 0})}</text>`;
+  }).join("");
+  const ticks = [0, 0.5, 1].map(f => {
+    const tv = t0 + (t1 - t0) * f, d = new Date(tv);
+    const lab = d.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
+    return `<text x="${X(tv)}" y="${H - 10}" text-anchor="${f === 0 ? "start" : f === 1 ? "end" : "middle"}">${lab}</text>`;
+  }).join("");
+  const dots = pts.map((p, i) => `<circle cx="${X(t[i]).toFixed(1)}" cy="${Y(y[i]).toFixed(1)}" r="3" fill="var(--accent)"><title>${esc(when(p.ts))}: ${money(p.revenue)}</title></circle>`).join("");
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Revenue over time"><defs>
+    <linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".35"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+    ${grid}<path d="${area}" fill="url(#g)"/><path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linejoin="round"/>${dots}${marker}${ticks}</svg>`;
+}
+
+async function loadAudit(runId) {
+  const box = $("#tab-aud"); if (!box) return;
+  try {
+    const res = await fetch("/api/audit/" + encodeURIComponent(runId)); if (!res.ok) throw new Error(await res.text());
+    const rows = await res.json();
+    box.innerHTML = `<div class="small muted" style="margin-bottom:8px">Every agent step and SQL statement of run <span class="mono">${esc(runId)}</span>, read back from the AUDIT_LOG table in Db2.</div>
+    <div class="scroll" style="max-height:480px"><table><thead><tr><th>#</th><th>Agent</th><th>Action</th><th class="num">Rows</th><th class="num">ms</th><th>Outcome</th></tr></thead><tbody>${
+      rows.map(a => `<tr><td>${a.seq}</td><td>${esc(a.agent)}</td><td>${esc(a.action)}${a.sql_text ? `<details><summary class="small muted">SQL</summary><pre>${esc(a.sql_text)}</pre></details>` : ""}${a.detail ? `<div class="small muted">${esc(a.detail)}</div>` : ""}</td>
+      <td class="num">${a.row_count ?? ""}</td><td class="num">${a.latency_ms ?? ""}</td><td>${esc(a.outcome)}</td></tr>`).join("")}</tbody></table></div>`;
+  } catch (err) { box.innerHTML = `<div class="muted small">Audit log unavailable: ${esc(err.message).slice(0, 160)}</div>`; }
+}
+
+/* ---------- history, health, demo ---------- */
+async function loadRecent() {
+  try {
+    const rows = await (await fetch("/api/reports?limit=8")).json();
+    $("#recent").innerHTML = rows.length ? rows.map(r => `<button data-run="${esc(r.run_id)}"><b>${esc(r.question)}</b>
+      <span class="badge ${esc(String(r.status || "").toLowerCase())}">${esc(String(r.status || "").toLowerCase())}</span>
+      <span class="small muted"> ${esc(r.created_at || "")}</span></button>`).join("") : '<span class="muted small">Nothing yet.</span>';
+    document.querySelectorAll("[data-run]").forEach(b => b.onclick = async () => {
+      const r = await (await fetch("/api/reports/" + encodeURIComponent(b.dataset.run))).json();
+      resetPipeline(); AGENTS.forEach(a => setNode(a.id, "done", "Loaded from Db2 (stored report)"));
+      r.hypotheses_tested.forEach(addHypothesis); renderReport(r); window.scrollTo({top: 0, behavior: "smooth"});
+    });
+  } catch { /* history is optional */ }
+}
+async function loadHealth() {
+  try {
+    const h = await (await fetch("/api/health")).json();
+    const db = $("#dbPill");
+    db.innerHTML = h.db.ok ? `<span class="dot ok"></span><span>Db2 connected${h.db.temporal_tables && h.db.temporal_tables.length ? " · " + h.db.temporal_tables.length + " temporal table" + (h.db.temporal_tables.length > 1 ? "s" : "") : ""}</span>`
+      : `<span class="dot bad"></span><span title="${esc(h.db.error)}">Db2 unreachable</span>`;
+    $("#llmPill").innerHTML = `<span class="dot ${h.llm.enabled ? "ok" : ""}"></span><span>LLM: ${esc(h.llm.label)}</span>`;
+    $("#demoCard").classList.toggle("hidden", !h.demo_controls);
+    if (!h.db.ok) $("#goMsg").textContent = "Db2 is not reachable: " + h.db.error;
+  } catch { $("#dbPill").innerHTML = '<span class="dot bad"></span><span>API unreachable</span>'; }
+}
+async function demoAction(kind) {
+  const msg = $("#demoMsg"); msg.className = "toast"; msg.textContent = kind === "reset" ? "Resetting (about 10 seconds)…" : "Running SQL transaction…";
+  document.querySelectorAll("[data-fault]").forEach(b => b.disabled = true);
+  try {
+    const res = await fetch(kind === "reset" ? "/api/demo/reset" : "/api/demo/inject/" + kind, {method: "POST"});
+    const body = await res.json(); if (!res.ok) throw new Error(body.detail || res.statusText);
+    msg.textContent = "✓ " + body.message;
+    if (kind === "reset") loadHealth();
+  } catch (err) { msg.className = "toast err"; msg.textContent = String(err.message).slice(0, 220); }
+  document.querySelectorAll("[data-fault]").forEach(b => b.disabled = false);
+}
+
+$("#examples").innerHTML = EXAMPLES.map(e => `<button class="chip">${esc(e)}</button>`).join("");
+document.querySelectorAll(".chip").forEach(c => c.onclick = () => { $("#q").value = c.textContent; });
+document.querySelectorAll("[data-fault]").forEach(b => b.onclick = () => demoAction(b.dataset.fault));
+$("#go").onclick = startInvestigation;
+$("#q").addEventListener("keydown", e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) startInvestigation(); });
+$("#themeBtn").onclick = () => {
+  const root = document.documentElement, dark = getComputedStyle(root).getPropertyValue("--bg").trim() === "#0a0f1f";
+  root.dataset.theme = dark ? "light" : "dark";
+};
+buildPipeline(); loadHealth(); loadRecent();
+</script>
+</body>
+</html>

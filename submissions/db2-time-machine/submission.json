@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Db2 Time Machine",
+    "slug": "db2-time-machine",
+    "short_description": "A LangGraph multi-agent root-cause analyst that time-travels through IBM Db2 system-period temporal tables to explain why a business number changed, who changed it and when, and proves the cause with verified evidence queries.",
+    "category": "AI / Agentic / Data Engineering / Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": ""
+  },
+  "team": {
+    "name": "Juhi Gupta",
+    "members": [
+      {
+        "name": "Juhi Gupta",
+        "github": "Juhi-Gupta-code",
+        "email": "juhi241b121@gmail.com",
+        "role": "Solo developer: Db2 schema, agents, API and UI"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker, icr.io/db2_community/db2)",
+    "connector": "ibm_db (native driver via ibm_db_dbi) and ibm_db_sa (SQLAlchemy dialect)",
+    "features_used": [
+      "System-period temporal tables",
+      "History tables and ADD VERSIONING",
+      "FOR SYSTEM_TIME AS OF and FROM .. TO queries",
+      "Transaction-start-ID column",
+      "BEFORE and AFTER row triggers",
+      "SYSCAT catalog introspection",
+      "VARCHAR_FORMAT, WLM_SET_CLIENT_INFO, CURRENT CLIENT_USERID",
+      "Audit log and incident report tables"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "SQL", "JavaScript"],
+    "frameworks": ["LangGraph", "FastAPI"],
+    "ai_models": ["Anthropic Claude (optional)", "Any OpenAI-compatible model (optional)", "Offline deterministic fallback"]
+  }
+}
