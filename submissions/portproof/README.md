@@ -216,7 +216,7 @@ A rewrite is also accepted when what remains is not a difference anybody can fix
 - **Translation:** `sqlglot` 30.30.0 with IBM's `db2-sqlglot-dialect` 1.1.0
 - **Embeddings:** `sentence-transformers` 6.2.0, `all-MiniLM-L6-v2`
 - **Source engines:** PostgreSQL 17 and MySQL 8.4 in Docker, with DuckDB 2.0.0 embedded as a declared stand in. Db2 also reads both of them directly through federation, using its own bundled JDBC driver for PostgreSQL and Oracle's Connector/J 8.4.0 for MySQL
-- **UI:** Streamlit 1.67.0
+- **UI:** Streamlit 1.67.0, themed dark through `.streamlit/config.toml`
 - **Testing:** pytest 9.2.0
 
 Every version in `requirements.txt` is pinned to what the project was built and measured against.
@@ -354,7 +354,7 @@ The regressions pinned by name, because each one would have invalidated the resu
 
 ## Screenshots and Demo
 
-All seven are in `docs/screenshots/`, captured from the running Streamlit app.
+All seven are in `docs/screenshots/`, captured from the running app against a live Db2. Nothing in them is mocked up: every SQLCODE, every verdict and every number was produced by the engine at the moment the shot was taken.
 
 ### 1. A silent failure, caught by the engine
 
