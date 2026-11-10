@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "SupplyChain Sentinel",
+    "slug": "supplychain-sentinel",
+    "short_description": "An IBM Db2-backed LangGraph agentic control tower for early manufacturing supply disruption detection, impact analysis and auditable recovery planning.",
+    "category": "AI / Agentic AI / Data Engineering",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": ""
+  },
+  "team": {
+    "name": "Individual Participation",
+    "members": [
+      {
+        "name": "Bhumika Bhatt",
+        "github": "bhattbhumika31-dotcom",
+        "role": "Individual developer \u2014 Db2 integration, LangGraph workflow and application"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition / configured IBM Db2 instance",
+    "connector": "ibm_db Python driver",
+    "features_used": [
+      "Relational tables",
+      "Parameterized SQL",
+      "Multi-table joins",
+      "Aggregations",
+      "Transactional approval audit"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "SQL"
+    ],
+    "frameworks": [
+      "Streamlit",
+      "LangGraph"
+    ],
+    "ai_models": [
+      "Deterministic agent workflow; optional LLM narrative extension"
+    ]
+  }
+}
