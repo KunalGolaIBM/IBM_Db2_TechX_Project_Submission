@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import pytest
 
+from src import federation
 from src.corpus import CORPUS, VARIANTS
 from src.counterexample import (
     InstanceResult,
@@ -325,3 +326,98 @@ def test_limit_with_an_offset_cannot_hide_a_swap():
             part.strip() for part in statement.sql.split("LIMIT")[-1].split(",")
         )
         assert offset != count, f"{statement.case_name}: LIMIT {offset}, {count}"
+
+
+# --------------------------------------------------------------------------
+# federation: Db2's own opinion on whether the inputs even matched
+# --------------------------------------------------------------------------
+def test_an_identical_input_strengthens_a_divergence_and_a_different_one_does_not():
+    """The whole point of the federated cross-check.
+
+    A divergence is only evidence about the translation if both engines were
+    reading the same rows. Keeping the two cases apart is what stops a loading
+    bug from being filed as a translator bug.
+    """
+    matched = federation.Corroboration(
+        "INPUTS_MATCH",
+        (federation.InputComparison("orders", "postgres", "DB2INST1.PG_ORDERS",
+                                    columns_compared=6),),
+    )
+    assert matched.strengthens_proof
+    assert not matched.undermines_proof
+
+    differed = federation.Corroboration(
+        "INPUTS_DIFFER",
+        (federation.InputComparison("orders", "postgres", "DB2INST1.PG_ORDERS",
+                                    only_in_source=2, columns_compared=6),),
+    )
+    assert differed.undermines_proof
+    assert not differed.strengthens_proof
+
+
+def test_no_federation_is_not_an_opinion_either_way():
+    """A checkout that never ran the setup script must not look like a pass."""
+    absent = federation.Corroboration("UNAVAILABLE", note="no nicknames for mysql")
+    assert not absent.strengthens_proof
+    assert not absent.undermines_proof
+    assert "no nicknames" in absent.headline()
+
+
+def test_a_skipped_column_is_named_rather_than_quietly_dropped():
+    """Db2 refuses to cast a MySQL BOOLEAN nickname column (SQL0461N).
+
+    Dropping it silently would turn a partial check into one that reads as
+    complete, so the description has to say which columns were left out.
+    """
+    partial = federation.InputComparison(
+        "customers",
+        "mysql",
+        "DB2INST1.MY_CUSTOMERS",
+        columns_compared=5,
+        columns_skipped=("IS_ACTIVE", "IS_DELETED"),
+    )
+    assert partial.identical
+    text = partial.describe()
+    assert "5 columns" in text
+    assert "IS_ACTIVE" in text and "IS_DELETED" in text
+
+
+def test_a_comparison_that_errored_is_not_counted_as_agreement():
+    failed = federation.InputComparison(
+        "orders", "mysql", "DB2INST1.MY_ORDERS", error="SQL1101N"
+    )
+    assert not failed.attempted
+    assert not failed.identical
+    assert "not compared" in failed.describe()
+
+
+def test_the_local_column_type_is_what_the_remote_is_cast_to():
+    assert federation._db2_type("VARCHAR", 40, 0) == "VARCHAR(40)"
+    assert federation._db2_type("DECIMAL", 10, 2) == "DECIMAL(10,2)"
+    assert federation._db2_type("INTEGER", 4, 0) == "INTEGER"
+    # TIMESTAMP carries a precision Db2 will not accept in this position.
+    assert federation._db2_type("TIMESTAMP", 26, 6) == "TIMESTAMP"
+
+
+def test_only_a_real_identifier_can_reach_the_statement_text():
+    """SQL has no parameter marker for an identifier, so the guard is the check."""
+    assert federation._safe_identifier("pg_orders") == "PG_ORDERS"
+    for bad in ("orders; DROP TABLE t", 'orders"', "", "9lives", "a b"):
+        with pytest.raises(ValueError):
+            federation._safe_identifier(bad)
+
+
+def test_a_table_that_was_never_read_cannot_be_folded_into_a_pass():
+    """Four tables agreeing and a fifth never read is not confirmation.
+
+    This is the same mistake as a vacuous proof, one level up: the summary
+    looked like a clean pass while one of the inputs had not been compared at
+    all.
+    """
+    ok = federation.InputComparison("orders", "mysql", "N.MY_ORDERS", columns_compared=6)
+    unread = federation.InputComparison(
+        "customers", "mysql", "N.MY_CUSTOMERS", error="SQL1101N"
+    )
+    partial = federation.Corroboration("UNAVAILABLE", (ok, unread), note="not compared")
+    assert not partial.strengthens_proof
+    assert not partial.undermines_proof

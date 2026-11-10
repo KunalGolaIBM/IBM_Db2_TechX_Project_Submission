@@ -42,6 +42,7 @@
       "ADMIN_GET_TAB_COMPRESS_INFO and SYSCAT.TABLES compression measurement",
       "ORGANIZE BY COLUMN (BLU) availability check",
       "MON_GET_PKG_CACHE_STMT workload hotspots",
+      "Federation: a JDBC wrapper, POSTGRESQL and MYSQL servers, user mappings to read only remote accounts, and nicknames, so one Db2 statement compares the source rows against Db2's own with EXCEPT ALL in both directions",
       "SYSCAT catalog introspection"
     ]
   },

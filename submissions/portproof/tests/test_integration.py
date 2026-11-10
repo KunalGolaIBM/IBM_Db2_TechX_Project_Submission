@@ -632,3 +632,84 @@ def test_failure_rollup_is_refreshed_by_the_engine(app_conn):
         (-911,),
     )[0]
     assert int(after) == int(before) + 1, "REFRESH IMMEDIATE did not maintain the MQT"
+
+
+# --------------------------------------------------------------------------
+# federation: the engine checking the inputs for itself
+# --------------------------------------------------------------------------
+@pytest.mark.db2
+def test_db2_can_read_the_source_tables_and_agree_about_their_contents(owner_conn):
+    """The federated cross-check, end to end against the real servers.
+
+    Skipped rather than failed when no nicknames exist, because federation is
+    optional: scripts/create_federation.sh has to be run once, as the instance
+    owner, and a checkout that has not run it must still pass its tests.
+    """
+    from src import federation
+    from src.corpus import BASE, FIXTURE_TABLES
+    from src.counterexample import Db2Target, available_sources, ensure_fixture_schema
+
+    state = federation.status(owner_conn)
+    if not state.available:
+        pytest.skip(f"federation not configured: {state.note}")
+
+    sources = available_sources()
+    ensure_fixture_schema(owner_conn)
+    target = Db2Target(owner_conn)
+
+    for dialect, engine in sources.items():
+        if dialect not in state.dialects():
+            continue
+        # Load the same dataset on both sides, then ask Db2 to compare them
+        # itself. This is the one check in the suite that does not rely on
+        # Python having read both results correctly.
+        engine.load(BASE)
+        target.load(BASE)
+
+        result = federation.corroborate(owner_conn, FIXTURE_TABLES, dialect)
+        assert result.verdict == "INPUTS_MATCH", result.evidence()
+        assert result.strengthens_proof
+        assert all(c.columns_compared > 0 for c in result.comparisons), result.evidence()
+
+
+@pytest.mark.db2
+def test_the_federated_comparison_notices_a_row_only_db2_has(owner_conn):
+    """A deliberate divergence has to be caught, or the check proves nothing.
+
+    One extra row is inserted into the Db2 copy and nowhere else. Db2's own
+    symmetric difference must report exactly that one row, on the Db2 side.
+    """
+    from src import db, federation
+    from src.corpus import BASE
+    from src.counterexample import FIXTURE_SCHEMA, Db2Target, available_sources, \
+        ensure_fixture_schema
+
+    state = federation.status(owner_conn)
+    sources = available_sources()
+    dialect = next((d for d in state.dialects() if d in sources), None)
+    if dialect is None:
+        pytest.skip("federation not configured for any available source engine")
+
+    ensure_fixture_schema(owner_conn)
+    target = Db2Target(owner_conn)
+    sources[dialect].load(BASE)
+    target.load(BASE)
+
+    nickname = next(
+        n for n in state.nicknames[dialect] if n.upper().endswith("_CUSTOMERS")
+    )
+    db.execute(owner_conn, f"SET CURRENT SCHEMA {FIXTURE_SCHEMA}")
+    db.execute(
+        owner_conn,
+        "INSERT INTO customers (id, name, email, first_name, last_name, "
+        "is_active, is_deleted) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [9901, "only in db2", "nowhere@example.com", "only", "db2", True, False],
+    )
+    try:
+        result = federation.compare_inputs(owner_conn, "customers", dialect, nickname)
+        assert result.attempted, result.describe()
+        assert result.only_in_db2 == 1, result.describe()
+        assert result.only_in_source == 0, result.describe()
+        assert not result.identical
+    finally:
+        db.execute(owner_conn, "DELETE FROM customers WHERE id = ?", [9901])

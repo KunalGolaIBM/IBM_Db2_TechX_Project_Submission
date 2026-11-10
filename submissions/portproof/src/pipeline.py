@@ -21,8 +21,8 @@ import json
 from dataclasses import dataclass, field
 
 from . import db, physical, translate
-from .config import llm_config
-from .corpus import VARIANTS, Statement, statements_for
+from .config import llm_config, setup_config
+from .corpus import BASE, FIXTURE_TABLES, VARIANTS, Statement, statements_for
 from .counterexample import (
     Db2Target,
     SemanticVerdict,
@@ -31,6 +31,7 @@ from .counterexample import (
     ensure_fixture_schema,
     prove_semantics,
 )
+from .federation import Corroboration, corroborate
 from .fixmemory import FixMemory
 from .repair import RepairLoop, RepairOutcome
 from .semantic_repair import SemanticRepairLoop, SemanticRepairOutcome
@@ -55,6 +56,10 @@ class StatementResult:
     #: a repaired statement would be indistinguishable from one that was never
     #: wrong, which is the most useful fact about it.
     original_semantic: SemanticVerdict | None = None
+    #: Db2's own opinion, through federation, on whether the two engines were
+    #: even looking at the same rows. Only asked for when a divergence survived
+    #: repair, because that is the only time the answer changes anything.
+    federation: Corroboration | None = None
     stmt_id: int | None = None
     compile_cert: str | None = None
     semantic_cert: str | None = None
@@ -129,6 +134,18 @@ class MigrationReport:
         return sum(1 for r in self.results if r.status == "UNSTABLE")
 
     @property
+    def federation_note(self) -> str:
+        """What federation added to the divergences this run found, if anything."""
+        asked = [r.federation for r in self.results if r.federation is not None]
+        if not asked:
+            return ""
+        if any(f.undermines_proof for f in asked):
+            return "Db2 federation says the two engines did not hold the same rows"
+        if any(f.strengthens_proof for f in asked):
+            return "Db2 federation confirmed both engines held identical rows"
+        return asked[0].note or "federation was not available"
+
+    @property
     def semantic_divergences(self) -> int:
         """Statements that compiled on Db2 and returned the wrong rows."""
         return sum(
@@ -179,7 +196,11 @@ class MigrationReport:
             f"order not determined by the SQL: {self.unstable}",
             f"vacuous (agreed on nothing): {self.vacuous}",
             f"inconclusive             : {self.inconclusive}",
-        ]
+        ] + (
+            [f"divergence cross-checked : {self.federation_note}"]
+            if self.federation_note
+            else []
+        )
 
 
 class Pipeline:
@@ -213,6 +234,49 @@ class Pipeline:
         self.repair_loop = repair_loop or RepairLoop(owner_conn, memory=memory)
         self.learn = learn
         self.semantic_repair = semantic_repair
+        self._federation: dict[str, Corroboration] = {}
+
+    def _corroborate(self, dialect: str) -> Corroboration:
+        """Db2's federated opinion on the inputs, asked once per dialect.
+
+        The same dataset is loaded into both engines first. That is not a
+        formality. By the time a statement has been proved, the order stability
+        probe has reloaded the *witness* dataset into the source engine while
+        Db2 still holds the last one the variant loop used, so comparing the two
+        at that moment asks about two different points in time and reliably
+        reports a difference that means nothing. Reloading is safe here because
+        the proof for this statement has already finished, and the next
+        statement's proof reloads both engines for every variant anyway.
+
+        Cached per dialect: every statement reads the same fixture tables, so
+        the answer cannot differ between them, and the comparison crosses the
+        network twice for each table.
+        """
+        if dialect in self._federation:
+            return self._federation[dialect]
+
+        result = Corroboration("UNAVAILABLE", note="federation was not reachable")
+        probe = None
+        try:
+            engine = self.sources.get(dialect)
+            if engine is not None:
+                engine.load(BASE)
+                self.target.load(BASE)
+            # A connection of its own, closed straight afterwards. Reading a
+            # nickname opens a unit of work that spans the remote data source,
+            # and until it is committed, DDL on that same connection is
+            # refused. Sharing the owner connection meant the next statement's
+            # `DROP TABLE` silently failed and its `CREATE TABLE` came back
+            # SQL0601N, which looked like a prover bug and was not one.
+            probe = db.connect(setup_config(), role="setup")
+            result = corroborate(probe, FIXTURE_TABLES, dialect)
+        except Exception as exc:  # federation is optional, never fatal
+            result = Corroboration("UNAVAILABLE", note=str(exc)[:160])
+        finally:
+            if probe is not None:
+                db.close(probe)
+        self._federation[dialect] = result
+        return result
 
     @property
     def source_engines(self) -> str:
@@ -374,6 +438,14 @@ class Pipeline:
                 if verdict.outcome == "DIFFERENT" and verdict.order_unstable:
                     verdict.outcome = "UNSTABLE"
 
+                # A surviving divergence is worth a second opinion from the
+                # engine itself. If Db2 can read the source tables directly, it
+                # can say whether the two engines held the same rows to begin
+                # with, which separates a translation bug from a loading one.
+                # When federation is not configured this is a no-op.
+                if verdict.outcome in ("DIFFERENT", "UNSTABLE"):
+                    result.federation = self._corroborate(statement.dialect)
+
                 result.status = {
                     "EQUIVALENT": "PROVEN_EQUIVALENT",
                     "DIFFERENT": "PROVEN_DIFFERENT",
@@ -420,6 +492,11 @@ class Pipeline:
                     "witness_before": result.original_semantic.witness_table()
                     if result.original_semantic
                     else None,
+                }
+            if result.federation is not None:
+                detail["federation"] = {
+                    "verdict": result.federation.verdict,
+                    "says": result.federation.headline(),
                 }
             result.semantic_cert = self._record_verdict(
                 result,

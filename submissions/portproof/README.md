@@ -96,6 +96,7 @@ PROVEN DIFFERENT         : 1
 order not determined by the SQL: 2
 vacuous (agreed on nothing): 0
 inconclusive             : 1
+divergence cross-checked : Db2 federation confirmed both engines held identical rows
 ```
 
 **Fourteen silent failures out of 38.** Every one translated without complaint. Db2's own SQLCODEs were the only thing that caught them: `-104` unexpected token, `-204` undefined name, `-206` column not in scope, `-390` function not valid in this context, `-440` no authorized routine found, `-182` invalid datetime arithmetic, `-20521` invalid identifier. All 14 were repaired and re verified by Db2.
@@ -103,6 +104,8 @@ inconclusive             : 1
 **Seven statements compiled on Db2 and returned the wrong rows.** This is the category nothing else in the toolchain can see. Six were repaired and re proved against the source engine. The one that remains is a genuine finding rather than a failure: PostgreSQL numeric division and Db2 DECIMAL division carry different trailing digits, and the report says so.
 
 **Two statements were reported as having no determined order rather than as a Db2 bug.** Their `ORDER BY` has ties, which PortProof established by asking the source engine the same question twice, over the same rows inserted in a different order, and getting two different answers.
+
+**The surviving divergence was cross checked by Db2 itself.** Through federation, one Db2 statement read the PostgreSQL tables and PortProof's own copies together and found them to hold identical rows, across all four tables. That matters because it rules out the dull explanation. The engines disagreed about the answer, and they were definitely looking at the same question.
 
 ---
 
@@ -120,6 +123,8 @@ Db2 decides three things an application layer could not decide for it.
 
 **It computes the certificates.** `RECORD_VERDICT` is a SQL PL procedure that computes `HASH(..., 2)`, a SHA-256, over the verdict's own fields inside the engine. The application never gets to choose the certificate, and what is hashed is the evidence rather than the conclusion: instances that returned rows, rows compared, distinct inputs, strength and the per instance breakdown. Before that, a vacuous proof and a substantive one hashed identically.
 
+**It decides whether the two engines were even looking at the same rows.** Db2 federation puts nicknames over the PostgreSQL and MySQL tables, so a single Db2 statement reads the source data and PortProof's own copy at once and computes the symmetric difference between them with `EXCEPT ALL` in both directions. That answers a question Python set arithmetic cannot: when the two engines disagree about an answer, was that the translation meaning something different, or was it the fixture loader putting slightly different data into Db2? A timestamp that lost its fractional seconds and a mistranslated `GROUP BY` look identical from the outside. The check runs when a divergence survives repair, and when federation is not configured it reports `UNAVAILABLE` rather than anything that could be read as a pass. See `src/federation.py` and `scripts/create_federation.sh`.
+
 **It decides who gives up.** `ESCALATE_STALLED` is a cursor loop with an explicit `CONTINUE HANDLER FOR NOT FOUND` that marks every statement which burned its repair budget without a proof as `ESCALATED`, writing the reason into the row. It runs as the least privilege identity, which cannot `UPDATE` the ledger directly. "The automation gave up on these statements" is the one output of an automated migration that the automation must not be able to quietly rewrite.
 
 ### Schema and data model
@@ -136,6 +141,7 @@ Db2 decides three things an application layer could not decide for it.
 | `IX_FIX_MEMORY_VEC` | `CREATE VECTOR INDEX ... WITH DISTANCE COSINE`, so recall can be served by `FETCH APPROX FIRST`. |
 | WLM service class, workload, thresholds | `SQLROWSRETURNED` and `ESTIMATEDSQLCOST` thresholds on a workload matched by `CURRENT CLIENT_APPLNAME`. The engine stops the prover's own queries if one runs away. |
 | Two identities | `PPOWN` owns the schema and is deliberately not `DBADM`. `PPAPP` is what the application runs as, holding `SELECT` on the ledger and `EXECUTE` on three procedures. It cannot `INSERT`, `UPDATE` or `DELETE` any table directly. |
+| `JDBC` wrapper, `PGSRV` and `MYSRV` servers, eight nicknames | Federation, so Db2 reads PostgreSQL and MySQL itself. Each Db2 identity is mapped to a remote account that holds `SELECT` and nothing else, minted by the setup script with a password it never writes to disk, because a user mapping stores a remote credential in the catalogue and the admin account in `.env` can write. |
 
 ### Key queries and operations
 
@@ -209,7 +215,7 @@ A rewrite is also accepted when what remains is not a difference anybody can fix
 - **AI framework:** LangChain 1.4.9, LangGraph 1.2.20, `langchain-db2` 1.0.0
 - **Translation:** `sqlglot` 30.30.0 with IBM's `db2-sqlglot-dialect` 1.1.0
 - **Embeddings:** `sentence-transformers` 6.2.0, `all-MiniLM-L6-v2`
-- **Source engines:** PostgreSQL 17 and MySQL 8.4 in Docker, with DuckDB 2.0.0 embedded as a declared stand in
+- **Source engines:** PostgreSQL 17 and MySQL 8.4 in Docker, with DuckDB 2.0.0 embedded as a declared stand in. Db2 also reads both of them directly through federation, using its own bundled JDBC driver for PostgreSQL and Oracle's Connector/J 8.4.0 for MySQL
 - **UI:** Streamlit 1.67.0
 - **Testing:** pytest 9.2.0
 
@@ -265,6 +271,13 @@ python -m src.setup_db
 #    Separate because building it implicitly creates a helper table in SYSIBM,
 #    which PortProof's deliberately-not-DBADM owner cannot write to.
 bash scripts/create_vector_index.sh db2spike testdb
+
+# 8. Optional: federation, so Db2 reads the source engines itself and can
+#    say whether a divergence was about meaning or about the data.
+#    Run one proof first, so the fixture tables exist to put nicknames over.
+python -m src.main --dialect postgres --limit 1
+bash scripts/create_federation.sh db2spike testdb pppg ppmysql
+python -m src.main --federation
 ```
 
 ---
@@ -300,6 +313,9 @@ python -m src.main --physical
 # Read the Db2 ledger back, with the MQT rollup and a time travel query
 python -m src.main --ledger
 
+# Ask Db2 itself whether the source rows and its own copies match
+python -m src.main --federation
+
 # The three tab UI
 streamlit run src/app.py
 ```
@@ -332,6 +348,7 @@ The regressions pinned by name, because each one would have invalidated the resu
 | Fetch time errors are wrapped | A WLM threshold stops the activity during the fetch, not at prepare or execute, so `fetch_all` let the engine's own safety control escape as a bare exception. |
 | Only an outer `ORDER BY` asserts order | The old check matched the bare words, so `OVER (ORDER BY ...)` made PortProof compare a window function's ties positionally and report engine dependent order as a semantic difference. |
 | Adversarial datasets are actually distinct | The variants shared row lists by reference, so two of the four tables were byte identical across five of the six datasets. "Equivalent on six datasets" was one test counted six times. |
+| A skipped federated column is named | Db2 will not cast a MySQL `BOOLEAN` nickname column, so two columns drop out of the comparison. Dropping them quietly turned a five column check into one that read as complete. |
 
 ---
 
@@ -417,6 +434,15 @@ Measured on Community Edition 12.1.5.0 during this build. Recorded here because 
 
 **`COLLATION_KEY_BIT` works in a predicate and is rejected as an index key expression**, `SQL0356N` reason 23, which is why the case insensitive case name index is on `UPPER(CASE_NAME)` instead.
 
+**Federation to PostgreSQL and MySQL works on Community Edition, and four of its error messages point away from the actual cause.** This one took the longest to get right, so all four are written down.
+
+1. `CREATE WRAPPER JDBC` with no `LIBRARY` clause succeeds and resolves to `libdb2rcjdbc.so`. Naming `libdb2qgjava.so` instead, which is what the file names suggest, fails with `SQL1883N`: *"UNFENCED_WRAPPER_CLASS" is a required "WRAPPER" option*. That library is the wrapper SDK, for wrappers you write yourself. The only concrete wrapper class shipped in the install is the REST service one.
+2. `HOST`, `PORT` and `DBNAME` are rejected as server options for this wrapper with `SQL1881N`. `URL` is the only way to say where the source is.
+3. Db2 ships its own JDBC drivers in `federation/jdbc/lib` and defaults `DRIVER_CLASS` to `com.ibm.fluidquery.jdbc.postgresql.PostgreSQLDriver`. Those are DataDirect drivers, so the URL has to be DataDirect shaped: `jdbc:ibm:postgresql://host:port;DatabaseName=db`. An ordinary `jdbc:postgresql://` URL fails with `SQL1336N`, *the remote host "unknown" was not found*, which reads like a DNS problem and is not one. `DRIVER_PACKAGE` must also be an absolute path; a bare file name fails with *FOpostgresql.jar is not accessible!* even when the jar is in the directory Db2 ships it in.
+4. The bundled MySQL driver refuses MySQL Community Server outright: `SQL1822N`, *[IBM][MySQL JDBC Driver]Connections to MySQL Community Server...*. That is a licence restriction inside the driver rather than a Db2 limitation, and pointing `DRIVER_PACKAGE` and `DRIVER_CLASS` at Oracle's own Connector/J makes it work.
+
+Two more, once it connects. Without a user mapping for the connecting identity, Db2 sends the local authorisation ID and password to the remote, which surfaces as `SQL1101N` for MySQL and PostgreSQL's `28P01` rather than as anything mentioning user mappings. And a nickname column arrives with whatever type Db2's own mapping produces, so `EXCEPT ALL` against a local table of the obvious equivalent type fails with `SQL0415N` until the remote side is cast; for a MySQL `BOOLEAN`, which arrives as BINARY, no cast exists at all (`SQL0461N`).
+
 **`ADMIN_GET_TAB_COMPRESS_INFO` has no `PCTPAGESSAVED` column.** The real names are `PCTPAGESSAVED_CURRENT` and `PCTPAGESSAVED_ADAPTIVE`, and `ADMIN_GET_TAB_COMPRESS_INFO_V10` is a specific name, so an unqualified `GRANT EXECUTE` fails with `SQL0476N` and needs `ON SPECIFIC FUNCTION`.
 
 **Only `SQL_ATTR_INFO_APPLNAME` feeds `CURRENT CLIENT_APPLNAME`.** `SQL_ATTR_INFO_PROGRAMNAME` populates a different monitor element. Setting the wrong one leaves the special register empty, every connection matches the default workload, and a WLM threshold that is correct in every other respect silently never fires.
@@ -435,13 +461,13 @@ Stated plainly, because a prover that oversells itself is the thing this project
 - **`DB2_SCHEMA` is reported and not honoured.** The schema name is baked into the DDL, the procedure names and the grants. PortProof warns when the variable disagrees instead of pretending it moves anything.
 - **The default repair engine is rules, not a model.** A deliberate trade for offline reproducibility. The `http` provider exists and goes through the same validation, but the measured numbers above are from the rule engine.
 - **One divergence remains unrepaired**, and the report says which and why: PostgreSQL numeric division and Db2 DECIMAL division carry different trailing digits. That is a finding, not a bug to patch over.
-- **Federation was not attempted.** A Db2 federated wrapper to PostgreSQL and MySQL would let the differential proof run inside a single engine. `FEDERATED=YES` was verified on this instance; the wrapper was not.
+- **Federation cross checks the inputs, not the answers.** Db2 reads both source engines directly and compares their rows against its own copies inside a single statement, which is what tells you a divergence is about meaning rather than about loading. It does not yet run the translated query and the source query side by side in one statement, because the source query is in the source dialect and Db2 will not parse it. Passthru executes it at the source but cannot be joined to a local table.
 
 **Next steps**
 
 - A cost regression gate: compare `EXPLAIN` estimates before and after a repair, so a rewrite that is correct and catastrophically slow is caught too.
 - Counterexample minimisation: shrink a failing dataset to the smallest rows that still disagree, which turns a verdict into a bug report.
-- Federated differential execution, so the source engine and Db2 are compared in one statement.
+- Full federated differential execution: translate the source statement into a Db2 statement over nicknames as well as over local tables, so the two answers are produced and compared by one optimiser.
 - Widen the corpus from a public benchmark such as BIRD Mini-Dev, to report the same measurements at a larger scale.
 
 ---
@@ -453,3 +479,27 @@ Stated plainly, because a prover that oversells itself is the thing this project
 | Vishnu | [@ZENODIUM](https://github.com/ZENODIUM) | Solo entry. Db2 schema and SQL PL, the compile oracle, the differential prover and its soundness guards, the LangGraph compile repair loop, the semantic repair loop, the Db2 vector fix memory, the Streamlit UI, and the test suite. |
 
 Built on IBM's `db2-sqlglot-dialect` and IBM's `langchain-db2`. The translator is the subject of the measurements here rather than a competitor: PortProof exists to tell you which of its outputs you can trust.
+
+### Third party components and licences
+
+Every dependency is pinned in `requirements.txt`. All of it is used as a published package through its public interface; no third party source is vendored, copied or adapted into this folder, and every line of code under `submissions/portproof/` was written for this submission.
+
+| Component | Licence | What it is used for |
+|---|---|---|
+| IBM `ibm_db`, `ibm-db-sa` | Apache 2.0 | The Db2 driver and its SQLAlchemy dialect. |
+| IBM `langchain-db2` | Apache 2.0 | `DB2VS`, the official LangChain vector store over Db2. |
+| IBM `db2-sqlglot-dialect` | Apache 2.0 | The translator under test. |
+| `langchain`, `langchain-core`, `langchain-community`, `langgraph` | MIT | The repair loop's model interface and state machine. |
+| `sqlglot` | MIT | SQL parsing underneath the dialect. |
+| `sentence-transformers`, model `all-MiniLM-L6-v2` | Apache 2.0 | Local 384 dimension embeddings, CPU only. |
+| `duckdb` | MIT | The zero setup PostgreSQL stand in, which declares where it diverges. |
+| `psycopg` | LGPL 3.0 | PostgreSQL client. Used unmodified as a library. |
+| `pymysql` | MIT | MySQL client. |
+| `cryptography` | Apache 2.0 or BSD 3-Clause | Required by `pymysql` for MySQL 8 `caching_sha2_password`. |
+| `streamlit` | Apache 2.0 | The three tab UI. |
+| `python-dotenv` | BSD 3-Clause | Reads `.env`. |
+| `pytest` | MIT | The test suite. |
+| Oracle MySQL Connector/J 8.4.0 | GPL 2.0 with the Universal FOSS Exception | Downloaded at setup time by `scripts/create_federation.sh`, into the Db2 container, never committed. Needed because IBM's bundled MySQL federation driver refuses MySQL Community Server. |
+| PostgreSQL 17, MySQL 8.4, Db2 Community Edition 12.1.5.0 | PostgreSQL Licence, GPL 2.0, IBM Db2 Community Edition licence | Run as official Docker images, started by the commands in this README. |
+
+IBM Db2 Community Edition is used under its own licence, accepted explicitly by the `LICENSE=accept` environment variable in the documented `docker run` command.

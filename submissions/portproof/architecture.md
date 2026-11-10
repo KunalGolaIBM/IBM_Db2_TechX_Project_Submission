@@ -34,6 +34,7 @@ graph TD
         R["3. compile repair<br/>LangGraph, bounded"]
         S["4. semantic proof<br/>differential execution"]
         SR["5. semantic repair<br/>measured rules, re proved"]
+        F["5b. federated cross check<br/>did both engines hold<br/>the same rows?"]
         L["6. ledger and certificate<br/>SQL PL"]
     end
 
@@ -49,6 +50,7 @@ graph TD
         MEM["FIX_MEMORY<br/>VECTOR(384) + vector index"]
         LED["STATEMENT + VERDICT<br/>temporal, MQT, SHA-256"]
         WLM["WLM thresholds<br/>on CURRENT CLIENT_APPLNAME"]
+        NICK["Nicknames over PGSRV<br/>and MYSRV, JDBC wrapper"]
     end
 
     CLI --> T
@@ -66,6 +68,11 @@ graph TD
     S -->|DIFFERENT| SR
     SR --> PREP
     SR --> S
+    SR -->|divergence survived| F
+    F --> NICK
+    NICK -.->|reads directly| PG
+    NICK -.->|reads directly| MY
+    F --> L
     S --> L
     SR --> L
     L --> LED
@@ -182,6 +189,46 @@ The rules are scoped to one dialect each, because a rule that fixes case
 sensitivity firing on a PostgreSQL statement would introduce the exact class of
 bug this file exists to remove.
 
+### 5b. Federated cross check, `src/federation.py`
+
+A divergence that survives repair raises a question the Python side cannot
+answer. The prover has seen two answers and nothing else. If those answers
+differ, the cause is either the query meaning something different, which is the
+bug PortProof hunts, or the fixture loader having put slightly different data
+into the two engines, which is a bug in the harness and not evidence about the
+translation at all. A `TIMESTAMP` that lost its fractional seconds on the way
+into Db2 produces exactly the same visible symptom as a mistranslated
+`GROUP BY`.
+
+Db2 federation settles it. With a `JDBC` wrapper, a `POSTGRESQL` server, a
+`MYSQL` server and a nickname per table, one Db2 statement reads both copies of
+the data and computes the symmetric difference:
+
+```sql
+WITH SRC AS (SELECT CAST("id" AS INTEGER) AS ID, ... FROM DB2INST1.PG_ORDERS),
+     TGT AS (SELECT ID, ... FROM PPTEST.ORDERS),
+     ONLY_SRC AS (SELECT * FROM SRC EXCEPT ALL SELECT * FROM TGT),
+     ONLY_TGT AS (SELECT * FROM TGT EXCEPT ALL SELECT * FROM SRC)
+SELECT (SELECT COUNT(*) FROM ONLY_SRC), (SELECT COUNT(*) FROM ONLY_TGT)
+  FROM SYSIBM.SYSDUMMY1
+```
+
+`EXCEPT ALL` rather than `EXCEPT`, so a duplicated row on one side counts as a
+difference instead of being hidden by set semantics. The remote column is cast
+to the *local* column's type, because Db2 gives a nickname whatever type its own
+mapping produces and `EXCEPT ALL` refuses mismatched types with SQL0415N. Where
+no cast exists, which happens for a MySQL `BOOLEAN` arriving as BINARY, the
+column is left out and named in the output, because a partial check that reads
+as complete is worse than none.
+
+Three properties keep this honest. It only runs when a divergence survived, so
+it costs nothing on the happy path. It returns `UNAVAILABLE` rather than
+anything resembling a pass when no nickname exists, which is the state of any
+checkout that has not run `scripts/create_federation.sh`. And the Db2 identities
+are mapped to remote accounts holding `SELECT` and nothing else, minted by the
+setup script with a password it never writes to disk, because a user mapping
+stores a remote credential inside the Db2 catalogue.
+
 ### 6. Ledger and certificate, `sql/02_procedures.sql`
 
 The runtime identity holds no `INSERT` on any table. It can only `CALL`:
@@ -212,6 +259,7 @@ The runtime identity holds no `INSERT` on any table. It can only `CALL`:
 | `src/corpus.py` | The 38 statements, the shared fixture DDL, and the six adversarial datasets. `Variant.shuffled()` feeds the stability probe. |
 | `src/counterexample.py` | The source engines, the canonicalisation, the verdict and its strength. |
 | `src/semantic_repair.py` | The five measured rewrite rules and the loop that re proves them. |
+| `src/federation.py` | The federated cross check: nicknames, the cast reconciliation, and Db2's own symmetric difference over the two copies of the data. |
 | `src/repair.py` | The LangGraph compile repair state machine. |
 | `src/llm.py` | `RuleRepairLLM` (the default) and `HttpRepairLLM`, both as LangChain models. |
 | `src/embeddings.py` | Local sentence transformer embeddings, plus a deterministic fallback for tests. |
@@ -241,6 +289,7 @@ less reliably in Python.
 | WLM thresholds | A timeout in the client, which cannot stop work already running in the engine. |
 | `GRANT` and `CHECK` constraints | Privilege and validity as application conventions rather than as engine rules. |
 | `ADMIN_GET_TAB_COMPRESS_INFO`, `MON_GET_PKG_CACHE_STMT` | Guessed physical design advice. |
+| Federation: JDBC wrapper, nicknames, `EXCEPT ALL` across engines | Two result sets compared in Python, which can tell you the answers differ but never whether the inputs did. |
 
 ---
 
