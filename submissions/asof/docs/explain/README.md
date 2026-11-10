@@ -18,3 +18,7 @@ Plans whose name ends in `_100k` were explained against `ASOF_VBENCH`, 100,000 s
 | [as_of_retrieval_approx_100k](as_of_retrieval_approx_100k.txt) | FETCH APPROX FIRST 10 ROWS under FOR BUSINESS_TIME AS OF, at scale (100,000 synthetic clause versions) | RETURN > TBSCAN > SORT > FETCH > IXSCAN | POLICY_CLAUSE (table), IX_CLAUSE_DOC_ASOF (index) | 463.12 |
 | [nearest_any_date_approx_100k](nearest_any_date_approx_100k.txt) | FETCH APPROX FIRST 10 ROWS without FOR BUSINESS_TIME AS OF, at scale (100,000 synthetic clause versions) | RETURN > TBSCAN > SORT > FETCH > IXSCAN | IX_CLAUSE_EMBEDDING (vector index), POLICY_CLAUSE (table) | 501.43 |
 | [nearest_any_date_default_100k](nearest_any_date_default_100k.txt) | FETCH FIRST 10 ROWS, neither EXACT nor APPROX, without the period, at scale (100,000 synthetic clause versions) | RETURN > TBSCAN > SORT > FETCH > IXSCAN | IX_CLAUSE_EMBEDDING (vector index), POLICY_CLAUSE (table) | 501.43 |
+
+## SQL0901N repro
+
+[sql0901n_repro.py](sql0901n_repro.py) reproduces the Db2 12.1.5.0 defect in one command against any database where the user may create a buffer pool, a table space and a schema: `DB2_PASSWORD=... python sql0901n_repro.py --port 50000`. It needs only `ibm_db`, builds a 1,500-row bitemporal table shaped like `POLICY_CLAUSE`, and drops everything after. On IBM's stock image it prints 10 rows for a forced vector-index scan with a search list of 200 under `FOR BUSINESS_TIME AS OF`, 10 rows for 1,000 without the period, and SQL0901N ("Fetched nodes unexpectedly unsorted.") for 210 under the period.
