@@ -19,8 +19,16 @@ db2-sqlglot-dialect==1.1.0       # IBM's Db2 dialect: the thing PortProof verifi
 # --- embeddings (local, CPU, no API key) ---------------------------------
 sentence-transformers==6.2.0
 
-# --- the source engine for differential testing --------------------------
-duckdb==2.0.0                    # PostgreSQL-compatible, embedded, no server
+# --- the source engines for differential testing -------------------------
+# A real server where the engine's own semantics decide the answer; the
+# embedded DuckDB as a zero-setup stand-in that declares where it differs.
+duckdb==2.0.0                    # PostgreSQL stand-in, no server needed
+psycopg[binary]==3.2.12          # PostgreSQL, when a real one is reachable
+pymysql==1.1.2                   # MySQL: a *real* one, because MySQL's
+                                 # collation and division semantics live in the
+                                 # engine and cannot be emulated by DuckDB
+cryptography==46.0.3             # required by pymysql for MySQL 8's default
+                                 # caching_sha2_password authentication
 
 # --- app and tooling -----------------------------------------------------
 streamlit==1.67.0

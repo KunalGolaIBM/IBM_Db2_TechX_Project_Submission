@@ -36,7 +36,7 @@ from src.config import llm_config, runtime_config, setup_config  # noqa: E402
 from src.corpus import CORPUS, VARIANTS, Statement  # noqa: E402
 from src.counterexample import (  # noqa: E402
     Db2Target,
-    DuckDbSource,
+    available_sources,
     ensure_fixture_schema,
     prove_semantics,
 )
@@ -50,6 +50,8 @@ st.set_page_config(page_title="PortProof", page_icon="✓", layout="wide")
 VERDICT_COLOUR = {
     "EQUIVALENT": "#1f883d",
     "DIFFERENT": "#cf222e",
+    "UNSTABLE": "#bc4c00",
+    "VACUOUS": "#8250df",
     "INCONCLUSIVE": "#9a6700",
 }
 
@@ -57,7 +59,19 @@ VERDICT_COLOUR = {
 VERDICT_LABEL = {
     "EQUIVALENT": "PROVEN EQUIVALENT",
     "DIFFERENT": "PROVEN DIFFERENT",
+    "UNSTABLE": "ORDER NOT DETERMINED",
+    "VACUOUS": "VACUOUS, PROVES NOTHING",
     "INCONCLUSIVE": "INCONCLUSIVE",
+}
+
+#: How much an EQUIVALENT is actually worth. Shown next to the verdict, because
+#: a verdict without its strength invites exactly the over-reading PortProof is
+#: supposed to prevent.
+STRENGTH_COLOUR = {
+    "STRONG": "#1f883d",
+    "MODERATE": "#9a6700",
+    "WEAK": "#bc4c00",
+    "NONE": "#57606a",
 }
 
 
@@ -78,9 +92,15 @@ def _memory(_app_conn):
     return FixMemory(_app_conn, embeddings=LocalEmbeddings())
 
 
-@st.cache_resource
+@st.cache_resource(show_spinner="Starting the source engines...")
 def _prover(_owner_conn):
-    return DuckDbSource(), Db2Target(_owner_conn)
+    """The source engines, one per dialect, and the Db2 target.
+
+    MySQL is a real server when one is reachable. If it is not, MySQL
+    statements come back INCONCLUSIVE rather than being judged by a
+    PostgreSQL-compatible stand-in -- see :class:`DuckDbSource`.
+    """
+    return available_sources(), Db2Target(_owner_conn)
 
 
 def _code(sql: str, *, language: str = "sql") -> None:
@@ -326,24 +346,61 @@ with tab_semantic:
                     st.caption("repaired first, then proved")
 
         if statement is not None and db2_sql:
-            source, target = _prover(owner_conn)
+            sources, target = _prover(owner_conn)
+            source = sources.get(statement.dialect)
+            if source is None:
+                st.warning(
+                    f"No {statement.dialect} source engine is reachable, so "
+                    "meaning cannot be checked. PortProof will not substitute a "
+                    "different engine: its agreement with Db2 would be evidence "
+                    "about the wrong dialect. See `.env.example` for MySQL."
+                )
+                st.stop()
             with st.spinner(f"running both statements on {len(VARIANTS)} datasets..."):
                 verdict = prove_semantics(
                     source_sql=statement.sql,
                     db2_sql=db2_sql,
                     source=source,
                     target=target,
+                    dialect=statement.dialect,
                 )
 
             colour = VERDICT_COLOUR.get(verdict.outcome, "#57606a")
+            strength_colour = STRENGTH_COLOUR.get(verdict.strength, "#57606a")
             st.markdown(
                 f"<h3 style='color:{colour};margin-bottom:0'>"
-                f"{VERDICT_LABEL.get(verdict.outcome, verdict.outcome)}</h3>"
+                f"{VERDICT_LABEL.get(verdict.outcome, verdict.outcome)}"
+                f"<span style='color:{strength_colour};font-size:0.6em;"
+                f"font-weight:600;margin-left:.6em'>evidence "
+                f"{verdict.strength}</span></h3>"
                 f"<p style='color:#57606a'>{html.escape(verdict.headline)}</p>",
                 unsafe_allow_html=True,
             )
             for note in verdict.notes:
                 st.caption(f"· {note}")
+
+            e1, e2, e3, e4 = st.columns(4)
+            e1.metric("instances run", verdict.instances_checked)
+            e2.metric("agreed on rows", verdict.substantive_instances)
+            e3.metric("rows compared", verdict.rows_compared)
+            e4.metric("distinct inputs", verdict.distinct_inputs)
+
+            if verdict.outcome == "UNSTABLE" or verdict.order_unstable:
+                st.warning(
+                    "The two engines returned different rows, and so did the "
+                    "**source engine against itself**, when the same rows were "
+                    "inserted in the opposite order. This statement's `ORDER BY` "
+                    "has ties, so no engine owes you this order and Db2 is not "
+                    "at fault. Add a tiebreaker (for example `, id`) and prove "
+                    "it again."
+                )
+            if verdict.outcome == "VACUOUS":
+                st.warning(
+                    "Both engines returned **no rows on every dataset**. They "
+                    "agreed, and the agreement is empty: `[] == []` is true for "
+                    "any two statements that happen to select nothing. PortProof "
+                    "used to count this as a proof of equivalence. It is not one."
+                )
 
             left, right = st.columns(2)
             with left:
@@ -360,6 +417,9 @@ with tab_semantic:
                         "dataset": r.variant,
                         "what it stresses": r.targets,
                         "agreed": "yes" if r.agreed else ("--" if r.inconclusive else "NO"),
+                        "evidence": "none (both empty)" if r.vacuous else (
+                            f"{r.rows_compared} rows" if r.agreed else r.difference or "--"
+                        ),
                         "source rows": len(r.source_rows),
                         "db2 rows": len(r.db2_rows),
                         "note": (r.source_error or r.db2_error or ""),

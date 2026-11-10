@@ -16,6 +16,21 @@ load_dotenv(find_dotenv(usecwd=True), override=False)
 #: Marks PortProof's own connections so a Db2 WLM workload can leash them.
 APPL_NAME = "portproof-prover"
 
+#: The ledger schema. Fixed, because the DDL, the SQL PL procedure names and the
+#: GRANTs all spell it out; see the note in :func:`_base`.
+PORTPROOF_SCHEMA = "PORTPROOF"
+
+
+def schema_override_warning() -> str:
+    """A warning if DB2_SCHEMA is set to something PortProof will not honour."""
+    requested = os.getenv("DB2_SCHEMA", "").strip().upper()
+    if requested and requested != PORTPROOF_SCHEMA:
+        return (
+            f"DB2_SCHEMA={requested} is ignored: the ledger schema is fixed at "
+            f"{PORTPROOF_SCHEMA} by sql/01_schema.sql and sql/03_grants.sql"
+        )
+    return ""
+
 
 class ConfigError(RuntimeError):
     """Raised when required configuration is absent."""
@@ -68,7 +83,12 @@ def _base(user_var: str, pwd_var: str) -> Db2Config:
         database=os.getenv("DB2_DATABASE", "testdb"),
         user=_require(user_var),
         password=_require(pwd_var),
-        schema=os.getenv("DB2_SCHEMA", "PORTPROOF").upper(),
+        # Reported, not honoured, and deliberately not configurable: the schema
+        # name is baked into sql/01_schema.sql, the procedure names the ledger
+        # writes go through, and the GRANTs in sql/03_grants.sql. An env var
+        # that silently fails to move any of that would be worse than no env
+        # var, so DB2_SCHEMA is read only to warn when it disagrees.
+        schema=PORTPROOF_SCHEMA,
     )
 
 
@@ -86,6 +106,67 @@ def setup_config() -> Db2Config:
     if os.getenv("DB2_SETUP_USER", "").strip():
         return _base("DB2_SETUP_USER", "DB2_SETUP_PASSWORD")
     return runtime_config()
+
+
+@dataclass(frozen=True)
+class SourceDbConfig:
+    """Connection details for a source engine used as ground truth."""
+
+    host: str
+    port: int
+    database: str
+    user: str
+    password: str
+
+    def redacted(self) -> str:
+        return f"{self.user}@{self.host}:{self.port}/{self.database}"
+
+
+def postgres_config() -> SourceDbConfig:
+    """PostgreSQL settings. Absent configuration means the embedded DuckDB
+    stand-in is used instead, with its known divergences declared."""
+    return SourceDbConfig(
+        host=os.getenv("PG_HOST", "localhost"),
+        port=int(os.getenv("PG_PORT", "5433")),
+        database=os.getenv("PG_DATABASE", "pptest"),
+        user=os.getenv("PG_USER", "postgres"),
+        password=os.getenv("PG_PASSWORD", ""),
+    )
+
+
+@dataclass(frozen=True)
+class MySqlConfig:
+    """Connection details for the real MySQL used as a source-of-truth engine.
+
+    PortProof originally emulated MySQL with DuckDB in PostgreSQL mode. That is
+    sufficient for syntax but not for *semantics*: MySQL's default collation is
+    case-insensitive and PostgreSQL's is not, so a statement whose whole point
+    was that divergence compared equal on both engines and was certified
+    equivalent when it was not. Where a real MySQL is reachable it is used; where
+    it is not, the prover declines to rule rather than guess (see
+    :func:`src.counterexample.prove_semantics`).
+    """
+
+    host: str
+    port: int
+    database: str
+    user: str
+    password: str
+
+    def redacted(self) -> str:
+        return f"{self.user}@{self.host}:{self.port}/{self.database}"
+
+
+def mysql_config() -> MySqlConfig:
+    """MySQL settings. Absent configuration is not an error -- it means the
+    MySQL source engine is simply unavailable, and the caller degrades."""
+    return MySqlConfig(
+        host=os.getenv("MYSQL_HOST", "localhost"),
+        port=int(os.getenv("MYSQL_PORT", "3307")),
+        database=os.getenv("MYSQL_DATABASE", "pptest"),
+        user=os.getenv("MYSQL_USER", "root"),
+        password=os.getenv("MYSQL_PASSWORD", ""),
+    )
 
 
 @dataclass(frozen=True)

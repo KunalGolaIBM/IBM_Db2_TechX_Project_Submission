@@ -2,10 +2,13 @@
 
 Three things live here:
 
-* :data:`CORPUS` -- realistic PostgreSQL and MySQL statements to migrate. This is
-  the same 32-statement set used in the feasibility study that measured IBM's
-  ``db2-sqlglot-dialect`` reporting success on 32/32 while 20 of its outputs
-  failed on a real Db2.
+* :data:`CORPUS` -- realistic PostgreSQL and MySQL statements to migrate. It
+  extends the 32-statement set used in the feasibility study, which measured
+  IBM's ``db2-sqlglot-dialect`` reporting success on 32/32 while 20 of its
+  outputs failed on a real Db2. The additions are joins, a column-by-column
+  division and a ``NOT IN`` over a NULL-bearing subquery: the original set was
+  entirely single-table, so nothing in it could expose a join or a NULL
+  three-valued-logic difference at all.
 * :data:`FIXTURE_DDL` / :data:`FIXTURE_ROWS` -- a tiny schema created identically
   in Db2 and in the source engine so results can be compared.
 * :data:`VARIANTS` -- adversarial datasets, each built to make the source engine
@@ -50,7 +53,13 @@ CORPUS: list[Statement] = [
     Statement("postgres", "null_ordering", "SELECT id, email FROM customers ORDER BY email, id"),
     Statement("postgres", "empty_string_null", "SELECT id FROM customers WHERE email = '' ORDER BY id"),
     Statement("postgres", "case_compare", "SELECT id FROM customers WHERE name = 'ASHA SMITH' ORDER BY id"),
-    Statement("mysql", "limit_comma", "SELECT id, name FROM customers ORDER BY id LIMIT 2, 2"),
+    Statement("postgres", "join_aggregate", "SELECT c.id, c.name, count(o.id) AS orders, coalesce(sum(o.amount), 0) AS spend FROM customers c LEFT JOIN orders o ON o.customer_id = c.id GROUP BY c.id, c.name ORDER BY c.id"),
+    Statement("postgres", "join_three_tables", "SELECT c.name, i.sku, o.amount FROM customers c JOIN orders o ON o.customer_id = c.id JOIN order_items i ON i.customer_id = c.id WHERE o.status = 'PAID' ORDER BY c.name, i.sku, o.amount"),
+    Statement("postgres", "column_division", "SELECT id, amount / quantity AS unit_price FROM orders WHERE quantity <> 0 ORDER BY id"),
+    Statement("postgres", "not_in_null", "SELECT id FROM customers WHERE id NOT IN (SELECT customer_id FROM orders) ORDER BY id"),
+    Statement("mysql", "limit_comma", "SELECT id, name FROM customers ORDER BY id LIMIT 1, 3"),
+    Statement("mysql", "join_group_concat", "SELECT c.id, GROUP_CONCAT(i.sku ORDER BY i.sku SEPARATOR ',') AS skus FROM customers c LEFT JOIN order_items i ON i.customer_id = c.id GROUP BY c.id ORDER BY c.id"),
+    Statement("mysql", "column_division", "SELECT id, amount / quantity AS unit_price FROM orders WHERE quantity <> 0 ORDER BY id"),
     Statement("mysql", "backticks_ifnull", "SELECT `id`, IFNULL(`email`, 'n/a') AS e FROM `customers` ORDER BY `id`"),
     Statement("mysql", "date_format", "SELECT DATE_FORMAT(created_at, '%Y-%m') AS m, COUNT(*) AS n FROM orders GROUP BY m ORDER BY m"),
     Statement("mysql", "group_concat", "SELECT customer_id, GROUP_CONCAT(sku SEPARATOR ',') AS skus FROM order_items GROUP BY customer_id ORDER BY customer_id"),
@@ -78,7 +87,8 @@ FIXTURE_DDL: list[str] = [
          customer_id INTEGER,
          amount DECIMAL(10,2),
          status VARCHAR(10),
-         created_at TIMESTAMP
+         created_at TIMESTAMP,
+         quantity INTEGER
        )""",
     """CREATE TABLE order_items (
          customer_id INTEGER,
@@ -101,13 +111,29 @@ class Variant:
     targets: str
     rows: dict[str, list[tuple]] = field(default_factory=dict)
 
+    def shuffled(self) -> "Variant":
+        """The same data, inserted in the opposite order.
+
+        Logically identical: a table is a set, and no correct query can tell the
+        difference. That is exactly what makes it a test. A statement whose
+        ``ORDER BY`` has ties is not *determined* by its SQL, and reversing the
+        insertion order is enough to make a real engine admit it by returning
+        different rows for the same input -- see the stability probe in
+        :func:`src.counterexample.prove_semantics`.
+        """
+        return Variant(
+            name=f"{self.name}:reinserted",
+            targets=f"{self.targets} (same rows, opposite insertion order)",
+            rows={table: list(reversed(rows)) for table, rows in self.rows.items()},
+        )
+
 
 def _c(id_, name, email, first, last, active=True, deleted=False):
     return (id_, name, email, first, last, active, deleted)
 
 
-def _o(id_, cust, amount, status, ts):
-    return (id_, cust, amount, status, ts)
+def _o(id_, cust, amount, status, ts, quantity=2):
+    return (id_, cust, amount, status, ts, quantity)
 
 
 #: The baseline dataset: ordinary, unremarkable values.
@@ -119,12 +145,13 @@ BASE = Variant(
             _c(1, "Asha Smith", "asha@example.com", "Asha", "Smith"),
             _c(2, "Bob Stone", "bob@example.com", "Bob", "Stone"),
             _c(3, "Cy Smithers", "cy@example.com", "Cy", "Smithers", False, True),
+            _c(4, "Dev Rao", "dev@example.com", "Dev", "Rao"),
         ],
         "orders": [
-            _o(10, 1, "50.00", "PAID", "2026-01-05 10:00:00"),
-            _o(11, 1, "150.00", "NEW", "2026-02-07 11:00:00"),
-            _o(12, 2, "99.50", "PAID", "2026-02-20 09:30:00"),
-            _o(13, 3, "10.00", "PAID", "2026-03-01 08:00:00"),
+            _o(10, 1, "50.00", "PAID", "2026-01-05 10:00:00", 2),
+            _o(11, 1, "150.00", "NEW", "2026-02-07 11:00:00", 3),
+            _o(12, 2, "99.50", "PAID", "2026-02-20 09:30:00", 1),
+            _o(13, 3, "10.00", "PAID", "2026-03-01 08:00:00", 4),
         ],
         "order_items": [(1, "B2"), (1, "A1"), (2, "C3")],
         "events": [
@@ -134,7 +161,15 @@ BASE = Variant(
     },
 )
 
-#: Each of these encodes a difference measured on real engines.
+# Every variant below overrides *all four* tables.
+#
+# They used to be written as ``{**BASE.rows, "customers": [...]}``, which looks
+# like six datasets and is not. ``order_items`` and ``events`` were the same
+# three and two rows in five of the six, so a statement over those tables was
+# one test reported as five; and because the dict values were the *same list
+# objects* as BASE's, there was nothing stopping one variant's data from being
+# mistaken for another's. SemanticVerdict.distinct_inputs now measures this
+# rather than trusting it, and the data below gives it something to measure.
 VARIANTS: list[Variant] = [
     BASE,
     Variant(
@@ -142,25 +177,47 @@ VARIANTS: list[Variant] = [
         targets="case-sensitive comparison: MySQL's default collation matches "
                 "'Asha' to 'ASHA'; Db2 and PostgreSQL do not",
         rows={
-            **BASE.rows,
             "customers": [
-                _c(1, "ASHA SMITH", "asha@example.com", "Asha", "Smith"),
+                _c(1, "ASHA SMITH", "ASHA@EXAMPLE.COM", "Asha", "Smith"),
                 _c(2, "asha smith", "bob@example.com", "Bob", "Stone"),
-                _c(3, "Asha Smith", "cy@example.com", "Cy", "Smithers"),
+                _c(3, "Asha Smith", "cy@Example.com", "Cy", "Smithers"),
+            ],
+            "orders": [
+                _o(20, 1, "11.00", "paid", "2026-01-06 10:00:00", 2),
+                _o(21, 2, "22.00", "PAID", "2026-01-07 10:00:00", 4),
+                _o(22, 3, "33.00", "Paid", "2026-01-08 10:00:00", 3),
+            ],
+            "order_items": [(1, "a1"), (1, "A1"), (2, "b2"), (3, "B2")],
+            "events": [
+                (1, '{"type":"Click","city":"PUNE"}'),
+                (2, '{"type":"click","city":"pune"}'),
             ],
         },
     ),
     Variant(
         name="nulls_and_empties",
         targets="NULL ordering and empty-string handling: NULLs sort first in "
-                "MySQL, last in Db2/PostgreSQL; '' IS NULL is false in both but "
-                "true in Oracle-compatible modes",
+                "MySQL, last in Db2/PostgreSQL; aggregates skip NULLs; and "
+                "NOT IN over a NULL-bearing subquery returns no rows at all",
         rows={
-            **BASE.rows,
             "customers": [
-                _c(1, "Asha Smith", None, "Asha", "Smith"),
+                _c(1, "Asha Smith", None, "Asha", None),
                 _c(2, "Bob Stone", "", "Bob", "Stone"),
-                _c(3, "Cy Smithers", "cy@example.com", "Cy", "Smithers"),
+                _c(3, "Cy Smithers", "cy@example.com", None, "Smithers"),
+                _c(4, None, "dev@example.com", "Dev", "Rao", None, None),
+            ],
+            "orders": [
+                # A NULL customer_id is what makes NOT IN collapse, and a NULL
+                # amount is what separates COUNT(*) from COUNT(amount).
+                _o(30, None, "40.00", "PAID", "2026-01-09 10:00:00", 2),
+                _o(31, 1, None, "NEW", None, None),
+                _o(32, 2, "0.00", None, "2026-02-01 00:00:00", 0),
+            ],
+            "order_items": [(1, None), (None, "A1"), (2, "")],
+            "events": [
+                (1, '{"type":"click"}'),
+                (2, None),
+                (3, '{"type":"view","city":null}'),
             ],
         },
     ),
@@ -169,27 +226,46 @@ VARIANTS: list[Variant] = [
         targets="unstable ordering: equal sort keys make DISTINCT ON and "
                 "window functions non-deterministic unless fully ordered",
         rows={
-            **BASE.rows,
+            "customers": [
+                _c(1, "Tie One", "t1@example.com", "Tie", "One"),
+                _c(2, "Tie One", "t2@example.com", "Tie", "One"),
+                _c(3, "Tie One", "t3@example.com", "Tie", "One"),
+            ],
             "orders": [
-                _o(10, 1, "50.00", "PAID", "2026-01-05 10:00:00"),
-                _o(11, 1, "50.00", "PAID", "2026-01-05 10:00:00"),
-                _o(12, 1, "50.00", "NEW", "2026-01-05 10:00:00"),
-                _o(13, 2, "10.00", "PAID", "2026-03-01 08:00:00"),
+                _o(40, 1, "50.00", "PAID", "2026-01-05 10:00:00", 2),
+                _o(41, 1, "50.00", "PAID", "2026-01-05 10:00:00", 2),
+                _o(42, 1, "50.00", "NEW", "2026-01-05 10:00:00", 2),
+                _o(43, 2, "10.00", "PAID", "2026-03-01 08:00:00", 2),
+            ],
+            "order_items": [(1, "A1"), (1, "A1"), (1, "A1"), (2, "A1")],
+            "events": [
+                (1, '{"type":"click","city":"Agra"}'),
+                (2, '{"type":"click","city":"Agra"}'),
             ],
         },
     ),
     Variant(
         name="division_and_rounding",
         targets="integer division and decimal scale: 7/2 is 3 on Db2 and "
-                "PostgreSQL but 3.5 in MySQL",
+                "PostgreSQL but 3.5 in MySQL, and DECIMAL/INTEGER scale rules "
+                "differ, so amount/quantity rounds differently per engine",
         rows={
-            **BASE.rows,
-            "orders": [
-                _o(10, 1, "7.00", "PAID", "2026-01-05 10:00:00"),
-                _o(11, 1, "2.00", "PAID", "2026-02-07 11:00:00"),
-                _o(12, 2, "0.01", "PAID", "2026-02-20 09:30:00"),
-                _o(13, 3, "99999.99", "PAID", "2026-03-01 08:00:00"),
+            "customers": [
+                _c(1, "Asha Smith", "asha@example.com", "Asha", "Smith"),
+                _c(2, "Bob Stone", "bob@example.com", "Bob", "Stone"),
             ],
+            "orders": [
+                # Chosen so amount/quantity is non-terminating, exactly .5, and
+                # at the edge of DECIMAL(10,2) -- the three cases where the
+                # engines' scale and rounding rules visibly part company.
+                _o(50, 1, "7.00", "PAID", "2026-01-05 10:00:00", 2),
+                _o(51, 1, "10.00", "PAID", "2026-02-07 11:00:00", 3),
+                _o(52, 2, "0.01", "PAID", "2026-02-20 09:30:00", 7),
+                _o(53, 2, "99999.99", "PAID", "2026-03-01 08:00:00", 1),
+                _o(54, 2, "5.00", "NEW", "2026-03-02 08:00:00", 0),
+            ],
+            "order_items": [(1, "D4"), (2, "D4"), (2, "E5")],
+            "events": [(1, '{"type":"sum","city":"Delhi"}')],
         },
     ),
     Variant(
@@ -204,13 +280,6 @@ VARIANTS: list[Variant] = [
         },
     ),
 ]
-
-
-def variant_by_name(name: str) -> Variant:
-    for variant in VARIANTS:
-        if variant.name == name:
-            return variant
-    raise KeyError(name)
 
 
 def statements_for(dialect: str | None = None) -> list[Statement]:

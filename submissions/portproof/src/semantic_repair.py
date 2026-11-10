@@ -1,0 +1,485 @@
+"""Stage 3b: repair a statement that compiles and still means something else.
+
+The compile repair loop in :mod:`src.repair` closes a loop that Db2 itself
+opens: Db2 rejected the SQL, so Db2 can say when it stops rejecting it. The
+harder failure has no such signal. A statement that *compiles* and returns the
+wrong rows is accepted by every tool in the chain, which is precisely why
+PortProof hunts for it -- and until now PortProof hunted for it and then
+stopped, reporting PROVEN DIFFERENT and leaving the engineer to it.
+
+This module closes that loop too:
+
+    prove meaning -> DIFFERENT -> rewrite -> compile-check -> prove meaning again
+
+Three properties make this safe to automate, and they are the point:
+
+1. **A candidate is never trusted.** It goes back through ``PREPARE`` and then
+   through the whole differential proof. A rewrite that compiles but still
+   disagrees is discarded with the same indifference as one that does not
+   compile at all.
+2. **The acceptance test is the one that found the bug.** The repair is accepted
+   only if the counterexample that proved the statement different now agrees,
+   *and* the proof is not vacuous -- a rewrite that makes both engines return
+   nothing would otherwise look like a fix.
+3. **The rules are engine findings, not guesses.** Each one encodes a divergence
+   measured on this Db2 and this source engine, with the measurement in its
+   docstring.
+
+The rules are dialect-scoped on purpose. MySQL's ``=`` on strings is
+case-insensitive and PostgreSQL's is not, so a rule that "fixes" case
+sensitivity must never fire on a PostgreSQL statement -- it would introduce the
+very class of bug this file exists to remove.
+"""
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
+from typing import Callable, Sequence
+
+from . import db
+from .corpus import Variant
+from .counterexample import Db2Target, SemanticVerdict, SourceEngine, prove_semantics
+
+#: Db2's Unicode Collation Algorithm, strength 1: primary differences only, so
+#: case and accents are ignored. Verified on CE 12.1.5 to reproduce MySQL's
+#: default ``utf8mb4_0900_ai_ci`` equality exactly on the mixed_case fixture:
+#: both return ids 1, 2 and 3 for ``name = 'asha smith'`` where plain Db2 ``=``
+#: returns none.
+UCA_CASE_INSENSITIVE = "UCA500R1_S1"
+
+#: The same algorithm at strength 3: case and accents *do* distinguish, but only
+#: after the letter does. Verified on CE 12.1.5 to reproduce PostgreSQL's
+#: default linguistic ordering: ``ORDER BY sku`` over {A1, a1, B2, b2} gives
+#: ``a1, A1, b2, B2`` on PostgreSQL and on Db2 through this key, against
+#: ``A1, B2, a1, b2`` from Db2's own code-point ordering.
+UCA_LINGUISTIC = "UCA500R1_S3"
+
+#: MySQL's decimal division: the result scale is the numerator's scale plus
+#: ``div_precision_increment`` (4 by default), and the result is *rounded*.
+#: Db2's ``/`` truncates to a much wider scale instead, so 0.01/7 is
+#: 0.00142857... in Db2 against MySQL's 0.001429.
+MYSQL_DIV_PRECISION_INCREMENT = 4
+
+_STRING_EQ_RE = re.compile(
+    r"(?P<lhs>[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)"
+    r"\s*(?P<op>=|<>|!=)\s*"
+    r"(?P<rhs>'(?:''|[^'])*')"
+)
+_OPERAND = r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?|\d+(?:\.\d+)?"
+#: The shape IBM's ``db2-sqlglot-dialect`` emits for MySQL's ``/``: it casts the
+#: numerator to DOUBLE. See :func:`_mysql_decimal_division`.
+_DOUBLE_DIVISION_RE = re.compile(
+    rf"CAST\s*\(\s*(?P<num>{_OPERAND})\s+AS\s+(?:DOUBLE|FLOAT|REAL)\s*\)"
+    rf"\s*/\s*(?P<den>NULLIF\s*\([^()]*\)|{_OPERAND})",
+    re.IGNORECASE,
+)
+_DIVISION_RE = re.compile(rf"(?P<num>{_OPERAND})\s*/\s*(?P<den>{_OPERAND})")
+#: What the compile-repair rule ``array_agg->listagg`` leaves behind.
+_LISTAGG_CAST_RE = re.compile(
+    r"LISTAGG\s*\(\s*CAST\s*\((?P<expr>[^()]*?)\s+AS\s+VARCHAR\s*\(\s*\d+\s*\)\s*\)\s*,\s*','\s*\)",
+    re.IGNORECASE,
+)
+
+
+def _collate_string_equality(sql: str) -> str:
+    """Make string equality case-insensitive, the way MySQL's default is.
+
+    ``COLLATION_KEY_BIT`` is applied to *both* sides so the comparison is
+    between collation keys rather than between code points. Measured: with the
+    mixed_case fixture, ``name = 'asha smith'`` returns nothing on Db2 and three
+    rows on MySQL; with both sides wrapped at UCA strength 1, Db2 returns the
+    same three rows.
+    """
+
+    def rewrite(match: re.Match[str]) -> str:
+        lhs, op, rhs = match.group("lhs"), match.group("op"), match.group("rhs")
+        key = f"COLLATION_KEY_BIT(%s, '{UCA_CASE_INSENSITIVE}')"
+        return f"{key % lhs} {op} {key % rhs}"
+
+    return _STRING_EQ_RE.sub(rewrite, sql)
+
+
+def _mysql_decimal_division(sql: str) -> str:
+    """Give ``/`` MySQL's exact decimal scale and rounding.
+
+    Two things are wrong with the division that reaches Db2, and the first is
+    not Db2's doing. Measured: IBM's ``db2-sqlglot-dialect`` renders MySQL's
+    ``amount / quantity`` as ``CAST(amount AS DOUBLE) / NULLIF(quantity, 0)``.
+    MySQL's ``/`` is **exact decimal** arithmetic; the translation is binary
+    floating point. It compiles, it returns a number, and for ``0.01 / 7`` it
+    returns 0.0014285714285714286 where MySQL returns 0.001429 -- a money column
+    silently turned into a float, which is the oldest bug in finance software
+    and one that no syntax check can see.
+
+    The second is a genuine Db2/MySQL difference: Db2's decimal ``/`` keeps a
+    very wide scale and *truncates*, while MySQL rounds to the numerator's scale
+    plus ``div_precision_increment`` (4).
+
+    So the rewrite does both: decimal, not float, and MySQL's scale with MySQL's
+    rounding. ``NULLIF`` is kept, because MySQL's ``x / 0`` really is NULL.
+
+    The numerator's declared scale is not knowable from the SQL text, so this
+    uses 4 for an integer literal (MySQL's ``7 / 2`` is ``3.5000``) and 6
+    otherwise -- a ``DECIMAL(n,2)`` column, by far the common case, giving
+    ``2 + 4``. A wrong guess is harmless by construction: the rewrite is
+    re-proved against the source engine and discarded unless every row matches.
+    """
+
+    def rewrite(match: re.Match[str]) -> str:
+        num, den = match.group("num"), match.group("den")
+        scale = MYSQL_DIV_PRECISION_INCREMENT if re.fullmatch(r"\d+", num) else 6
+        return (
+            f"CAST(ROUND(CAST({num} AS DECIMAL(31,12)) / {den}, {scale}) "
+            f"AS DECIMAL(31,{scale}))"
+        )
+
+    # The translator's float idiom first; a bare `a / b` only where it is left.
+    rewritten = _DOUBLE_DIVISION_RE.sub(rewrite, sql)
+    if rewritten != sql:
+        return rewritten
+    return _DIVISION_RE.sub(rewrite, sql)
+
+
+def _postgres_array_text(sql: str) -> str:
+    """Render an aggregated list the way PostgreSQL renders an array.
+
+    Db2 has no array type in a result column, so the compile-repair rule turns
+    ``array_agg(id)`` into ``LISTAGG(CAST(id AS VARCHAR(200)), ',')``. That
+    compiles, and it quietly changes the value: PostgreSQL's ``integer[]`` casts
+    to the text ``{10,11}`` while the Db2 rewrite yields ``10,11``. A consumer
+    parsing the column -- and something always parses that column -- gets a
+    different answer.
+
+    Braces are the whole fix, and they are not cosmetic: they are what makes the
+    migrated column round-trip through an array parser. ``LISTAGG`` already
+    returns NULL for an empty group, which matches an empty PostgreSQL array
+    cast only loosely, so the proof is still what decides.
+    """
+    return _LISTAGG_CAST_RE.sub(
+        lambda m: (
+            "('{' || LISTAGG(CAST("
+            + m.group("expr").strip()
+            + " AS VARCHAR(200)), ',') || '}')"
+        ),
+        sql,
+    )
+
+
+_ORDER_KEY_RE = re.compile(
+    r"(?P<lead>\bORDER\s+BY\s+)(?P<keys>[^()]*?)"
+    r"(?=\s*(?:\)|\bOFFSET\b|\bFETCH\b|\bLIMIT\b|$))",
+    re.IGNORECASE,
+)
+_PLAIN_KEY_RE = re.compile(
+    r"^\s*(?P<expr>[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)"
+    r"(?P<tail>(?:\s+(?:ASC|DESC))?(?:\s+NULLS\s+(?:FIRST|LAST))?)\s*$",
+    re.IGNORECASE,
+)
+
+
+def _linguistic_order(sql: str) -> str:
+    """Sort strings the way PostgreSQL sorts them, not the way Db2 does.
+
+    Db2 orders character data by code point, so every upper-case letter sorts
+    before every lower-case one: ``A1, B2, a1, b2``. PostgreSQL's default
+    collation is linguistic: ``a1, A1, b2, B2``. Both are correct and they are
+    not the same, which is a migration bug with teeth, because the three places
+    it surfaces all look like something else:
+
+    * ``ORDER BY ... LIMIT n`` -- pagination silently returns different rows,
+      and only for the pages where a case boundary falls inside the window;
+    * ``string_agg(x ORDER BY x)`` -- the aggregated *string* differs, so a
+      downstream parser sees different data, not a different sort;
+    * any report whose rows a human eyeballs for order.
+
+    ``COLLATION_KEY_BIT(k, 'UCA500R1_S3')`` gives Db2 PostgreSQL's ordering.
+    Keys are wrapped only where they are a bare column reference, with ASC /
+    DESC / NULLS kept outside the call where they still apply; a numeric key
+    wrapped this way will not compile, and the loop discards it like any other
+    failed candidate.
+    """
+
+    def wrap_keys(match: re.Match[str]) -> str:
+        rewritten = []
+        for key in match.group("keys").split(","):
+            plain = _PLAIN_KEY_RE.match(key)
+            if not plain:
+                rewritten.append(key.strip())
+                continue
+            expr, tail = plain.group("expr"), plain.group("tail")
+            rewritten.append(
+                f"COLLATION_KEY_BIT({expr}, '{UCA_LINGUISTIC}'){tail}"
+            )
+        return match.group("lead") + ", ".join(rewritten)
+
+    return _ORDER_KEY_RE.sub(wrap_keys, sql)
+
+
+_STRFTIME_IN_FORMAT_RE = re.compile(
+    r"(VARCHAR_FORMAT|TO_CHAR|TIMESTAMP_FORMAT)\s*\(([^()]*?)'(?P<fmt>[^']*%[A-Za-z][^']*)'\s*\)",
+    re.IGNORECASE,
+)
+#: strftime pattern -> Db2 format model. Db2's VARCHAR_FORMAT takes a format
+#: *model* ('YYYY-MM'), not strftime escapes.
+_STRFTIME_TO_DB2 = (
+    ("%Y", "YYYY"), ("%m", "MM"), ("%d", "DD"),
+    ("%H", "HH24"), ("%M", "MI"), ("%S", "SS"),
+)
+
+
+def _db2_format_model(sql: str) -> str:
+    """Translate a strftime format string into Db2's format model.
+
+    This one is worth reading twice, because it is the failure mode PortProof
+    exists to make visible and it got past PortProof's own compile oracle.
+
+    Measured: ``to_char(created_at, 'YYYY-MM')`` is translated to
+    ``VARCHAR_FORMAT(created_at, '%Y-%m')`` -- the format string is converted
+    the *wrong way*, from Db2's model into strftime. ``PREPARE`` accepts it,
+    because the format is a string literal and its contents are not validated
+    at compile time. It fails only when a row is fetched. So a compile oracle
+    alone passes it, and the statement reaches production and then breaks on
+    the first execution.
+
+    The differential proof catches it because the proof *runs* the statement.
+    """
+
+    def rewrite(match: re.Match[str]) -> str:
+        fmt = match.group("fmt")
+        for src, dst in _STRFTIME_TO_DB2:
+            fmt = fmt.replace(src, dst)
+        head = match.group(0)[: match.start("fmt") - match.start(0) - 1]
+        return f"{head}'{fmt}')"
+
+    return _STRFTIME_IN_FORMAT_RE.sub(rewrite, sql)
+
+
+@dataclass(frozen=True)
+class SemanticRule:
+    """One measured divergence, and the rewrite that closes it."""
+
+    name: str
+    #: The source dialect this rule is about. It fires for no other.
+    dialect: str
+    #: What the rule is for, in the report and the UI.
+    because: str
+    #: True if the *source* statement shows the construct the rule addresses.
+    detect: Callable[[str], bool]
+    rewrite: Callable[[str], str]
+
+
+SEMANTIC_RULES: list[SemanticRule] = [
+    SemanticRule(
+        name="mysql-case-insensitive-collation",
+        dialect="mysql",
+        because=(
+            "MySQL's default collation (utf8mb4_0900_ai_ci) makes string "
+            "equality case-insensitive; Db2's is case-sensitive"
+        ),
+        detect=lambda sql: bool(_STRING_EQ_RE.search(sql)),
+        rewrite=_collate_string_equality,
+    ),
+    SemanticRule(
+        name="mysql-decimal-division",
+        dialect="mysql",
+        because=(
+            "MySQL's '/' is exact decimal division rounded to the numerator's "
+            "scale + 4; the translator emits binary floating point and Db2's "
+            "own decimal '/' truncates at a wider scale"
+        ),
+        detect=lambda sql: bool(_DIVISION_RE.search(sql)),
+        rewrite=_mysql_decimal_division,
+    ),
+    SemanticRule(
+        name="postgres-array-text-form",
+        dialect="postgres",
+        because=(
+            "PostgreSQL's array_agg produces an array whose text form is "
+            "'{10,11}'; the Db2 rewrite via LISTAGG produces '10,11'"
+        ),
+        detect=lambda sql: bool(re.search(r"\barray_agg\b", sql, re.IGNORECASE)),
+        rewrite=_postgres_array_text,
+    ),
+    SemanticRule(
+        name="postgres-linguistic-collation-order",
+        dialect="postgres",
+        because=(
+            "PostgreSQL's default collation orders strings linguistically "
+            "(a1 < A1 < b2); Db2 orders them by code point (A1 < B2 < a1), so "
+            "ORDER BY, LIMIT windows and string_agg all come out differently"
+        ),
+        detect=lambda sql: bool(re.search(r"\bORDER\s+BY\b", sql, re.IGNORECASE)),
+        rewrite=_linguistic_order,
+    ),
+    # Not dialect-specific in nature, but the translator only produces it from
+    # PostgreSQL's to_char; registered for both so neither is missed.
+    *[
+        SemanticRule(
+            name="strftime->db2-format-model",
+            dialect=dialect,
+            because=(
+                "the translator renders the date format the wrong way round, "
+                "producing strftime escapes ('%Y-%m') where Db2 wants a format "
+                "model ('YYYY-MM'); PREPARE accepts it and the fetch fails"
+            ),
+            detect=lambda sql: bool(
+                re.search(r"\b(?:to_char|date_format)\b", sql, re.IGNORECASE)
+            ),
+            rewrite=_db2_format_model,
+        )
+        for dialect in ("postgres", "mysql")
+    ],
+]
+
+
+@dataclass
+class SemanticAttempt:
+    n: int
+    rule: str
+    sql: str
+    compiled: bool
+    outcome: str = ""
+    strength: str = "NONE"
+    sqlcode: int | None = None
+    message: str = ""
+
+    @property
+    def accepted(self) -> bool:
+        return self.compiled and self.outcome == "EQUIVALENT"
+
+
+@dataclass
+class SemanticRepairOutcome:
+    repaired: bool
+    final_sql: str
+    verdict: SemanticVerdict | None = None
+    rule: str = ""
+    because: str = ""
+    attempts: list[SemanticAttempt] = field(default_factory=list)
+    #: True when the rewrite fixed every divergence the statement's own SQL
+    #: determines, and the rows that still differ differ only because the
+    #: ORDER BY has ties. Nothing can fix that, and nothing should claim to.
+    partial: bool = False
+
+    @property
+    def attempt_count(self) -> int:
+        return len(self.attempts)
+
+    def summary(self) -> str:
+        if self.repaired and self.partial:
+            return (
+                f"semantic repair accepted as far as the SQL determines: "
+                f"{self.rule} ({self.because}); what still differs is row order "
+                "the statement never specified -- add a tiebreaker to ORDER BY"
+            )
+        if self.repaired:
+            return f"semantic repair accepted: {self.rule} ({self.because})"
+        if not self.attempts:
+            return "no semantic repair rule applies to this divergence"
+        tried = ", ".join(a.rule for a in self.attempts)
+        return f"semantic repair failed; Db2 rejected or disproved: {tried}"
+
+
+class SemanticRepairLoop:
+    """Try measured rewrites until the differential proof itself agrees."""
+
+    def __init__(
+        self,
+        conn,
+        *,
+        source: SourceEngine,
+        target: Db2Target,
+        rules: Sequence[SemanticRule] | None = None,
+    ) -> None:
+        self.conn = conn
+        self.source = source
+        self.target = target
+        self.rules = list(rules if rules is not None else SEMANTIC_RULES)
+
+    def candidates(self, *, source_sql: str, db2_sql: str, dialect: str) -> list[SemanticRule]:
+        """Which rules are even relevant. Dialect first, then the construct."""
+        return [
+            rule
+            for rule in self.rules
+            if rule.dialect == dialect and rule.detect(source_sql) and rule.rewrite(db2_sql) != db2_sql
+        ]
+
+    def run(
+        self,
+        *,
+        source_sql: str,
+        db2_sql: str,
+        dialect: str,
+        variants: Sequence[Variant] | None = None,
+        before: SemanticVerdict | None = None,
+    ) -> SemanticRepairOutcome:
+        attempts: list[SemanticAttempt] = []
+        agreed_before = before.instances_agreed if before is not None else -1
+        for n, rule in enumerate(
+            self.candidates(source_sql=source_sql, db2_sql=db2_sql, dialect=dialect), start=1
+        ):
+            candidate = rule.rewrite(db2_sql)
+            compiled = db.compile_check(self.conn, candidate)
+            if not compiled.ok:
+                attempts.append(
+                    SemanticAttempt(
+                        n=n,
+                        rule=rule.name,
+                        sql=candidate,
+                        compiled=False,
+                        sqlcode=compiled.sqlcode,
+                        message=compiled.message[:200],
+                    )
+                )
+                continue
+
+            verdict = prove_semantics(
+                source_sql=source_sql,
+                db2_sql=candidate,
+                source=self.source,
+                target=self.target,
+                variants=variants,
+                dialect=dialect,
+            )
+            attempts.append(
+                SemanticAttempt(
+                    n=n,
+                    rule=rule.name,
+                    sql=candidate,
+                    compiled=True,
+                    outcome=verdict.outcome,
+                    strength=verdict.strength,
+                )
+            )
+            # EQUIVALENT is necessary and not sufficient: a rewrite that made
+            # both engines return nothing would satisfy it. VACUOUS is already a
+            # separate outcome, and strength NONE catches the rest.
+            full = verdict.outcome == "EQUIVALENT" and verdict.strength != "NONE"
+
+            # A rewrite also counts when what is left over is not a difference
+            # anybody can fix. `postgres/limit_offset` is the case: the engines
+            # part company on mixed-case names, which the collation rewrite
+            # settles, *and* on three rows whose sort key is literally the same
+            # string, which no rewrite can settle because the statement never
+            # said which of them comes first. Accepting the rewrite and naming
+            # the residue is more use than discarding a correct fix.
+            partial = (
+                not full
+                and verdict.outcome == "DIFFERENT"
+                and verdict.order_unstable
+                and verdict.instances_agreed > agreed_before
+            )
+            if full or partial:
+                return SemanticRepairOutcome(
+                    repaired=True,
+                    final_sql=candidate,
+                    verdict=verdict,
+                    rule=rule.name,
+                    because=rule.because,
+                    attempts=attempts,
+                    partial=partial,
+                )
+
+        return SemanticRepairOutcome(
+            repaired=False, final_sql=db2_sql, attempts=attempts
+        )

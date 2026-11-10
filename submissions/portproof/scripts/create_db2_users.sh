@@ -79,6 +79,23 @@ docker exec -u db2inst1 "${CONTAINER}" bash -lc "
   db2 -x \"CREATE SCHEMA PORTPROOF AUTHORIZATION PPOWN\" || true
   db2 -x \"GRANT CREATEIN, ALTERIN, DROPIN ON SCHEMA PORTPROOF TO USER PPOWN\"
 
+  # A 32K-page tablespace, so the fix memory can carry a vector INDEX and not
+  # only a vector column.
+  #
+  # Measured on CE 12.1.5: 'CREATE VECTOR INDEX ... WITH DISTANCE COSINE' on a
+  # VECTOR(384, FLOAT32) column fails with SQL0614N -- 'the combined length of
+  # the specified columns is too long' -- in USERSPACE1, because that has 4K
+  # pages and therefore a 1024-byte index key limit, while 384 FLOAT32 values
+  # are 1536 bytes. In a 32K-page tablespace the limit is 8192 and the index
+  # builds (SYSCAT.INDEXES.INDEXTYPE = 'VANN').
+  #
+  # CREATE BUFFERPOOL needs an authority the least-privilege users deliberately
+  # do not have, which is why it is here, run by the instance owner, and why
+  # PortProof degrades to exact vector search rather than requiring it.
+  db2 -x \"CREATE BUFFERPOOL BP32K IMMEDIATE SIZE 1000 PAGESIZE 32K\" || true
+  db2 -x \"CREATE LARGE TABLESPACE PPVEC PAGESIZE 32K MANAGED BY AUTOMATIC STORAGE BUFFERPOOL BP32K\" || true
+  db2 -x \"GRANT USE OF TABLESPACE PPVEC TO USER PPOWN\" || true
+
   db2 -x \"SELECT GRANTEE, CREATETABAUTH, IMPLSCHEMAAUTH FROM SYSCAT.DBAUTH WHERE GRANTEE IN ('PPOWN','PPAPP')\"
 "
 

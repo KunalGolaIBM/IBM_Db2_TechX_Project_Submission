@@ -4,17 +4,18 @@
 
 PortProof has one architectural rule, and everything else follows from it:
 
-> **The language model may only propose. Db2 decides.**
+> **The model may only propose. Db2 decides.**
 
-The system is a pipeline whose every stage ends in a Db2 verdict. There is no
-code path that marks a statement migrated without the engine having said so —
-first through `PREPARE` (does it compile?), then through differential execution
-(does it mean the same thing?). The LLM sits inside a bounded loop whose only
-exits are "Db2 accepted it" and "attempt budget exhausted".
+The system is a pipeline where every stage ends in a Db2 verdict. There is no
+code path that marks a statement migrated without the engine having said so,
+first through `PREPARE` (does it compile?) and then through differential
+execution (does it mean the same thing?). The repair loops sit inside bounded
+state machines whose only exits are "Db2 accepted it" and "the attempt budget
+is spent".
 
-This inverts the usual LLM-tool arrangement. Normally the model is the authority
-and the database is storage. Here the database is the authority and the model is
-an untrusted string generator.
+This inverts the usual arrangement between a model and a tool. Normally the
+model is the authority and the database is storage. Here the database is the
+authority and the model is an untrusted string generator.
 
 ---
 
@@ -23,269 +24,250 @@ an untrusted string generator.
 ```mermaid
 graph TD
     subgraph UI["Interface"]
-        CLI["CLI<br/>python -m src.main"]
-        WEB["Streamlit UI<br/>src/app.py"]
+        CLI["src/main.py<br/>command line"]
+        APP["src/app.py<br/>Streamlit, three tabs"]
     end
 
-    subgraph PIPE["Pipeline — src/pipeline.py"]
-        T["1 · Translate<br/>db2-sqlglot-dialect"]
-        G["Input guard<br/>src/safety.py"]
-        C{"2 · Compile oracle<br/>ibm_db PREPARE<br/>DeferredPrepare=0"}
-        R["3 · Repair loop<br/>LangGraph StateGraph"]
-        S{"4 · Semantic proof<br/>6 adversarial datasets"}
-        L["5 · Record verdict<br/>SQL PL CALL"]
-        M["6 · Learn<br/>only if PROVEN_EQUIVALENT"]
+    subgraph PIPE["src/pipeline.py"]
+        T["1. translate<br/>db2-sqlglot-dialect"]
+        C["2. compile proof<br/>Db2 PREPARE"]
+        R["3. compile repair<br/>LangGraph, bounded"]
+        S["4. semantic proof<br/>differential execution"]
+        SR["5. semantic repair<br/>measured rules, re proved"]
+        L["6. ledger and certificate<br/>SQL PL"]
     end
 
-    subgraph LLM["Proposal layer (least trusted)"]
-        RULES["Rule engine (default)<br/>14 deterministic rewrites"]
-        HTTP["OpenAI-compatible endpoint<br/>optional"]
+    subgraph SRC["Source engines, one per dialect"]
+        PG["PostgreSQL 17<br/>real server"]
+        MY["MySQL 8.4<br/>real server"]
+        DD["DuckDB<br/>stand in, declares its divergences"]
     end
 
     subgraph DB2["IBM Db2 12.1.5.0"]
-        COMPILE["SQL compiler<br/>PREPARE / SQLCODE"]
-        FIX["FIX_MEMORY<br/>VECTOR(384, FLOAT32)<br/>VECTOR_DISTANCE COSINE"]
-        PROC["SQL PL procedures<br/>HASH(...,2) SHA-256"]
-        LEDGER["STATEMENT (temporal)<br/>VERDICT<br/>MQT REFRESH IMMEDIATE"]
-        FIXT["PPTEST<br/>throwaway fixtures"]
-        MON["ADMIN_GET_TAB_COMPRESS_INFO<br/>MON_GET_PKG_CACHE_STMT"]
+        PREP["PREPARE<br/>compile oracle"]
+        FIX["PPTEST schema<br/>disposable fixtures"]
+        MEM["FIX_MEMORY<br/>VECTOR(384) + vector index"]
+        LED["STATEMENT + VERDICT<br/>temporal, MQT, SHA-256"]
+        WLM["WLM thresholds<br/>on CURRENT CLIENT_APPLNAME"]
     end
 
-    DUCK[("DuckDB<br/>postgres-compatible<br/>source engine")]
-
     CLI --> T
-    WEB --> G --> T
-    T --> C
-    C -->|"SQLCODE &lt; 0 — silent failure"| R
-    C -->|ok| S
-    R -->|"recall precedent"| FIX
-    R -->|"propose"| RULES
-    R -.->|"or"| HTTP
-    RULES -->|"candidate SQL"| R
-    R -->|"re-verify every attempt"| C
-    S -->|"same statement, both engines"| DUCK
-    S -->|"same statement, both engines"| FIXT
+    APP --> T
+    T --> C --> PREP
+    C -->|rejected| R
+    R -->|recall precedent| MEM
+    R --> PREP
+    C -->|compiles| S
+    R -->|compiles| S
+    S --> PG
+    S --> MY
+    S --> DD
+    S --> FIX
+    S -->|DIFFERENT| SR
+    SR --> PREP
+    SR --> S
     S --> L
-    L -->|"CALL as PPAPP"| PROC
-    PROC --> LEDGER
-    L --> M
-    M -->|"embed verified repair"| FIX
-    C -.-> COMPILE
-    WEB -->|"measured advice"| MON
-
-    style DB2 fill:#0f62fe22,stroke:#0f62fe
-    style LLM fill:#cf222e22,stroke:#cf222e
-```
-
-The red block is the only untrusted component, and it has no edge that reaches
-Db2 without passing back through the compile oracle.
-
----
-
-## Component Breakdown
-
-### 1. Interface layer
-- **`src/app.py`** — Streamlit, three tabs matching the three claims:
-  *Translate & Prove*, *Semantic Proof*, *Ledger & Engine*. Pasted SQL goes
-  through `src/safety.py` before anything else touches it.
-- **`src/main.py`** — the CLI used to produce every number in `README.md`.
-
-### 2. Translation
-- **`src/translate.py`** wraps IBM's `db2-sqlglot-dialect` with
-  `ErrorLevel.RAISE`, so a translator that *does* complain is distinguished from
-  one that silently emits invalid SQL. On this corpus it never complains, which
-  is the project's premise and is asserted as a test.
-
-### 3. The compile oracle — `src/db.py::compile_check`
-- Calls `ibm_db.prepare()` and **never executes**. Returns `CompileResult(ok,
-  sqlcode, sqlstate, message)` with the SQLCODE parsed out of the diagnostic.
-- Depends on `DeferredPrepare=0` in the DSN. With the CLI default, `PREPARE` is
-  held on the client until execution and this function reports success for SQL
-  the server would reject — which would make every verdict in the system
-  meaningless. Asserted by `test_prepare_is_a_real_server_side_compile`.
-- Name resolution is established by `ensure_fixture_schema()`, which sets
-  `CURRENT SCHEMA` in the same call that guarantees the tables exist, so
-  unqualified corpus SQL (`FROM orders`) resolves the way the application would
-  write it.
-
-### 4. The repair loop — `src/repair.py`
-A LangGraph `StateGraph`:
-
-```
-          ┌──────────────────────────────────┐
-          ▼                                  │
-      [ prove ] ──ok──▶ END                  │
-          │                                  │
-       not ok                                │
-          ▼                                  │
-      [ recall ]  ◀── Db2 VECTOR_DISTANCE    │
-          ▼                                  │
-      [ repair ]  ◀── rule engine or LLM     │
-          └──────────────────────────────────┘
-                 (bounded attempt budget)
-```
-
-- `recall` grounds the prompt in past repairs **Db2 has already verified**.
-- `repair` produces a candidate; `clean_sql` strips prose and code fences.
-- `prove` re-submits it to Db2. The router exits only on `ok` or on exhausting
-  the budget. Attempt 0 is the translator's own output, before any repair ran.
-
-### 5. The semantic prover — `src/counterexample.py`
-- `SourceEngine` is a Protocol; `DuckDbSource` is the PostgreSQL-compatible
-  implementation and `Db2Target` is the Db2 side, both loading the *same* six
-  `Variant` datasets from `src/corpus.py`.
-- `canon_value` / `canon_rows` canonicalise before comparing. This is where
-  correctness actually lives: `ibm_db` returns a `DECIMAL` as the string
-  `'50.00'` while DuckDB returns `Decimal('50.00')`, and `Decimal.normalize()`
-  renders that as `5E+1`. Both artefacts produced **false** PROVEN DIFFERENT
-  verdicts during development; both are now fixed and pinned by tests.
-- Ordered comparison only when the statement has `ORDER BY`; otherwise rows are
-  compared as a multiset and the verdict carries a note saying so.
-- A disagreement is returned as an `InstanceResult` **witness** — dataset name,
-  what it stresses, and both result sets — so the verdict can be checked.
-
-### 6. The ledger — `sql/01_schema.sql`, `sql/02_procedures.sql`
-- Writes go only through SQL PL procedures called by `PPAPP`, which holds no
-  `INSERT` on any table.
-- `RECORD_VERDICT` computes the certificate **inside the engine**:
-  `LOWER(HEX(HASH(... , 2)))` over the verdict's own fields plus
-  `CURRENT TIMESTAMP`. The application cannot choose it.
-
----
-
-## Data Flow
-
-1. **Input.** A corpus statement, or SQL pasted into the UI and passed through
-   `check_read_only` (single statement, read-only, comments and literals
-   stripped before checking).
-2. **Translate.** IBM's dialect emits Db2 SQL, usually without complaint.
-3. **Compile.** Db2 `PREPARE`. A failure here on cleanly-translated SQL is what
-   PortProof calls a *silent failure*: 13 of 32 on this corpus.
-4. **Recall.** The failure text and SQLCODE are embedded locally and matched
-   against `FIX_MEMORY` with `VECTOR_DISTANCE(..., COSINE)`, filtered by source
-   dialect with `JSON_VALUE` — one statement, both halves evaluated in Db2.
-5. **Repair and re-prove.** Bounded, and every attempt goes back to the engine.
-6. **Execute both.** Source statement on DuckDB, Db2 statement on Db2, over six
-   adversarial datasets; canonicalise; compare.
-7. **Record.** `CALL PORTPROOF.RECORD_TRANSLATION` then
-   `CALL PORTPROOF.RECORD_VERDICT` as `PPAPP`. The MQT refreshes itself in the
-   same transaction; the temporal table preserves the previous row.
-8. **Learn.** Only a repair that compiled *and* proved equivalent is embedded
-   back into `FIX_MEMORY`.
-
----
-
-## IBM Db2 Schema & Storage Design
-
-The full, runnable DDL is `sql/01_schema.sql`; this is that file, abridged only
-by its `DROP` statements.
-
-```sql
--- The migration unit. System-versioned: every change to a statement's state is
--- kept by the engine, so the whole migration is replayable with
--- FOR SYSTEM_TIME AS OF.
-CREATE TABLE PORTPROOF.STATEMENT (
-  STMT_ID       INTEGER       NOT NULL GENERATED ALWAYS AS IDENTITY,
-  CASE_NAME     VARCHAR(80)   NOT NULL,
-  SRC_DIALECT   VARCHAR(16)   NOT NULL,
-  SRC_SQL       VARCHAR(4000) NOT NULL,
-  DB2_SQL       VARCHAR(4000),
-  STATUS        VARCHAR(24)   NOT NULL,
-  ATTEMPTS      SMALLINT      NOT NULL DEFAULT 0,
-  LAST_SQLCODE  INTEGER,
-  LAST_ERROR    VARCHAR(1200),
-  META          VARCHAR(2000),
-  SYS_START     TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN,
-  SYS_END       TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW END,
-  TRANS_ID      TIMESTAMP(12) GENERATED ALWAYS AS TRANSACTION START ID,
-  PERIOD SYSTEM_TIME (SYS_START, SYS_END),
-  CONSTRAINT PK_STATEMENT PRIMARY KEY (STMT_ID),
-  CONSTRAINT UQ_STATEMENT_CASE UNIQUE (CASE_NAME),
-  CONSTRAINT CK_ST_DIALECT CHECK (SRC_DIALECT IN ('postgres', 'mysql')),
-  CONSTRAINT CK_ST_ATTEMPTS CHECK (ATTEMPTS BETWEEN 0 AND 10),
-  CONSTRAINT CK_ST_STATUS CHECK (STATUS IN (
-    'TRANSLATE_FAIL', 'COMPILE_FAIL', 'COMPILES', 'REPAIRED',
-    'PROVEN_EQUIVALENT', 'PROVEN_DIFFERENT', 'ESCALATED'))
-);
-
-CREATE TABLE PORTPROOF.STATEMENT_HIST LIKE PORTPROOF.STATEMENT;
-
-ALTER TABLE PORTPROOF.STATEMENT
-  ADD VERSIONING USE HISTORY TABLE PORTPROOF.STATEMENT_HIST;
-
--- Proof records. One row per verdict Db2 itself produced.
-CREATE TABLE PORTPROOF.VERDICT (
-  VERDICT_ID  INTEGER       NOT NULL GENERATED ALWAYS AS IDENTITY,
-  STMT_ID     INTEGER       NOT NULL,
-  KIND        VARCHAR(16)   NOT NULL,
-  OUTCOME     VARCHAR(24)   NOT NULL,
-  INSTANCES   SMALLINT      NOT NULL DEFAULT 0,
-  DETAIL      VARCHAR(8000),
-  CERT_SHA    VARCHAR(64),          -- HASH(..., 2), computed by Db2
-  CREATED_AT  TIMESTAMP     NOT NULL DEFAULT CURRENT TIMESTAMP,
-  CONSTRAINT PK_VERDICT PRIMARY KEY (VERDICT_ID),
-  CONSTRAINT FK_VERDICT_STMT FOREIGN KEY (STMT_ID)
-    REFERENCES PORTPROOF.STATEMENT (STMT_ID) ON DELETE CASCADE,
-  CONSTRAINT CK_VD_KIND CHECK (KIND IN ('COMPILE', 'SEMANTIC', 'PHYSICAL')),
-  CONSTRAINT CK_VD_OUTCOME CHECK (OUTCOME IN (
-    'PASS', 'FAIL', 'EQUIVALENT', 'DIFFERENT', 'INCONCLUSIVE', 'ADVICE')),
-  CONSTRAINT CK_VD_INSTANCES CHECK (INSTANCES >= 0)
-);
-
-CREATE INDEX PORTPROOF.IX_VERDICT_STMT ON PORTPROOF.VERDICT (STMT_ID, KIND);
-
--- Failure rollup, maintained by the engine on every insert.
--- Note: "LAST_SQLCODE IS NOT NULL" would also match 0, i.e. a *successful*
--- compile, so the failure rollup would have counted successes as failures.
-CREATE TABLE PORTPROOF.MQT_FAILURE_BY_CODE AS (
-  SELECT SRC_DIALECT, LAST_SQLCODE, COUNT(*) AS N
-  FROM PORTPROOF.STATEMENT
-  WHERE LAST_SQLCODE < 0
-  GROUP BY SRC_DIALECT, LAST_SQLCODE
-) DATA INITIALLY DEFERRED REFRESH IMMEDIATE MAINTAINED BY SYSTEM;
-
--- Expression-based index, so case-insensitive case-name lookups are indexed.
--- Note (measured on CE 12.1.5): COLLATION_KEY_BIT works in a *predicate* but is
--- rejected as an index key expression (SQL0356N reason 23), so the indexable
--- form is UPPER(). PortProof emits the collation-key form for comparison
--- semantics and this form when an index is needed.
-CREATE INDEX PORTPROOF.IX_STMT_CASEFOLD
-  ON PORTPROOF.STATEMENT (UPPER(CASE_NAME));
-
--- The fix memory, created by langchain-db2's DB2VS.
---   ID CHARACTER(16), TEXT CLOB, METADATA BLOB, EMBEDDING VECTOR(384)
--- Hybrid recall: semantic ranking and relational filter in one statement.
-SELECT JSON_VALUE(METADATA, '$.fixed_sql' RETURNING VARCHAR(4000)),
-       VECTOR_DISTANCE(EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE) AS DIST
-  FROM FIX_MEMORY
- WHERE JSON_VALUE(METADATA, '$.dialect' RETURNING VARCHAR(16)) = ?
- ORDER BY DIST
- FETCH FIRST 3 ROWS ONLY;
+    SR --> L
+    L --> LED
+    S -->|proved equivalent after repair| MEM
+    PREP --- WLM
+    FIX --- WLM
 ```
 
 ---
 
-## Security & Secrets Management
+## The five stages, and what each one is not allowed to do
 
-- Credentials are read at runtime from environment variables
-  (`src/config.py`). Only `.env.example` is committed, with placeholders.
-- **Two identities, separated by Db2 itself**, not by application convention:
+### 1. Translate, `src/translate.py`
 
-  | | `PPOWN` | `PPAPP` |
-  |---|---|---|
-  | purpose | owns the schema | what the app runs as |
-  | authorities | `CONNECT`, `CREATETAB`, `IMPLICIT_SCHEMA`, `WLMADM` | `CONNECT` |
-  | ledger tables | owner | `SELECT` only |
-  | procedures | owner | `EXECUTE` on three |
-  | writes | via DDL | **none** — `INSERT` raises `-551` |
-  | DBADM | **no** | **no** |
+Wraps IBM's `db2-sqlglot-dialect`. It records whether the translator raised, and
+nothing else. It is not allowed to judge its own output, which is the point of
+the next stage.
 
-- Every stored value is bound as a parameter marker. The one thing that cannot
-  be — the statement under test — is validated by `src/safety.py` and then only
-  ever `PREPARE`d.
-- Semantic proofs execute in the disposable `PPTEST` schema.
-- A WLM service class, workload and thresholds (`sql/04_wlm_leash.sql`) cap what
-  the prover's own queries may consume.
-- `GRANT EXECUTE` on the two monitoring routines is scoped to exactly those two
-  specific signatures rather than granting DBADM, which is what most
-  documentation suggests.
+### 2. Compile proof, `src/db.py`
+
+`compile_check()` sends the candidate to Db2 as a `PREPARE`. Db2 parses it,
+resolves every name against the live catalog, and type checks it, without
+executing anything. The returned `CompileResult` carries Db2's own SQLCODE and
+SQLSTATE.
+
+`DeferredPrepare=0` in the connection string is load bearing. With the Db2 CLI
+default, `PREPARE` is held back on the client until execution, so
+`ibm_db.prepare()` reports success for SQL the server would reject. Measured on
+12.1.5. Without that flag the compile oracle is measuring the client library.
+
+A statement that translated cleanly and is rejected here is a **silent failure**.
+Fourteen of the 38 corpus statements are.
+
+### 3. Compile repair, `src/repair.py` and `src/llm.py`
+
+A LangGraph state machine:
+
+```
+prove -> (ok) -> END
+prove -> (fail) -> recall -> repair -> prove -> ...
+```
+
+It exits on success or at `MAX_REPAIR_ATTEMPTS`. Every transition is recorded
+with the rules that fired and how many precedents were recalled.
+
+Two guards on the proposal, before it reaches the connection:
+
+- `src/safety.py` requires a single read only query. `PREPARE` alone is not
+  sufficient, because `DROP TABLE orders` prepares perfectly well, and the
+  prompt carries attacker influenced text (the source SQL, and Db2's error
+  message) into a generative model.
+- Db2's `PREPARE` is the acceptance test. A repair Db2 rejects is discarded.
+
+The default repair engine is `RuleRepairLLM`, fifteen deterministic rewrites
+each derived from a real SQLCODE on a real Db2, exposed through the LangChain
+`LLM` interface so the pipeline cannot tell it from a model. `LLM_PROVIDER=http`
+substitutes any OpenAI compatible endpoint through the same chain and the same
+guards.
+
+### 4. Semantic proof, `src/counterexample.py`
+
+The original statement runs on the source engine, the translated statement runs
+on Db2, both over the six adversarial datasets in `src/corpus.py`, and the
+results are compared.
+
+What is compared, and why each part is needed:
+
+- **Values, canonicalised.** `Decimal('50.00')` and `50.0` are the same datum in
+  different clothes. `canon_value` folds driver artefacts out so they cannot
+  become verdicts. It once used `Decimal.normalize()`, which returns `5E+1` for
+  `50.00`, and that alone produced four false `PROVEN DIFFERENT` results.
+- **Column arity and names.** Without arity, a two column result and a seven
+  column result compare equal whenever both return no rows. Generated names for
+  unaliased expressions are excluded, because engines spell those differently
+  and comparing them would measure the drivers.
+- **Row order, only when the statement asked for it.** `has_outer_order_by`
+  tracks parenthesis depth after stripping comments and literals, so
+  `OVER (ORDER BY ...)`, a subquery's ordering and an ordered set aggregate's
+  ordering are all correctly treated as saying nothing about the result's order.
+  Matching the bare words made PortProof report engine dependent tie order as a
+  semantic difference.
+
+Three refusals, each one a bug PortProof used to have:
+
+| Guard | The wrong answer it prevents |
+|---|---|
+| Dialect guard | A PostgreSQL compatible engine judging MySQL SQL. Both returned nothing for a case insensitive comparison, nothing matched nothing, and a real divergence was certified `EQUIVALENT`. |
+| Declared divergences | DuckDB answering for PostgreSQL where it is known to differ. DuckDB says `7 / 2` is 3.5; PostgreSQL and Db2 both say 3, so the verdict was a false `PROVEN DIFFERENT`. |
+| Vacuity and strength | `[] == []` counting as evidence. Now a `VACUOUS` outcome, and `EQUIVALENT` carries a strength computed from instances that returned rows over genuinely distinct inputs. |
+
+And one probe, which is the novel piece. Before reporting `PROVEN DIFFERENT` on
+an ordered statement, the same statement is re run on the same engine against
+the same rows inserted in the opposite order. A table is a set; no correct query
+can notice. If the engine returns something else, the `ORDER BY` has ties, the
+result was never determined by the SQL, and Db2 disagreeing is not a migration
+bug. That distinction cannot be made by reading the SQL, because `ORDER BY name`
+is unstable or not depending entirely on the data, so the engine is asked rather
+than the parser.
+
+### 5. Semantic repair, `src/semantic_repair.py`
+
+Db2 volunteers a signal when it rejects a statement. Nothing volunteers one when
+a statement is accepted and wrong, so this loop builds its own: the acceptance
+test is the differential proof that found the divergence.
+
+```
+DIFFERENT -> rewrite (dialect scoped rule) -> PREPARE -> prove again
+```
+
+A candidate is accepted only when the proof comes back `EQUIVALENT` with a
+strength above `NONE`, or when every remaining disagreement is order unstable,
+which means the rewrite fixed everything the statement's own SQL determines.
+The rules are scoped to one dialect each, because a rule that fixes case
+sensitivity firing on a PostgreSQL statement would introduce the exact class of
+bug this file exists to remove.
+
+### 6. Ledger and certificate, `sql/02_procedures.sql`
+
+The runtime identity holds no `INSERT` on any table. It can only `CALL`:
+
+- `RECORD_TRANSLATION`, a `MERGE` upsert keyed on the case name. It was a
+  `SELECT` then `IF`/`INSERT` or `ELSE`/`UPDATE`, which is a read then write
+  race: two concurrent runs of the same case both read NULL, both insert, and
+  the second fails on the unique constraint instead of updating.
+- `RECORD_VERDICT`, which computes `HASH(..., 2)`, a SHA-256, over the verdict's
+  own fields inside the engine. What is hashed is the evidence, not the
+  conclusion. Before that, a vacuous proof and a substantive one hashed
+  identically, so the certificate attested to a claim rather than to its
+  grounds.
+- `ESCALATE_STALLED`, a cursor loop with an explicit
+  `CONTINUE HANDLER FOR NOT FOUND` that marks statements which spent their
+  budget without a proof, and writes the reason into the row.
+
+---
+
+## Module map
+
+| File | Responsibility |
+|---|---|
+| `src/config.py` | Environment only. No secret is hard coded. Builds the DSN with `DeferredPrepare=0`. |
+| `src/db.py` | Db2 access. Every value bound. `compile_check` is the oracle; `fetch_described` also returns column names and wraps fetch time errors so a WLM threshold arrives as a `Db2Error` with its SQLCODE. |
+| `src/translate.py` | IBM's translator, and whether it raised. |
+| `src/safety.py` | The read only guard applied to anything a human or a model supplies. |
+| `src/corpus.py` | The 38 statements, the shared fixture DDL, and the six adversarial datasets. `Variant.shuffled()` feeds the stability probe. |
+| `src/counterexample.py` | The source engines, the canonicalisation, the verdict and its strength. |
+| `src/semantic_repair.py` | The five measured rewrite rules and the loop that re proves them. |
+| `src/repair.py` | The LangGraph compile repair state machine. |
+| `src/llm.py` | `RuleRepairLLM` (the default) and `HttpRepairLLM`, both as LangChain models. |
+| `src/embeddings.py` | Local sentence transformer embeddings, plus a deterministic fallback for tests. |
+| `src/fixmemory.py` | Db2 as the vector store, through `langchain-db2` `DB2VS`, with the Db2 native hybrid recall and the vector index. |
+| `src/physical.py` | Compression, columnar and package cache measurements, taken from the engine. |
+| `src/pipeline.py` | Wires all of it together and writes the ledger. |
+| `src/setup_db.py` | Idempotent installer for the schema, procedures, grants, MQT, vector store and WLM leash. |
+| `src/main.py` | The command line. |
+| `src/app.py` | The Streamlit UI. |
+
+---
+
+## Why Db2 and not a generic database
+
+Every one of these is doing work that would otherwise have to be re implemented
+less reliably in Python.
+
+| Db2 capability | What it replaces |
+|---|---|
+| `PREPARE` with `DeferredPrepare=0` | A SQL parser and type checker for Db2's own dialect, maintained by us, always slightly wrong. |
+| `HASH(..., 2)` in SQL PL | An application computed certificate, which the application could choose. |
+| `PERIOD SYSTEM_TIME` and `FOR SYSTEM_TIME AS OF` | An audit table and triggers, and a trust assumption that nobody edited the ledger. |
+| MQT `REFRESH IMMEDIATE` | A rollup query recomputed on every read, or a cache that goes stale. |
+| `VECTOR` plus `VECTOR_DISTANCE` plus `CREATE VECTOR INDEX` | A separate vector service, and a second consistency problem. |
+| Vector and relational filter in one statement | Top k retrieval followed by a filter, which loses recall exactly when the filter is selective. |
+| `COLLATION_KEY_BIT` at UCA strength 1 and 3 | Re implementing MySQL and PostgreSQL collation in application code. |
+| WLM thresholds | A timeout in the client, which cannot stop work already running in the engine. |
+| `GRANT` and `CHECK` constraints | Privilege and validity as application conventions rather than as engine rules. |
+| `ADMIN_GET_TAB_COMPRESS_INFO`, `MON_GET_PKG_CACHE_STMT` | Guessed physical design advice. |
+
+---
+
+## Data flow for one statement
+
+```
+corpus statement (PostgreSQL or MySQL)
+   |
+   v  db2-sqlglot-dialect
+candidate Db2 SQL
+   |
+   v  Db2 PREPARE                      <-- silent failures are caught here
+compiles? ---- no ----> safety check -> recall from FIX_MEMORY -> rewrite -> back to PREPARE
+   | yes                                   (bounded, at most MAX_REPAIR_ATTEMPTS)
+   v
+load six adversarial datasets into the source engine and into PPTEST
+   |
+   v  run both, compare values, columns and (where asserted) order
+agree? ---- no ----> stability probe -> semantic rule -> PREPARE -> prove again
+   | yes                                   (accepted only if the proof agrees)
+   v
+EQUIVALENT with a strength, or DIFFERENT with a witness,
+or UNSTABLE, or VACUOUS, or INCONCLUSIVE with a reason
+   |
+   v  CALL RECORD_TRANSLATION, CALL RECORD_VERDICT
+ledger row + SHA-256 certificate over the evidence
+   |
+   v  only if repaired AND proved equivalent
+embedded into FIX_MEMORY for the next run
+```

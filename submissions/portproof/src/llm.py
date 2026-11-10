@@ -114,6 +114,43 @@ def _fix_group_concat(sql: str) -> str:
     return _rewrite_calls(sql, "GROUP_CONCAT", build)
 
 
+def _fix_nulls_in_within_group(sql: str) -> str:
+    """Db2 rejects ``NULLS FIRST``/``NULLS LAST`` inside ``WITHIN GROUP``.
+
+    Measured on CE 12.1.5: ``ORDER BY email NULLS FIRST`` compiles at the top
+    level, while ``LISTAGG(sku, ',') WITHIN GROUP (ORDER BY sku NULLS LAST)``
+    fails with SQL0109N -- "clause is not supported in the context where it is
+    used: NULLS". So this is not a rule about the keyword, it is a rule about
+    *where* the keyword appears, and a blanket strip would silently change the
+    meaning of the top-level ordering it is legal in.
+
+    Removing it inside ``WITHIN GROUP`` is meaning-preserving: an ordered-set
+    aggregate's ordering applies to the values it aggregates, and aggregate
+    functions ignore NULLs, so there are no NULLs left for the clause to place.
+
+    sqlglot emits it for every MySQL ``ORDER BY`` (MySQL sorts NULLs first in
+    ASC), so any ``GROUP_CONCAT`` with an ordering at all hits this.
+    """
+    out, cursor = [], 0
+    pattern = re.compile(r"\bWITHIN\s+GROUP\s*\(", re.IGNORECASE)
+    while True:
+        match = pattern.search(sql, cursor)
+        if not match:
+            out.append(sql[cursor:])
+            return "".join(out)
+        parsed = _balanced_args(sql, match.end() - 1)
+        if parsed is None:  # pragma: no cover - unbalanced SQL
+            out.append(sql[cursor : match.end()])
+            cursor = match.end()
+            continue
+        args, after = parsed
+        body = ", ".join(args)
+        cleaned = re.sub(r"\s+NULLS\s+(?:FIRST|LAST)\b", "", body, flags=re.IGNORECASE)
+        out.append(sql[cursor : match.start()])
+        out.append(f"WITHIN GROUP ({cleaned})")
+        cursor = after
+
+
 def _fix_array_agg(sql: str) -> str:
     """Db2 has no array type in this context; aggregate to a string instead."""
 
@@ -321,6 +358,9 @@ def _fix_leading_underscore_identifiers(sql: str) -> str:
 RULES: list[Rule] = [
     ("rename-leading-underscore-identifiers", _fix_leading_underscore_identifiers),
     ("group_concat->listagg", _fix_group_concat),
+    # Must run after group_concat->listagg, which is what creates the
+    # WITHIN GROUP this cleans up.
+    ("drop-nulls-clause-in-within-group", _fix_nulls_in_within_group),
     ("array_agg->listagg", _fix_array_agg),
     ("concat->||", _fix_concat),
     ("timestamp_trunc->trunc_timestamp", _fix_timestamp_trunc),

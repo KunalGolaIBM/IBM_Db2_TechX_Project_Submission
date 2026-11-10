@@ -106,11 +106,15 @@ def main(argv: list[str] | None = None) -> int:
 
         # The official LangChain integration creates its own table.
         from .embeddings import LocalEmbeddings
-        from .fixmemory import ensure_table
+        from .fixmemory import ensure_table, ensure_vector_index
 
         print("  fix memory: creating FIX_MEMORY via langchain-db2 DB2VS ...")
         shape = ensure_table(conn, embeddings=LocalEmbeddings())
         print(f"    FIX_MEMORY columns: {shape}")
+        # Only the embedding column had an index before this: the table's PK.
+        # Every recall therefore distanced every row, while the engine has had
+        # an approximate vector index since 12.1.
+        print(f"    {ensure_vector_index(conn)}")
 
         failure = run_group(SCRIPTS_AFTER_VECTOR)
         if failure is not None:

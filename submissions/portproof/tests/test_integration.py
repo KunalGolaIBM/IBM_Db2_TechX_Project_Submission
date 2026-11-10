@@ -112,7 +112,7 @@ def test_record_translation_then_verdict_round_trip(app_conn):
     out = db.call_proc(
         app_conn,
         "PORTPROOF.RECORD_TRANSLATION",
-        (case, "postgres", "SELECT 1", "SELECT 1 FROM SYSIBM.SYSDUMMY1", "COMPILES", None, None, "{}", 0),
+        (case, "postgres", "SELECT 1", "SELECT 1 FROM SYSIBM.SYSDUMMY1", "COMPILES", None, None, "{}", 1, 0),
     )
     stmt_id = int(out[-1])
     assert stmt_id > 0
@@ -141,7 +141,7 @@ def test_check_constraint_rejects_an_unknown_status(app_conn):
         db.call_proc(
             app_conn,
             "PORTPROOF.RECORD_TRANSLATION",
-            ("test/badstatus", "postgres", "SELECT 1", None, "NOT_A_STATUS", None, None, "{}", 0),
+            ("test/badstatus", "postgres", "SELECT 1", None, "NOT_A_STATUS", None, None, "{}", 1, 0),
         )
     assert caught.value.sqlcode == -545
 
@@ -151,7 +151,7 @@ def test_check_constraint_rejects_an_unknown_dialect(app_conn):
         db.call_proc(
             app_conn,
             "PORTPROOF.RECORD_TRANSLATION",
-            ("test/baddialect", "oracle", "SELECT 1", None, "COMPILES", None, None, "{}", 0),
+            ("test/baddialect", "oracle", "SELECT 1", None, "COMPILES", None, None, "{}", 1, 0),
         )
     assert caught.value.sqlcode == -545
 
@@ -164,12 +164,12 @@ def test_system_versioning_keeps_history(app_conn):
     db.call_proc(
         app_conn,
         "PORTPROOF.RECORD_TRANSLATION",
-        (case, "postgres", "SELECT 1", None, "COMPILE_FAIL", -104, "first", "{}", 0),
+        (case, "postgres", "SELECT 1", None, "COMPILE_FAIL", -104, "first", "{}", 1, 0),
     )
     db.call_proc(
         app_conn,
         "PORTPROOF.RECORD_TRANSLATION",
-        (case, "postgres", "SELECT 1", "SELECT 1", "REPAIRED", -104, "second", "{}", 0),
+        (case, "postgres", "SELECT 1", "SELECT 1", "REPAIRED", -104, "second", "{}", 2, 0),
     )
     current = db.fetch_one(
         app_conn, "SELECT STATUS FROM PORTPROOF.STATEMENT WHERE CASE_NAME = ?", (case,)
@@ -186,7 +186,7 @@ def test_mqt_is_refreshed_by_the_engine(app_conn):
     db.call_proc(
         app_conn,
         "PORTPROOF.RECORD_TRANSLATION",
-        ("test/mqt", "mysql", "SELECT 1", None, "COMPILE_FAIL", -999, "mqt probe", "{}", 0),
+        ("test/mqt", "mysql", "SELECT 1", None, "COMPILE_FAIL", -999, "mqt probe", "{}", 1, 0),
     )
     row = db.fetch_one(
         app_conn,
@@ -277,7 +277,48 @@ def test_repair_is_verified_by_db2_not_asserted(owner_conn, loaded_target):
 # the semantic proof
 # --------------------------------------------------------------------------
 def test_integer_division_is_proven_different(owner_conn):
-    """7/2 compiles identically on both engines and returns a different answer."""
+    """MySQL's 7/2 is 3.5 and Db2's is 3. Both compile; the answers differ.
+
+    This is the one that has to be judged by a *real* MySQL. DuckDB in
+    PostgreSQL mode also answers 3.5, which made this look like a MySQL
+    divergence when it was partly DuckDB's own; see the next test.
+    """
+    from src.counterexample import (
+        Db2Target,
+        MySqlSource,
+        ensure_fixture_schema,
+        prove_semantics,
+    )
+
+    ensure_fixture_schema(owner_conn)
+    target = Db2Target(owner_conn)
+    try:
+        source = MySqlSource()
+    except Exception as exc:  # pragma: no cover - no MySQL on this machine
+        pytest.skip(f"no MySQL reachable: {str(exc)[:80]}")
+    try:
+        verdict = prove_semantics(
+            source_sql="SELECT 7 / 2 AS q FROM customers WHERE id = 1",
+            db2_sql="SELECT 7 / 2 AS q FROM customers WHERE id = 1",
+            source=source,
+            target=target,
+            variants=[BASE],
+            dialect="mysql",
+        )
+    finally:
+        source.close()
+    assert verdict.outcome == "DIFFERENT"
+    assert verdict.witness is not None
+    assert verdict.witness.source_rows == [("3.5",)]
+    assert verdict.witness.db2_rows == [("3",)]
+
+
+def test_the_duckdb_stand_in_refuses_to_judge_division(owner_conn):
+    """A false PROVEN DIFFERENT: DuckDB says 7/2 is 3.5, PostgreSQL says 3.
+
+    PostgreSQL and Db2 agree here, so reporting a difference would have sent a
+    reviewer after a bug that is not in their code. The stand in declines.
+    """
     from src.counterexample import (
         Db2Target,
         DuckDbSource,
@@ -295,13 +336,82 @@ def test_integer_division_is_proven_different(owner_conn):
             source=source,
             target=target,
             variants=[BASE],
+            dialect="postgres",
         )
     finally:
         source.close()
-    assert verdict.outcome == "DIFFERENT"
-    assert verdict.witness is not None
-    assert verdict.witness.source_rows == [("3.5",)]
-    assert verdict.witness.db2_rows == [("3",)]
+    assert verdict.outcome == "INCONCLUSIVE"
+    assert "declined to adjudicate" in verdict.notes[0]
+
+
+def test_a_real_postgres_agrees_with_db2_about_integer_division(owner_conn):
+    from src.counterexample import (
+        Db2Target,
+        PostgresSource,
+        ensure_fixture_schema,
+        prove_semantics,
+    )
+
+    ensure_fixture_schema(owner_conn)
+    target = Db2Target(owner_conn)
+    try:
+        source = PostgresSource()
+    except Exception as exc:  # pragma: no cover - no PostgreSQL on this machine
+        pytest.skip(f"no PostgreSQL reachable: {str(exc)[:80]}")
+    try:
+        verdict = prove_semantics(
+            source_sql="SELECT 7 / 2 AS q FROM customers WHERE id = 1",
+            db2_sql="SELECT 7 / 2 AS q FROM customers WHERE id = 1",
+            source=source,
+            target=target,
+            variants=VARIANTS[:2],
+            dialect="postgres",
+        )
+    finally:
+        source.close()
+    assert verdict.outcome == "EQUIVALENT", verdict.witness_table()
+
+
+def test_a_semantic_divergence_is_repaired_and_re_proved(owner_conn):
+    """The end to end claim: compiles, wrong rows, rewritten, proof agrees."""
+    from src.counterexample import (
+        Db2Target,
+        MySqlSource,
+        ensure_fixture_schema,
+        prove_semantics,
+    )
+    from src.semantic_repair import SemanticRepairLoop
+
+    ensure_fixture_schema(owner_conn)
+    target = Db2Target(owner_conn)
+    try:
+        source = MySqlSource()
+    except Exception as exc:  # pragma: no cover - no MySQL on this machine
+        pytest.skip(f"no MySQL reachable: {str(exc)[:80]}")
+    sql = "SELECT id FROM customers WHERE name = 'asha smith' ORDER BY id"
+    try:
+        before = prove_semantics(
+            source_sql=sql,
+            db2_sql=sql,
+            source=source,
+            target=target,
+            dialect="mysql",
+        )
+        assert before.outcome == "DIFFERENT", before.headline
+
+        fix = SemanticRepairLoop(owner_conn, source=source, target=target).run(
+            source_sql=sql, db2_sql=sql, dialect="mysql", before=before
+        )
+    finally:
+        source.close()
+
+    assert fix.repaired, fix.summary()
+    assert fix.rule == "mysql-case-insensitive-collation"
+    assert "COLLATION_KEY_BIT" in fix.final_sql
+    # The rewrite is reported only because the proof that caught the bug agrees.
+    assert fix.verdict is not None
+    assert fix.verdict.outcome == "EQUIVALENT"
+    assert fix.verdict.strength != "NONE"
 
 
 def test_identical_trivial_statement_is_proven_equivalent(owner_conn):
@@ -347,11 +457,14 @@ def test_proof_does_not_report_driver_type_differences(owner_conn):
             db2_sql="SELECT id, amount FROM orders ORDER BY id",
             source=source,
             target=target,
-            variants=[BASE],
+            # Two variants, not one: a single instance is now deliberately below
+            # MIN_CONCLUSIVE_INSTANCES and comes back INCONCLUSIVE.
+            variants=VARIANTS[:2],
         )
     finally:
         source.close()
     assert verdict.outcome == "EQUIVALENT", verdict.witness_table()
+    assert verdict.strength in ("MODERATE", "STRONG")
 
 
 # --------------------------------------------------------------------------
@@ -510,7 +623,7 @@ def test_failure_rollup_is_refreshed_by_the_engine(app_conn):
     db.call_proc(
         app_conn,
         "PORTPROOF.RECORD_TRANSLATION",
-        (case, "postgres", "SELECT 1", None, "COMPILE_FAIL", -911, "synthetic", "{}", 0),
+        (case, "postgres", "SELECT 1", None, "COMPILE_FAIL", -911, "synthetic", "{}", 1, 0),
     )
     after = db.fetch_one(
         app_conn,

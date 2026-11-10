@@ -21,17 +21,19 @@ import json
 from dataclasses import dataclass, field
 
 from . import db, physical, translate
+from .config import llm_config
 from .corpus import VARIANTS, Statement, statements_for
 from .counterexample import (
     Db2Target,
-    DuckDbSource,
     SemanticVerdict,
     SourceEngine,
+    available_sources,
     ensure_fixture_schema,
     prove_semantics,
 )
 from .fixmemory import FixMemory
 from .repair import RepairLoop, RepairOutcome
+from .semantic_repair import SemanticRepairLoop, SemanticRepairOutcome
 
 
 @dataclass
@@ -45,6 +47,14 @@ class StatementResult:
     first_error: str = ""
     repair: RepairOutcome | None = None
     semantic: SemanticVerdict | None = None
+    #: The second repair loop: the one that runs when the SQL compiled and
+    #: still meant something else.
+    semantic_repair: SemanticRepairOutcome | None = None
+    #: The verdict that *found* the divergence, kept after a semantic repair
+    #: replaces `semantic` with the proof that the rewrite agrees. Without it
+    #: a repaired statement would be indistinguishable from one that was never
+    #: wrong, which is the most useful fact about it.
+    original_semantic: SemanticVerdict | None = None
     stmt_id: int | None = None
     compile_cert: str | None = None
     semantic_cert: str | None = None
@@ -58,11 +68,20 @@ class StatementResult:
     def repaired(self) -> bool:
         return bool(self.repair and self.repair.repaired)
 
+    @property
+    def semantically_repaired(self) -> bool:
+        return bool(self.semantic_repair and self.semantic_repair.repaired)
+
 
 @dataclass
 class MigrationReport:
     results: list[StatementResult] = field(default_factory=list)
     source_engine: str = ""
+    #: How many adversarial datasets were *available*. Not a claim about how
+    #: many any given statement was actually checked on -- that is per
+    #: statement, and it is :attr:`instances_proved` below. Reporting
+    #: ``len(VARIANTS)`` as the evidence for every verdict was a claim the run
+    #: had not earned.
     variants: int = 0
 
     # -- the numbers the README quotes -----------------------------------
@@ -99,16 +118,66 @@ class MigrationReport:
     def inconclusive(self) -> int:
         return sum(1 for r in self.results if r.status == "COMPILES")
 
+    @property
+    def vacuous(self) -> int:
+        """Agreed on nothing: both engines returned no rows every time."""
+        return sum(1 for r in self.results if r.status == "VACUOUS")
+
+    @property
+    def unstable(self) -> int:
+        """Statements whose own ORDER BY does not determine their result."""
+        return sum(1 for r in self.results if r.status == "UNSTABLE")
+
+    @property
+    def semantic_divergences(self) -> int:
+        """Statements that compiled on Db2 and returned the wrong rows."""
+        return sum(
+            1
+            for r in self.results
+            if r.status == "PROVEN_DIFFERENT" or r.semantically_repaired
+        )
+
+    @property
+    def semantically_repaired(self) -> int:
+        """...of which the meaning was fixed and re-proved."""
+        return sum(1 for r in self.results if r.semantically_repaired)
+
+    @property
+    def instances_proved(self) -> int:
+        """Adversarial instances that actually contributed to an EQUIVALENT."""
+        return sum(
+            r.semantic.substantive_instances
+            for r in self.results
+            if r.status == "PROVEN_EQUIVALENT" and r.semantic is not None
+        )
+
+    @property
+    def strong_proofs(self) -> int:
+        return sum(
+            1
+            for r in self.results
+            if r.semantic is not None and r.semantic.strength == "STRONG"
+        )
+
     def summary_lines(self) -> list[str]:
+        equivalent = self.proven_equivalent
+        mean = f"{self.instances_proved / equivalent:.1f}" if equivalent else "0"
         return [
             f"statements migrated      : {self.total}",
             f"translator reported errors: {self.translator_errors}",
             f"SILENT failures (clean translate, rejected by Db2): {self.silent_failures}",
             f"repaired and re-verified : {self.repaired}",
             f"still failing to compile : {self.unrepaired}",
-            f"proven equivalent        : {self.proven_equivalent} "
-            f"(on {self.variants} adversarial datasets vs {self.source_engine})",
+            f"proven equivalent        : {equivalent} "
+            f"(mean {mean} of {self.variants} adversarial datasets returned rows; "
+            f"source engines: {self.source_engine})",
+            f"  of those, evidence STRONG: {self.strong_proofs}",
+            f"semantic divergences found: {self.semantic_divergences} "
+            f"(compiled on Db2, wrong rows)",
+            f"  of those, repaired and re-proved: {self.semantically_repaired}",
             f"PROVEN DIFFERENT         : {self.proven_different}",
+            f"order not determined by the SQL: {self.unstable}",
+            f"vacuous (agreed on nothing): {self.vacuous}",
             f"inconclusive             : {self.inconclusive}",
         ]
 
@@ -120,18 +189,37 @@ class Pipeline:
         app_conn,
         owner_conn,
         source: SourceEngine | None = None,
+        sources: dict[str, SourceEngine] | None = None,
         memory: FixMemory | None = None,
         repair_loop: RepairLoop | None = None,
         learn: bool = True,
+        semantic_repair: bool = True,
     ):
         self.app_conn = app_conn
         self.owner_conn = owner_conn
         ensure_fixture_schema(owner_conn)
         self.target = Db2Target(owner_conn)
-        self.source = source if source is not None else DuckDbSource()
+        # One engine per source dialect. A statement is judged by the engine for
+        # *its own* dialect or by nothing at all -- see the dialect guard in
+        # prove_semantics, and the comment on DuckDbSource explaining the false
+        # EQUIVALENT that the one-engine-for-everything arrangement produced.
+        if sources is not None:
+            self.sources = dict(sources)
+        elif source is not None:
+            self.sources = {getattr(source, "dialect", "postgres"): source}
+        else:
+            self.sources = available_sources()
         self.memory = memory
         self.repair_loop = repair_loop or RepairLoop(owner_conn, memory=memory)
         self.learn = learn
+        self.semantic_repair = semantic_repair
+
+    @property
+    def source_engines(self) -> str:
+        """Which engines the verdicts in this run were measured against."""
+        if not self.sources:
+            return "none"
+        return ", ".join(f"{d}={s.name}" for d, s in sorted(self.sources.items()))
 
     # -- ledger ----------------------------------------------------------
     def _record_translation(self, result: StatementResult) -> None:
@@ -142,6 +230,18 @@ class Pipeline:
                 "attempts": result.repair.attempt_count if result.repair else 0,
                 "rules": sorted(
                     {r for a in (result.repair.attempts if result.repair else []) for r in a.rules_fired}
+                ),
+                "semantic_strength": (
+                    result.semantic.strength if result.semantic else None
+                ),
+                "semantic_repair": (
+                    {
+                        "rule": result.semantic_repair.rule,
+                        "repaired": result.semantic_repair.repaired,
+                        "tried": [a.rule for a in result.semantic_repair.attempts],
+                    }
+                    if result.semantic_repair
+                    else None
                 ),
             }
         )[:2000]
@@ -157,6 +257,10 @@ class Pipeline:
                 result.first_sqlcode,
                 (result.first_error or "")[:1200] or None,
                 meta,
+                # The real number of times Db2 was asked about this statement:
+                # the compile-repair attempts plus any semantic-repair ones.
+                (result.repair.attempt_count if result.repair else 1)
+                + (result.semantic_repair.attempt_count if result.semantic_repair else 0),
                 0,
             ),
         )
@@ -217,19 +321,65 @@ class Pipeline:
         compiles_now = result.status in ("COMPILES", "REPAIRED")
 
         if compiles_now and prove_meaning:
-            verdict = prove_semantics(
-                source_sql=statement.sql,
-                db2_sql=result.db2_sql or "",
-                source=self.source,
-                target=self.target,
-            )
-            result.semantic = verdict
-            if verdict.outcome == "EQUIVALENT":
-                result.status = "PROVEN_EQUIVALENT"
-            elif verdict.outcome == "DIFFERENT":
-                result.status = "PROVEN_DIFFERENT"
-            else:
+            source = self.sources.get(statement.dialect)
+            if source is None:
+                result.semantic = SemanticVerdict(
+                    outcome="INCONCLUSIVE",
+                    instances_checked=0,
+                    instances_agreed=0,
+                    source_engine="none",
+                    notes=[
+                        f"no {statement.dialect} source engine is reachable, so "
+                        "meaning was not checked"
+                    ],
+                )
                 result.status = "COMPILES"
+            else:
+                verdict = prove_semantics(
+                    source_sql=statement.sql,
+                    db2_sql=result.db2_sql or "",
+                    source=source,
+                    target=self.target,
+                    dialect=statement.dialect,
+                )
+                result.semantic = verdict
+
+                # A compiling statement that returns the wrong rows is the
+                # failure nothing else in the toolchain can see, so it is worth
+                # trying to fix rather than merely reporting. Every candidate is
+                # re-proved by the same differential test that caught it.
+                if verdict.outcome == "DIFFERENT" and self.semantic_repair:
+                    loop = SemanticRepairLoop(
+                        self.owner_conn, source=source, target=self.target
+                    )
+                    fix = loop.run(
+                        source_sql=statement.sql,
+                        db2_sql=result.db2_sql or "",
+                        dialect=statement.dialect,
+                        before=verdict,
+                    )
+                    if fix.attempts:
+                        result.semantic_repair = fix
+                    if fix.repaired and fix.verdict is not None:
+                        result.original_semantic = verdict
+                        result.db2_sql = fix.final_sql
+                        result.semantic = fix.verdict
+                        verdict = fix.verdict
+
+                # Only once no rewrite worked is instability the useful answer.
+                # A statement that is both unstable and fixable gets the fix; a
+                # statement that is unstable and unfixable gets the diagnosis,
+                # which is itself actionable ("add a tiebreaker") and is not a
+                # Db2 defect.
+                if verdict.outcome == "DIFFERENT" and verdict.order_unstable:
+                    verdict.outcome = "UNSTABLE"
+
+                result.status = {
+                    "EQUIVALENT": "PROVEN_EQUIVALENT",
+                    "DIFFERENT": "PROVEN_DIFFERENT",
+                    "UNSTABLE": "UNSTABLE",
+                    "VACUOUS": "VACUOUS",
+                }.get(verdict.outcome, "COMPILES")
 
         self._record_translation(result)
         result.compile_cert = self._record_verdict(
@@ -247,20 +397,36 @@ class Pipeline:
             },
         )
         if result.semantic is not None:
+            # The certificate hashes DETAIL, so DETAIL has to be the evidence.
+            # It used to be two integers and a witness, which made a vacuous
+            # proof and a substantive one hash identically -- a certificate over
+            # a conclusion rather than over what the conclusion rests on.
+            detail = {
+                "source_engine": result.semantic.source_engine,
+                "witness": result.semantic.witness_table(),
+                "witness_variant": result.semantic.witness.variant
+                if result.semantic.witness
+                else None,
+                "notes": result.semantic.notes,
+                **result.semantic.evidence(),
+            }
+            if result.semantically_repaired and result.semantic_repair is not None:
+                detail["semantic_repair"] = {
+                    "rule": result.semantic_repair.rule,
+                    "because": result.semantic_repair.because,
+                    "was": result.original_semantic.outcome
+                    if result.original_semantic
+                    else None,
+                    "witness_before": result.original_semantic.witness_table()
+                    if result.original_semantic
+                    else None,
+                }
             result.semantic_cert = self._record_verdict(
                 result,
                 "SEMANTIC",
                 result.semantic.outcome,
                 result.semantic.instances_agreed,
-                {
-                    "source_engine": result.semantic.source_engine,
-                    "instances_checked": result.semantic.instances_checked,
-                    "witness": result.semantic.witness_table(),
-                    "witness_variant": result.semantic.witness.variant
-                    if result.semantic.witness
-                    else None,
-                    "notes": result.semantic.notes,
-                },
+                detail,
             )
 
         # Learn only from repairs Db2 accepted *and* that proved equivalent.
@@ -292,20 +458,86 @@ class Pipeline:
         statements = statements_for(dialect)
         if limit:
             statements = statements[:limit]
-        report = MigrationReport(source_engine=self.source.name, variants=len(VARIANTS))
+        report = MigrationReport(source_engine=self.source_engines, variants=len(VARIANTS))
         for statement in statements:
             report.results.append(self.run_statement(statement, prove_meaning=prove_meaning))
         return report
 
+    def escalate_stalled(self, *, max_attempts: int | None = None) -> int:
+        """Hand the statements the machine could not finish to a human.
+
+        The decision is made *in the engine*, by a SQL PL cursor loop with an
+        explicit ``CONTINUE HANDLER FOR NOT FOUND``, under the least-privilege
+        identity that cannot UPDATE the ledger itself. That matters more than it
+        sounds: "the AI gave up on these N statements" is the one output of an
+        automated migration that must not be something the automation can
+        quietly rewrite.
+        """
+        budget = max_attempts if max_attempts is not None else llm_config().max_repair_attempts
+        out = db.call_proc(
+            self.app_conn, "PORTPROOF.ESCALATE_STALLED", (int(budget), 0)
+        )
+        return int(out[-1])
+
     def physical_advice(self) -> dict:
-        return {
+        """Measured physical-design advice, recorded as a verdict like any other.
+
+        The advice is written to the ledger under ``KIND = 'PHYSICAL'`` with
+        ``OUTCOME = 'ADVICE'`` -- the two values the schema has always allowed
+        and that nothing ever wrote. An advisory number that is not in the
+        ledger is not reproducible, and the whole claim here is that it was
+        measured rather than asserted.
+        """
+        advice = {
             "compression": physical.measure_compression(self.owner_conn),
             "columnar": physical.check_columnar(self.owner_conn),
             "hotspots": physical.workload_hotspots(self.owner_conn),
         }
+        try:
+            self._record_physical(advice)
+        except db.Db2Error:  # pragma: no cover - advisory, never fatal
+            pass
+        return advice
+
+    def _record_physical(self, advice: dict) -> str | None:
+        """Attach the physical measurement to the first statement in the ledger.
+
+        The VERDICT table hangs off STATEMENT, so the measurement needs a row to
+        belong to; it is a property of the run, and the run's first statement is
+        the stable anchor for it.
+        """
+        row = db.fetch_one(
+            self.app_conn,
+            "SELECT MIN(STMT_ID) FROM PORTPROOF.STATEMENT",
+        )
+        if not row or row[0] is None:
+            return None
+        compression = advice["compression"]
+        detail = json.dumps(
+            {
+                "compression": compression.headline,
+                "pages_saved_percent": getattr(compression, "percent_saved", None),
+                "adaptive_percent_saved": getattr(
+                    compression, "adaptive_percent_saved", None
+                ),
+                "columnar": advice["columnar"].headline,
+                "hotspots": [
+                    {"statement": text[:120], "executions": int(n)}
+                    for text, n, _cpu in advice["hotspots"][:5]
+                ],
+            },
+            default=str,
+        )[:8000]
+        out = db.call_proc(
+            self.app_conn,
+            "PORTPROOF.RECORD_VERDICT",
+            (int(row[0]), "PHYSICAL", "ADVICE", len(advice["hotspots"]), detail, ""),
+        )
+        return str(out[-1])
 
     def close(self) -> None:
-        try:
-            self.source.close()
-        except Exception:  # pragma: no cover
-            pass
+        for source in self.sources.values():
+            try:
+                source.close()
+            except Exception:  # pragma: no cover
+                pass
