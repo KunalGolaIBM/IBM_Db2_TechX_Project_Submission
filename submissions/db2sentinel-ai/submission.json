@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Db2Sentinel AI: Agentic Enterprise Database Security & Incident Response",
+    "slug": "db2sentinel-ai",
+    "short_description": "An Agentic AI-powered enterprise database security, anomaly detection and incident response platform combining IBM Db2, LangChain and LangGraph.",
+    "category": "AI / Database Security / Multi-Agent Systems",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/KunalGolaIBM/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "Db2Sentinel AI Team",
+    "members": [
+      {
+        "name": "Project Lead & AI Engineer",
+        "github": "participant-github",
+        "email": "developer@example.com",
+        "role": "Full-Stack AI Engineer & Database Architect"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition (Docker / Linux / Windows) & Db2 Cloud",
+    "connector": "ibm_db (official IBM Python driver) / SQLAlchemy",
+    "features_used": [
+      "Relational Tables & Constraints (SENTINEL_* entities)",
+      "High-Performance B-Tree Indexing",
+      "Native Db2 Audit Facility Integration (db2audit)",
+      "Db2 Activity Event Monitors (WRITE TO TABLE)",
+      "Parameterized SQL Execution & Transaction Management",
+      "Db2 12.1.2+ VECTOR readiness for semantic incident search"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "TypeScript", "SQL", "HTML/CSS"],
+    "frameworks": ["FastAPI", "LangChain", "LangGraph", "React", "Tailwind CSS", "Recharts", "Pydantic v2"],
+    "ai_models": ["LangChain Multi-Agent Framework", "LangGraph StateGraph Orchestration", "Gemini 1.5/2.0 / OpenAI / Ollama compatible", "Deterministic Rule-Based Fallback Engine"]
+  }
+}

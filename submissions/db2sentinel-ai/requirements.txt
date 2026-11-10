@@ -1,0 +1,22 @@
+# IBM Db2 Driver
+ibm_db>=3.2.0
+
+# Web API Framework
+fastapi>=0.111.0
+uvicorn>=0.30.0
+pydantic>=2.7.0
+pydantic-settings>=2.2.0
+python-dotenv>=1.0.0
+
+# AI & Multi-Agent Orchestration
+langchain>=0.2.0
+langchain-core>=0.2.0
+langgraph>=0.1.0
+
+# Utilities & Networking
+httpx>=0.27.0
+requests>=2.31.0
+
+# Testing & Quality
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
