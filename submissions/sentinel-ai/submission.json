@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "SENTINEL AI: Agentic Account Compromise Detection for Defence Networks",
+    "slug": "sentinel-ai",
+    "short_description": "Agentic AI cybersecurity intelligence platform designed for defence organisations to correlate suspicious login activities, unfamiliar devices, and restricted access records using 5 LangGraph agents and IBM Db2.",
+    "category": "AI / Cybersecurity / Agentic AI",
+    "demo_url": "http://127.0.0.1:8000",
+    "video_url": "",
+    "repo_url": "https://github.com/KunalGolaIBM/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "Individual Submission",
+    "members": [
+      {
+        "name": "Pranav Ravi",
+        "github": "pranavLALO",
+        "email": "pranavravi2005@gmail.com",
+        "role": "Solo Developer - Agentic AI & Full-Stack"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 on Cloud / Db2 Community Edition (Docker)",
+    "connector": "ibm_db (Python native driver)",
+    "features_used": [
+      "Relational Tables (7 Military Telemetry Tables)",
+      "Parameterized SQL Ingestion & Retrieval",
+      "Multi-Event Correlation Queries",
+      "Audit Trail & Response Authorization Governance"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "JavaScript", "SQL"],
+    "frameworks": ["FastAPI", "LangGraph", "React", "Vite", "TailwindCSS"],
+    "ai_models": ["IBM watsonx.ai Granite", "Explainable Security Intelligence Engine"]
+  }
+}
