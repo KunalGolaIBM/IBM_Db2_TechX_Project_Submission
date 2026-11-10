@@ -1,0 +1,131 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-page: #0a0a0a;
+    --text-primary: #f2f2f2;
+    --card-opaque: #171717;
+    --card-opaque-hover: #1c1c1c;
+    --text-muted: rgba(255, 255, 255, 0.5);
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(255, 255, 255, 0.16);
+  }
+
+  body {
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    font-family: 'Onest', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    letter-spacing: -0.011em;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Glass window into underlying WebGL Soffit 002 continuous atmospheric field */
+.bento-glass-window {
+  position: relative;
+  background: rgba(6, 18, 32, 0.38);
+  backdrop-filter: blur(24px) saturate(130%);
+  -webkit-backdrop-filter: blur(24px) saturate(130%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    0 12px 32px -8px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bento-glass-window:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 
+    0 16px 40px -8px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Opaque Bento Card #171717 */
+.bento-opaque-card {
+  position: relative;
+  background-color: var(--card-opaque);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  box-shadow: 0 10px 28px -8px rgba(0, 0, 0, 0.65);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.bento-opaque-card:hover {
+  border-color: var(--border-hover);
+  background-color: var(--card-opaque-hover);
+}
+
+/* Bento Grid Responsive Layout with Controlled Breakpoints */
+.bento-layout-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "active"
+    "brief"
+    "exposure"
+    "trace"
+    "response";
+}
+
+/* Tablet: 768px - 1279px (Two-Column Bento Grid) */
+@media (min-width: 768px) and (max-width: 1279px) {
+  .bento-layout-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "active brief"
+      "active exposure"
+      "trace  response";
+  }
+}
+
+/* Desktop: min-width 1280px (Three-Column Asymmetric Bento Grid: 32 / 34 / 34) */
+@media (min-width: 1280px) {
+  .bento-layout-grid {
+    grid-template-columns: 32fr 34fr 34fr;
+    grid-template-areas:
+      "active brief    trace"
+      "active exposure response";
+  }
+}
+
+.bento-area-active {
+  grid-area: active;
+}
+
+.bento-area-brief {
+  grid-area: brief;
+}
+
+.bento-area-exposure {
+  grid-area: exposure;
+}
+
+.bento-area-trace {
+  grid-area: trace;
+}
+
+.bento-area-response {
+  grid-area: response;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.25);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
