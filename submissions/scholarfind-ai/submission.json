@@ -1,0 +1,7 @@
+{
+  "project_name": "ScholarFind AI",
+  "project_slug": "scholarfind-ai",
+  "description": "A platform that helps students discover scholarships matching their profiles.",
+  "technologies": ["Python", "FastAPI", "React", "Vite", "IBM Db2"],
+  "github_username": "ngelimalika-ops"
+}
