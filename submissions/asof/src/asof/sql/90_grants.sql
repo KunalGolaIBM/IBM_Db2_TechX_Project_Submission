@@ -347,3 +347,9 @@ GRANT SELECT ON TABLE ASOF.V_BACKTEST_RUNS TO USER ASOF_APP_USER
 -- grant: APP_SELECT_V_BACKTEST_CONTRADICTIONS
 GRANT SELECT ON TABLE ASOF.V_BACKTEST_CONTRADICTIONS TO USER ASOF_APP_USER
 @
+
+-- Lane b-rcac-wlm: Db2 workload management (07_wlm.sql, docs/wlm.md). Without USAGE, Db2 would map the analysts'
+-- connections to its default workload, past the thresholds.
+-- grant: ANALYST_USAGE_WL_ASOF_ANALYST
+GRANT USAGE ON WORKLOAD WL_ASOF_ANALYST TO ROLE ASOF_ANALYST
+@

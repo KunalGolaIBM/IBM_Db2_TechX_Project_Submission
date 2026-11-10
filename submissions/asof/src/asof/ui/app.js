@@ -896,6 +896,7 @@ function askView(r) {
     ANSWERED: html`<div class="banner ok"><strong>Answered.</strong><span>${r.rows.length} row${r.rows.length === 1 ? "" : "s"}${r.truncated ? " (capped)" : ""} in ${(r.latency_ms / 1000).toFixed(1)} s, as ${r.runs_as}.${r.scope_applied ? html` Scope Db2 applied: ${r.scope_applied.length ? r.scope_applied.join(", ") : "no policy document"}.` : ""}</span></div>`,
     REFUSED: html`<div class="banner bad"><strong>Refused.</strong><span>No query ran. ${r.reason}</span></div>`,
     FAILED: html`<div class="banner bad"><strong>Db2 rejected the query.</strong><span>${r.reason}</span></div>`,
+    STOPPED: html`<div class="banner bad"><strong>Db2 stopped the query.</strong><span>${r.reason}</span></div>`,
     ERROR: html`<div class="banner bad"><strong>Not available.</strong><span>${r.reason}</span></div>`,
   }[r.status];
   const attempts = (r.attempts || []).filter((a) => a.refused || a.db2_error);
@@ -908,7 +909,7 @@ function askView(r) {
       <div class="scroll-x"><table><thead><tr>${r.columns.map((c) => html`<th>${c}</th>`)}</tr></thead>
       <tbody>${r.rows.map((row) => html`<tr>${row.map((v) => html`<td class="${v === "[masked]" ? "muted" : ""}">${v === null ? "null" : v}</td>`)}</tr>`)}</tbody></table></div></div>` : ""}
     ${attempts.length ? html`<div class="card"><div class="card-head"><h2>Attempts that did not run</h2><span class="sub">the model gets one retry with the reason</span></div>
-      ${attempts.map((a) => html`<pre class="sql">${a.proposed_sql}</pre><p class="small">${a.refused ? html`<strong>Refused by the SQLGlot check:</strong> ${a.refused}` : html`<strong>Db2:</strong> ${a.db2_error}`}</p>`)}</div>` : ""}`;
+      ${attempts.map((a) => html`<pre class="sql">${a.proposed_sql}</pre><p class="small">${a.refused ? html`<strong>Refused by the SQLGlot check:</strong> ${a.refused}` : a.db2_threshold ? html`<strong>Stopped by Db2's workload management:</strong> ${a.db2_threshold}` : html`<strong>Db2:</strong> ${a.db2_error}`}</p>`)}</div>` : ""}`;
 }
 
 // ---------- Change impact ----------

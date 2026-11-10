@@ -24,7 +24,7 @@ USER_RE = re.compile(r"^[a-z][a-z0-9]{0,7}$")
 GRANTS_PREFIX = "90_"
 NOT_HELD = "42504"  # REVOKE of a privilege that is not held
 _MARKER = re.compile(r"^--\s*(bufferpool|tablespace|table|mqt|index|versioning|trigger|procedure|function|type|view|mask|role"
-                     r"|grant|other|permission):"
+                     r"|grant|other|permission|workload|threshold):"
                      r"\s*([A-Z0-9_]+)\s*$", re.M)
 _SCHEMA_TOKEN = re.compile(r"\bASOF\.")
 
@@ -75,6 +75,12 @@ def _exists(conn: ibm_db_dbi.Connection, schema: str, st: Statement) -> bool:
         return bool(db.query(conn, "SELECT 1 FROM SYSCAT.TABLESPACES WHERE TBSPACE = ?", (st.name,)))
     elif st.kind == "type":  # user-defined row and array types (CREATE TYPE has no OR REPLACE)
         sql = "SELECT 1 FROM SYSCAT.DATATYPES WHERE TYPESCHEMA = ? AND TYPENAME = ?"
+    elif st.kind == "role":  # database-level, like the workload management objects below
+        return bool(db.query(conn, "SELECT 1 FROM SYSCAT.ROLES WHERE ROLENAME = ?", (st.name,)))
+    elif st.kind == "workload":
+        return bool(db.query(conn, "SELECT 1 FROM SYSCAT.WORKLOADS WHERE WORKLOADNAME = ?", (st.name,)))
+    elif st.kind == "threshold":
+        return bool(db.query(conn, "SELECT 1 FROM SYSCAT.THRESHOLDS WHERE THRESHOLDNAME = ?", (st.name,)))
     else:
         return False  # triggers, procedures, views and grants use CREATE OR REPLACE or are idempotent
     return bool(db.query(conn, sql, (schema, st.name)))

@@ -19,6 +19,9 @@ layer assumes the one before it failed:
    to that user, whatever the SQL says (05_masks.sql). Db2 does not mask predicates, which is
    why rule 2 keeps those columns out of WHERE, ORDER BY, GROUP BY, joins and functions.
 5. Db2 cancels the statement after QUERY_TIMEOUT_S, and at most ROW_CAP rows come back.
+6. Every analyst connection runs in Db2's workload WL_ASOF_ANALYST (07_wlm.sql), whose thresholds
+   stop a query whose estimated cost, rows returned or run time is over the limit, whoever sent
+   it. That comes back as status STOPPED with a plain reason (asof/wlm.py).
 
 If the SQL is refused, or Db2 rejects it, the model gets one more try with the reason. The
 written answer comes only from the returned rows, and the UI shows the rows and the SQL with it.
@@ -41,7 +44,7 @@ from langchain_core.runnables import RunnableLambda
 from sqlglot import exp
 from sqlglot.errors import SqlglotError
 
-from . import db, rowaccess
+from . import db, rowaccess, wlm
 from .config import Settings
 from .domains import DOMAINS
 from .llm import LLMError, ModelClient
@@ -218,7 +221,8 @@ def _no_materialized_views(*_args, **_kwargs) -> list[str]:
 @dataclass
 class AskResult:
     question: str
-    status: str  # ANSWERED, REFUSED (no SQL passed the gate) or FAILED (Db2 rejected the checked SQL)
+    status: str  # ANSWERED, REFUSED (no SQL passed the gate), FAILED (Db2 rejected the checked SQL) or STOPPED (Db2's
+    # workload management stopped it: a threshold on cost, rows or time, asof/wlm.py)
     answer: str | None = None
     sql: str | None = None  # the checked SQL that ran
     explanation: str | None = None
@@ -387,6 +391,12 @@ class LedgerAsker:
                 out.columns, out.rows, out.truncated = self.run_sql(sql, scope.key)
             except db.DatabaseError as err:
                 attempt["db2_error"] = str(err)[:300]
+                stopped = wlm.stopped(err)
+                if stopped:  # Db2 itself refused the work, not the SQL: say which limit, plainly
+                    attempt["db2_threshold"] = stopped
+                    out.status, out.reason = "STOPPED", stopped
+                    previous = (sql, f"Db2 stopped it: {stopped}")
+                    continue
                 out.status, out.reason = "FAILED", f"Db2 rejected the checked SQL: {str(err)[:300]}"
                 previous = (sql, f"Db2 error: {str(err)[:300]}")
                 continue

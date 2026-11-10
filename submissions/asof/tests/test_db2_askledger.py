@@ -126,5 +126,7 @@ def test_db2_cancels_a_runaway_query(settings, audited):
     asker, _ = ask(settings, audited, LedgerSql(sql=heavy, explanation="x"), LedgerSql(sql=heavy, explanation="x"),
                    timeout_s=1)
     r = asker.ask("count everything against everything")
-    assert r.status == "FAILED" and r.rows == []
-    assert all("SQL0952N" in a["db2_error"] for a in r.attempts)  # "processing was cancelled due to an interrupt"
+    assert r.status in ("FAILED", "STOPPED") and r.rows == [] and len(r.attempts) == 2
+    # Db2 ends it either way: the app's statement timeout ("processing was cancelled due to an interrupt"), or one of
+    # the analyst workload's thresholds (07_wlm.sql). Which one depends on the optimizer's estimate (docs/wlm.md).
+    assert all("SQL0952N" in a["db2_error"] or "TH_ASOF_ANALYST_" in a["db2_error"] for a in r.attempts), r.attempts
