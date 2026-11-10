@@ -45,7 +45,7 @@ flowchart TB
 One command checks every headline claim against the live Db2, with no LLM key, and rolls back anything it writes: Db2 12.1 and native `VECTOR` columns, vector search, IBM `langchain-db2`, temporal tables, the least-privilege agent, RCAC mask and row permission, the `EXPLAIN` cost guard, **bitemporal** `BUSINESS_TIME` + `SYSTEM_TIME` promotions, a **materialized query table**, the change feed, the SQL PL and JSON guardrails, guarded apply + rollback, earned autonomy decided inside Db2, CHECK constraints, the hash-chain trigger, the tamper-evident audit chain, an **external anchor that catches a fully rebuilt ledger**, the red team and the evaluation. It also fuzzes the guardrails with 1,000 random proposals. Expected output ends with **`26/26 checks passed`** in about 10 seconds. The same checks run live, one by one, in the app's **Proofs** tab. With Docker: `docker compose exec app python src/verify.py`.
 
 ### What building this taught us about Db2 (measured)
-Hardening an AI agent against Db2 surfaced four behaviours anyone putting an LLM on Db2 will hit. Each was measured, fixed and pinned by a test ([details and reproduction](docs/db2_findings.md)):
+Hardening an AI agent against Db2, and then running it at 1,000,000 reservations, surfaced five behaviours anyone putting an LLM on Db2 will hit. Each was measured, fixed and pinned by a test ([details and reproduction](docs/db2_findings.md)):
 
 | Finding | Measured | Fix + proof |
 |---|---|---|
@@ -53,6 +53,18 @@ Hardening an AI agent against Db2 surfaced four behaviours anyone putting an LLM
 | An `EXPLAIN` cost guard for AI-written SQL is only as good as the **statistics** | a normal KPI query: **177,163** timerons on fresh tables vs **1,876** after `RUNSTATS` (94×), so the guard refused legitimate questions | `RUNSTATS` at setup; `verify.py` check 14 |
 | `JSON_VALUE ... RETURNING VARCHAR(n)` **raises `SQL0137N`** on an over-long value instead of failing cleanly | found by our guardrail fuzzer on its first run (`"PENTHOUSE"` into `VARCHAR(8)`) | wide variables + validation; **10,000/10,000** fuzzed decisions now match the oracle |
 | The Db2 Community container **won't restart**: `DBI20187E` on `fencedid` | a restart loop after a WSL reboot | `scripts/fix_db2_restart.sh` |
+| A fixed `EXPLAIN` cost limit **does not scale with the data**; the MQT is what keeps the agent inside it | at **1,000,000 reservations** the agent's "occupancy tonight" query costs **142,782** timerons on the live view (refused) but **71** on `MQT_DAILY_KPIS`, which is also **~500× faster** for 30 nights of history (0.4 ms vs 221 ms) | [scale benchmark](docs/scale_benchmark.md), `python src/benchmark_scale.py` |
+
+### Measured at 1,000,000 reservations
+`python src/benchmark_scale.py` rebuilds the same schema in a separate throwaway schema, loads a 12,000-room hotel group with **1,000,000 reservations** inside Db2 (41 s), and measures it ([full results](docs/scale_benchmark.md)):
+
+| At 1M reservations | Measured |
+|---|---|
+| 30 nights of KPIs: live view vs MQT | 221 ms vs **0.4 ms** (~500× faster) |
+| Time travel `AS OF` before a 38,512-row change | **19 ms** |
+| Change feed pairing 38,512 changes from history | 210 ms |
+| Verify a 50,000-step SHA-256 audit chain inside Db2 | **304 ms** (intact) |
+| `EXPLAIN` guard on a runaway self cross join | 79 billion timerons, refused before it runs |
 
 ### 5-minute judge tour
 After `docker compose up -d` (or `bash scripts/quickstart.sh`), open http://localhost:8501. Steps 1–4 need **no API key**.

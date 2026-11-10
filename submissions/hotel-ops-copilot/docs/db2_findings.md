@@ -81,6 +81,27 @@ and starts it again.
 
 ---
 
+## 5. A fixed `EXPLAIN` cost limit does not scale with the data; the MQT keeps the agent inside it
+
+**What happened.** `python src/benchmark_scale.py` loads the same schema with **1,000,000 reservations** in a separate
+schema. There, the agent's ordinary question "what is tonight's occupancy?" against the live view `V_DAILY_KPIS` costs
+**142,782 timerons**, so a 25,000-timeron guard would refuse it, although it is not a runaway query. Asked of the
+materialized query table `MQT_DAILY_KPIS`, the same question costs **71 timerons**.
+
+| At 1M reservations | Live view | MQT |
+|---|---|---|
+| "Occupancy tonight": `EXPLAIN` cost | 142,782 timerons (refused) | **71** timerons (allowed) |
+| 30 nights of KPI history | 221 ms | **0.4 ms** |
+
+**Why it matters for AI apps.** A cost guard must be sized for the data volume, and the semantic layer the agent is
+pointed at matters as much as the guard: at scale, aggregates should come from MQTs. The demo database (2,440
+reservations) stays well under the limit; at production volumes the agent's schema card should prefer the MQT.
+
+**Also measured:** Db2 Community's default transaction log (about 100 MB) fills on a 100,000-row insert into a temporal,
+indexed table (`SQL0964C`), so the benchmark commits in 20,000-row batches.
+
+---
+
 ## Smaller ones
 
 - `FOR SYSTEM_TIME AS OF` does not accept a scalar subquery (`SQL0104N`); fetch the timestamp first and pass it as a
