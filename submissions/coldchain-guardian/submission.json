@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "ColdChain Guardian",
+    "slug": "coldchain-guardian",
+    "short_description": "Agentic AI platform for predictive cold-chain risk management using IBM Db2, LangGraph, and CrewAI.",
+    "category": "AI / RAG / Data Engineering / Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": ""
+  },
+  "team": {
+    "name": "Solo Contributor",
+    "members": [
+      {
+        "name": "Your Name",
+        "github": "your-github",
+        "email": "your.email@example.com",
+        "role": "Full-stack Engineer, AI Architect, Db2 Specialist"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker)",
+    "connector": "ibm_db / SQLAlchemy",
+    "features_used": ["Relational Tables", "Indexing", "Audit Logs", "Identity Columns"]
+  },
+  "tech_stack": {
+    "languages": ["Python", "TypeScript"],
+    "frameworks": ["FastAPI", "React", "LangGraph", "CrewAI"],
+    "ai_models": ["Google Gemini"]
+  }
+}
