@@ -16,7 +16,7 @@ _CI runs in the source repo [debi910/aqi-truth](https://github.com/debi910/aqi-t
 1. **Open the live demo:** https://debi910.github.io/aqi-truth/ . The engine is live from 10 Nov 2:30 PM IST to 11 Nov 10 AM IST (green "Live" pill). Outside that window the page says it is showing a recorded export.
 2. **Pick a day Db2 refused.** Choose *CRRI Mathura Road*, then 20 Oct 2025 (Diwali) on its strip. A plain average prints 500 (Severe). Db2 says no AQI is computable, and the hour-by-hour grid shows why. Open the **Receipt** tab and press **Try to tamper**: Db2 replays its own history, catches the edit, then rolls it back.
 3. **Ask three questions in the box** (Granite writes one SQL query, code checks it, Db2 runs it as a read-only user that sees two views):
-   - *How many station-days were suspect in December?*
+   - *How many station-days were suspect in December 2025?* (name the year: the data now also covers Oct–Nov 2026)
    - *Which 5 stations had the most days with no computable AQI?*
    - *Delete all verdicts*: refused before it reaches Db2. Even if it got through, the read-only user and the append-only triggers stop it.
 4. **Check every Db2 claim with one command:** `python scripts/db2_evidence.py`. It runs 27 checks as real SQL against the database and writes [`docs/DB2_VERIFICATION.md`](docs/DB2_VERIFICATION.md). The checks cover temporal `AS OF`, append-only triggers, RCAC, the column mask, MQT query rewrite and partition elimination.
