@@ -1,0 +1,11 @@
+{
+  "project_name": "MEDSHIELD AI",
+  "project_slug": "medshield-ai",
+  "tagline": "Agentic medication safety screening with IBM Db2",
+  "description": "A healthcare decision-support prototype that screens medication lists for potential drug interactions, duplicate entries and recorded allergies, then stores review reports in IBM Db2.",
+  "participant_type": "individual",
+  "team_size": 1,
+  "technologies": ["Python", "FastAPI", "LangGraph", "IBM Db2", "ibm_db", "HTML", "CSS", "JavaScript"],
+  "category": "Healthcare / Agentic AI",
+  "data_policy": "Synthetic demonstration data only; no real patient information"
+}
