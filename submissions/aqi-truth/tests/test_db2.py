@@ -101,7 +101,8 @@ def test_question_box_query_times_out():
     import ask
     old = ask.TIMEOUT_S; ask.TIMEOUT_S = 2
     try:
-        r = ask.run("SELECT COUNT(*) FROM AQ.V_CHECK A JOIN AQ.V_CHECK B ON A.PARAM = B.PARAM")
+        # Three views (the checker's limit) joined on inequality: a near cross product of ~10^9 rows even on the CI sample.
+        r = ask.run("SELECT COUNT(*) FROM AQ.V_CHECK A JOIN AQ.V_CHECK B ON A.PARAM <> B.PARAM JOIN AQ.V_CHECK C ON B.PARAM <> C.PARAM")
     finally:
         ask.TIMEOUT_S = old
     assert r["outcome"] == "DB2_ERROR" and "cancelled" in r["why"]

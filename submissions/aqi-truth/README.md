@@ -1,5 +1,7 @@
 # AQI Truth
 
+[![CI: pytest on IBM Db2 12.1.5](https://github.com/debi910/aqi-truth/actions/workflows/ci.yml/badge.svg)](https://github.com/debi910/aqi-truth/actions/workflows/ci.yml)
+
 > **One-Line Pitch:** Delhi's air-quality dashboards print a number even when the monitors were blank, frozen or reporting impossible values. AQI Truth puts the official CPCB method inside IBM Db2, so Db2 checks every hour and **refuses to give an AQI when the data cannot support one**, with a tamper-proof evidence ledger for each decision.
 
 - **Live demo:** https://debi910.github.io/aqi-truth/ (calls the hosted Db2 + Granite server when it is up; otherwise shows a clearly labelled export of the same run)
@@ -25,7 +27,7 @@
 | **Db2 integration & depth (30)** | [`docs/DB2_VERIFICATION.md`](docs/DB2_VERIFICATION.md): one command (`python scripts/db2_evidence.py`) runs every Db2 claim against the live database and records what Db2 answered (27 checks: temporal `AS OF`, trigger `75001`, `42501` for both restricted IDs, row permission, column mask, query timeout, partition elimination, MQT query rewrite, receipts). SQL: [`sql/`](sql) (SQL PL procedures, window functions, temporal + partitioned `READING`, `MERGE`, `VECTOR`, RCAC). |
 | **Innovation & impact (25)** | [Results on real data](#results-on-real-data): Db2 refuses an AQI on station-days where a plain average still prints one. Every verdict carries a hash-chained receipt that Db2 can replay from its own history; on the [live demo](https://debi910.github.io/aqi-truth/), open a day's Receipt tab and press "Try to tamper". |
 | **Architecture & AI (20)** | [architecture.md](architecture.md); [AI / LLM Architecture](#ai--llm-architecture): Granite explains and writes SQL, code checks both, Db2 decides. |
-| **Reproducibility & code (15)** | `docker compose up` ([Setup](#setup--installation)); [tests](tests) against a real Db2; [eval/](eval) with results files. |
+| **Reproducibility & code (15)** | `docker compose up` ([Setup](#setup--installation)); 50 [tests](tests) against a real Db2, run by [CI](https://github.com/debi910/aqi-truth/actions/workflows/ci.yml) on every push in a fresh IBM Db2 Community container loaded from `data/sample` (no secrets, never the live database); [eval/](eval) with results files. |
 | **Docs & presentation (10)** | This README, [CHANGELOG.md](CHANGELOG.md), the [live site](https://debi910.github.io/aqi-truth/). |
 
 ---
@@ -228,7 +230,7 @@ cp .env.example .env
 ```bash
 pip install -r requirements.txt
 set -a; . ./.env; set +a; export DB2_HOST=localhost OLLAMA_URL=http://localhost:11434
-pytest tests/                      # 39 tests; the Db2 ones skip if DB2_PASSWORD is unset
+pytest tests/                      # 50 tests; the Db2 ones skip if DB2_PASSWORD is unset
 python eval/fault_injection.py     # rebuilds schema AQE and plants 198 faults
 python eval/ask_eval.py            # 20 gold questions + 8 attack prompts
 python scripts/db2_evidence.py     # proves the Db2 claims on the live database, writes docs/DB2_VERIFICATION.md
@@ -273,7 +275,7 @@ The tests run against a real Db2, not mocks. They check: CPCB sub-index values; 
 ---
 
 ## Data sources and licences
-- Air-quality data: CPCB CAAQMS via the [OpenAQ public archive](https://openaq-data-archive.s3.amazonaws.com) (OpenAQ data is CC BY 4.0). `data/sample/` holds three station-months from it.
+- Air-quality data: CPCB CAAQMS via the [OpenAQ public archive](https://openaq-data-archive.s3.amazonaws.com) (OpenAQ data is CC BY 4.0). `data/sample/` holds four station-months from it (October 2025: Chandni Chowk, Anand Vihar, ITO and the out-of-scope US Embassy monitor, which the row-permission test needs).
 - AQI method: [CPCB National Air Quality Index](https://cpcb.nic.in/National-Air-Quality-Index/).
 - Reporting: ThePrint and Newslaundry articles linked above, quoted in `data/rules.json`.
 - Models: IBM Granite 4.0 micro and Granite embedding (Apache 2.0).
