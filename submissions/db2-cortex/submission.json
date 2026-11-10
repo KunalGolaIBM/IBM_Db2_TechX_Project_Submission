@@ -3,7 +3,7 @@
   "project": {
     "title": "Db2 Cortex",
     "slug": "db2-cortex",
-    "short_description": "Governed, self-auditing multi-agent analytics copilot: LangGraph agents use Db2 VECTOR search, a Db2 semantic cache, session memory and a SHA-256 hash-chained audit log to answer business questions safely.",
+    "short_description": "Governed, self-auditing multi-agent analytics copilot: LangGraph agents use Db2 VECTOR search, a Db2 semantic cache, session memory tables, and a hash-chained audit table.",
     "category": "AI / Agentic Text-to-SQL / Analytics",
     "demo_url": "",
     "video_url": "",
@@ -15,7 +15,7 @@
       {
         "name": "Chandra Pavansai",
         "github": "Pavan3030-pr",
-        "email": "pavan2053010@gmail.com",
+        "email": "pavan20053010@gmail.com",
         "role": "Solo: Backend, Db2 and AI Developer"
       }
     ]
@@ -28,29 +28,7 @@
       "VECTOR(384, FLOAT32) + VECTOR_DISTANCE (COSINE)",
       "Semantic query cache in Db2",
       "Session memory tables",
-      "Hash-chained audit table",
-      "Db2 PREPARE statement validation",
-      "LangChain Db2 vector store (DB2VS)"
-    ]
-  },
-  "tech_stack": {
-    "languages": [
-      "Python",
-      "JavaScript"
-    ],
-    "frameworks": [
-      "LangGraph",
-      "LangChain",
-      "FastAPI",
-      "sqlglot"
-    ],
-    "ai_models": [
-      "IBM watsonx.ai Granite (optional)",
-      "OpenAI (optional)",
-      "Ollama (optional)",
-      "Gemini (optional)",
-      "MiniLM-L6-v2 embeddings",
-      "Offline demo planner"
+      "Hash-chained audit table"
     ]
   }
 }
