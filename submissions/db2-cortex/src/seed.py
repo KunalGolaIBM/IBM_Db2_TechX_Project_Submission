@@ -1,7 +1,7 @@
 """Creates the BANKING demo schema + Cortex control-plane tables in Db2 and fills the VECTOR semantic layer."""
 import random
 import datetime as dt
-from db import execute, executemany, query, vlit, conn
+from db import execute, executemany, vlit, conn
 from embeddings import embed, EMB
 from config import EMBED_DIM
 

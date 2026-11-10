@@ -5,7 +5,7 @@ import sys
 import glob
 import db
 import guard
-from agents import GRAPH, chain_hash
+from agents import GRAPH
 from embeddings import embed
 
 R = []
@@ -168,24 +168,5 @@ if "--submit" in sys.argv:
     check("No obvious API keys in files", lambda: (not secrets, str(secrets)))
 
 failed = [r for r in R if not r[0]]
-passed = len(R) - len(failed)
-print(f"\n{passed}/{len(R)} checks passed")
-print()
-print("=" * 64)
-print("JUDGE SCORECARD  (self-check against official criteria)")
-print("=" * 64)
-print("  Db2 Integration (30%)     VECTOR | cache | memory | audit | PREPARE | DB2VS")
-print("  Innovation (25%)          self-repair | PII wall | hash-chain | out-of-scope gate")
-print("  Architecture (20%)        LangGraph 9-node graph with conditional edges")
-print("  Reproducibility (15%)     docker-compose + seed + verify + pytest (no DB)")
-print("  Documentation (10%)       README + architecture.md + docs/JUDGES.md + UI")
-print("=" * 64)
-if failed:
-    print("FAILED checks:")
-    for ok, name, note in failed:
-        print(f"  - {name}: {note}")
-    print()
-    print("Fix the failures above, then re-run:  python verify.py")
-    sys.exit(1)
-print("All checks green. Submission is ready for judges.")
-sys.exit(0)
+print(f"\n{len(R) - len(failed)}/{len(R)} checks passed")
+sys.exit(1 if failed else 0)

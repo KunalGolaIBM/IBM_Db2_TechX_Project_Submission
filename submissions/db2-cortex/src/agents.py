@@ -7,7 +7,7 @@ import datetime as dt
 from typing import TypedDict
 from langgraph.graph import StateGraph, END
 import db
-from config import CACHE_THRESHOLD, EMBED_DIM, PII_COLUMNS
+from config import CACHE_THRESHOLD, PII_COLUMNS
 from embeddings import embed, EMB
 from llm import LLM
 import guard
@@ -275,7 +275,7 @@ def analyze(s):
     chart = {}
     if rows and len(cols) >= 2 and _num(rows[0][1]):
         kind = "line" if re.search(r"MONTH|DATE|YEAR", cols[0], re.I) else "bar"
-        chart = {"type": kind, "labels": [str(r[0]) for r in rows[:30]], "label": cols[1], "data": [float(r[1]) for r in rows[:30]]}
+        chart = {"type": kind, "labels": [str(r[0]) for r in rows[:30]], "label": cols[1], "data": [float(r[1]) if _num(r[1]) else 0.0 for r in rows[:30]]}
     if LLM is None or not rows:
         top = f" Top: {rows[0][0]} ({rows[0][1]})." if rows and len(cols) > 1 else ""
         return {"chart": chart, "insight": f"Returned {len(rows)} rows.{top}", "_detail": "Chart spec + summary"}
