@@ -1,0 +1,20 @@
+
+# Environment secrets
+.env
+**/.env
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+
+# Frontend dependencies and build output
+node_modules/
+dist/
+
+# Secrets
+.env
+.env.*
+!.env.example
