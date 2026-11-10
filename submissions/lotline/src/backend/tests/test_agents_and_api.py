@@ -1191,5 +1191,26 @@ def test_phase5_1_reqD_foscos_tracking_and_structured_closure_blockers():
     assert "cannot be closed" in close_resp.text.lower()
 
 
+# ==============================================================================
+# OPTIONAL LIVE GEMINI SUITE (GRACEFUL SKIP WHEN KEY IS ABSENT)
+# ==============================================================================
+@pytest.mark.skipif(
+    not os.getenv("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY") == "TEST_MOCK_GEMINI_API_KEY",
+    reason="Live GEMINI_API_KEY not configured in environment (skipping live LLM test cleanly)"
+)
+def test_live_gemini_api_when_key_configured():
+    """Verify live Gemini synthesis only runs when a genuine API key is supplied."""
+    from app.services.gemini_service import synthesize_agent_intelligence
+    state = get_mock_base_state()
+    res = synthesize_agent_intelligence(
+        incident_data=state["incident_data"],
+        trace_data=state["trace_data"],
+        risk_data=state["risk_assessment"],
+        actions=state["recommended_actions"]
+    )
+    assert res is not None
+
+
+
 
 
