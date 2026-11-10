@@ -97,6 +97,14 @@ All of this is in [`tests/test_db2_row_permissions.py`](../tests/test_db2_row_pe
   `POLICY_DOC` or the ledger tables, and Db2 still applies the rule to its queries: the reader's privileges are not
   checked against what a permission reads.
 
+## Cost
+
+Measured on the lane's Db2 (IBM's stock 12.1.5.0 image on an x86 VM, reached through an SSH tunnel), 10,000 decisions
+with two citations each, the same rows with row access control on and then off for the ledger and its citations:
+`VERIFY_CHAIN` as the runtime user took 31.0 s and 31.1 s. The ledger page, the two analytics views and an audit
+`GROUP BY` took 76 to 92 ms either way, which is mostly the tunnel's round trip. For a user that holds
+`ASOF_ALL_DOMAINS`, the permissions cost nothing measurable here.
+
 ## Limits
 
 - The API's specialist inbox still answers as `asofrev`, which sees every domain: AsOf's API users carry roles but no
