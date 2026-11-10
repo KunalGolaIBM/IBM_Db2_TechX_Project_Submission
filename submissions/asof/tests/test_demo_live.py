@@ -22,7 +22,7 @@ from asof.llm import LLMError, LLMResult
 from asof.schemas import ExtractionResult
 
 PROXY = ("127.0.0.1", 51000)  # Caddy on the same machine
-KEY = "sk-or-v1-demo-live-test-key-0000000000000000"
+KEY = "sk-not-a-real-key-demolive-0000"  # under 32 characters after "sk-", so the secret check passes it
 RECORDED = {"label": "Moffatt: March booking", "doc_id": "AURELIA-CSP", "as_of": "2026-03-10",
             "question": "My grandmother just died. Can I get the bereavement fare after I travel?",
             "draft": "Yes, you can apply within 90 days.", "draft_checked": "Yes, you can apply within 90 days."}
