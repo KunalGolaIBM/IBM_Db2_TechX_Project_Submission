@@ -237,7 +237,7 @@ python -m asof.demo          # optional: thirteen sample decisions, three of the
 ```
 
 - **The console** (http://127.0.0.1:8000) and **the customer chat** (http://127.0.0.1:8000/chat), whose every reply AsOf checks ([every screen](docs/screenshots.md)).
-- **The API:** JSON over HTTP; every route and a `curl` walkthrough of the Moffatt scenario are in [docs/api.md](docs/api.md). In a LangChain app:
+- **The API:** JSON over HTTP; every route and a `curl` walkthrough of the Moffatt scenario are in [docs/api.md](docs/api.md). Integrations call `POST /api/gate` with their own draft and show the customer only `final_answer` (when `released` is false, that is just the holding reply), while `POST /api/assistant/ask` is the demo console's endpoint and deliberately returns the demo assistant's raw draft so the Playground and the chat's Behind-the-scenes view can show it struck through. In a LangChain app:
 
   ```python
   chain = RunnablePassthrough.assign(draft=assistant_prompt | llm | StrOutputParser()) | as_runnable()

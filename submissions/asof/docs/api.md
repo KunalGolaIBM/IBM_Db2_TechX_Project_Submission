@@ -24,7 +24,7 @@ Every route, below, is JSON over HTTP; [docs/api.md](api.md) walks through the M
 | Endpoint | Purpose |
 |---|---|
 | `POST /api/gate` | Check a draft: `question`, `draft_answer`, `as_of_date`, optional `doc_id` (`AURELIA-CSP`, the default, `FERNHOLLOW-FEES`, or `auto` to [route](db2.md#routing-which-policy-a-draft-is-about) it) and `channel`. Returns the decision, final answer, and per-claim verdicts with clause versions and quotes; with `auto`, also the route. |
-| `POST /api/assistant/ask` | Ask the naive demo assistant, then check its draft |
+| `POST /api/assistant/ask` | The demo console's endpoint: ask the naive demo assistant, then check its draft. Returns the raw draft too (`assistant.draft`); not for integrations (below) |
 | `GET /api/ledger`, `GET /api/ledger/{id}` | Recorded decisions and their claim citations |
 | `GET /api/ledger/{id}/replay` | The clause rows a decision used, what Db2 held at that moment, and what applies today |
 | `POST /api/ledger/ask` | "Ask the ledger": a plain-English question about the audit trail, answered as the read-only analyst `asofread`. Returns the answer, the checked SQL that ran and the rows. |
@@ -45,6 +45,8 @@ Every route, below, is JSON over HTTP; [docs/api.md](api.md) walks through the M
 | `GET /api/notices`, `POST /api/notices/draft`, `POST /api/notices/{id}/decision` | Correction notices (`reviewer` role): list them, have the change-impact agent draft a checked notice for each answer a policy change made stale (`ADD_NOTICE`), approve or reject one (`DECIDE_NOTICE`) |
 | `GET /api/analytics` | Decision, area and override statistics from the Db2 views |
 | `GET /healthz` | Db2 connectivity and the configured model |
+
+**Integrations call `/api/gate`, not `/api/assistant/ask`.** `/api/assistant/ask` is the demo console's endpoint: it deliberately returns the demo assistant's raw draft (`assistant.draft`) next to the decision, so the Playground and the customer chat's Behind-the-scenes view can show that draft struck through. An integration sends its own draft to `/api/gate` and gets back the decision, `released`, `final_answer` and the per-claim verdicts (with ids, timing and the ledger receipt), never a copy of the draft. Show the customer `final_answer` and nothing else: the claim texts and `rewrite` are for audit, and `rewrite` can hold a rewrite that failed its re-check. `released` is false (HTTP 503) only when nothing checked can go out, because the router could not tell which policy applies or the ledger could not record the decision; `final_answer` is then only the generic holding reply, so show that or nothing.
 
 **Drop it into an existing LangChain app**
 
