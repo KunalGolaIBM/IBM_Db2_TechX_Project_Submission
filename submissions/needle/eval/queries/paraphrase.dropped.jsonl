@@ -1,0 +1,1 @@
+{"reason": "shares_6_word_run", "source_adv_id": "GHSA-x44h-65qv-cw74", "text": "We got a request to check if a hostname like 127.0.0.1.nip.io can bypass our URL filter. It seems to work even though it's a private IP. Is this a known issue or something we should worry about?"}

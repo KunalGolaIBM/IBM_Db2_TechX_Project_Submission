@@ -1,0 +1,13 @@
+Check: the landing page's "Ask for 10. Get N." numbers against Db2 itself (2026-11-09 ~23:58 CST)
+
+The landing page computes, from cloud.json (scripts/build_hero_cloud.py), how many of the 21 nearest public advisories a
+10% analyst (ROW_BUCKET < 10) may read: pyyaml 2, flashpix 0. This check runs the real statement as each identity:
+NEEDLE.TRIAGE_MODE(..., 'VEC') with k = 10 and depth = 10 (FETCH APPROX FIRST 10, the shared plan, no router),
+query vectors from nomic-embed-text ('search_query: ' prefix), Db2 12.1.5 VECDB (26,210 advisories).
+
+NDL_P10 pyyaml VEC depth 10 (shared plan, no router): rows = 2 | answered depth 10
+NDL_P10 flashpix VEC depth 10 (shared plan, no router): rows = 0 | answered depth 10
+NDL_SENIOR pyyaml VEC depth 10 (shared plan, no router): rows = 10 | answered depth 10
+NDL_SENIOR flashpix VEC depth 10 (shared plan, no router): rows = 10 | answered depth 10
+
+Result: Db2 returns the same counts the page shows (2 and 0 for NDL_P10; 10 for NDL_SENIOR).

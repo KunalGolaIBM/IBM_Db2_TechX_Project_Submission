@@ -1,0 +1,6 @@
+[router] NDL_P10    EXACT/10 L=None recall=1.0 underfill=0.0 fallbacks=0 p50=16.34ms leaks=0
+[router] NDL_P25    EXACT/10 L=None recall=1.0 underfill=0.0 fallbacks=0 p50=36.26ms leaks=0
+[router] NDL_P50    APPROX/100 L=300 recall=1.0 underfill=0.0 fallbacks=0 p50=78.45ms leaks=0
+[router] NDL_P75    APPROX/50 L=150 recall=0.9876 underfill=0.0 fallbacks=0 p50=7.34ms leaks=0
+[router] NDL_SENIOR APPROX/50 L=150 recall=0.9865 underfill=0.0 fallbacks=0 p50=7.17ms leaks=0
+wrote /home/codespace/ndl_rcac/rcac_real_results.json

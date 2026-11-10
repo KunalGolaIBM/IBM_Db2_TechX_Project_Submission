@@ -1,0 +1,345 @@
+# F3/F4 run 1 (stopped by SQL0968C at query ~100/150). Raw stdout of scripts/connector_findings.py f3f4 before the per-search COMMIT was added; library traceback in the wrapper log below.
+
+## F3/F4 filtered search  (2026-11-10T02:00:58+00:00)
+
+```
+NDL_CONN.F1_NOTNULL rows=26210  ROW_BUCKET<10 rows=2621  selectivity=0.1000
+NDL_CONN.DB2VS_ADV rows=26210  metadata row_bucket<10 rows=2621
+queries: 150 paraphrase query vectors from data/eval_qvecs.json.gz, embedding={'model': 'nomic-embed-text', 'prefix': 'search_query: ', 'name': 'nomic-embed-text:latest', 'digest': '0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f', 'quantization': 'F16'}
+```
+
+### EXPLAIN of the F4 statements
+
+
+### F4a SQL WHERE + FETCH APPROX FIRST 10
+
+```sql
+SELECT ADV_ID FROM NDL_CONN.F1_NOTNULL WHERE ROW_BUCKET < 10 ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 10 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 02:00:58.638654  QUERYTAG CFD081001  total cost 1805.970458984375  **vector index used: ['NDL_CONN.F1_NOTNULL_VIX']**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        1805.970458984375
+          2 TBSCAN        1805.970458984375
+          3 SORT          1805.97021484375
+          4 FETCH         1805.960693359375
+          5 IXSCAN        1216.573974609375
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 4 O  NDL_CONN.F1_NOTNULL  26210.0
+  -1 D -> 5 O  NDL_CONN.F1_NOTNULL_VIX  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015715404425_P2_O31_I2 TA
+  SYSIBM.AGT261110015715404425_P2_O31_I2 TA
+  SYSIBM.AIJ261110015715404425_P2_O31_I2 TA
+  NDL_CONN.F1_NOTNULL TA
+  NDL_CONN.F1_NOTNULL_VIX VI
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		1805.97
+	Query Degree:		1
+
+
+             Rows 
+            RETURN
+            (   1)
+             Cost 
+              I/O 
+              |
+              10 
+            TBSCAN
+            (   2)
+            1805.97 
+            255.052 
+              |
+              10 
+            SORT  
+            (   3)
+            1805.97 
+            255.052 
+              |
+            10.018 
+            FETCH 
+            (   4)
+            1805.96 
+            255.052 
+          /---+----\
+        85          26210 
+      IXSCAN   TABLE: NDL_CONN
+      (   5)     F1_NOTNULL
+      1216.57        Q1
+       171.4 
+        |
+       26210 
+ VECIDX: NDL_CONN
+  F1_NOTNULL_VIX
+        Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+### F4b SQL WHERE + FETCH APPROX FIRST 100, take 10
+
+```sql
+SELECT ADV_ID FROM NDL_CONN.F1_NOTNULL WHERE ROW_BUCKET < 10 ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 100 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 02:00:59.160395  QUERYTAG CFD081002  total cost 3050.955810546875  **vector index used: NO**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        3050.955810546875
+          2 TBSCAN        3050.955810546875
+          3 SORT          3050.95458984375
+          4 TBSCAN        3047.9697265625
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 4 O  NDL_CONN.F1_NOTNULL  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015715404425_P2_O31_I2 +T
+  SYSIBM.AGT261110015715404425_P2_O31_I2 +T
+  SYSIBM.AIJ261110015715404425_P2_O31_I2 +T
+  NDL_CONN.F1_NOTNULL TA
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		3050.96
+	Query Degree:		1
+
+
+      Rows 
+     RETURN
+     (   1)
+      Cost 
+       I/O 
+       |
+       100 
+     TBSCAN
+     (   2)
+     3050.96 
+      2621 
+       |
+       100 
+     SORT  
+     (   3)
+     3050.95 
+      2621 
+       |
+     3089.07 
+     TBSCAN
+     (   4)
+     3047.97 
+      2621 
+       |
+      26210 
+ TABLE: NDL_CONN
+   F1_NOTNULL
+       Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+### F4c over-fetch FETCH APPROX FIRST 100, then WHERE, take 10
+
+```sql
+SELECT ADV_ID FROM (SELECT ADV_ID, ROW_BUCKET, VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) AS CF_D FROM NDL_CONN.F1_NOTNULL ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 100 ROWS ONLY) X WHERE ROW_BUCKET < 10 ORDER BY CF_D FETCH FIRST 10 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 02:00:59.712278  QUERYTAG CFD081003  total cost 2075.269287109375  **vector index used: ['NDL_CONN.F1_NOTNULL_VIX']**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        2075.269287109375
+          2 TBSCAN        2075.269287109375
+          3 SORT          2075.26904296875
+          4 FILTER        2075.2685546875
+          5 TBSCAN        2075.266357421875
+          6 SORT          2075.26513671875
+          7 FETCH         2075.16796875
+          8 IXSCAN        1383.7440185546875
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 7 O  NDL_CONN.F1_NOTNULL  26210.0
+  -1 D -> 8 O  NDL_CONN.F1_NOTNULL_VIX  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015715404425_P2_O31_I2 TA
+  SYSIBM.AGT261110015715404425_P2_O31_I2 TA
+  SYSIBM.AIJ261110015715404425_P2_O31_I2 TA
+  NDL_CONN.F1_NOTNULL TA
+  NDL_CONN.F1_NOTNULL_VIX VI
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		2075.27
+	Query Degree:		1
+
+
+             Rows 
+            RETURN
+            (   1)
+             Cost 
+              I/O 
+              |
+              10 
+            TBSCAN
+            (   2)
+            2075.27 
+            293.139 
+              |
+              10 
+            SORT  
+            (   3)
+            2075.27 
+            293.139 
+              |
+            11.7858 
+            FILTER
+            (   4)
+            2075.27 
+            293.139 
+              |
+              100 
+            TBSCAN
+            (   5)
+            2075.27 
+            293.139 
+              |
+              100 
+            SORT  
+            (   6)
+            2075.27 
+            293.139 
+              |
+              100 
+            FETCH 
+            (   7)
+            2075.17 
+            293.139 
+          /---+----\
+        100         26210 
+      IXSCAN   TABLE: NDL_CONN
+      (   8)     F1_NOTNULL
+      1383.74        Q1
+      195.005 
+        |
+       26210 
+ VECIDX: NDL_CONN
+  F1_NOTNULL_VIX
+        Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+### F4b SQL WHERE + FETCH APPROX FIRST 200, take 10
+
+```sql
+SELECT ADV_ID FROM NDL_CONN.F1_NOTNULL WHERE ROW_BUCKET < 10 ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 200 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 02:01:00.213853  QUERYTAG CFD081004  total cost 3050.9775390625  **vector index used: NO**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        3050.9775390625
+          2 TBSCAN        3050.9775390625
+          3 SORT          3050.97509765625
+          4 TBSCAN        3047.9697265625
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 4 O  NDL_CONN.F1_NOTNULL  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015715404425_P2_O31_I2 +T
+  SYSIBM.AGT261110015715404425_P2_O31_I2 +T
+  SYSIBM.AIJ261110015715404425_P2_O31_I2 +T
+  NDL_CONN.F1_NOTNULL TA
+```
+
+### F4c over-fetch FETCH APPROX FIRST 200, then WHERE, take 10
+
+```sql
+SELECT ADV_ID FROM (SELECT ADV_ID, ROW_BUCKET, VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) AS CF_D FROM NDL_CONN.F1_NOTNULL ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 200 ROWS ONLY) X WHERE ROW_BUCKET < 10 ORDER BY CF_D FETCH FIRST 10 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 02:01:00.230737  QUERYTAG CFD081005  total cost 3073.03125  **vector index used: NO**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        3073.03125
+          2 TBSCAN        3073.03125
+          3 SORT          3073.031005859375
+          4 FILTER        3073.030029296875
+          5 TBSCAN        3073.02587890625
+          6 SORT          3073.0234375
+          7 TBSCAN        3047.418701171875
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 7 O  NDL_CONN.F1_NOTNULL  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015715404425_P2_O31_I2 +T
+  SYSIBM.AGT261110015715404425_P2_O31_I2 +T
+  SYSIBM.AIJ261110015715404425_P2_O31_I2 +T
+  NDL_CONN.F1_NOTNULL TA
+```
+
+Ground truth statement (exact, bound vector):
+```sql
+SELECT ADV_ID, VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) AS CF_D FROM NDL_CONN.F1_NOTNULL WHERE ROW_BUCKET < 10 ORDER BY CF_D FETCH FIRST 20 ROWS ONLY
+```
+  ... 25/150 queries
+  ... 50/150 queries
+  ... 75/150 queries
+
+## wrapper stderr/stdout tail (python traceback)
+```
+  ... 75/150 queries
+2026-11-10 02:04:31,331 - ERROR - An unexpected error occurred: Fetch Failure: [IBM][CLI Driver][DB2/LINUXX8664] SQL0968C  The file system is full.  SQLSTATE=57011 SQLCODE=-968
+Traceback (most recent call last):
+  File "/tmp/needle/conn_venv/lib/python3.14/site-packages/langchain_db2/db2vs.py", line 53, in wrapper
+    return func(*args, **kwargs)
+  File "/tmp/needle/conn_venv/lib/python3.14/site-packages/langchain_db2/db2vs.py", line 619, in similarity_search_by_vector_with_relevance_scores
+--
+    rows_fetched = ibm_db.fetchall(self.stmt_handler)
+Exception: Fetch Failure: [IBM][CLI Driver][DB2/LINUXX8664] SQL0968C  The file system is full.  SQLSTATE=57011 SQLCODE=-968
+Traceback (most recent call last):
+  File "/tmp/needle/conn_venv/lib/python3.14/site-packages/langchain_db2/db2vs.py", line 53, in wrapper
+    return func(*args, **kwargs)
+  File "/tmp/needle/conn_venv/lib/python3.14/site-packages/langchain_db2/db2vs.py", line 619, in similarity_search_by_vector_with_relevance_scores
+--
+    rows_fetched = ibm_db.fetchall(self.stmt_handler)
+Exception: Fetch Failure: [IBM][CLI Driver][DB2/LINUXX8664] SQL0968C  The file system is full.  SQLSTATE=57011 SQLCODE=-968
+The above exception was the direct cause of the following exception:
+Traceback (most recent call last):
+  File "/tmp/needle/connector_findings.py", line 770, in <module>
+    main()
+    ~~~~^^
+--
+  File "/tmp/needle/conn_venv/lib/python3.14/site-packages/langchain_db2/db2vs.py", line 71, in wrapper
+    raise RuntimeError(error_msg) from e
+RuntimeError: Unexpected error: Fetch Failure: [IBM][CLI Driver][DB2/LINUXX8664] SQL0968C  The file system is full.  SQLSTATE=57011 SQLCODE=-968
+shell closed: exit status 1
+```

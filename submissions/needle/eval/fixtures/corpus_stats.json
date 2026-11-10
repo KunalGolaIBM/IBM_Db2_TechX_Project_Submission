@@ -1,0 +1,12 @@
+{
+  "n": 2000,
+  "avgdl": 170.8565,
+  "avg_idf": 6.4960177433493005,
+  "vocab": 28496,
+  "postings": 180282,
+  "k1": 1.2,
+  "b": 0.75,
+  "epsilon": 0.25,
+  "max_terms_per_doc": 512,
+  "max_query_terms": 64
+}

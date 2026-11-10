@@ -1,0 +1,16 @@
+fastapi==0.162.2
+haystack-ai==3.4.1
+httpx==0.28.1
+ibm_db==3.3.0
+langchain-core==1.7.6
+langchain-db2==1.0.0
+langchain-ollama==1.1.0
+matplotlib==3.11.2
+numpy==2.5.4
+pandas==3.1.1
+pytest==9.2.0
+python-dotenv==1.2.4
+rank-bm25==0.2.2
+requests==2.34.2
+streamlit==1.67.0
+uvicorn==0.54.0

@@ -1,0 +1,52 @@
+# pytest -m db (C1/H2 fix verification) 2026-11-09 20:13 CST
+# command: .venv/Scripts/python.exe -m pytest tests/test_triage_rcac.py tests/test_bm25_parity.py -m db -v -rs -p no:cacheprovider
+============================= test session starts =============================
+platform win32 -- Python 3.13.2, pytest-9.2.0, pluggy-1.7.0 -- <repo>/needle\.venv\Scripts\python.exe
+rootdir: <repo>/needle
+configfile: pytest.ini
+plugins: anyio-4.16.0, langsmith-0.14.17
+collecting ... collected 8 items / 2 deselected / 6 selected
+
+tests/test_triage_rcac.py::test_junior_cannot_select_bm25_statistics[NEEDLE.TERM_DF] PASSED [ 16%]
+tests/test_triage_rcac.py::test_junior_cannot_select_bm25_statistics[NEEDLE.CORPUS_STATS] PASSED [ 33%]
+tests/test_triage_rcac.py::test_junior_triage_still_returns_results_with_execute_only PASSED [ 50%]
+tests/test_triage_rcac.py::test_difference_attack_yields_empty_set PASSED [ 66%]
+tests/test_triage_rcac.py::test_junior_never_sees_forbidden_ids_through_triage PASSED [ 83%]
+tests/test_bm25_parity.py::test_sql_bm25_matches_rank_bm25 PASSED        [100%]
+
+====================== 6 passed, 2 deselected in 49.42s =======================
+# exit code: 0
+
+# ---------------------------------------------------------------------------------------------------------------
+# Additional verification (copied from the command output, 2026-11-09 ~20:10-20:20 CST)
+#
+# 1. Live fix, run as DB2INST1 with the CLP inside the db2 container:
+#    db2 -td@ -vf 03_triage_proc.sql   -> 4 x DB20000I (BM25_SEARCH, TRIAGE_MODE, TRIAGE, SYNC_POSTING_ACL)
+#    CALL NEEDLE.SYNC_POSTING_ACL(?)   -> P_UPDATED = 0 (POSTING already in sync), Return Status = 0
+#    REVOKE SELECT ON NEEDLE.TERM_DF / NEEDLE.CORPUS_STATS FROM NDL_SENIOR, NDL_JUNIOR, NDL_P10..P75 -> DB20000I x 2
+#    RUNSTATS TERM_DF, CORPUS_STATS    -> Return Status = 0
+#    CORPUS_STATS: N = 26183, AVGDL = 1.31364473131421E+002, AVG_IDF = 9.17756547719032E+000
+#      (before the fix: N = 26210, AVGDL = 131.6642884395269, AVG_IDF = 9.179734939733331)
+#    TERM_DF rows = 183662 (before: 184278; the 616 removed terms occur only in embargoed postings)
+#    EMBARGOED_DOCS (ADV_DOC) = 27, EMBARGOED_POSTING_DOCS = 27, POSTING_ACL_DRIFT = 0, DF_NOT_EQUAL_PUBLIC = 0
+#    SYSCAT.TABAUTH on TERM_DF / CORPUS_STATS: only DB2INST1 (SELECTAUTH G)
+#    SYSCAT.ROUTINEAUTH: EXECUTE on NEEDLE_BM25_SEARCH, NEEDLE_TRIAGE, NEEDLE_TRIAGE_MODE kept for all 6 NDL_* users
+#
+# 2. TRUNCATE on a table with ROW ACCESS CONTROL active (scratch table NDL_DEV_BM25.RT, dropped afterwards):
+#    TRUNCATE TABLE ... IMMEDIATE -> DB20000I, ROWS_AFTER_TRUNCATE = 0   (the loader's reload path works under RCAC)
+#
+# 3. Loader invariant check (scripts/load_postings_in_codespace.py --steps check, in the codespace):
+#    CHECK db: postings=1944102 acl_drift_vs_adv_doc=0 TERM_DF=183662 public_terms=183662 df_not_public_count=0
+#              N=26183 public_docs=26183 embargoed_docs=27 AVGDL=131.36447313142116 AVG_IDF=9.17756547719032
+#    CHECK py (full corpus): postings=1944102 vocab=184278 N=26210 AVGDL=131.6642884395269 AVG_IDF=9.179734939740372
+#    CHECK MATCH
+#    (A full reload was NOT run, to avoid disturbing other agents' queries; H2 is fixed in code: the loader now
+#     copies ROW_BUCKET / EMBARGO_UNTIL from ADV_DOC at insert time and the POST_LOAD part re-runs the MERGE.)
+#
+# 4. Approximation check, BM25_SEARCH on the first 5 embargoed advisories' own ID term (depth 3):
+#    NDL_SENIOR: embargoed advisory ranked #1 for its own ID term in 4/5 probes
+#    NDL_JUNIOR: embargoed advisory ranked #1 for its own ID term in 0/5 probes (and 0 rows: test (c) step 4)
+#    The 5th senior probe (GHSA-5x8w-8jj5-q52h) ranks its alias copy PYSEC-2026-4330 first (same CANON_ID, also
+#    embargoed, invisible to NDL_JUNIOR: junior SELECT on ADV_DOC for PYSEC-2026-4330 returned []).
+#
+# 5. Unit tests: pytest tests/test_tokenize.py tests/test_bm25_parity.py -m "not db" -> 9 passed, 1 deselected

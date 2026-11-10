@@ -1,0 +1,55 @@
+-- Db2 CLP in the container (needle-db2), as the instance owner db2inst1, database VECDB
+$ db2 "SELECT VARCHAR(SERVICE_LEVEL, 20) AS SERVICE_LEVEL FROM TABLE(SYSPROC.ENV_GET_INST_INFO()) AS T"
+
+SERVICE_LEVEL
+--------------------
+DB2 v12.1.5.0
+
+  1 record(s) selected.
+
+$ db2 "SELECT VARCHAR(TABNAME, 12) AS TABNAME, VARCHAR(INDNAME, 12) AS INDNAME, INDEXTYPE FROM SYSCAT.INDEXES WHERE INDSCHEMA = 'NEEDLE' AND INDEXTYPE = 'VANN'"
+
+TABNAME      INDNAME      INDEXTYPE
+------------ ------------ ---------
+ADV_DOC      ADV_DOC_VIX  VANN
+
+  1 record(s) selected.
+
+$ db2 "SELECT VARCHAR(CONTROLNAME, 40) AS CONTROLNAME, CONTROLTYPE, ENABLE, VALID, VARCHAR(TABNAME, 14) AS TABNAME FROM SYSCAT.CONTROLS WHERE TABSCHEMA = 'NEEDLE' ORDER BY CONTROLTYPE, TABNAME"
+
+CONTROLNAME                              CONTROLTYPE ENABLE VALID TABNAME
+---------------------------------------- ----------- ------ ----- --------------
+ADV_DOC_SUMMARY_MASK                     C           Y      Y     ADV_DOC
+ADV_AFFECTED_ROWS                        R           Y      Y     ADV_AFFECTED
+SYS_DEFAULT_ROW_PERMISSION__ADV_AFFECTED R           Y      Y     ADV_AFFECTED
+ADV_ALIAS_ROWS                           R           Y      Y     ADV_ALIAS
+SYS_DEFAULT_ROW_PERMISSION__ADV_ALIAS    R           Y      Y     ADV_ALIAS
+ADV_DOC_ROWS                             R           Y      Y     ADV_DOC
+SYS_DEFAULT_ROW_PERMISSION__ADV_DOC      R           Y      Y     ADV_DOC
+POSTING_ROWS                             R           Y      Y     POSTING
+SYS_DEFAULT_ROW_PERMISSION__POSTING      R           Y      Y     POSTING
+
+  9 record(s) selected.
+
+$ db2 "SELECT VARCHAR(TABNAME, 16) AS TABNAME, VARCHAR(PERIODNAME, 14) AS PERIODNAME, VARCHAR(BEGINCOLNAME, 10) AS BEGINCOL, VARCHAR(ENDCOLNAME, 10) AS ENDCOL FROM SYSCAT.PERIODS WHERE TABSCHEMA = 'NEEDLE'"
+
+TABNAME          PERIODNAME     BEGINCOL   ENDCOL
+---------------- -------------- ---------- ----------
+SBOM_COMPONENT   BUSINESS_TIME  BUS_START  BUS_END
+
+  1 record(s) selected.
+
+$ db2 "SELECT COUNT(*) AS ADVISORIES, SUM(CASE WHEN EMBARGO_UNTIL > CURRENT TIMESTAMP THEN 1 ELSE 0 END) AS EMBARGOED FROM NEEDLE.ADV_DOC"
+
+ADVISORIES  EMBARGOED
+----------- -----------
+      26210          27
+
+  1 record(s) selected.
+
+
+-- from the Mac through the SSH tunnel, ibm_db as each analyst: SELECT SESSION_USER, COUNT(*), SUM(CASE WHEN ADV_ID = 'GHSA-5x8w-8jj5-q52h' THEN 1 ELSE 0 END) FROM NEEDLE.ADV_DOC
+-- each identity on its own connection (password from .env, never printed); RCAC decides the count
+NDL_SENIOR   visible advisories 26,210   GHSA-5x8w-8jj5-q52h visible: 1
+NDL_JUNIOR   visible advisories 26,183   GHSA-5x8w-8jj5-q52h visible: 0
+NDL_P10      visible advisories  2,616   GHSA-5x8w-8jj5-q52h visible: 0

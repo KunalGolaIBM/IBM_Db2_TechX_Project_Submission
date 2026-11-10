@@ -1,0 +1,6 @@
+[rcac] NDL_P10    visible=2996/30000 exact ms=18.7 agree_np=1.0  approx10 recall=0.226 rows=2.26 lt_k=50  router=EXACT/10 recall=1.0 ms=19.24
+[rcac] NDL_P25    visible=7505/30000 exact ms=41.79 agree_np=1.0  approx10 recall=0.556 rows=5.56 lt_k=49  router=APPROX/80 recall=1.0 ms=11.3
+[rcac] NDL_P50    visible=14909/30000 exact ms=82.11 agree_np=1.0  approx10 recall=0.882 rows=9.34 lt_k=14  router=APPROX/41 recall=0.996 ms=5.53
+[rcac] NDL_P75    visible=22375/30000 exact ms=126.65 agree_np=1.0  approx10 recall=0.95 rows=10.0 lt_k=0  router=APPROX/27 recall=0.988 ms=5.06
+[rcac] NDL_SENIOR visible=30000/30000 exact ms=167.8 agree_np=1.0  approx10 recall=0.974 rows=10.0 lt_k=0  router=APPROX/20 recall=0.988 ms=3.05
+wrote /home/codespace/ndl_rcac/rcac_synthetic_results.json

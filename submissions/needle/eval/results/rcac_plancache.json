@@ -1,0 +1,271 @@
+{
+ "statement": "SELECT ADV_ID, VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) AS DIST FROM NEEDLE.ADV_DOC T ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 10 ROWS ONLY",
+ "runs": [
+  {
+   "order": "forward",
+   "steps": [
+    {
+     "user": "NDL_P10",
+     "rows_returned_per_query": [
+      1,
+      2,
+      2,
+      6,
+      7,
+      0,
+      4,
+      2,
+      2,
+      2
+     ],
+     "cache_entries": [
+      {
+       "executable_id": "0100000000000000FE1300000000000000000000020020261110015942020530",
+       "num_executions": 10,
+       "delta_executions": 10,
+       "delta_rows_read": 35226,
+       "delta_rows_returned": 28,
+       "delta_stmt_exec_time_ms": 16
+      }
+     ]
+    },
+    {
+     "user": "NDL_P25",
+     "rows_returned_per_query": [
+      6,
+      2,
+      5,
+      6,
+      9,
+      3,
+      8,
+      4,
+      6,
+      4
+     ],
+     "cache_entries": [
+      {
+       "executable_id": "0100000000000000FE1300000000000000000000020020261110015942020530",
+       "num_executions": 20,
+       "delta_executions": 10,
+       "delta_rows_read": 35226,
+       "delta_rows_returned": 53,
+       "delta_stmt_exec_time_ms": 17
+      }
+     ]
+    },
+    {
+     "user": "NDL_P50",
+     "rows_returned_per_query": [
+      10,
+      9,
+      10,
+      10,
+      10,
+      10,
+      9,
+      5,
+      10,
+      7
+     ],
+     "cache_entries": [
+      {
+       "executable_id": "0100000000000000FE1300000000000000000000020020261110015942020530",
+       "num_executions": 30,
+       "delta_executions": 10,
+       "delta_rows_read": 35226,
+       "delta_rows_returned": 90,
+       "delta_stmt_exec_time_ms": 17
+      }
+     ]
+    },
+    {
+     "user": "NDL_P75",
+     "rows_returned_per_query": [
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10
+     ],
+     "cache_entries": [
+      {
+       "executable_id": "0100000000000000FE1300000000000000000000020020261110015942020530",
+       "num_executions": 40,
+       "delta_executions": 10,
+       "delta_rows_read": 35226,
+       "delta_rows_returned": 100,
+       "delta_stmt_exec_time_ms": 16
+      }
+     ]
+    },
+    {
+     "user": "NDL_SENIOR",
+     "rows_returned_per_query": [
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10
+     ],
+     "cache_entries": [
+      {
+       "executable_id": "0100000000000000FE1300000000000000000000020020261110015942020530",
+       "num_executions": 50,
+       "delta_executions": 10,
+       "delta_rows_read": 35226,
+       "delta_rows_returned": 100,
+       "delta_stmt_exec_time_ms": 17
+      }
+     ]
+    }
+   ],
+   "distinct_executable_ids": [
+    "0100000000000000FE1300000000000000000000020020261110015942020530"
+   ]
+  },
+  {
+   "order": "reverse",
+   "steps": [
+    {
+     "user": "NDL_SENIOR",
+     "rows_returned_per_query": [
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10
+     ],
+     "cache_entries": [
+      {
+       "executable_id": "01000000000000002D1400000000000000000000020020261110015943844308",
+       "num_executions": 10,
+       "delta_executions": 10,
+       "delta_rows_read": 35226,
+       "delta_rows_returned": 100,
+       "delta_stmt_exec_time_ms": 18
+      }
+     ]
+    },
+    {
+     "user": "NDL_P75",
+     "rows_returned_per_query": [
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10
+     ],
+     "cache_entries": [
+      {
+       "executable_id": "01000000000000002D1400000000000000000000020020261110015943844308",
+       "num_executions": 20,
+       "delta_executions": 10,
+       "delta_rows_read": 35226,
+       "delta_rows_returned": 100,
+       "delta_stmt_exec_time_ms": 18
+      }
+     ]
+    },
+    {
+     "user": "NDL_P50",
+     "rows_returned_per_query": [
+      10,
+      9,
+      10,
+      10,
+      10,
+      10,
+      9,
+      5,
+      10,
+      7
+     ],
+     "cache_entries": [
+      {
+       "executable_id": "01000000000000002D1400000000000000000000020020261110015943844308",
+       "num_executions": 30,
+       "delta_executions": 10,
+       "delta_rows_read": 35226,
+       "delta_rows_returned": 90,
+       "delta_stmt_exec_time_ms": 17
+      }
+     ]
+    },
+    {
+     "user": "NDL_P25",
+     "rows_returned_per_query": [
+      6,
+      2,
+      5,
+      6,
+      9,
+      3,
+      8,
+      4,
+      6,
+      4
+     ],
+     "cache_entries": [
+      {
+       "executable_id": "01000000000000002D1400000000000000000000020020261110015943844308",
+       "num_executions": 40,
+       "delta_executions": 10,
+       "delta_rows_read": 35226,
+       "delta_rows_returned": 53,
+       "delta_stmt_exec_time_ms": 16
+      }
+     ]
+    },
+    {
+     "user": "NDL_P10",
+     "rows_returned_per_query": [
+      1,
+      2,
+      2,
+      6,
+      7,
+      0,
+      4,
+      2,
+      2,
+      2
+     ],
+     "cache_entries": [
+      {
+       "executable_id": "01000000000000002D1400000000000000000000020020261110015943844308",
+       "num_executions": 50,
+       "delta_executions": 10,
+       "delta_rows_read": 35226,
+       "delta_rows_returned": 28,
+       "delta_stmt_exec_time_ms": 18
+      }
+     ]
+    }
+   ],
+   "distinct_executable_ids": [
+    "01000000000000002D1400000000000000000000020020261110015943844308"
+   ]
+  }
+ ]
+}

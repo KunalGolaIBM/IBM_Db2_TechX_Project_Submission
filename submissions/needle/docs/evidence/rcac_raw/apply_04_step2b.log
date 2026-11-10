@@ -1,0 +1,50 @@
+SELECT ADV_ID, CANON_ID, KIND, PUBLISHED, EMBARGO_UNTIL FROM NEEDLE.ADV_DOC WHERE CANON_ID IN (SELECT CANON_ID FROM NEEDLE.ADV_DOC WHERE ADV_ID = 'GHSA-5x8w-8jj5-q52h')
+
+ADV_ID                                                           CANON_ID                                                         KIND     PUBLISHED                  EMBARGO_UNTIL             
+---------------------------------------------------------------- ---------------------------------------------------------------- -------- -------------------------- --------------------------
+GHSA-5x8w-8jj5-q52h                                              GHSA-5x8w-8jj5-q52h                                              GHSA     2026-10-23-21.55.21.000000 -                         
+PYSEC-2026-4330                                                  GHSA-5x8w-8jj5-q52h                                              PYSEC    2026-10-19-22.17.07.107000 -                         
+
+  2 record(s) selected.
+
+
+UPDATE NEEDLE.ADV_DOC SET EMBARGO_UNTIL = CURRENT TIMESTAMP + 60 DAYS WHERE CANON_ID IN (SELECT CANON_ID FROM NEEDLE.ADV_DOC WHERE ADV_ID = 'GHSA-5x8w-8jj5-q52h')
+DB20000I  The SQL command completed successfully.
+
+CALL NEEDLE.SYNC_POSTING_ACL(?)
+
+  Value of output parameters
+  --------------------------
+  Parameter Name  : P_UPDATED
+  Parameter Value : 589
+
+  Return Status = 0
+
+SELECT ADV_ID, CANON_ID, EMBARGO_UNTIL FROM NEEDLE.ADV_DOC WHERE CANON_ID IN (SELECT CANON_ID FROM NEEDLE.ADV_DOC WHERE ADV_ID = 'GHSA-5x8w-8jj5-q52h')
+
+ADV_ID                                                           CANON_ID                                                         EMBARGO_UNTIL             
+---------------------------------------------------------------- ---------------------------------------------------------------- --------------------------
+GHSA-5x8w-8jj5-q52h                                              GHSA-5x8w-8jj5-q52h                                              2027-01-09-02.10.48.041308
+PYSEC-2026-4330                                                  GHSA-5x8w-8jj5-q52h                                              2027-01-09-02.10.48.041308
+
+  2 record(s) selected.
+
+
+SELECT COUNT(*) AS EMBARGOED_ROWS FROM NEEDLE.ADV_DOC WHERE EMBARGO_UNTIL > CURRENT TIMESTAMP
+
+EMBARGOED_ROWS
+--------------
+            27
+
+  1 record(s) selected.
+
+
+SELECT COUNT(DISTINCT ADV_ID) AS EMBARGOED_IN_POSTING FROM NEEDLE.POSTING WHERE EMBARGO_UNTIL > CURRENT TIMESTAMP
+
+EMBARGOED_IN_POSTING
+--------------------
+                  27
+
+  1 record(s) selected.
+
+

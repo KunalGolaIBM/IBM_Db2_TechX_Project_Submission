@@ -1,0 +1,21 @@
+## F5 write path on an indexed table  (2026-11-10T02:04:50+00:00)
+```
+SKIP     0.0s  DROP TABLE NDL_CONN.F5_WRITES  ([IBM][CLI Driver][DB2/LINUXX8664] SQL0204N  "NDL_CONN.F5_WRITES" is an undefined name.  SQLSTATE=42704 SQLCODE=-204)
+OK       0.2s  CREATE TABLE NDL_CONN.F5_WRITES (ADV_ID VARCHAR(64) NOT NULL PRIMARY KEY, EMB VECTOR(768, FLOAT32))
+OK       0.2s  INSERT INTO NDL_CONN.F5_WRITES SELECT ADV_ID, EMB FROM NDL_CONN.F1_NOTNULL ORDER BY ADV_ID FETCH FIRST 2000 ROWS ONLY
+OK       5.0s  CREATE VECTOR INDEX NDL_CONN."F5_WRITES_VIX" ON NDL_CONN.F5_WRITES ("EMB") WITH DISTANCE COSINE
+     ADM13500E count: 10 (before 10)
+OK       0.1s  CALL SYSPROC.ADMIN_CMD('RUNSTATS ON TABLE NDL_CONN.F5_WRITES FOR INDEXES ALL')
+OK       0.0s  INSERT one row (add_texts)
+OK       0.0s  UPDATE the vector of that row
+OK       0.0s  DELETE that row (delete(ids))
+     rows: 2000
+FAIL     0.0s  TRUNCATE TABLE ... IMMEDIATE (clear_table, db2vs.py:202)
+     [IBM][CLI Driver][DB2/LINUXX8664] SQL1477N  For table "NDL_CONN.F5_WRITES" an object "41" in table space "2" cannot be accessed.  SQLSTATE=55019 SQLCODE=-1477
+     after TRUNCATE, SELECT COUNT(*) failed: Fetch Failure: [IBM][CLI Driver][DB2/LINUXX8664] SQL1477N  For table "NDL_CONN.F5_WRITES" an object "41" in table space "2" cannot be accessed.  SQLSTATE=55019 SQLCODE=-1477
+FAIL     0.0s  INSERT one row after TRUNCATE
+     [IBM][CLI Driver][DB2/LINUXX8664] SQL1477N  For table "NDL_CONN.F5_WRITES" an object "41" in table space "2" cannot be accessed.  SQLSTATE=55019 SQLCODE=-1477
+OK       0.1s  DROP INDEX F5_WRITES_VIX (drop_index, PR #342)
+     after DROP INDEX, SELECT COUNT(*): 0
+OK       0.0s  DROP TABLE NDL_CONN.F5_WRITES
+```

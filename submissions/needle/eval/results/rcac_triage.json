@@ -1,0 +1,561 @@
+{
+ "plans_as_db2inst1": {
+  "hybrid_depth10": {
+   "operators": [
+    "1:RETURN",
+    "2:TBSCAN",
+    "3:SORT",
+    "4:HSJOIN",
+    "5:FILTER",
+    "6:TBSCAN",
+    "7:SORT",
+    "8:FILTER",
+    "9:GRPBY",
+    "10:TBSCAN",
+    "11:SORT",
+    "12:HSJOIN",
+    "13:NLJOIN",
+    "14:FETCH",
+    "15:IXSCAN",
+    "16:IXSCAN",
+    "17:NLJOIN",
+    "18:NLJOIN",
+    "19:TBSCAN",
+    "20:TBSCAN",
+    "21:TBSCAN",
+    "22:TEMP",
+    "23:TBSCAN",
+    "24:SORT",
+    "25:HSJOIN",
+    "26:TBSCAN",
+    "27:TBSCAN",
+    "28:SORT",
+    "29:TBSCAN",
+    "30:TEMP",
+    "31:UNION",
+    "32:TBSCAN",
+    "33:TBSCAN",
+    "34:TBSCAN",
+    "35:SORT",
+    "36:TBSCAN",
+    "37:SORT",
+    "38:NLJOIN",
+    "39:FETCH",
+    "40:IXSCAN",
+    "41:FETCH",
+    "42:IXSCAN"
+   ],
+   "total_cost": 5411.4,
+   "uses_vector_index": true,
+   "srchlsiz": 50,
+   "beamwdth": 2,
+   "vector_ixscan_est_rows": 21.0,
+   "predicates": [
+    {
+     "op": 4,
+     "ff": 3.815337549895048e-05,
+     "text": "(Q33.ADV_ID = Q9.ADV_ID)"
+    },
+    {
+     "op": 5,
+     "ff": 0.3333333134651184,
+     "text": "(Q31.$C1 <= 10)"
+    },
+    {
+     "op": 8,
+     "ff": 0.3333333134651184,
+     "text": "(+0.00000000000000E+000 < Q29.$C1)"
+    },
+    {
+     "op": 12,
+     "ff": 5.4265838116407394e-06,
+     "text": "(Q15.TERM = Q27.TERM)"
+    },
+    {
+     "op": 13,
+     "ff": 0.4949999749660492,
+     "text": "((Q14.ROW_BUCKET < (SELECT Q12.$C0, Q12.$C1 FROM (SELECT Q11.MAX_BUCKET, Q11.SEES_EMBARGO FROM NEEDLE.USER_ACCESS AS Q11 WHERE (Q11.AUTHID = USER)) AS Q12)) AND ((Q14.EMBARGO_UNTIL IS NULL OR (Q14.EMB"
+    },
+    {
+     "op": 15,
+     "ff": 0.1428571492433548,
+     "text": "(Q11.AUTHID = USER)"
+    },
+    {
+     "op": 15,
+     "ff": 0.1428571492433548,
+     "text": "(Q11.AUTHID = USER)"
+    },
+    {
+     "op": 16,
+     "ff": 0.4949999749660492,
+     "text": "((Q14.ROW_BUCKET < (SELECT Q12.$C0, Q12.$C1 FROM (SELECT Q11.MAX_BUCKET, Q11.SEES_EMBARGO FROM NEEDLE.USER_ACCESS AS Q11 WHERE (Q11.AUTHID = USER)) AS Q12)) AND ((Q14.EMBARGO_UNTIL IS NULL OR (Q14.EMB"
+    },
+    {
+     "op": 25,
+     "ff": 5.4265838116407394e-06,
+     "text": "(Q18.TERM = Q26.$C0)"
+    },
+    {
+     "op": 29,
+     "ff": 0.9599999785423279,
+     "text": "Q24.$C1 IS NOT NULL"
+    },
+    {
+     "op": 29,
+     "ff": 0.3333333134651184,
+     "text": "( LENGTH(Q24.$C1) <= 128)"
+    },
+    {
+     "op": 32,
+     "ff": 0.3333333134651184,
+     "text": "(Q19.$C0 < 2047)"
+    },
+    {
+     "op": 32,
+     "ff": 0.9599999785423279,
+     "text": "Q19.$C1 IS NOT NULL"
+    },
+    {
+     "op": 38,
+     "ff": 0.4949999749660492,
+     "text": "((Q4.ROW_BUCKET < (SELECT Q2.$C0, Q2.$C1 FROM (SELECT Q1.MAX_BUCKET, Q1.SEES_EMBARGO FROM NEEDLE.USER_ACCESS AS Q1 WHERE (Q1.AUTHID = USER)) AS Q2)) AND ((Q4.EMBARGO_UNTIL IS NULL OR (Q4.EMBARGO_UNTIL"
+    },
+    {
+     "op": 40,
+     "ff": 0.1428571492433548,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 40,
+     "ff": 0.1428571492433548,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 41,
+     "ff": 0.4949999749660492,
+     "text": "((Q4.ROW_BUCKET < (SELECT Q2.$C0, Q2.$C1 FROM (SELECT Q1.MAX_BUCKET, Q1.SEES_EMBARGO FROM NEEDLE.USER_ACCESS AS Q1 WHERE (Q1.AUTHID = USER)) AS Q2)) AND ((Q4.EMBARGO_UNTIL IS NULL OR (Q4.EMBARGO_UNTIL"
+    }
+   ]
+  },
+  "hybrid_depth100": {
+   "operators": [
+    "1:RETURN",
+    "2:TBSCAN",
+    "3:SORT",
+    "4:HSJOIN",
+    "5:FILTER",
+    "6:TBSCAN",
+    "7:SORT",
+    "8:FILTER",
+    "9:GRPBY",
+    "10:TBSCAN",
+    "11:SORT",
+    "12:HSJOIN",
+    "13:NLJOIN",
+    "14:FETCH",
+    "15:IXSCAN",
+    "16:IXSCAN",
+    "17:NLJOIN",
+    "18:NLJOIN",
+    "19:TBSCAN",
+    "20:TBSCAN",
+    "21:TBSCAN",
+    "22:TEMP",
+    "23:TBSCAN",
+    "24:SORT",
+    "25:HSJOIN",
+    "26:TBSCAN",
+    "27:TBSCAN",
+    "28:SORT",
+    "29:TBSCAN",
+    "30:TEMP",
+    "31:UNION",
+    "32:TBSCAN",
+    "33:TBSCAN",
+    "34:TBSCAN",
+    "35:SORT",
+    "36:TBSCAN",
+    "37:SORT",
+    "38:NLJOIN",
+    "39:FETCH",
+    "40:IXSCAN",
+    "41:TBSCAN"
+   ],
+   "total_cost": 8662.5,
+   "uses_vector_index": false,
+   "srchlsiz": null,
+   "beamwdth": null,
+   "vector_ixscan_est_rows": null,
+   "predicates": [
+    {
+     "op": 4,
+     "ff": 3.815337549895048e-05,
+     "text": "(Q33.ADV_ID = Q9.ADV_ID)"
+    },
+    {
+     "op": 5,
+     "ff": 0.3333333134651184,
+     "text": "(Q31.$C1 <= 100)"
+    },
+    {
+     "op": 8,
+     "ff": 0.3333333134651184,
+     "text": "(+0.00000000000000E+000 < Q29.$C1)"
+    },
+    {
+     "op": 12,
+     "ff": 5.4265838116407394e-06,
+     "text": "(Q15.TERM = Q27.TERM)"
+    },
+    {
+     "op": 13,
+     "ff": 0.4949999749660492,
+     "text": "((Q14.ROW_BUCKET < (SELECT Q12.$C0, Q12.$C1 FROM (SELECT Q11.MAX_BUCKET, Q11.SEES_EMBARGO FROM NEEDLE.USER_ACCESS AS Q11 WHERE (Q11.AUTHID = USER)) AS Q12)) AND ((Q14.EMBARGO_UNTIL IS NULL OR (Q14.EMB"
+    },
+    {
+     "op": 15,
+     "ff": 0.1428571492433548,
+     "text": "(Q11.AUTHID = USER)"
+    },
+    {
+     "op": 15,
+     "ff": 0.1428571492433548,
+     "text": "(Q11.AUTHID = USER)"
+    },
+    {
+     "op": 16,
+     "ff": 0.4949999749660492,
+     "text": "((Q14.ROW_BUCKET < (SELECT Q12.$C0, Q12.$C1 FROM (SELECT Q11.MAX_BUCKET, Q11.SEES_EMBARGO FROM NEEDLE.USER_ACCESS AS Q11 WHERE (Q11.AUTHID = USER)) AS Q12)) AND ((Q14.EMBARGO_UNTIL IS NULL OR (Q14.EMB"
+    },
+    {
+     "op": 25,
+     "ff": 5.4265838116407394e-06,
+     "text": "(Q18.TERM = Q26.$C0)"
+    },
+    {
+     "op": 29,
+     "ff": 0.9599999785423279,
+     "text": "Q24.$C1 IS NOT NULL"
+    },
+    {
+     "op": 29,
+     "ff": 0.3333333134651184,
+     "text": "( LENGTH(Q24.$C1) <= 128)"
+    },
+    {
+     "op": 32,
+     "ff": 0.3333333134651184,
+     "text": "(Q19.$C0 < 2047)"
+    },
+    {
+     "op": 32,
+     "ff": 0.9599999785423279,
+     "text": "Q19.$C1 IS NOT NULL"
+    },
+    {
+     "op": 38,
+     "ff": 0.4949999749660492,
+     "text": "((Q4.ROW_BUCKET < (SELECT Q2.$C0, Q2.$C1 FROM (SELECT Q1.MAX_BUCKET, Q1.SEES_EMBARGO FROM NEEDLE.USER_ACCESS AS Q1 WHERE (Q1.AUTHID = USER)) AS Q2)) AND ((Q4.EMBARGO_UNTIL IS NULL OR (Q4.EMBARGO_UNTIL"
+    },
+    {
+     "op": 40,
+     "ff": 0.1428571492433548,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 40,
+     "ff": 0.1428571492433548,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 41,
+     "ff": 0.4949999749660492,
+     "text": "((Q4.ROW_BUCKET < (SELECT Q2.$C0, Q2.$C1 FROM (SELECT Q1.MAX_BUCKET, Q1.SEES_EMBARGO FROM NEEDLE.USER_ACCESS AS Q1 WHERE (Q1.AUTHID = USER)) AS Q2)) AND ((Q4.EMBARGO_UNTIL IS NULL OR (Q4.EMBARGO_UNTIL"
+    }
+   ]
+  }
+ },
+ "users": {
+  "NDL_P10": {
+   "vec_depth10": {
+    "rows_mean": 2.2,
+    "underfill": 20,
+    "n": 20,
+    "rows": [
+     1,
+     2,
+     2,
+     6,
+     7,
+     0,
+     4,
+     2,
+     2,
+     2,
+     0,
+     2,
+     2,
+     1,
+     2,
+     6,
+     1,
+     0,
+     0,
+     2
+    ]
+   },
+   "vec_depth100": {
+    "rows_mean": 10.0,
+    "underfill": 0,
+    "n": 20,
+    "rows": [
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10
+    ]
+   }
+  },
+  "NDL_P25": {
+   "vec_depth10": {
+    "rows_mean": 5.4,
+    "underfill": 19,
+    "n": 20,
+    "rows": [
+     6,
+     2,
+     5,
+     6,
+     9,
+     3,
+     8,
+     4,
+     6,
+     4,
+     7,
+     4,
+     5,
+     3,
+     4,
+     10,
+     5,
+     6,
+     5,
+     6
+    ]
+   },
+   "vec_depth100": {
+    "rows_mean": 10.0,
+    "underfill": 0,
+    "n": 20,
+    "rows": [
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10
+    ]
+   }
+  },
+  "NDL_P50": {
+   "vec_depth10": {
+    "rows_mean": 9.1,
+    "underfill": 8,
+    "n": 20,
+    "rows": [
+     10,
+     9,
+     10,
+     10,
+     10,
+     10,
+     9,
+     5,
+     10,
+     7,
+     10,
+     6,
+     10,
+     8,
+     9,
+     10,
+     9,
+     10,
+     10,
+     10
+    ]
+   },
+   "vec_depth100": {
+    "rows_mean": 10.0,
+    "underfill": 0,
+    "n": 20,
+    "rows": [
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10
+    ]
+   }
+  },
+  "NDL_P75": {
+   "vec_depth10": {
+    "rows_mean": 10.0,
+    "underfill": 0,
+    "n": 20,
+    "rows": [
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10
+    ]
+   },
+   "vec_depth100": {
+    "rows_mean": 10.0,
+    "underfill": 0,
+    "n": 20,
+    "rows": [
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10
+    ]
+   }
+  },
+  "NDL_SENIOR": {
+   "vec_depth10": {
+    "rows_mean": 10.0,
+    "underfill": 0,
+    "n": 20,
+    "rows": [
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10
+    ]
+   },
+   "vec_depth100": {
+    "rows_mean": 10.0,
+    "underfill": 0,
+    "n": 20,
+    "rows": [
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10
+    ]
+   }
+  }
+ }
+}

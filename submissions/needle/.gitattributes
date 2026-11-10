@@ -1,0 +1,6 @@
+# Frozen query files: keep the exact bytes so the stored SHA-256 checks pass on any OS
+# (eval/build_queries.py --verify, eval/run_eval.py).
+eval/queries/*.jsonl -text
+eval/queries/*.sha256 -text
+# Shell scripts run inside Linux containers and Codespaces.
+*.sh text eol=lf

@@ -1,0 +1,6 @@
+[where]  10%  exact ms=18.73  approx10 literal recall=0.894 rows=9.02  subq recall=0.226 rows=2.26
+[where]  25%  exact ms=41.54  approx10 literal recall=0.846 rows=9.02  subq recall=0.556 rows=5.56
+[where]  50%  exact ms=77.19  approx10 literal recall=0.882 rows=9.34  subq recall=0.882 rows=9.34
+[where]  75%  exact ms=111.43  approx10 literal recall=0.942 rows=9.72  subq recall=0.95 rows=10.0
+[where] 100%  exact ms=148.54  approx10 literal recall=0.974 rows=10.0  subq recall=0.974 rows=10.0
+wrote /home/codespace/ndl_rcac/rcac_synthetic_results.json

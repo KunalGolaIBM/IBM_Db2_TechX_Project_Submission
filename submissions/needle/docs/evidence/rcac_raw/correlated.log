@@ -1,0 +1,22 @@
+[cor] fetched+kmeans 26210 rows, k=100, seed=7 in 12.7s; cluster sizes min/median/max = 34/192/1111
+  (ignored) [IBM][CLI Driver][DB2/LINUXX8664] SQL0204N  "NDL_DEV_RCAC.ADV_COR" is an undefined name.  SQLSTATE=42704 SQLCODE=-204
+  (ignored) [IBM][CLI Driver][DB2/LINUXX8664] SQL0204N  "NDL_DEV_RCAC.COR_MAP" is an undefined name.  SQLSTATE=42704 SQLCODE=-204
+[cor] built NDL_DEV_RCAC.ADV_COR: 26210 rows, coverage {10: 0.1022, 25: 0.2667, 50: 0.5006, 100: 1.0}, index+runstats 58.7s
+wrote /home/codespace/ndl_rcac/rcac_correlated.json
+[cor] NDL_P10    visible=2679 | APPROX10 recall=0.1035 rows=1.04 underfill=0.9647 hist={'recall_0': 130, 'recall_0_to_0.5': 25, 'recall_0.5_to_1': 9, 'recall_1': 6} rows_hist={'0_rows': 130, '1_to_9_rows': 34, '10_rows': 6} leaks=0 | router EXACT/10 heldout recall=1.0 underfill=0.0 fallbacks=0 leaks=0 | APPROX10 heldout recall=0.0775
+[cor] NDL_P25    visible=6989 | APPROX10 recall=0.2306 rows=2.31 underfill=0.9353 hist={'recall_0': 72, 'recall_0_to_0.5': 69, 'recall_0.5_to_1': 18, 'recall_1': 11} rows_hist={'0_rows': 72, '1_to_9_rows': 87, '10_rows': 11} leaks=0 | router EXACT/10 heldout recall=1.0 underfill=0.0 fallbacks=0 leaks=0 | APPROX10 heldout recall=0.2213
+[cor] NDL_P50    visible=13121 | APPROX10 recall=0.6382 rows=6.56 underfill=0.5588 hist={'recall_0': 20, 'recall_0_to_0.5': 36, 'recall_0.5_to_1': 56, 'recall_1': 58} rows_hist={'0_rows': 20, '1_to_9_rows': 75, '10_rows': 75} leaks=0 | router APPROX/100 heldout recall=0.9652 underfill=0.0 fallbacks=3 leaks=0 | APPROX10 heldout recall=0.6427
+[cor] NDL_SENIOR visible=26210 | APPROX10 recall=0.9488 rows=10.0 underfill=0.0 hist={'recall_0': 1, 'recall_0_to_0.5': 0, 'recall_0.5_to_1': 43, 'recall_1': 126} rows_hist={'0_rows': 0, '1_to_9_rows': 0, '10_rows': 170} leaks=0 | router APPROX/50 heldout recall=0.9843 underfill=0.0 fallbacks=1 leaks=0 | APPROX10 heldout recall=0.9461
+[cor plan] approx10 index=True L=50 est=21.0 FF=[0.49295774102211, 0.49295774102211]
+wrote /home/codespace/ndl_rcac/rcac_correlated.json
+[cor plan] approx10        index=True L=50 est=21.0
+[cor plan] approx10_L50    index=True L=50 est=21.0
+[cor plan] approx25        index=True L=68 est=51.0
+[cor plan] approx25_L75    index=True L=75 est=51.0
+[cor plan] approx50        index=True L=102 est=102.0
+[cor plan] approx50_L150   index=True L=150 est=102.0
+[cor plan] approx100       index=False L=None est=None
+[cor plan] approx100_L300  index=True L=203 est=203.0
+[cor plan] approx200       index=False L=None est=None
+[cor plan] approx200_L600  index=True L=406 est=406.0
+wrote /home/codespace/ndl_rcac/rcac_correlated.json

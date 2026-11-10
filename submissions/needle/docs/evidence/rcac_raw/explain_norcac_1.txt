@@ -1,0 +1,398 @@
+== EXACT k=10
+   SELECT ID, VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) AS D FROM NDL_DEV_RCAC.VEC_SYN ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH EXACT FIRST 10 ROWS ONLY
+    (1, 'RETURN', '3487.06', '', '')
+    (2, 'TBSCAN', '3487.06', '', '')
+    (3, 'SORT  ', '3487.06', '', '')
+    (4, 'TBSCAN', '3485.19', 'NDL_DEV_RCAC', 'VEC_SYN')
+DB2 Universal Database Version 12.1, 5622-044 (c) Copyright IBM Corp. 1991, 2024
+Licensed Material - Program Property of IBM
+IBM Db2 Explain Table Format Tool
+
+Connect to Database Successful.
+Connecting to the Database.
+DB2 Universal Database Version 12.1, 5622-044 (c) Copyright IBM Corp. 1991, 2024
+Licensed Material - Program Property of IBM
+IBM Db2 Explain Table Format Tool
+
+
+
+******************** EXPLAIN INSTANCE ********************
+
+DB2_VERSION:       12.01.5
+FORMATTED ON DB:   VECDB
+SOURCE_NAME:       SYSSH200
+SOURCE_SCHEMA:     NULLID  
+SOURCE_VERSION:      
+EXPLAIN_TIME:      2026-11-10-01.23.38.992225
+EXPLAIN_REQUESTER: DB2INST1
+
+Database Context:
+----------------
+	Parallelism:          None
+	CPU Speed:            4.723443e-08
+	Comm Speed:           100
+	Buffer Pool size:     49851
+	Sort Heap size:       2133
+	Database Heap size:   4842
+	Lock List size:       15360
+	Maximum Lock List:    98
+	Average Applications: 1
+	Locks Available:      481689
+
+Package Context:
+---------------
+	SQL Type:           Dynamic
+	Optimization Level: 5
+	Blocking:           Block All Cursors
+	Isolation Level:    Cursor Stability
+
+
+
+---------------- STATEMENT 1  SECTION 4 ----------------
+	QUERYNO:       1
+	QUERYTAG:                          
+	Statement Type:   Select
+	Updatable:        No
+	Deletable:        No
+	Query Degree:     1
+
+Original Statement:
+------------------
+SELECT 
+  ID,
+  VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) AS D 
+FROM 
+  NDL_DEV_RCAC.VEC_SYN 
+ORDER BY 
+  VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) 
+FETCH EXACT FIRST 10 ROWS ONLY
+
+
+Optimized Statement:
+-------------------
+SELECT 
+  Q2.ID AS "ID",
+  Q2.$C1 AS "D",
+  Q2.$C2 
+FROM 
+  (SELECT 
+     Q1.ID,
+     VECTOR_DISTANCE(Q1.EMB, VECTOR(?, 768, FLOAT32), COSINE),
+     VECTOR_DISTANCE(Q1.EMB, VECTOR(?, 768, FLOAT32), COSINE) 
+   FROM 
+     NDL_DEV_RCAC.VEC_SYN AS Q1
+  ) AS Q2 
+ORDER BY 
+  Q2.$C2
+
+Access Plan:
+-----------
+	Total Cost: 		3487.07
+	Query Degree:		1
+
+
+        Rows 
+       RETURN
+       (   1)
+        Cost 
+         I/O 
+         |
+         10 
+       TBSCAN
+       (   2)
+       3487.07 
+        3000 
+         |
+         10 
+       SORT  
+       (   3)
+       3487.07 
+        3000 
+         |
+        30000 
+       TBSCAN
+       (   4)
+       3485.19 
+        3000 
+         |
+        30000 
+ TABLE: NDL_DEV_RCAC
+       VEC_SYN
+         Q1
+
+
+
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+
+
+Plan Details:
+-------------
+
+
+	1) RETURN: (Return Result)
+		Cumulative Total Cost: 		3487.07
+		Cumulative CPU Cost: 		1.09898e+08
+		Cumulative I/O Cost: 		3000
+		Cumulative Re-Total Cost: 	3.071
+		Cumulative Re-CPU Cost: 	6.50162e+07
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	3487.07
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		BLDLEVEL: (Build level)
+			DB2 v12.1.5.0 : special_85816
+		CPUCACHE: (Per-thread CPU cache size)
+			8388608
+		HEAPUSE : (Maximum Statement Heap Usage)
+			112 Pages
+		MAX CARD: (Maximum Cardinality)
+			10
+		PLANID  : (Access plan identifier)
+			058a1eddf60f2134
+		PREPTIME: (Statement prepare time)
+			        28 milliseconds
+		SEMEVID : (Semantic environment identifier)
+			0000000000000001
+		STMTHEAP: (Statement heap size)
+			8192
+		STMTID  : (Normalized statement identifier)
+			567390d0892d3a25
+		TENANTID: (Compiled In Tenant ID)
+			0
+		TENANTNM: (Compiled In Tenant Name)
+			SYSTEM
+
+		Input Streams:
+		-------------
+			4) From Operator #2
+
+				Estimated number of rows: 	10
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q3.D+Q3.ID
+
+
+	2) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		3487.07
+		Cumulative CPU Cost: 		1.09898e+08
+		Cumulative I/O Cost: 		3000
+		Cumulative Re-Total Cost: 	3.071
+		Cumulative Re-CPU Cost: 	6.50162e+07
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	3487.07
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		MAX CARD: (Maximum Cardinality)
+			10
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			3) From Operator #3
+
+				Estimated number of rows: 	10
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.$C2(A)+Q2.D+Q2.ID
+
+
+		Output Streams:
+		--------------
+			4) To Operator #1
+
+				Estimated number of rows: 	10
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q3.D+Q3.ID
+
+
+	3) SORT  : (Sort)
+		Cumulative Total Cost: 		3487.07
+		Cumulative CPU Cost: 		1.09894e+08
+		Cumulative I/O Cost: 		3000
+		Cumulative Re-Total Cost: 	3.07081
+		Cumulative Re-CPU Cost: 	6.50122e+07
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	3487.07
+		Estimated Bufferpool Buffers: 	3000
+
+		Arguments:
+		---------
+		DUPLWARN: (Duplicates Warning flag)
+			FALSE
+		KEYS    : (Key cardinality)
+			1
+		MAX CARD: (Maximum Cardinality)
+			10
+		NUMROWS : (Estimated number of rows)
+			10
+		ROWWIDTH: (Estimated width of rows)
+			20.000000
+		SORTKEY : (Sort Key column)
+			1: Q2.$C2(A)
+		TEMPSIZE: (Temporary Table Page Size)
+			32768
+		TRUNCSRT: (Truncated sort (for Fetch First n Rows Only))
+			TRUE
+		UNIQUE  : (Uniqueness required flag)
+			FALSE
+
+		Input Streams:
+		-------------
+			2) From Operator #4
+
+				Estimated number of rows: 	30000
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.$C2+Q2.D+Q2.ID
+
+
+		Output Streams:
+		--------------
+			3) To Operator #2
+
+				Estimated number of rows: 	10
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.$C2(A)+Q2.D+Q2.ID
+
+
+	4) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		3485.19
+		Cumulative CPU Cost: 		7.02286e+07
+		Cumulative I/O Cost: 		3000
+		Cumulative Re-Total Cost: 	2.44021
+		Cumulative Re-CPU Cost: 	5.16617e+07
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	7.04747
+		Estimated Bufferpool Buffers: 	3000
+
+		Arguments:
+		---------
+		CUR_COMM: (Currently Committed)
+			TRUE
+		LCKAVOID: (Lock Avoidance)
+			TRUE
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			SEQUENTIAL          
+		ROWLOCK : (Row Lock intent)
+			SHARE (CS/RS)
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SKIP_INS: (Skip Inserted Rows)
+			TRUE
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			FAST
+		TABLOCK : (Table Lock intent)
+			INTENT SHARE
+		TBISOLVL: (Table access Isolation Level)
+			CURSOR STABILITY
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			TRUE
+		VISIBLE : (May be included in scan sharing structures)
+			TRUE
+		WRAPPING: (Scan may start anywhere and wrap)
+			TRUE
+
+		Input Streams:
+		-------------
+			1) From Object NDL_DEV_RCAC.VEC_SYN
+
+				Estimated number of rows: 	30000
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.$RID$+Q1.EMB+Q1.ID
+
+
+		Output Streams:
+		--------------
+			2) To Operator #3
+
+				Estimated number of rows: 	30000
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.$C2+Q2.D+Q2.ID
+
+
+Objects Used in Access Plan:
+---------------------------
+
+	Schema:   SYSIBM  
+	Name:     ACV261110012109735734_P2_O9_I2
+	Type:     Table (reference only)
+
+	Schema:   SYSIBM  
+	Name:     AGT261110012109735734_P2_O9_I2
+	Type:     Table (reference only)
+
+	Schema:   SYSIBM  
+	Name:     AIJ261110012109735734_P2_O9_I2
+	Type:     Table (reference only)
+
+	Schema:   NDL_DEV_RCAC
+	Name:     VEC_SYN
+	Type:     Table
+			Time of creation: 		2026-11-10-01.20.53.232102
+			Last statistics update: 	2026-11-10-01.22.46.450059
+			Number of columns: 		4
+			Number of rows: 		30000
+			Width of rows: 			3110
+			Number of buffer pool pages: 	3000
+			Number of data partitions: 	1
+			Distinct row values: 		No
+			Tablespace name: 		USERSPACE1
+			Tablespace overhead: 		6.725000
+			Tablespace transfer rate: 	0.320000
+			Source for statistics: 		Single Node
+			Prefetch page count: 		32
+			Container extent page count: 	32
+			Table overflow record count: 	0
+			Table Active Blocks: 		-1
+			Average Row Compression Ratio: 	0
+			Percentage Rows Compressed: 	0
+			Average Compressed Row Size: 	0
+
+Executing Connect Reset -- Connect Reset was Successful.

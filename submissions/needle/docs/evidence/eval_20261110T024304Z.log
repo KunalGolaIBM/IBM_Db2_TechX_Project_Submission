@@ -1,0 +1,34 @@
+run 20261110T024304Z: 450 queries, slices=['named', 'masked', 'paraphrase'], retrievers=['triage', 'bm25', 'approx', 'exact']
+loaded 450 query vectors from data/eval_qvecs.json.gz
+db facts: {"db2_level": [["DB2 v12.1.5.0", "special_85816"]], "session_user": "NDL_SENIOR", "adv_doc_visible_rows": 26210, "adv_doc_rows_by_kind": [["GHSA", 6579], ["MAL", 11990], ["OSV", 11], ["PYSEC", 7630]], "adv_doc_indexes": [["ADV_DOC_CANON", "REG "], ["ADV_DOC_VIX", "VANN"], ["SQL261110012227340", "REG "]], "adv_doc_card_stats": [["26210", "2026-11-10 01:31:23.968119"]], "rcac_control": [["ADV_AFFECTED", "R"], ["ADV_ALIAS", "R"], ["ADV_DOC", "B"], ["CORPUS_STATS", " "], ["POSTING", "R"], ["TERM_DF", " "]], "embargoed_visible_adv_ids": ["GHSA-2qm8-x737-gmw5", "GHSA-42gh-23hr-vphw", "GHSA-4vqv-7265
+EXPLAIN exact: vector_index_in_plan=False ops=['RETURN', 'TBSCAN', 'SORT', 'NLJOIN', 'FETCH', 'IXSCAN', 'FILTER', 'NLJOIN', 'FETCH', 'IXSCAN', 'TBSCAN'] err=None
+EXPLAIN approx: vector_index_in_plan=True ops=['RETURN', 'TBSCAN', 'SORT', 'NLJOIN', 'FETCH', 'IXSCAN', 'FILTER', 'NLJOIN', 'FETCH', 'IXSCAN', 'FETCH', 'IXSCAN'] err=None
+TRIAGE depth 50 hit SQL0901N; answered with depth 128
+triage: 450 queries in 28.7s
+bm25: 450 queries in 23.4s
+approx: 450 queries in 1.3s
+exact: 450 queries in 33.3s
+
+RELEVANCE (canon_id ground truth), run 20261110T024304Z
+retriever   slice         n    R@1    R@3   R@10    MRR   p50ms   p95ms  err
+triage      named       150  0.940  0.987  0.993  0.964    36.8    63.3    0
+triage      masked      150  0.993  1.000  1.000  0.997    90.3   134.0    0
+triage      paraphrase  150  0.227  0.360  0.453  0.295    52.4    86.7    0
+bm25        named       150  0.933  0.980  0.993  0.955    29.9    52.4    0
+bm25        masked      150  1.000  1.000  1.000  1.000    74.5   108.6    0
+bm25        paraphrase  150  0.213  0.233  0.340  0.241    42.9    75.6    0
+approx      named       150  0.940  0.980  0.993  0.960     3.0     4.2    0
+approx      masked      150  0.960  0.987  0.993  0.972     2.9     3.8    0
+approx      paraphrase  150  0.180  0.253  0.360  0.225     2.7     3.3    0
+exact       named       150  0.940  0.980  0.993  0.960    73.2    76.6    0
+exact       masked      150  0.967  0.993  1.000  0.979    73.3    75.5    0
+exact       paraphrase  150  0.180  0.267  0.367  0.230    72.9    76.4    0
+
+ANN FIDELITY (APPROX vs EXACT, same vector)
+approx_vs_exact         all         n= 450 overlap@10=0.97 min=0.1 identical=0.8378
+approx_vs_exact         named       n= 150 overlap@10=0.9873 min=0.8 identical=0.9133
+approx_vs_exact         masked      n= 150 overlap@10=0.9787 min=0.2 identical=0.88
+approx_vs_exact         paraphrase  n= 150 overlap@10=0.944 min=0.1 identical=0.72
+
+gate: triage named recall@10 = 0.9933 (min 0.8) -> passed
+wrote /tmp/ndl_eval4/eval/results/20261110T024304Z.json

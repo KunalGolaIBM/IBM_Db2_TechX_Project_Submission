@@ -1,0 +1,65 @@
+-- NEEDLE data tables (owner: data agent). Db2 12.1.5, database VECDB, 32K pages.
+-- Statements end with ';'. scripts/load_in_codespace.py runs the part before '-- @POST_LOAD'
+-- before the load and the part after it once the rows are in.
+-- Re-runnable: the loader ignores SQL0601N (object already exists) and SQL0624N/SQL0605W.
+
+CREATE SCHEMA NEEDLE;
+
+-- Raw OSV JSON, one row per advisory file (all 26,842 records, withdrawn included).
+CREATE TABLE NEEDLE.ADV_RAW (
+  ADV_ID     VARCHAR(64)  NOT NULL PRIMARY KEY,
+  RAW        CLOB(2M)     NOT NULL,
+  SHA256     CHAR(64)     NOT NULL,
+  LOADED_AT  TIMESTAMP    NOT NULL DEFAULT CURRENT TIMESTAMP
+);
+
+-- One searchable document per NON-withdrawn advisory. EMB is NOT NULL: a nullable vector
+-- column forces exact search and prevents the vector index from being used.
+CREATE TABLE NEEDLE.ADV_DOC (
+  ADV_ID         VARCHAR(64)   NOT NULL PRIMARY KEY,
+  CANON_ID       VARCHAR(64)   NOT NULL,
+  KIND           VARCHAR(8)    NOT NULL,
+  SUMMARY        VARCHAR(2000),
+  DETAILS        CLOB(1M),
+  PACKAGES       VARCHAR(4000),
+  PUBLISHED      TIMESTAMP,
+  MODIFIED       TIMESTAMP,
+  WITHDRAWN      TIMESTAMP,
+  CVSS           VARCHAR(200),
+  DOC_LEN        INTEGER       NOT NULL,
+  ROW_BUCKET     SMALLINT      NOT NULL CHECK (ROW_BUCKET BETWEEN 0 AND 99),
+  EMBARGO_UNTIL  TIMESTAMP,
+  EMB            VECTOR(768, FLOAT32) NOT NULL
+);
+
+CREATE INDEX NEEDLE.ADV_DOC_CANON ON NEEDLE.ADV_DOC (CANON_ID);
+
+-- Alias graph (CVE / GHSA / PYSEC ids) for the advisories in ADV_DOC.
+CREATE TABLE NEEDLE.ADV_ALIAS (
+  ADV_ID  VARCHAR(64) NOT NULL,
+  ALIAS   VARCHAR(64) NOT NULL,
+  PRIMARY KEY (ADV_ID, ALIAS)
+);
+
+CREATE INDEX NEEDLE.ADV_ALIAS_ALIAS ON NEEDLE.ADV_ALIAS (ALIAS);
+
+-- Explicit affected versions (OSV affected[].versions) for the advisories in ADV_DOC.
+-- PACKAGE is the PEP 503 normalized PyPI name: lowercase, runs of '-', '_', '.' -> '-'.
+CREATE TABLE NEEDLE.ADV_AFFECTED (
+  ADV_ID     VARCHAR(64)  NOT NULL,
+  ECOSYSTEM  VARCHAR(32)  NOT NULL,
+  PACKAGE    VARCHAR(256) NOT NULL,
+  VERSION    VARCHAR(128) NOT NULL,
+  PRIMARY KEY (ADV_ID, ECOSYSTEM, PACKAGE, VERSION)
+);
+
+CREATE INDEX NEEDLE.ADV_AFFECTED_PV ON NEEDLE.ADV_AFFECTED (PACKAGE, VERSION);
+
+-- @POST_LOAD
+-- DiskANN vector index, built after the bulk load, then statistics.
+CREATE VECTOR INDEX NEEDLE.ADV_DOC_VIX ON NEEDLE.ADV_DOC (EMB) WITH DISTANCE COSINE;
+
+CALL SYSPROC.ADMIN_CMD('RUNSTATS ON TABLE NEEDLE.ADV_DOC WITH DISTRIBUTION AND INDEXES ALL');
+CALL SYSPROC.ADMIN_CMD('RUNSTATS ON TABLE NEEDLE.ADV_ALIAS WITH DISTRIBUTION AND INDEXES ALL');
+CALL SYSPROC.ADMIN_CMD('RUNSTATS ON TABLE NEEDLE.ADV_AFFECTED WITH DISTRIBUTION AND INDEXES ALL');
+CALL SYSPROC.ADMIN_CMD('RUNSTATS ON TABLE NEEDLE.ADV_RAW');

@@ -1,0 +1,2632 @@
+DB2 Universal Database Version 12.1, 5622-044 (c) Copyright IBM Corp. 1991, 2024
+Licensed Material - Program Property of IBM
+IBM Db2 Explain Table Format Tool
+
+
+
+******************** EXPLAIN INSTANCE ********************
+
+DB2_VERSION:       12.01.5
+FORMATTED ON DB:   VECDB
+SOURCE_NAME:       SQLC2Q32
+SOURCE_SCHEMA:     NULLID  
+SOURCE_VERSION:      
+EXPLAIN_TIME:      2026-11-10-01.42.11.364913
+EXPLAIN_REQUESTER: DB2INST1
+
+Database Context:
+----------------
+	Parallelism:          None
+	CPU Speed:            4.723443e-08
+	Comm Speed:           100
+	Buffer Pool size:     49851
+	Sort Heap size:       2133
+	Database Heap size:   4842
+	Lock List size:       63815
+	Maximum Lock List:    98
+	Average Applications: 1
+	Locks Available:      2001238
+
+Package Context:
+---------------
+	SQL Type:           Dynamic
+	Optimization Level: 5
+	Blocking:           Block All Cursors
+	Isolation Level:    Cursor Stability
+
+
+
+---------------- STATEMENT 1  SECTION 203 ----------------
+	QUERYNO:       1
+	QUERYTAG:                          
+	Statement Type:   Select
+	Updatable:        No
+	Deletable:        No
+	Query Degree:     1
+
+Original Statement:
+------------------
+WITH VEC0 (ADV_ID, VEC_DIST) AS 
+  (SELECT 
+     ADV_ID,
+     DOUBLE(VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE)) 
+   FROM 
+     NEEDLE.ADV_DOC 
+   ORDER BY 
+     VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) 
+   FETCH APPROX FIRST 100 ROWS ONLY
+  ),
+  KW (ADV_ID, KW_RANK) AS 
+  (SELECT 
+     B.ADV_ID,
+     B.KW_RANK 
+   FROM 
+     TABLE(NEEDLE.BM25_SEARCH(CAST(? AS CLOB(32K)), 100)) AS B
+  ),
+  VEC (ADV_ID, VEC_DIST, VEC_RANK) AS 
+  (SELECT 
+     ADV_ID,
+     VEC_DIST,
+     RANK() OVER (ORDER BY 
+                    VEC_DIST,
+                    ADV_ID) 
+   FROM 
+     VEC0
+  ),
+  F (ADV_ID, RRF, KW_RANK, VEC_RANK, VEC_DIST) AS 
+  (SELECT 
+     COALESCE(K.ADV_ID, V.ADV_ID),
+     COALESCE(1E0 / (60 + K.KW_RANK), 0E0) + COALESCE(1E0 / (60 + V.VEC_RANK), 0E0),
+     K.KW_RANK,
+     V.VEC_RANK,
+     V.VEC_DIST 
+   FROM 
+     KW K 
+     FULL OUTER JOIN VEC V 
+     ON K.ADV_ID = V.ADV_ID
+  ) 
+SELECT 
+  ADV_ID,
+  RRF,
+  INTEGER(KW_RANK) AS KW_RANK,
+  INTEGER(VEC_RANK) AS VEC_RANK,
+  VEC_DIST 
+FROM 
+  F 
+ORDER BY 
+  RRF DESC,
+  ADV_ID 
+FETCH FIRST 10 ROWS ONLY
+
+
+Optimized Statement:
+-------------------
+SELECT 
+  Q25.$C0 AS "ADV_ID",
+  Q25.$C1 AS "RRF",
+  INTEGER(Q25.$C2) AS "KW_RANK",
+  INTEGER(Q25.$C3) AS "VEC_RANK",
+  Q25.$C4 AS "VEC_DIST" 
+FROM 
+  (SELECT 
+     COALESCE(Q24.ADV_ID, Q6.ADV_ID),
+     (COALESCE((+1.00000000000000E+000 / (60 + Q24.$C1)), +0.00000000000000E+000) + COALESCE( (+1.00000000000000E+000 / (60 + Q6.$C2)), +0.00000000000000E+000)),
+     Q24.$C1,
+     Q6.$C2,
+     Q6.$C1 
+   FROM 
+     (SELECT 
+        Q5.ADV_ID,
+        Q5.$C1,
+        Q5.$C2 
+      FROM 
+        (SELECT 
+           Q4.ADV_ID,
+           Q4.$C1,
+           RANK() OVER (ORDER BY 
+                          Q4.$C1,
+                          Q4.ADV_ID) 
+         FROM 
+           (SELECT 
+              Q3.ADV_ID,
+              Q3.$C1 
+            FROM 
+              (SELECT 
+                 Q2.ADV_ID,
+                 Q2.$C1,
+                 Q2.$C2 
+               FROM 
+                 (SELECT 
+                    Q1.ADV_ID,
+                    VECTOR_DISTANCE(Q1.EMB, VECTOR(?, 768, FLOAT32), COSINE),
+                    VECTOR_DISTANCE(Q1.EMB, VECTOR(?, 768, FLOAT32), COSINE) 
+                  FROM 
+                    NEEDLE.ADV_DOC AS Q1
+                 ) AS Q2 
+               ORDER BY 
+                 Q2.$C2
+              ) AS Q3
+           ) AS Q4
+        ) AS Q5
+     ) AS Q6 
+     FULL OUTER JOIN 
+     (SELECT 
+        Q23.ADV_ID,
+        Q23.$C1 
+      FROM 
+        (SELECT 
+           Q22.ADV_ID,
+           Q22.$C1 
+         FROM 
+           (SELECT 
+              Q21.ADV_ID,
+              RANK() OVER (ORDER BY 
+                             Q21.$C1 DESC,
+                             Q21.ADV_ID) 
+            FROM 
+              (SELECT 
+                 Q20.ADV_ID,
+                 Q20.$C1 
+               FROM 
+                 (SELECT 
+                    Q19.ADV_ID,
+                    SUM((
+                         CASE 
+                         WHEN ((LN(((DOUBLE(Q19.N) - Q19.DF) + +5.00000000000000E-001)) - LN((Q19.DF + +5.00000000000000E-001))) < +0.00000000000000E+000) 
+                         THEN (Q19.EPSILON * Q19.AVG_IDF) 
+                         ELSE (LN(((DOUBLE(Q19.N) - Q19.DF) + +5.00000000000000E-001)) - LN((Q19.DF + +5.00000000000000E-001))) END * ((Q19.TF * (Q19.K1 + +1.00000000000000E+000)) / (Q19.TF + (Q19.K1 * ((+1.00000000000000E+000 - Q19.B) + ((Q19.B * Q19.BM25_DL) / Q19.AVGDL))))))) 
+                  FROM 
+                    (SELECT 
+                       Q18.ADV_ID,
+                       Q7.N,
+                       Q17.DF,
+                       Q7.EPSILON,
+                       Q7.AVG_IDF,
+                       Q18.TF,
+                       Q7.K1,
+                       Q7.B,
+                       Q18.BM25_DL,
+                       Q7.AVGDL 
+                     FROM 
+                       NEEDLE.CORPUS_STATS AS Q7,
+                       (SELECT 
+                          DISTINCT Q16.TERM,
+                          Q16.DF,
+                          Q16.$C2 
+                        FROM 
+                          (SELECT 
+                             Q15.TERM,
+                             Q15.DF,
+                             VARCHAR(Q14.$C0, 128) 
+                           FROM 
+                             (SELECT 
+                                Q13.$C1,
+                                VARCHAR(Q13.$C1, 128) 
+                              FROM 
+                                (SELECT 
+                                   (Q8.$C0 + 1),
+                                   JSON_VALUE() 
+                                 FROM 
+                                   Q13 AS Q8 
+                                 WHERE 
+                                   (Q8.$C0 < 2047) AND 
+                                   Q8.$C1 IS NOT NULL 
+                                 UNION ALL 
+                                 SELECT 
+                                   0,
+                                   JSON_VALUE() 
+                                 FROM 
+                                   (SELECT 
+                                      'Y' 
+                                    FROM 
+                                      (VALUES 
+                                         1) AS Q10
+                                   ) AS Q11
+                                ) AS Q13 
+                              WHERE 
+                                Q13.$C1 IS NOT NULL AND 
+                                (LENGTH(Q13.$C1) <= 128)
+                             ) AS Q14,
+                             NEEDLE.TERM_DF AS Q15 
+                           WHERE 
+                             (Q15.TERM = Q14.$C1)
+                          ) AS Q16 
+                        ORDER BY 
+                          Q16.DF,
+                          Q16.TERM
+                       ) AS Q17,
+                       NEEDLE.POSTING AS Q18 
+                     WHERE 
+                       (Q7.ID = 1) AND 
+                       (Q18.TERM = Q17.TERM)
+                    ) AS Q19 
+                  GROUP BY 
+                    Q19.ADV_ID
+                 ) AS Q20 
+               WHERE 
+                 (+0.00000000000000E+000 < Q20.$C1)
+              ) AS Q21
+           ) AS Q22 
+         WHERE 
+           (Q22.$C1 <= 100)
+        ) AS Q23
+     ) AS Q24 
+     ON (Q24.ADV_ID = Q6.ADV_ID)
+  ) AS Q25 
+ORDER BY 
+  Q25.$C1 DESC,
+  Q25.$C0
+
+Access Plan:
+-----------
+	Total Cost: 		3217.14
+	Query Degree:		1
+
+
+                        Rows 
+                       RETURN
+                       (   1)
+                        Cost 
+                         I/O 
+                         |
+                         10 
+                       TBSCAN
+                       (   2)
+                       3217.14 
+                       606.324 
+                         |
+                         10 
+                       SORT  
+                       (   3)
+                       3217.14 
+                       606.324 
+                         |
+                         100 
+                      >HSJOIN<
+                      (   4)
+                       3217.13 
+                       606.324 
+                /--------+---------\
+              100                  75.021 
+            TBSCAN                 FILTER
+            (   5)                 (  11)
+            2076.58                1140.54 
+            293.324                  313 
+              |                      |
+              100                  225.063 
+            SORT                   TBSCAN
+            (   6)                 (  12)
+            2076.58                1140.53 
+            293.324                  313 
+              |                      |
+              100                  225.063 
+            TBSCAN                 SORT  
+            (   7)                 (  13)
+            2076.57                1140.53 
+            293.324                  313 
+              |                      |
+              100                  225.063 
+            SORT                   FILTER
+            (   8)                 (  14)
+            2076.57                1140.51 
+            293.324                  313 
+              |                      |
+              100                  675.189 
+            FETCH                  GRPBY 
+            (   9)                 (  15)
+            2076.47                1140.48 
+            293.324                  313 
+          /---+----\                 |
+        100         26210          675.189 
+      IXSCAN   TABLE: NEEDLE       TBSCAN
+      (  10)       ADV_DOC         (  16)
+      1383.74        Q1            1140.47 
+      195.005                        313 
+        |                            |
+       26210                       675.189 
+ VECIDX: NEEDLE                    SORT  
+    ADV_DOC_VIX                    (  17)
+        Q1                         1140.46 
+                                     313 
+                                     |
+                                   675.189 
+                                   NLJOIN
+                                   (  18)
+                                   1140.4 
+                                     313 
+                            /--------+---------\
+                          64                   10.5498 
+                        NLJOIN                 IXSCAN
+                        (  19)                 (  31)
+                        238.493                14.0943 
+                          185                     2 
+                  /-------+-------\              |
+                 1                  64       1.9441e+06 
+              FETCH               TBSCAN   INDEX: NEEDLE  
+              (  20)              (  22)    POSTING_PK_IX
+              7.04761             231.445        Q18
+                 1                  184 
+           /----+----\              |
+          1             1           64 
+       IXSCAN    TABLE: NEEDLE    SORT  
+       (  21)     CORPUS_STATS    (  23)
+     0.00191205        Q7         231.444 
+          0                         184 
+         |                          |
+          1                       102.72 
+   INDEX: SYSIBM                  HSJOIN^
+ SQL261110013007290               (  24)
+         Q7                       231.432 
+                                    184 
+                               /----+----\
+                           184278        102.72 
+                           TBSCAN        TBSCAN
+                           (  25)        (  26)
+                           228.599      0.250552 
+                             184            0 
+                             |             |
+                           184278          321 
+                       TABLE: NEEDLE     TEMP  
+                           TERM_DF       (  27)
+                             Q15        0.188644 
+                                            0 
+                                           |
+                                           321 
+                                         UNION 
+                                         (  28)
+                                        0.163141 
+                                            0 
+                                      /----+----\
+                                    320            1 
+                                  TBSCAN        TBSCAN
+                                  (  29)        (  30)
+                                 0.156346     5.66813e-06 
+                                     0             0 
+                                    |             |
+                                    321            1 
+                                  TEMP     TABFNC: SYSIBM  
+                                  (  27)        GENROW
+                                 0.188644 
+                                     0 
+
+Operator Symbols :
+------------------
+
+   Symbol      Description
+   ---------   ------------------------------------------
+   >JOIN     : Left outer join
+    JOIN<    : Right outer join
+   >JOIN<    : Full outer join
+   xJOIN     : Left antijoin
+    JOINx    : Right antijoin
+   ^JOIN     : Left early out
+    JOIN^    : Right early out
+
+
+Extended Diagnostic Information:
+--------------------------------
+
+Diagnostic Identifier: 	1
+Diagnostic Details: 	EXP0022W  Statistics have not been collected for
+			index "SYSIBM  "."SQL261110013007290".  This can
+			lead to poor cardinality and predicate filtering
+			estimates.  Statistics should be collected for the
+			table and index.
+
+Plan Details:
+-------------
+
+
+	1) RETURN: (Return Result)
+		Cumulative Total Cost: 		3217.14
+		Cumulative CPU Cost: 		5.99405e+08
+		Cumulative I/O Cost: 		606.324
+		Cumulative Re-Total Cost: 	3217.14
+		Cumulative Re-CPU Cost: 	5.99287e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	3217.14
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		BLDLEVEL: (Build level)
+			DB2 v12.1.5.0 : special_85816
+		CPUCACHE: (Per-thread CPU cache size)
+			8388608
+		HEAPUSE : (Maximum Statement Heap Usage)
+			384 Pages
+		MAX CARD: (Maximum Cardinality)
+			10
+		PLANID  : (Access plan identifier)
+			8bf827c48730eaf8
+		PREPTIME: (Statement prepare time)
+			        22 milliseconds
+		SEMEVID : (Semantic environment identifier)
+			431f78d03d9bb07e
+		STMTHEAP: (Statement heap size)
+			8192
+		STMTID  : (Normalized statement identifier)
+			fcebc62741373268
+		TENANTID: (Compiled In Tenant ID)
+			0
+		TENANTNM: (Compiled In Tenant Name)
+			SYSTEM
+
+		Input Streams:
+		-------------
+			41) From Operator #2
+
+				Estimated number of rows: 	10
+				Number of columns: 		5
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q26.RRF(D)+Q26.ADV_ID(A)+Q26.VEC_DIST
+				+Q26.VEC_RANK+Q26.KW_RANK
+
+
+	2) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		3217.14
+		Cumulative CPU Cost: 		5.99401e+08
+		Cumulative I/O Cost: 		606.324
+		Cumulative Re-Total Cost: 	3217.14
+		Cumulative Re-CPU Cost: 	5.99282e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	3217.14
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		MAX CARD: (Maximum Cardinality)
+			10
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			40) From Operator #3
+
+				Estimated number of rows: 	10
+				Number of columns: 		5
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q25.RRF(D)+Q25.ADV_ID(A)+Q25.VEC_DIST
+				+Q25.VEC_RANK+Q25.KW_RANK
+
+
+		Output Streams:
+		--------------
+			41) To Operator #1
+
+				Estimated number of rows: 	10
+				Number of columns: 		5
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q26.RRF(D)+Q26.ADV_ID(A)+Q26.VEC_DIST
+				+Q26.VEC_RANK+Q26.KW_RANK
+
+
+	3) SORT  : (Sort)
+		Cumulative Total Cost: 		3217.14
+		Cumulative CPU Cost: 		5.99397e+08
+		Cumulative I/O Cost: 		606.324
+		Cumulative Re-Total Cost: 	3217.14
+		Cumulative Re-CPU Cost: 	5.99278e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	3217.14
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		DUPLWARN: (Duplicates Warning flag)
+			FALSE
+		KEYS    : (Key cardinality)
+			10
+		MAX CARD: (Maximum Cardinality)
+			10
+		NUMROWS : (Estimated number of rows)
+			10
+		ROWWIDTH: (Estimated width of rows)
+			76.000000
+		SORTKEY : (Sort Key column)
+			1: Q25.RRF(D)
+			2: Q25.ADV_ID(A)
+		TEMPSIZE: (Temporary Table Page Size)
+			32768
+		TRUNCSRT: (Truncated sort (for Fetch First n Rows Only))
+			TRUE
+		UNIQUE  : (Uniqueness required flag)
+			FALSE
+
+		Input Streams:
+		-------------
+			39) From Operator #4
+
+				Estimated number of rows: 	100
+				Number of columns: 		5
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q25.VEC_DIST+Q25.VEC_RANK+Q25.KW_RANK+Q25.RRF
+				+Q25.ADV_ID
+
+
+		Output Streams:
+		--------------
+			40) To Operator #2
+
+				Estimated number of rows: 	10
+				Number of columns: 		5
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q25.RRF(D)+Q25.ADV_ID(A)+Q25.VEC_DIST
+				+Q25.VEC_RANK+Q25.KW_RANK
+
+
+	4) HSJOIN: (Hash Join)
+		Cumulative Total Cost: 		3217.13
+		Cumulative CPU Cost: 		5.99233e+08
+		Cumulative I/O Cost: 		606.324
+		Cumulative Re-Total Cost: 	3217.13
+		Cumulative Re-CPU Cost: 	5.99233e+08
+		Cumulative Re-I/O Cost: 	606.324
+		Cumulative First Row Cost: 	3217.13
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		BITFLTR : (Hash Join Bit Filter used)
+			FALSE
+		EARLYOUT: (Early Out flag)
+			NONE
+		HASHCODE: (Hash Code Size)
+			24 BIT
+		HASHTBSZ: (Number of hash table entries)
+			75
+		OUTERJN : (Outer Join type)
+			FULL
+		TEMPSIZE: (Temporary Table Page Size)
+			32768
+		TUPBLKSZ: (Tuple Block Size (bytes))
+			4000
+
+		Predicates:
+		----------
+		2) Predicate used in Join, 
+			Comparison Operator: 		Equal (=)
+			Subquery Input Required: 	No
+			Filter Factor: 			3.81534e-05
+
+			Predicate Text:
+			--------------
+			(Q24.ADV_ID = Q6.ADV_ID)
+
+
+
+		Input Streams:
+		-------------
+			11) From Operator #5
+
+				Estimated number of rows: 	100
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q6.VEC_DIST(A)+Q6.ADV_ID(A)+Q6.VEC_RANK
+
+			38) From Operator #11
+
+				Estimated number of rows: 	75.021
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q24.KW_RANK+Q24.ADV_ID
+
+
+		Output Streams:
+		--------------
+			39) To Operator #3
+
+				Estimated number of rows: 	100
+				Number of columns: 		5
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q25.VEC_DIST+Q25.VEC_RANK+Q25.KW_RANK+Q25.RRF
+				+Q25.ADV_ID
+
+
+	5) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		2076.58
+		Cumulative CPU Cost: 		2.1401e+08
+		Cumulative I/O Cost: 		293.324
+		Cumulative Re-Total Cost: 	9.91391
+		Cumulative Re-CPU Cost: 	2.09887e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	2076.58
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		JN INPUT: (Join input leg)
+			OUTER
+		MAX CARD: (Maximum Cardinality)
+			100
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			10) From Operator #6
+
+				Estimated number of rows: 	100
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q4.VEC_DIST(A)+Q4.ADV_ID(A)
+
+
+		Output Streams:
+		--------------
+			11) To Operator #4
+
+				Estimated number of rows: 	100
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q6.VEC_DIST(A)+Q6.ADV_ID(A)+Q6.VEC_RANK
+
+
+	6) SORT  : (Sort)
+		Cumulative Total Cost: 		2076.58
+		Cumulative CPU Cost: 		2.13984e+08
+		Cumulative I/O Cost: 		293.324
+		Cumulative Re-Total Cost: 	9.91266
+		Cumulative Re-CPU Cost: 	2.09861e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	2076.58
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		DUPLWARN: (Duplicates Warning flag)
+			FALSE
+		KEYS    : (Key cardinality)
+			100
+		MAX CARD: (Maximum Cardinality)
+			100
+		NUMROWS : (Estimated number of rows)
+			100
+		ROWWIDTH: (Estimated width of rows)
+			32.000000
+		SORTKEY : (Sort Key column)
+			1: Q4.VEC_DIST(A)
+			2: Q4.ADV_ID(A)
+		TEMPSIZE: (Temporary Table Page Size)
+			32768
+		UNIQUE  : (Uniqueness required flag)
+			FALSE
+
+		Input Streams:
+		-------------
+			9) From Operator #7
+
+				Estimated number of rows: 	100
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q4.VEC_DIST+Q4.ADV_ID
+
+
+		Output Streams:
+		--------------
+			10) To Operator #5
+
+				Estimated number of rows: 	100
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q4.VEC_DIST(A)+Q4.ADV_ID(A)
+
+
+	7) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		2076.57
+		Cumulative CPU Cost: 		2.13811e+08
+		Cumulative I/O Cost: 		293.324
+		Cumulative Re-Total Cost: 	9.91266
+		Cumulative Re-CPU Cost: 	2.09861e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	2076.57
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		MAX CARD: (Maximum Cardinality)
+			100
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			8) From Operator #8
+
+				Estimated number of rows: 	100
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.$C2(A)+Q2.VEC_DIST+Q2.ADV_ID
+
+
+		Output Streams:
+		--------------
+			9) To Operator #6
+
+				Estimated number of rows: 	100
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q4.VEC_DIST+Q4.ADV_ID
+
+
+	8) SORT  : (Sort)
+		Cumulative Total Cost: 		2076.57
+		Cumulative CPU Cost: 		2.13784e+08
+		Cumulative I/O Cost: 		293.324
+		Cumulative Re-Total Cost: 	9.91141
+		Cumulative Re-CPU Cost: 	2.09834e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	2076.57
+		Estimated Bufferpool Buffers: 	3107.64
+
+		Arguments:
+		---------
+		DUPLWARN: (Duplicates Warning flag)
+			FALSE
+		KEYS    : (Key cardinality)
+			10
+		MAX CARD: (Maximum Cardinality)
+			100
+		NUMROWS : (Estimated number of rows)
+			100
+		ROWWIDTH: (Estimated width of rows)
+			36.000000
+		SORTKEY : (Sort Key column)
+			1: Q2.$C2(A)
+		TEMPSIZE: (Temporary Table Page Size)
+			32768
+		TRUNCSRT: (Truncated sort (for Fetch First n Rows Only))
+			TRUE
+		UNIQUE  : (Uniqueness required flag)
+			FALSE
+
+		Input Streams:
+		-------------
+			7) From Operator #9
+
+				Estimated number of rows: 	100
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.$C2+Q2.VEC_DIST+Q2.ADV_ID
+
+
+		Output Streams:
+		--------------
+			8) To Operator #7
+
+				Estimated number of rows: 	100
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.$C2(A)+Q2.VEC_DIST+Q2.ADV_ID
+
+
+	9) FETCH : (Fetch)
+		Cumulative Total Cost: 		2076.47
+		Cumulative CPU Cost: 		2.11731e+08
+		Cumulative I/O Cost: 		293.324
+		Cumulative Re-Total Cost: 	9.8209
+		Cumulative Re-CPU Cost: 	2.07918e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	724.544
+		Estimated Bufferpool Buffers: 	3107.64
+
+		Arguments:
+		---------
+		CUR_COMM: (Currently Committed)
+			TRUE
+		LCKAVOID: (Lock Avoidance)
+			TRUE
+		MAXPAGES: (Maximum pages for prefetch)
+			98
+		PREFETCH: (Type of Prefetch)
+			SEQUENTIAL,READAHEAD
+		ROWLOCK : (Row Lock intent)
+			SHARE (CS/RS)
+		SKIP_INS: (Skip Inserted Rows)
+			TRUE
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		TABLOCK : (Table Lock intent)
+			INTENT SHARE
+		TBISOLVL: (Table access Isolation Level)
+			CURSOR STABILITY
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			5) From Operator #10
+
+				Estimated number of rows: 	100
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.$RID$+Q1.EMB
+
+			6) From Object NEEDLE.ADV_DOC
+
+				Estimated number of rows: 	26210
+				Number of columns: 		1
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.ADV_ID
+
+
+		Output Streams:
+		--------------
+			7) To Operator #8
+
+				Estimated number of rows: 	100
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.$C2+Q2.VEC_DIST+Q2.ADV_ID
+
+
+	10) IXSCAN: (Index Scan)
+		Cumulative Total Cost: 		1383.74
+		Cumulative CPU Cost: 		2.10361e+08
+		Cumulative I/O Cost: 		195.005
+		Cumulative Re-Total Cost: 	9.81656
+		Cumulative Re-CPU Cost: 	2.07826e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	717.498
+		Estimated Bufferpool Buffers: 	195.005
+
+		Arguments:
+		---------
+		BEAMWDTH: (DiskANN search beam width)
+			2
+		CUR_COMM: (Currently Committed)
+			TRUE
+		LCKAVOID: (Lock Avoidance)
+			TRUE
+		MAXPAGES: (Maximum pages for prefetch)
+			1
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		ROWLOCK : (Row Lock intent)
+			SHARE (CS/RS)
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SKIP_INS: (Skip Inserted Rows)
+			TRUE
+		SRCHLSIZ: (DiskANN search list size)
+			100
+		TABLOCK : (Table Lock intent)
+			INTENT SHARE
+		TBISOLVL: (Table access Isolation Level)
+			CURSOR STABILITY
+
+		Input Streams:
+		-------------
+			1) From Object NEEDLE.ADV_DOC_VIX
+
+				Estimated number of rows: 	26210
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.$RID$+Q1.EMB
+
+
+		Output Streams:
+		--------------
+			5) To Operator #9
+
+				Estimated number of rows: 	100
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.$RID$+Q1.EMB
+
+
+	11) FILTER: (Filter)
+		Cumulative Total Cost: 		1140.54
+		Cumulative CPU Cost: 		3.8488e+08
+		Cumulative I/O Cost: 		313
+		Cumulative Re-Total Cost: 	18.0594
+		Cumulative Re-CPU Cost: 	3.82335e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	1140.53
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		JN INPUT: (Join input leg)
+			INNER
+
+		Predicates:
+		----------
+		3) Residual Predicate, 
+			Comparison Operator: 		Less Than or Equal (<=)
+			Subquery Input Required: 	No
+			Filter Factor: 			0.333333
+
+			Predicate Text:
+			--------------
+			(Q22.$C1 <= 100)
+
+
+
+		Input Streams:
+		-------------
+			37) From Operator #12
+
+				Estimated number of rows: 	225.063
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q22.ADV_ID+Q22.KW_RANK
+
+
+		Output Streams:
+		--------------
+			38) To Operator #4
+
+				Estimated number of rows: 	75.021
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q24.KW_RANK+Q24.ADV_ID
+
+
+	12) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		1140.53
+		Cumulative CPU Cost: 		3.84646e+08
+		Cumulative I/O Cost: 		313
+		Cumulative Re-Total Cost: 	18.0483
+		Cumulative Re-CPU Cost: 	3.82101e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	1140.53
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			36) From Operator #13
+
+				Estimated number of rows: 	225.063
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q21.$C1(D)+Q21.ADV_ID(A)
+
+
+		Output Streams:
+		--------------
+			37) To Operator #11
+
+				Estimated number of rows: 	225.063
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q22.ADV_ID+Q22.KW_RANK
+
+
+	13) SORT  : (Sort)
+		Cumulative Total Cost: 		1140.53
+		Cumulative CPU Cost: 		3.84588e+08
+		Cumulative I/O Cost: 		313
+		Cumulative Re-Total Cost: 	18.0456
+		Cumulative Re-CPU Cost: 	3.82044e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	1140.53
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		DUPLWARN: (Duplicates Warning flag)
+			FALSE
+		KEYS    : (Key cardinality)
+			226
+		NUMROWS : (Estimated number of rows)
+			226
+		ROWWIDTH: (Estimated width of rows)
+			32.000000
+		SORTKEY : (Sort Key column)
+			1: Q21.$C1(D)
+			2: Q21.ADV_ID(A)
+		TEMPSIZE: (Temporary Table Page Size)
+			32768
+		UNIQUE  : (Uniqueness required flag)
+			FALSE
+
+		Input Streams:
+		-------------
+			35) From Operator #14
+
+				Estimated number of rows: 	225.063
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q21.$C1+Q21.ADV_ID
+
+
+		Output Streams:
+		--------------
+			36) To Operator #12
+
+				Estimated number of rows: 	225.063
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q21.$C1(D)+Q21.ADV_ID(A)
+
+
+	14) FILTER: (Filter)
+		Cumulative Total Cost: 		1140.51
+		Cumulative CPU Cost: 		3.8415e+08
+		Cumulative I/O Cost: 		313
+		Cumulative Re-Total Cost: 	18.0456
+		Cumulative Re-CPU Cost: 	3.82044e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	1140.46
+		Estimated Bufferpool Buffers: 	0
+
+		Predicates:
+		----------
+		4) Residual Predicate, 
+			Comparison Operator: 		Less Than (<)
+			Subquery Input Required: 	No
+			Filter Factor: 			0.333333
+
+			Predicate Text:
+			--------------
+			(+0.00000000000000E+000 < Q20.$C1)
+
+
+
+		Input Streams:
+		-------------
+			34) From Operator #15
+
+				Estimated number of rows: 	675.189
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q20.$C1+Q20.ADV_ID
+
+
+		Output Streams:
+		--------------
+			35) To Operator #13
+
+				Estimated number of rows: 	225.063
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q21.$C1+Q21.ADV_ID
+
+
+	15) GRPBY : (Group By)
+		Cumulative Total Cost: 		1140.48
+		Cumulative CPU Cost: 		3.83549e+08
+		Cumulative I/O Cost: 		313
+		Cumulative Re-Total Cost: 	18.0172
+		Cumulative Re-CPU Cost: 	3.81442e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	1140.46
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		AGGMODE : (Aggregation Mode)
+			COMPLETE
+		GROUPBYC: (Group By columns)
+			TRUE
+		GROUPBYN: (Number of Group By columns)
+			1
+		GROUPBYR: (Group By requirement)
+			1: Q19.ADV_ID
+		ONEFETCH: (One Fetch flag)
+			FALSE
+
+		Input Streams:
+		-------------
+			33) From Operator #16
+
+				Estimated number of rows: 	675.189
+				Number of columns: 		10
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q19.ADV_ID(A)+Q19.AVGDL+Q19.BM25_DL+Q19.B
+				+Q19.K1+Q19.TF+Q19.AVG_IDF+Q19.EPSILON+Q19.DF
+				+Q19.N
+
+
+		Output Streams:
+		--------------
+			34) To Operator #14
+
+				Estimated number of rows: 	675.189
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q20.$C1+Q20.ADV_ID
+
+
+	16) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		1140.47
+		Cumulative CPU Cost: 		3.83374e+08
+		Cumulative I/O Cost: 		313
+		Cumulative Re-Total Cost: 	18.009
+		Cumulative Re-CPU Cost: 	3.81268e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	1140.46
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			32) From Operator #17
+
+				Estimated number of rows: 	675.189
+				Number of columns: 		10
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q19.ADV_ID(A)+Q19.AVGDL+Q19.BM25_DL+Q19.B
+				+Q19.K1+Q19.TF+Q19.AVG_IDF+Q19.EPSILON+Q19.DF
+				+Q19.N
+
+
+		Output Streams:
+		--------------
+			33) To Operator #15
+
+				Estimated number of rows: 	675.189
+				Number of columns: 		10
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q19.ADV_ID(A)+Q19.AVGDL+Q19.BM25_DL+Q19.B
+				+Q19.K1+Q19.TF+Q19.AVG_IDF+Q19.EPSILON+Q19.DF
+				+Q19.N
+
+
+	17) SORT  : (Sort)
+		Cumulative Total Cost: 		1140.46
+		Cumulative CPU Cost: 		3.83204e+08
+		Cumulative I/O Cost: 		313
+		Cumulative Re-Total Cost: 	18.0009
+		Cumulative Re-CPU Cost: 	3.81097e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	1140.46
+		Estimated Bufferpool Buffers: 	130
+
+		Arguments:
+		---------
+		DUPLWARN: (Duplicates Warning flag)
+			FALSE
+		KEYS    : (Key cardinality)
+			676
+		NUMROWS : (Estimated number of rows)
+			676
+		ROWWIDTH: (Estimated width of rows)
+			80.000000
+		SORTKEY : (Sort Key column)
+			1: Q19.ADV_ID(A)
+		TEMPSIZE: (Temporary Table Page Size)
+			32768
+		UNIQUE  : (Uniqueness required flag)
+			FALSE
+
+		Input Streams:
+		-------------
+			31) From Operator #18
+
+				Estimated number of rows: 	675.189
+				Number of columns: 		10
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q19.AVGDL+Q19.BM25_DL+Q19.B+Q19.K1+Q19.TF
+				+Q19.AVG_IDF+Q19.EPSILON+Q19.DF+Q19.N
+				+Q19.ADV_ID
+
+
+		Output Streams:
+		--------------
+			32) To Operator #16
+
+				Estimated number of rows: 	675.189
+				Number of columns: 		10
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q19.ADV_ID(A)+Q19.AVGDL+Q19.BM25_DL+Q19.B
+				+Q19.K1+Q19.TF+Q19.AVG_IDF+Q19.EPSILON+Q19.DF
+				+Q19.N
+
+
+	18) NLJOIN: (Nested Loop Join)
+		Cumulative Total Cost: 		1140.4
+		Cumulative CPU Cost: 		3.81831e+08
+		Cumulative I/O Cost: 		313
+		Cumulative Re-Total Cost: 	18.0009
+		Cumulative Re-CPU Cost: 	3.81097e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	252.585
+		Estimated Bufferpool Buffers: 	130
+
+		Arguments:
+		---------
+		EARLYOUT: (Early Out flag)
+			NONE
+		FETCHMAX: (Override for FETCH MAXPAGES)
+			IGNORE
+		ISCANMAX: (Override for ISCAN MAXPAGES)
+			IGNORE
+
+		Predicates:
+		----------
+		7) Predicate used in Join, 
+			Comparison Operator: 		Equal (=)
+			Subquery Input Required: 	No
+			Filter Factor: 			5.42658e-06
+
+			Predicate Text:
+			--------------
+			(Q18.TERM = Q17.TERM)
+
+
+
+		Input Streams:
+		-------------
+			28) From Operator #19
+
+				Estimated number of rows: 	64
+				Number of columns: 		8
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q17.DF(A)+Q17.TERM(A)+Q7.AVG_IDF+Q7.EPSILON
+				+Q7.N+Q7.AVGDL+Q7.K1+Q7.B
+
+			30) From Operator #31
+
+				Estimated number of rows: 	10.5498
+				Number of columns: 		4
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q18.TERM(A)+Q18.ADV_ID(A)+Q18.BM25_DL+Q18.TF
+
+
+		Output Streams:
+		--------------
+			31) To Operator #17
+
+				Estimated number of rows: 	675.189
+				Number of columns: 		10
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q19.AVGDL+Q19.BM25_DL+Q19.B+Q19.K1+Q19.TF
+				+Q19.AVG_IDF+Q19.EPSILON+Q19.DF+Q19.N
+				+Q19.ADV_ID
+
+
+	19) NLJOIN: (Nested Loop Join)
+		Cumulative Total Cost: 		238.493
+		Cumulative CPU Cost: 		3.78807e+08
+		Cumulative I/O Cost: 		185
+		Cumulative Re-Total Cost: 	17.8808
+		Cumulative Re-CPU Cost: 	3.78553e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	238.492
+		Estimated Bufferpool Buffers: 	2
+
+		Arguments:
+		---------
+		EARLYOUT: (Early Out flag)
+			NONE
+		FETCHMAX: (Override for FETCH MAXPAGES)
+			IGNORE
+		ISCANMAX: (Override for ISCAN MAXPAGES)
+			IGNORE
+		JN INPUT: (Join input leg)
+			OUTER
+		MAX CARD: (Maximum Cardinality)
+			64
+
+		Input Streams:
+		-------------
+			15) From Operator #20
+
+				Estimated number of rows: 	1
+				Number of columns: 		6
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q7.AVG_IDF+Q7.EPSILON+Q7.N+Q7.AVGDL+Q7.K1+Q7.B
+
+			27) From Operator #22
+
+				Estimated number of rows: 	64
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q17.DF(A)+Q17.TERM(A)
+
+
+		Output Streams:
+		--------------
+			28) To Operator #18
+
+				Estimated number of rows: 	64
+				Number of columns: 		8
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q17.DF(A)+Q17.TERM(A)+Q7.AVG_IDF+Q7.EPSILON
+				+Q7.N+Q7.AVGDL+Q7.K1+Q7.B
+
+
+	20) FETCH : (Fetch)
+		Cumulative Total Cost: 		7.04761
+		Cumulative CPU Cost: 		55300
+		Cumulative I/O Cost: 		1
+		Cumulative Re-Total Cost: 	0.000323036
+		Cumulative Re-CPU Cost: 	6839
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	7.04757
+		Estimated Bufferpool Buffers: 	2
+
+		Arguments:
+		---------
+		CUR_COMM: (Currently Committed)
+			TRUE
+		JN INPUT: (Join input leg)
+			OUTER
+		LCKAVOID: (Lock Avoidance)
+			TRUE
+		MAX CARD: (Maximum Cardinality)
+			1
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		ROWLOCK : (Row Lock intent)
+			SHARE (CS/RS)
+		SKIP_INS: (Skip Inserted Rows)
+			TRUE
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		TABLOCK : (Table Lock intent)
+			INTENT SHARE
+		TBISOLVL: (Table access Isolation Level)
+			CURSOR STABILITY
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			13) From Operator #21
+
+				Estimated number of rows: 	1
+				Number of columns: 		1
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q7.$RID$
+
+			14) From Object NEEDLE.CORPUS_STATS
+
+				Estimated number of rows: 	1
+				Number of columns: 		6
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q7.AVG_IDF+Q7.EPSILON+Q7.N+Q7.AVGDL+Q7.K1+Q7.B
+
+
+		Output Streams:
+		--------------
+			15) To Operator #19
+
+				Estimated number of rows: 	1
+				Number of columns: 		6
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q7.AVG_IDF+Q7.EPSILON+Q7.N+Q7.AVGDL+Q7.K1+Q7.B
+
+
+	21) IXSCAN: (Index Scan)
+		Cumulative Total Cost: 		0.00191205
+		Cumulative CPU Cost: 		40480
+		Cumulative I/O Cost: 		0
+		Cumulative Re-Total Cost: 	0.00023707
+		Cumulative Re-CPU Cost: 	5019
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	0.00191205
+		Estimated Bufferpool Buffers: 	1
+
+		Arguments:
+		---------
+		CUR_COMM: (Currently Committed)
+			TRUE
+		LCKAVOID: (Lock Avoidance)
+			TRUE
+		MAX CARD: (Maximum Cardinality)
+			1
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		ROWLOCK : (Row Lock intent)
+			SHARE (CS/RS)
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SKIP_INS: (Skip Inserted Rows)
+			TRUE
+		TABLOCK : (Table Lock intent)
+			INTENT SHARE
+		TBISOLVL: (Table access Isolation Level)
+			CURSOR STABILITY
+
+		Predicates:
+		----------
+		6) Start Key Predicate, 
+			Comparison Operator: 		Equal (=)
+			Subquery Input Required: 	No
+			Filter Factor: 			1
+
+			Predicate Text:
+			--------------
+			(Q7.ID = 1)
+
+
+		6) Stop Key Predicate, 
+			Comparison Operator: 		Equal (=)
+			Subquery Input Required: 	No
+			Filter Factor: 			1
+
+			Predicate Text:
+			--------------
+			(Q7.ID = 1)
+
+
+
+		Input Streams:
+		-------------
+			12) From Object SYSIBM.SQL261110013007290
+
+				Estimated number of rows: 	1
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q7.$RID$+Q7.ID
+
+
+		Output Streams:
+		--------------
+			13) To Operator #20
+
+				Estimated number of rows: 	1
+				Number of columns: 		1
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q7.$RID$
+
+
+	22) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		231.445
+		Cumulative CPU Cost: 		3.78752e+08
+		Cumulative I/O Cost: 		184
+		Cumulative Re-Total Cost: 	231.435
+		Cumulative Re-CPU Cost: 	3.78546e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	231.444
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		JN INPUT: (Join input leg)
+			INNER
+		MAX CARD: (Maximum Cardinality)
+			64
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			26) From Operator #23
+
+				Estimated number of rows: 	64
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q16.DF(A)+Q16.TERM(A)+Q16.$C2(A)
+
+
+		Output Streams:
+		--------------
+			27) To Operator #19
+
+				Estimated number of rows: 	64
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q17.DF(A)+Q17.TERM(A)
+
+
+	23) SORT  : (Sort)
+		Cumulative Total Cost: 		231.444
+		Cumulative CPU Cost: 		3.78734e+08
+		Cumulative I/O Cost: 		184
+		Cumulative Re-Total Cost: 	231.435
+		Cumulative Re-CPU Cost: 	3.78529e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	231.444
+		Estimated Bufferpool Buffers: 	184
+
+		Arguments:
+		---------
+		DUPLWARN: (Duplicates Warning flag)
+			TRUE
+		KEYS    : (Key cardinality)
+			64
+		MAX CARD: (Maximum Cardinality)
+			64
+		NUMROWS : (Estimated number of rows)
+			64
+		ROWWIDTH: (Estimated width of rows)
+			120.000000
+		SORTKEY : (Sort Key column)
+			1: Q16.DF(A)
+			2: Q16.TERM(A)
+			3: Q16.$C2(A)
+		TEMPSIZE: (Temporary Table Page Size)
+			32768
+		TRUNCSRT: (Truncated sort (for Fetch First n Rows Only))
+			TRUE
+		UNIQUE  : (Uniqueness required flag)
+			TRUE
+
+		Input Streams:
+		-------------
+			25) From Operator #24
+
+				Estimated number of rows: 	102.72
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q16.$C2+Q16.DF+Q16.TERM
+
+
+		Output Streams:
+		--------------
+			26) To Operator #22
+
+				Estimated number of rows: 	64
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q16.DF(A)+Q16.TERM(A)+Q16.$C2(A)
+
+
+	24) HSJOIN: (Hash Join)
+		Cumulative Total Cost: 		231.432
+		Cumulative CPU Cost: 		3.78483e+08
+		Cumulative I/O Cost: 		184
+		Cumulative Re-Total Cost: 	231.432
+		Cumulative Re-CPU Cost: 	3.78483e+08
+		Cumulative Re-I/O Cost: 	184
+		Cumulative First Row Cost: 	231.432
+		Estimated Bufferpool Buffers: 	184
+
+		Arguments:
+		---------
+		BITFLTR : (Hash Join Bit Filter used)
+			4096
+		EARLYOUT: (Early Out flag)
+			RIGHT
+		HASHCODE: (Hash Code Size)
+			24 BIT
+		HASHTBSZ: (Number of hash table entries)
+			103
+		TEMPSIZE: (Temporary Table Page Size)
+			32768
+		TUPBLKSZ: (Tuple Block Size (bytes))
+			4000
+
+		Predicates:
+		----------
+		8) Predicate used in Join, 
+			Comparison Operator: 		Equal (=)
+			Subquery Input Required: 	No
+			Filter Factor: 			5.42658e-06
+
+			Predicate Text:
+			--------------
+			(Q15.TERM = Q14.$C1)
+
+
+
+		Input Streams:
+		-------------
+			17) From Operator #25
+
+				Estimated number of rows: 	184278
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q15.DF+Q15.TERM
+
+			24) From Operator #26
+
+				Estimated number of rows: 	102.72
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q14.$C1+Q14.TERM
+
+
+		Output Streams:
+		--------------
+			25) To Operator #23
+
+				Estimated number of rows: 	102.72
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q16.$C2+Q16.DF+Q16.TERM
+
+
+	25) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		228.599
+		Cumulative CPU Cost: 		3.18506e+08
+		Cumulative I/O Cost: 		184
+		Cumulative Re-Total Cost: 	14.9888
+		Cumulative Re-CPU Cost: 	3.17328e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	7.04747
+		Estimated Bufferpool Buffers: 	184
+
+		Arguments:
+		---------
+		CUR_COMM: (Currently Committed)
+			TRUE
+		JN INPUT: (Join input leg)
+			OUTER
+		LCKAVOID: (Lock Avoidance)
+			TRUE
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			SEQUENTIAL          
+		ROWLOCK : (Row Lock intent)
+			SHARE (CS/RS)
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SKIP_INS: (Skip Inserted Rows)
+			TRUE
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			FAST
+		TABLOCK : (Table Lock intent)
+			INTENT SHARE
+		TBISOLVL: (Table access Isolation Level)
+			CURSOR STABILITY
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			TRUE
+		VISIBLE : (May be included in scan sharing structures)
+			TRUE
+		WRAPPING: (Scan may start anywhere and wrap)
+			TRUE
+
+		Input Streams:
+		-------------
+			16) From Object NEEDLE.TERM_DF
+
+				Estimated number of rows: 	184278
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q15.$RID$+Q15.DF+Q15.TERM
+
+
+		Output Streams:
+		--------------
+			17) To Operator #24
+
+				Estimated number of rows: 	184278
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q15.DF+Q15.TERM
+
+
+	26) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		0.250552
+		Cumulative CPU Cost: 		5.30444e+06
+		Cumulative I/O Cost: 		0
+		Cumulative Re-Total Cost: 	0.0605228
+		Cumulative Re-CPU Cost: 	1.28133e+06
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	0.225787
+		Estimated Bufferpool Buffers: 	6
+
+		Arguments:
+		---------
+		JN INPUT: (Join input leg)
+			INNER
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Predicates:
+		----------
+		9) Sargable Predicate, 
+			Comparison Operator: 		Is Not Null
+			Subquery Input Required: 	No
+			Filter Factor: 			0.96
+
+			Predicate Text:
+			--------------
+			Q13.$C1 IS NOT NULL
+
+
+		10) Sargable Predicate, 
+			Comparison Operator: 		Less Than or Equal (<=)
+			Subquery Input Required: 	No
+			Filter Factor: 			0.333333
+
+			Predicate Text:
+			--------------
+			(LENGTH(Q13.$C1) <= 128)
+
+
+
+		Input Streams:
+		-------------
+			23) From Operator #27
+
+				Estimated number of rows: 	321
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q9.$C1+Q9.$C0
+
+
+		Output Streams:
+		--------------
+			24) To Operator #24
+
+				Estimated number of rows: 	102.72
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q14.$C1+Q14.TERM
+
+
+	27) TEMP  : (Create Temporary Table)
+		Cumulative Total Cost: 		0.188644
+		Cumulative CPU Cost: 		3.99379e+06
+		Cumulative I/O Cost: 		0
+		Cumulative Re-Total Cost: 	0
+		Cumulative Re-CPU Cost: 	0
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	0.188644
+		Estimated Bufferpool Buffers: 	6
+
+		Arguments:
+		---------
+		CSETEMP : (Temp over common sub-expression flag)
+			TRUE
+		SLOWMAT : (Slow Materialization flag)
+			TRUE
+		TEMPSIZE: (Temporary Table Page Size)
+			32768
+
+		Input Streams:
+		-------------
+			22) From Operator #28
+
+				Estimated number of rows: 	321
+				Number of columns: 		4
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q9.$C1+Q9.$C0+Q12.$C1+Q12.$C0
+
+
+		Output Streams:
+		--------------
+			18) To Operator #29
+
+				Estimated number of rows: 	321
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q9.$C1+Q9.$C0
+
+			23) To Operator #26
+
+				Estimated number of rows: 	321
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q9.$C1+Q9.$C0
+
+
+	28) UNION : (Union)
+		Cumulative Total Cost: 		0.163141
+		Cumulative CPU Cost: 		3.45385e+06
+		Cumulative I/O Cost: 		0
+		Cumulative Re-Total Cost: 	0.161755
+		Cumulative Re-CPU Cost: 	3.42452e+06
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	0.111948
+		Estimated Bufferpool Buffers: 	0
+
+		Input Streams:
+		-------------
+			19) From Operator #29
+
+				Estimated number of rows: 	320
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q9.$C1+Q9.$C0
+
+			21) From Operator #30
+
+				Estimated number of rows: 	1
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q12.$C1+Q12.$C0
+
+
+		Output Streams:
+		--------------
+			22) To Operator #27
+
+				Estimated number of rows: 	321
+				Number of columns: 		4
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q9.$C1+Q9.$C0+Q12.$C1+Q12.$C0
+
+
+	29) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		0.156346
+		Cumulative CPU Cost: 		3.31e+06
+		Cumulative I/O Cost: 		0
+		Cumulative Re-Total Cost: 	0.154961
+		Cumulative Re-CPU Cost: 	3.28067e+06
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	0.111927
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Predicates:
+		----------
+		11) Sargable Predicate, 
+			Comparison Operator: 		Less Than (<)
+			Subquery Input Required: 	No
+			Filter Factor: 			0.333333
+
+			Predicate Text:
+			--------------
+			(Q8.$C0 < 2047)
+
+
+		12) Sargable Predicate, 
+			Comparison Operator: 		Is Not Null
+			Subquery Input Required: 	No
+			Filter Factor: 			0.96
+
+			Predicate Text:
+			--------------
+			Q8.$C1 IS NOT NULL
+
+
+
+		Input Streams:
+		-------------
+			18) From Operator #27
+
+				Estimated number of rows: 	321
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q9.$C1+Q9.$C0
+
+
+		Output Streams:
+		--------------
+			19) To Operator #28
+
+				Estimated number of rows: 	320
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q9.$C1+Q9.$C0
+
+
+	30) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		5.66813e-06
+		Cumulative CPU Cost: 		120
+		Cumulative I/O Cost: 		0
+		Cumulative Re-Total Cost: 	5.66813e-06
+		Cumulative Re-CPU Cost: 	120
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	4.2511e-06
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		MAX CARD: (Maximum Cardinality)
+			1
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		ROWLOCK : (Row Lock intent)
+			SHARE (CS/RS)
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			FAST
+		TABLOCK : (Table Lock intent)
+			INTENT SHARE
+		TBISOLVL: (Table access Isolation Level)
+			CURSOR STABILITY
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			TRUE
+		VISIBLE : (May be included in scan sharing structures)
+			TRUE
+		WRAPPING: (Scan may start anywhere and wrap)
+			TRUE
+
+		Input Streams:
+		-------------
+			20) From Object SYSIBM.GENROW
+
+				Estimated number of rows: 	1
+				Number of columns: 		0
+				Subquery predicate ID: 		Not Applicable
+
+
+		Output Streams:
+		--------------
+			21) To Operator #28
+
+				Estimated number of rows: 	1
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q12.$C1+Q12.$C0
+
+
+	31) IXSCAN: (Index Scan)
+		Cumulative Total Cost: 		14.0943
+		Cumulative CPU Cost: 		91613.6
+		Cumulative I/O Cost: 		2
+		Cumulative Re-Total Cost: 	7.04704
+		Cumulative Re-CPU Cost: 	43152.6
+		Cumulative Re-I/O Cost: 	1
+		Cumulative First Row Cost: 	14.0935
+		Estimated Bufferpool Buffers: 	3967
+
+		Arguments:
+		---------
+		CUR_COMM: (Currently Committed)
+			TRUE
+		JN INPUT: (Join input leg)
+			INNER
+		LCKAVOID: (Lock Avoidance)
+			TRUE
+		MAXPAGES: (Maximum pages for prefetch)
+			1
+		PREFETCH: (Type of Prefetch)
+			SEQUENTIAL,READAHEAD
+		ROWLOCK : (Row Lock intent)
+			SHARE (CS/RS)
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SKIP_INS: (Skip Inserted Rows)
+			TRUE
+		TABLOCK : (Table Lock intent)
+			INTENT SHARE
+		TBISOLVL: (Table access Isolation Level)
+			CURSOR STABILITY
+
+		Predicates:
+		----------
+		7) Start Key Predicate, 
+			Comparison Operator: 		Equal (=)
+			Subquery Input Required: 	No
+			Filter Factor: 			5.42658e-06
+
+			Predicate Text:
+			--------------
+			(Q18.TERM = Q17.TERM)
+
+
+		7) Stop Key Predicate, 
+			Comparison Operator: 		Equal (=)
+			Subquery Input Required: 	No
+			Filter Factor: 			5.42658e-06
+
+			Predicate Text:
+			--------------
+			(Q18.TERM = Q17.TERM)
+
+
+
+		Input Streams:
+		-------------
+			29) From Object NEEDLE.POSTING_PK_IX
+
+				Estimated number of rows: 	1.9441e+06
+				Number of columns: 		5
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q18.TERM(A)+Q18.ADV_ID(A)+Q18.$RID$
+				+Q18.BM25_DL+Q18.TF
+
+
+		Output Streams:
+		--------------
+			30) To Operator #18
+
+				Estimated number of rows: 	10.5498
+				Number of columns: 		4
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q18.TERM(A)+Q18.ADV_ID(A)+Q18.BM25_DL+Q18.TF
+
+
+Objects Used in Access Plan:
+---------------------------
+
+	Schema:   NEEDLE  
+	Name:     POSTING
+	Type:     Table (reference only)
+
+	Schema:   SYSIBM  
+	Name:     SYSDUMMY1
+	Type:     View (reference only)
+
+	Schema:   NEEDLE  
+	Name:     POSTING_PK_IX
+	Type:     Index
+			Time of creation: 		2026-11-10-01.31.08.419773
+			Last statistics update: 	2026-11-10-01.31.26.888396
+			Number of columns: 		6
+			Number of rows: 		1944102
+			Width of rows: 			-1
+			Number of buffer pool pages: 	3619
+			Distinct row values: 		Yes
+			Tablespace name: 		USERSPACE1
+			Tablespace overhead: 		6.725000
+			Tablespace transfer rate: 	0.320000
+			Source for statistics: 		Single Node
+			Prefetch page count: 		32
+			Container extent page count: 	32
+			Index clustering statistic: 	100.000000
+			Index leaf pages: 		3924
+			Index tree levels: 		3
+			Index full key cardinality: 	1944102
+			Index first key cardinality: 	184278
+			Index first 2 keys cardinality: 1944102
+			Index first 3 keys cardinality: 1944102
+			Index first 4 keys cardinality: 1944102
+			Index sequential pages: 	3923
+			Index page density: 		98
+			Index avg sequential pages: 	3923
+			Index avg gap between sequences:0
+			Index avg random pages: 	0
+			Fetch avg sequential pages: 	-1
+			Fetch avg gap between sequences:-1
+			Fetch avg random pages: 	-1
+			Index RID count: 		1944102
+			Index deleted RID count: 	0
+			Index empty leaf pages: 	0
+			Base Table Schema: 		NEEDLE  
+			Base Table Name: 		POSTING
+			Columns in index:
+				TERM(A)
+				ADV_ID(A)
+				TF(I)
+				BM25_DL(I)
+				ROW_BUCKET(I)
+				EMBARGO_UNTIL(I)
+			Null keys: 			Yes
+
+	Schema:   SYSIBM  
+	Name:     SQL261110013007290
+	Type:     Index
+			Time of creation: 		2026-11-10-01.30.07.210675
+			Last statistics update:
+			Number of columns: 		1
+			Number of rows: 		1
+			Width of rows: 			-1
+			Number of buffer pool pages: 	1
+			Distinct row values: 		Yes
+			Tablespace name: 		USERSPACE1
+			Tablespace overhead: 		6.725000
+			Tablespace transfer rate: 	0.320000
+			Source for statistics: 		Single Node
+			Prefetch page count: 		32
+			Container extent page count: 	32
+			Index clustering statistic: 	100.000000
+			Index leaf pages: 		1
+			Index tree levels: 		1
+			Index full key cardinality: 	-1
+			Index first key cardinality: 	-1
+			Index first 2 keys cardinality: -1
+			Index first 3 keys cardinality: -1
+			Index first 4 keys cardinality: -1
+			Index sequential pages: 	-1
+			Index page density: 		-1
+			Index avg sequential pages: 	-1
+			Index avg gap between sequences:-1
+			Index avg random pages: 	-1
+			Fetch avg sequential pages: 	-1
+			Fetch avg gap between sequences:-1
+			Fetch avg random pages: 	-1
+			Index RID count: 		0
+			Index deleted RID count: 	0
+			Index empty leaf pages: 	0
+			Base Table Schema: 		NEEDLE  
+			Base Table Name: 		CORPUS_STATS
+			Columns in index:
+				ID(A)
+			Null keys: 			Yes
+
+	Schema:   NEEDLE  
+	Name:     ADV_DOC
+	Type:     Table
+			Time of creation: 		2026-11-10-01.22.27.094217
+			Last statistics update: 	2026-11-10-01.31.23.968119
+			Number of columns: 		14
+			Number of rows: 		26210
+			Width of rows: 			3125
+			Number of buffer pool pages: 	2913
+			Number of data partitions: 	1
+			Distinct row values: 		No
+			Tablespace name: 		USERSPACE1
+			Tablespace overhead: 		6.725000
+			Tablespace transfer rate: 	0.320000
+			Source for statistics: 		Single Node
+			Prefetch page count: 		32
+			Container extent page count: 	32
+			Table overflow record count: 	0
+			Table Active Blocks: 		-1
+			Average Row Compression Ratio: 	0
+			Percentage Rows Compressed: 	0
+			Average Compressed Row Size: 	0
+
+	Schema:   NEEDLE  
+	Name:     CORPUS_STATS
+	Type:     Table
+			Time of creation: 		2026-11-10-01.30.07.210675
+			Last statistics update: 	2026-11-10-01.31.26.959911
+			Number of columns: 		8
+			Number of rows: 		1
+			Width of rows: 			60
+			Number of buffer pool pages: 	1
+			Number of data partitions: 	1
+			Distinct row values: 		No
+			Tablespace name: 		USERSPACE1
+			Tablespace overhead: 		6.725000
+			Tablespace transfer rate: 	0.320000
+			Source for statistics: 		Single Node
+			Prefetch page count: 		32
+			Container extent page count: 	32
+			Table overflow record count: 	0
+			Table Active Blocks: 		-1
+			Average Row Compression Ratio: 	0
+			Percentage Rows Compressed: 	0
+			Average Compressed Row Size: 	0
+
+	Schema:   NEEDLE  
+	Name:     TERM_DF
+	Type:     Table
+			Time of creation: 		2026-11-10-01.30.07.014456
+			Last statistics update: 	2026-11-10-01.31.26.952533
+			Number of columns: 		2
+			Number of rows: 		184278
+			Width of rows: 			29
+			Number of buffer pool pages: 	184
+			Number of data partitions: 	1
+			Distinct row values: 		No
+			Tablespace name: 		USERSPACE1
+			Tablespace overhead: 		6.725000
+			Tablespace transfer rate: 	0.320000
+			Source for statistics: 		Single Node
+			Prefetch page count: 		32
+			Container extent page count: 	32
+			Table overflow record count: 	0
+			Table Active Blocks: 		-1
+			Average Row Compression Ratio: 	0
+			Percentage Rows Compressed: 	0
+			Average Compressed Row Size: 	0
+
+	Schema:   SYSIBM  
+	Name:     ACV261110012537972461_P2_O15_I3
+	Type:     Table
+			Time of creation: 		2026-11-10-01.25.38.344457
+			Last statistics update: 	2026-11-10-01.31.24.302423
+			Number of columns: 		2
+			Number of rows: 		26210
+			Width of rows: 			6
+			Number of buffer pool pages: 	142
+			Number of data partitions: 	1
+			Distinct row values: 		No
+			Tablespace name: 		USERSPACE1
+			Tablespace overhead: 		6.725000
+			Tablespace transfer rate: 	0.320000
+			Source for statistics: 		Single Node
+			Prefetch page count: 		32
+			Container extent page count: 	32
+			Table overflow record count: 	0
+			Table Active Blocks: 		-1
+			Average Row Compression Ratio: 	0
+			Percentage Rows Compressed: 	0
+			Average Compressed Row Size: 	0
+
+	Schema:   SYSIBM  
+	Name:     AGT261110012537972461_P2_O15_I3
+	Type:     Table
+			Time of creation: 		2026-11-10-01.25.37.972553
+			Last statistics update: 	2026-11-10-01.31.24.230604
+			Number of columns: 		69
+			Number of rows: 		26210
+			Width of rows: 			6
+			Number of buffer pool pages: 	2917
+			Number of data partitions: 	1
+			Distinct row values: 		No
+			Tablespace name: 		USERSPACE1
+			Tablespace overhead: 		6.725000
+			Tablespace transfer rate: 	0.320000
+			Source for statistics: 		Single Node
+			Prefetch page count: 		32
+			Container extent page count: 	32
+			Table overflow record count: 	0
+			Table Active Blocks: 		-1
+			Average Row Compression Ratio: 	0
+			Percentage Rows Compressed: 	0
+			Average Compressed Row Size: 	0
+
+	Schema:   SYSIBM  
+	Name:     AIJ261110012537972461_P2_O15_I3
+	Type:     Table
+			Time of creation: 		2026-11-10-01.25.38.192333
+			Last statistics update: 	2026-11-10-01.31.24.291663
+			Number of columns: 		2
+			Number of rows: 		0
+			Width of rows: 			6
+			Number of buffer pool pages: 	1
+			Number of data partitions: 	1
+			Distinct row values: 		No
+			Tablespace name: 		USERSPACE1
+			Tablespace overhead: 		6.725000
+			Tablespace transfer rate: 	0.320000
+			Source for statistics: 		Single Node
+			Prefetch page count: 		32
+			Container extent page count: 	32
+			Table overflow record count: 	0
+			Table Active Blocks: 		-1
+			Average Row Compression Ratio: 	0
+			Percentage Rows Compressed: 	0
+			Average Compressed Row Size: 	0
+
+	Schema:   SYSIBM  
+	Name:     GENROW
+	Type:     Table Function
+			Time of creation:
+			Last statistics update:
+			Number of columns: 		1
+			Number of rows: 		1
+			Width of rows: 			11
+			Number of buffer pool pages: 	-1
+			Distinct row values: 		No
+			Source for statistics: 		Single Node
+
+	Schema:   NEEDLE  
+	Name:     ADV_DOC_VIX
+	Type:     Vector Index
+			Time of creation: 		2026-11-10-01.25.37.972067
+			Last statistics update:
+			Number of columns: 		1
+			Number of rows: 		26210
+			Width of rows: 			-1
+			Number of buffer pool pages: 	2913
+			Distinct row values: 		No
+			Tablespace name: 		USERSPACE1
+			Tablespace overhead: 		6.725000
+			Tablespace transfer rate: 	0.320000
+			Source for statistics: 		Single Node
+			Prefetch page count: 		32
+			Container extent page count: 	32
+			Base Table Schema: 		NEEDLE  
+			Base Table Name: 		ADV_DOC
+			Columns in index:
+				EMB(A)
+			Null keys: 			No
+
+
+Base Table For Index Not Already Shown:
+---------------------------------------
+
+	Schema: NEEDLE  
+	Name: 	POSTING
+			Time of creation: 		2026-11-10-01.30.06.909996
+			Last statistics update: 	2026-11-10-01.31.26.888396
+			Number of data partitions: 	1
+			Number of columns: 		6
+			Number of rows: 		1944102
+			Number of pages: 		3619
+			Number of pages with rows: 	3619
+			Number of meta-data pages: 	0
+			Table overflow record count: 	0
+			Indexspace name: 		USERSPACE1
+			Tablespace name: 		USERSPACE1
+			Tablespace overhead: 		-1.000000
+			Tablespace transfer rate: 	-1.000000
+			Prefetch page count: 		-1
+			Container extent page count: 	32
+
+			Long tablespace name: 		USERSPACE1
+

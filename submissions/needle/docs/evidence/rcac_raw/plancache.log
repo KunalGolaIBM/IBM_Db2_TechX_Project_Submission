@@ -1,0 +1,13 @@
+[plancache forward] after NDL_P10: 1 cache entr(y/ies): 1110015942020530 execs=10 (+10) +rows_read=35226 +rows_returned=28
+[plancache forward] after NDL_P25: 1 cache entr(y/ies): 1110015942020530 execs=20 (+10) +rows_read=35226 +rows_returned=53
+[plancache forward] after NDL_P50: 1 cache entr(y/ies): 1110015942020530 execs=30 (+10) +rows_read=35226 +rows_returned=90
+[plancache forward] after NDL_P75: 1 cache entr(y/ies): 1110015942020530 execs=40 (+10) +rows_read=35226 +rows_returned=100
+[plancache forward] after NDL_SENIOR: 1 cache entr(y/ies): 1110015942020530 execs=50 (+10) +rows_read=35226 +rows_returned=100
+   EXPLAIN_FROM_SECTION -> /home/codespace/ndl_rcac/ev/section_forward_0.txt (19125 chars)
+[plancache reverse] after NDL_SENIOR: 1 cache entr(y/ies): 1110015943844308 execs=10 (+10) +rows_read=35226 +rows_returned=100
+[plancache reverse] after NDL_P75: 1 cache entr(y/ies): 1110015943844308 execs=20 (+10) +rows_read=35226 +rows_returned=100
+[plancache reverse] after NDL_P50: 1 cache entr(y/ies): 1110015943844308 execs=30 (+10) +rows_read=35226 +rows_returned=90
+[plancache reverse] after NDL_P25: 1 cache entr(y/ies): 1110015943844308 execs=40 (+10) +rows_read=35226 +rows_returned=53
+[plancache reverse] after NDL_P10: 1 cache entr(y/ies): 1110015943844308 execs=50 (+10) +rows_read=35226 +rows_returned=28
+   EXPLAIN_FROM_SECTION -> /home/codespace/ndl_rcac/ev/section_reverse_0.txt (19125 chars)
+wrote /home/codespace/ndl_rcac/rcac_plancache.json

@@ -1,0 +1,173 @@
+{
+ "split": "heldout",
+ "n_queries": 89,
+ "db2": "DB2 v12.1.5.0",
+ "series": {
+  "rcac": [
+   {
+    "user": "NDL_P10",
+    "x": 9.98,
+    "recall": 0.2079,
+    "rows": 2.08,
+    "underfill": 1.0,
+    "index": true,
+    "L": 50,
+    "ixscan_est_rows": 21.0
+   },
+   {
+    "user": "NDL_P25",
+    "x": 25.069999999999997,
+    "recall": 0.5056,
+    "rows": 5.09,
+    "underfill": 0.9663,
+    "index": true,
+    "L": 50,
+    "ixscan_est_rows": 21.0
+   },
+   {
+    "user": "NDL_P50",
+    "x": 49.6,
+    "recall": 0.8517,
+    "rows": 9.16,
+    "underfill": 0.3596,
+    "index": true,
+    "L": 50,
+    "ixscan_est_rows": 21.0
+   },
+   {
+    "user": "NDL_P75",
+    "x": 74.9,
+    "recall": 0.9472,
+    "rows": 9.99,
+    "underfill": 0.0112,
+    "index": true,
+    "L": 50,
+    "ixscan_est_rows": 21.0
+   },
+   {
+    "user": "NDL_SENIOR",
+    "x": 100.0,
+    "recall": 0.9483,
+    "rows": 10.0,
+    "underfill": 0.0,
+    "index": true,
+    "L": 50,
+    "ixscan_est_rows": 21.0
+   }
+  ],
+  "router": [
+   {
+    "user": "NDL_P10",
+    "x": 9.98,
+    "recall": 1.0,
+    "rows": 10.0,
+    "underfill": 0.0,
+    "index": false,
+    "mode": "EXACT",
+    "depth": 10,
+    "L": null,
+    "fallbacks": 0
+   },
+   {
+    "user": "NDL_P25",
+    "x": 25.069999999999997,
+    "recall": 1.0,
+    "rows": 10.0,
+    "underfill": 0.0,
+    "index": false,
+    "mode": "EXACT",
+    "depth": 10,
+    "L": null,
+    "fallbacks": 0
+   },
+   {
+    "user": "NDL_P50",
+    "x": 49.6,
+    "recall": 1.0,
+    "rows": 10.0,
+    "underfill": 0.0,
+    "index": false,
+    "mode": "APPROX",
+    "depth": 100,
+    "L": 300,
+    "fallbacks": 0
+   },
+   {
+    "user": "NDL_P75",
+    "x": 74.9,
+    "recall": 0.9876,
+    "rows": 10.0,
+    "underfill": 0.0,
+    "index": true,
+    "mode": "APPROX",
+    "depth": 50,
+    "L": 150,
+    "fallbacks": 0
+   },
+   {
+    "user": "NDL_SENIOR",
+    "x": 100.0,
+    "recall": 0.9865,
+    "rows": 10.0,
+    "underfill": 0.0,
+    "index": true,
+    "mode": "APPROX",
+    "depth": 50,
+    "L": 150,
+    "fallbacks": 0
+   }
+  ],
+  "where": [
+   {
+    "user": "WHERE ROW_BUCKET < 10",
+    "x": 10.0,
+    "recall": 0.6831,
+    "rows": 7.88,
+    "underfill": 0.618,
+    "index": true,
+    "L": 90,
+    "ixscan_est_rows": 85.0
+   },
+   {
+    "user": "WHERE ROW_BUCKET < 25",
+    "x": 25.0,
+    "recall": 0.7888,
+    "rows": 8.61,
+    "underfill": 0.4045,
+    "index": true,
+    "L": 60,
+    "ixscan_est_rows": 39.0
+   },
+   {
+    "user": "WHERE ROW_BUCKET < 50",
+    "x": 50.0,
+    "recall": 0.8517,
+    "rows": 9.16,
+    "underfill": 0.3596,
+    "index": true,
+    "L": 50,
+    "ixscan_est_rows": 21.0
+   },
+   {
+    "user": "WHERE ROW_BUCKET < 75",
+    "x": 75.0,
+    "recall": 0.9213,
+    "rows": 9.6,
+    "underfill": 0.236,
+    "index": true,
+    "L": 50,
+    "ixscan_est_rows": 14.0
+   },
+   {
+    "user": "no filter",
+    "x": 100.0,
+    "recall": 0.9483,
+    "rows": 10.0,
+    "underfill": 0.0,
+    "index": true,
+    "L": 50,
+    "ixscan_est_rows": 10.0
+   }
+  ]
+ }
+}

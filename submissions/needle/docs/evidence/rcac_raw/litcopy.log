@@ -1,0 +1,7 @@
+  (ignored) [IBM][CLI Driver][DB2/LINUXX8664] SQL0204N  "NDL_DEV_RCAC.ADV_LIT" is an undefined name.  SQLSTATE=42704 SQLCODE=-204
+[litcopy] built NDL_DEV_RCAC.ADV_LIT: 26210 rows, index+runstats 66.5s
+wrote /home/codespace/ndl_rcac/rcac_litcopy.json
+[litcopy B_literal] P10 visible=2621 maxbucket=9 | APPROX10 recall=0.7653 rows=8.66 underfill=0.3824 | plan index=True L=102 est=102.0 FF=[(0.0989418774843216, '(Q1.ROW_BUCKET < 10)')] | approx25 recall=1.0 index=False | approx50 recall=1.0 index=False
+wrote /home/codespace/ndl_rcac/rcac_litcopy.json
+[litcopy A_sessionuser_literal] P10 visible=2621 maxbucket=9 | APPROX10 recall=1.0 rows=10.0 underfill=0.0 | plan index=False L=None est=None FF=[(0.04379936680197716, "(((USER = 'NDL_P10') AND (Q1.ROW_BUCKET < 10)) OR (USER = 'D")] | approx25 recall=1.0 index=False | approx50 recall=1.0 index=False
+wrote /home/codespace/ndl_rcac/rcac_litcopy.json

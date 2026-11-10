@@ -1,0 +1,19 @@
+## F3b temporary space per DB2VS search  (2026-11-10T02:08:27+00:00)
+
+```
+ibm_db_dbi connection autocommit: 0 (0 = off)
+start: TEMPSPACE1 used bytes (MON_GET_TABLESPACE)=32,768  container du bytes=8,704
+after DB2VS search 1 (k=10, no commit): used=26,902,528  du=26,847,744  (261 ms)
+after DB2VS search 2 (k=10, no commit): used=53,739,520  du=53,686,784  (273 ms)
+after DB2VS search 3 (k=10, no commit): used=80,576,512  du=80,525,824  (289 ms)
+after DB2VS search 4 (k=10, no commit): used=107,413,504  du=107,364,864  (270 ms)
+after DB2VS search 5 (k=10, no commit): used=134,250,496  du=134,203,904  (283 ms)
+after DB2VS search 6 (k=10, no commit): used=161,087,488  du=161,042,944  (254 ms)
+after DB2VS search 7 (k=10, no commit): used=187,924,480  du=187,881,984  (283 ms)
+after DB2VS search 8 (k=10, no commit): used=214,761,472  du=214,721,024  (274 ms)
+after dbi.commit(): used=214,761,472  du=8,704
+as executed by DB2VS (id, text, BSON2JSON(metadata), distance): 4 executions in one transaction -> du +107,356,160 bytes; after COMMIT du 8,704
+id, text, metadata (raw BLOB), distance: 4 executions in one transaction -> du +0 bytes; after COMMIT du 8,704
+id, distance only: 4 executions in one transaction -> du +0 bytes; after COMMIT du 8,704
+BSON2JSON applied after the top-k (outer query over FETCH FIRST 10): 4 executions in one transaction -> du +0 bytes; after COMMIT du 8,704
+```

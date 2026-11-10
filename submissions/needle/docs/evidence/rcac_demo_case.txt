@@ -1,0 +1,32 @@
+# RCAC demo case, run 2026-11-10T02:11:09+00:00
+# query text: "heap overflow in the image library's FlashPix JPEG decoder can lead to code execution, no CVE yet"
+# target: GHSA-5x8w-8jj5-q52h (synthetic demo embargo flag on a real advisory)
+
+== NDL_JUNIOR  (SESSION_USER=NDL_JUNIOR; rows with ADV_ID=GHSA-5x8w-8jj5-q52h visible to this user: 0)
+rank  ADV_ID                     RRF       KW_RANK  VEC_RANK  VEC_DIST
+   1  PYSEC-2026-565             0.02831       16         6  0.2283
+   2  GHSA-4r2x-xpjr-7cvv        0.02826       15         7  0.2285
+   3  PYSEC-2026-2804            0.02692        6        25  0.2506
+   4  PYSEC-2026-2825            0.02662        5        29  0.2518
+   5  GHSA-g7cr-3p24-7wf7        0.02650       17        14  0.2414
+   6  PYSEC-2026-697             0.02633        8        26  0.2506
+   7  PYSEC-2026-712             0.02604        7        30  0.2518
+   8  GHSA-m43c-649m-pm48        0.02545       11        28  0.2518
+   9  GHSA-267x-w5hx-8hjr        0.02542       14        24  0.2506
+  10  GHSA-8g5g-8vmr-9782        0.02425       56         4  0.2107
+-> GHSA-5x8w-8jj5-q52h rank for NDL_JUNIOR: NOT RETURNED
+
+== NDL_SENIOR  (SESSION_USER=NDL_SENIOR; rows with ADV_ID=GHSA-5x8w-8jj5-q52h visible to this user: 1)
+rank  ADV_ID                     RRF       KW_RANK  VEC_RANK  VEC_DIST
+   1  GHSA-5x8w-8jj5-q52h        0.03227        3         1  0.1979
+   2  PYSEC-2026-4330            0.02844        1        23  0.2462
+   3  PYSEC-2026-565             0.02775       18         7  0.2283
+   4  GHSA-4r2x-xpjr-7cvv        0.02769       17         8  0.2285
+   5  PYSEC-2026-2804            0.02620        8        27  0.2506
+   6  GHSA-g7cr-3p24-7wf7        0.02599       19        15  0.2414
+   7  PYSEC-2026-2825            0.02591        7        31  0.2518
+   8  PYSEC-2026-697             0.02565       10        28  0.2506
+   9  PYSEC-2026-712             0.02536        9        32  0.2518
+  10  GHSA-m43c-649m-pm48        0.02481       13        30  0.2518
+-> GHSA-5x8w-8jj5-q52h rank for NDL_SENIOR: 1
+

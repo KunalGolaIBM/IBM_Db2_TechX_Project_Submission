@@ -1,0 +1,45 @@
+# IBM Db2 12.1.5 Community Edition for NEEDLE.
+#
+# Requirements: Linux x86-64 Docker host (vector indexes are supported on Linux AMD64 only),
+# about 4 cores, 8-16 GB RAM, about 15 GB free disk. The image is about 2.6 GB compressed.
+#
+# Usage (from this folder, with .env created from .env.example):
+#   docker compose up -d
+#   docker compose ps          # wait until the db2 service is "healthy" (first start: several minutes)
+#   ./scripts/setup_db.sh      # creates VECDB with 32K pages and applies sql/*.sql
+#
+# docker compose reads DB2_PASSWORD from ./.env for variable substitution. It is never written here.
+# The settings below mirror the container that NEEDLE was built against (observed 2026-11-09).
+
+services:
+  db2:
+    image: icr.io/db2_community/db2:12.1.5.0
+    container_name: ${DB2_CONTAINER:-needle-db2}   # optional DB2_CONTAINER in .env (scripts/setup_db.sh reads it too)
+    privileged: true                      # required by IBM's documented run command for this image
+    ports:
+      - "127.0.0.1:${DB2_PORT:-50000}:50000"   # bind to localhost only; host port = DB2_PORT in .env
+    environment:
+      LICENSE: accept
+      DB2INSTANCE: db2inst1
+      DB2INST1_PASSWORD: ${DB2_PASSWORD:?Set DB2_PASSWORD in .env (copy .env.example to .env)}
+      TO_CREATE_SAMPLEDB: "false"
+      REPODB: "false"
+      ARCHIVE_LOGS: "false"
+      PERSISTENT_HOME: "true"
+      # No DBNAME: scripts/setup_db.sh creates VECDB with PAGESIZE 32 K.
+      # A 768-dim FLOAT32 vector index key needs a 16K or 32K page.
+    volumes:
+      - db2data:/database
+    healthcheck:
+      # The image's setup script touches this marker when it prints "(*) Setup has completed."
+      # (/var/db2_setup/lib/setup_db2_instance.sh; SETUP_COMPLETE=${CONFIG_DIR}/.shared-data/setup_complete).
+      # The marker lives on the volume. After a container restart it already exists, so also check
+      # `docker logs needle-db2` for a fresh "Setup has completed." line before connecting.
+      test: ["CMD-SHELL", "test -f /database/config/.shared-data/setup_complete"]
+      interval: 30s
+      timeout: 10s
+      retries: 60
+      start_period: 120s
+
+volumes:
+  db2data:

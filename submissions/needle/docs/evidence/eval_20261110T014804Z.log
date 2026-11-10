@@ -1,0 +1,53 @@
+run 20261110T014804Z: 450 queries, slices=['named', 'masked', 'paraphrase'], retrievers=['triage', 'bm25', 'exact', 'approx', 'rrf_client', 'exact_b50', 'approx_b50']
+loaded 450 query vectors from data/eval_qvecs.json.gz
+db facts: {"db2_level": [["DB2 v12.1.5.0", "special_85816"]], "session_user": "DB2INST1", "adv_doc_visible_rows": 26210, "adv_doc_rows_by_kind": [["GHSA", 6579], ["MAL", 11990], ["OSV", 11], ["PYSEC", 7630]], "adv_doc_indexes": [["ADV_DOC_CANON", "REG "], ["ADV_DOC_VIX", "VANN"], ["SQL261110012227340", "REG "]], "adv_doc_card_stats": [["26210", "2026-11-10 01:31:23.968119"]], "rcac": " ", "bm25_tables": [["CORPUS_STATS", 1], ["POSTING", 1944102], ["TERM_DF", 184278]], "triage_proc": "TRIAGE"}
+EXPLAIN exact: vector_index_in_plan=False ops=['RETURN', 'TBSCAN', 'SORT', 'TBSCAN'] err=None
+EXPLAIN approx: vector_index_in_plan=True ops=['RETURN', 'TBSCAN', 'SORT', 'FETCH', 'IXSCAN'] err=None
+EXPLAIN approx_b50: vector_index_in_plan=True ops=['RETURN', 'TBSCAN', 'SORT', 'FETCH', 'IXSCAN'] err=None
+EXPLAIN approx_depth100: vector_index_in_plan=True ops=['RETURN', 'TBSCAN', 'SORT', 'FETCH', 'IXSCAN'] err=None
+triage: 450 queries in 29.1s
+bm25: 450 queries in 23.6s
+exact: 450 queries in 40.9s
+approx: 450 queries in 1.3s
+rrf_client: 450 queries in 26.9s
+exact_b50: 450 queries in 20.0s
+approx_b50: 450 queries in 1.5s
+
+RELEVANCE (canon_id ground truth), run 20261110T014804Z
+retriever   slice         n    R@1    R@3   R@10    MRR   p50ms   p95ms  err
+triage      named       150  0.940  0.987  0.993  0.964    39.5    67.4    0
+triage      masked      150  0.993  1.000  1.000  0.997    96.0   157.5    0
+triage      paraphrase  150  0.233  0.360  0.453  0.302    46.2    75.4    1
+bm25        named       150  0.933  0.980  0.993  0.955    31.2    53.3    0
+bm25        masked      150  1.000  1.000  1.000  1.000    76.4   112.1    0
+bm25        paraphrase  150  0.213  0.233  0.340  0.241    43.3    75.0    0
+exact       named       150  0.940  0.980  0.993  0.960    88.2   116.0    0
+exact       masked      150  0.967  0.993  1.000  0.979    88.2   100.9    0
+exact       paraphrase  150  0.180  0.267  0.367  0.230    88.4   112.2    0
+approx      named       150  0.940  0.980  0.993  0.960     2.7     4.0    0
+approx      masked      150  0.960  0.987  0.993  0.972     2.7     3.8    0
+approx      paraphrase  150  0.180  0.253  0.360  0.225     2.7     4.0    0
+rrf_client  named       150  0.940  0.987  0.993  0.964    36.2    61.1    0
+rrf_client  masked      150  0.993  1.000  1.000  0.997    81.1   123.2    0
+rrf_client  paraphrase  150  0.233  0.360  0.453  0.302    52.0    96.0    1
+exact_b50   named        79  0.962  0.987  1.000  0.975    45.8    53.1    0
+exact_b50   masked       83  0.976  0.988  1.000  0.982    45.4    50.0    0
+exact_b50   paraphrase   83  0.229  0.289  0.458  0.285    40.0    49.9    0
+            filter check: {'predicate': 'ROW_BUCKET < 50', 'returned_rows': 4500, 'rows_violating_filter': 0}
+approx_b50  named        79  0.962  0.987  1.000  0.975     3.5     4.1    0
+approx_b50  masked       83  0.964  0.976  0.988  0.970     3.2     4.1    0
+approx_b50  paraphrase   83  0.229  0.277  0.410  0.276     2.9     4.0    0
+            filter check: {'predicate': 'ROW_BUCKET < 50', 'returned_rows': 4100, 'rows_violating_filter': 0}
+
+ANN FIDELITY (APPROX vs EXACT, same vector)
+approx_vs_exact         all         n= 450 overlap@10=0.97 min=0.1 identical=0.8378
+approx_vs_exact         named       n= 150 overlap@10=0.9873 min=0.8 identical=0.9133
+approx_vs_exact         masked      n= 150 overlap@10=0.9787 min=0.2 identical=0.88
+approx_vs_exact         paraphrase  n= 150 overlap@10=0.944 min=0.1 identical=0.72
+approx_b50_vs_exact_b50 all         n= 450 overlap@10=0.8813 min=0.1 identical=0.5378
+approx_b50_vs_exact_b50 named       n= 150 overlap@10=0.9133 min=0.4 identical=0.6667
+approx_b50_vs_exact_b50 masked      n= 150 overlap@10=0.888 min=0.4 identical=0.5533
+approx_b50_vs_exact_b50 paraphrase  n= 150 overlap@10=0.8427 min=0.1 identical=0.3933
+
+gate: triage named recall@10 = 0.9933 (min 0.8) -> passed
+wrote /tmp/ndl_eval2/eval/results/20261110T014804Z.json

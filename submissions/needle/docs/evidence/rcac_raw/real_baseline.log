@@ -1,0 +1,6 @@
+[baseline WHERE] p= 10 exact p50=16.99ms  approx10 recall=0.6818 returned=7.77 underfill=0.6235 L=90 ixrows=85.0 index=True | subquery approx10 recall=0.2059 returned=2.06 ixrows=21.0
+[baseline WHERE] p= 25 exact p50=36.4ms  approx10 recall=0.7871 returned=8.49 underfill=0.4647 L=60 ixrows=39.0 index=True | subquery approx10 recall=0.5029 returned=5.08 ixrows=21.0
+[baseline WHERE] p= 50 exact p50=66.09ms  approx10 recall=0.85 returned=9.02 underfill=0.3588 L=50 ixrows=21.0 index=True | subquery approx10 recall=0.85 returned=9.02 ixrows=21.0
+[baseline WHERE] p= 75 exact p50=98.31ms  approx10 recall=0.91 returned=9.42 underfill=0.3059 L=50 ixrows=14.0 index=True | subquery approx10 recall=0.9518 returned=9.99 ixrows=21.0
+[baseline WHERE] p=100 exact p50=129.4ms  approx10 recall=0.95 returned=10.0 underfill=0.0 L=50 ixrows=10.0 index=True
+wrote /home/codespace/ndl_rcac/rcac_real_results.json

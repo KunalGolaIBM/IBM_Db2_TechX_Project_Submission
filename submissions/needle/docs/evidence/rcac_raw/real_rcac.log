@@ -1,0 +1,6 @@
+[rcac] NDL_P10    session=['NDL_P10', 'NDL_P10'] visible=2616 oracle_equal=170/170 exact p50=16.55ms | approx10 recall=0.2053 returned=2.05 underfill=1.0 | approx100 recall=1.0 underfill=0.0 | L200 recall=0.2065 returned=2.06 | leaks=0
+[rcac] NDL_P25    session=['NDL_P25', 'NDL_P25'] visible=6570 oracle_equal=170/170 exact p50=36.16ms | approx10 recall=0.5024 returned=5.08 underfill=0.9706 | approx100 recall=1.0 underfill=0.0 | L200 recall=0.5071 returned=5.07 | leaks=0
+[rcac] NDL_P50    session=['NDL_P50', 'NDL_P50'] visible=13001 oracle_equal=170/170 exact p50=66.82ms | approx10 recall=0.8482 returned=9.0 underfill=0.3588 | approx100 recall=1.0 underfill=0.0 | L200 recall=0.8918 returned=8.94 | leaks=0
+[rcac] NDL_P75    session=['NDL_P75', 'NDL_P75'] visible=19632 oracle_equal=170/170 exact p50=109.76ms | approx10 recall=0.9518 returned=9.99 underfill=0.0059 | approx100 recall=1.0 underfill=0.0 | L200 recall=0.9947 returned=9.98 | leaks=0
+[rcac] NDL_SENIOR session=['NDL_SENIOR', 'NDL_SENIOR'] visible=26210 oracle_equal=170/170 exact p50=145.77ms | approx10 recall=0.95 returned=10.0 underfill=0.0 | approx100 recall=1.0 underfill=0.0 | L200 recall=0.9971 returned=10.0 | leaks=0
+wrote /home/codespace/ndl_rcac/rcac_real_results.json
