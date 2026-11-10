@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Monaco, Consolas, monospace;
+
+    /* FinSight AI Stage 8 Exact Brand Palette */
+    --brand-forest: #15370D;
+    --brand-sage: #728E6D;
+    --brand-gold: #E5CD82;
+    --brand-cream: #FFF2B4;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    letter-spacing: -0.011em;
+  }
+
+  /* Subtle scrollbar for modern browsers */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.5);
+  }
+}
