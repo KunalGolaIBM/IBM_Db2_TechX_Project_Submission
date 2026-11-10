@@ -1,0 +1,13 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY src ./src
+COPY pyproject.toml README.md ./
+
+RUN pip install --no-cache-dir "ibm_db>=3.2" "psycopg[binary]>=3.2" -e . && \
+    pip install --no-cache-dir -e .
+
+ENV PYTHONPATH=/app/src
+
+CMD ["python", "-m", "parity.bridge_client"]

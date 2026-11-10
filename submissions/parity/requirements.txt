@@ -1,0 +1,9 @@
+# Runtime dependencies for Parity.
+# Install with: pip install -r requirements.txt
+# For the full setup use: pip install -e ".[dev,db]"
+
+ibm_db>=3.2
+psycopg[binary]>=3.2
+
+# Optional, only for the CrewAI adapter:
+# crewai>=0.100

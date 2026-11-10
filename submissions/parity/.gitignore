@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Local memory for handover. Never push this folder.
+memory/
+logs/
+
+# Source proposal PDF. Not part of the codebase.
+*.pdf
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Build and reports
+build/
+dist/
+*.egg
+coverage/
+htmlcov/
+parity-*.html
+parity-*.json
