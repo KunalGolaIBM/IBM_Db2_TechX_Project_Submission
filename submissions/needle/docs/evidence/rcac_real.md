@@ -131,7 +131,7 @@ Observed plan difference: on ADV_COR the router's depth-100 text with the guidel
 vector index (IXSCAN est. 203, SRCHLSIZ 203; depth 200 + L 600: est. 406, SRCHLSIZ 406), while without the guideline
 depths 100 and 200 ran as table scans. On ADV_DOC the same depth-100 + L 300 text ran as a table scan. So at P50 the
 router ran true ANN on ADV_COR (6.2 ms, recall 0.965, 3 EXACT fallbacks for queries under 10 rows) but an exact scan
-on ADV_DOC (78.5 ms, recall 1.000). When n / FF exceeds the guideline's L, SRCHLSIZ shows n / FF (203, 406), not L.
+on ADV_DOC (78.5 ms, recall 1.000). SRCHLSIZ showed n / FF (203, 406), not the guideline's L (300, 600).
 Not run: other seeds, other k, the anti-correlated case.
 
 ## Demo case (applied after all measurements above were frozen)
@@ -206,8 +206,8 @@ vs NDL_P10's own EXACT on the copy. The copy was dropped afterwards. (Different 
 With row access control still active and the same authorized set, writing the permission as a literal moves the
 estimate to the true selectivity and under-fill shrinks to the literal-WHERE level (B), or the optimizer switches to an
 exact table scan (A, a plan-selection outcome, not ANN recall). In B, APPROX 25 and 50 already ran as table scans
-(recall 1.0, p50 16.8 / 19.2 ms). So the predicate's visibility to the optimizer, not RCAC or the size of the
-authorized set, drives the under-fill. A literal per-user permission does not scale to many users (one permission per
+(recall 1.0, p50 16.8 / 19.2 ms). So the estimate, not RCAC or the size of the authorized set, sets the size of the
+under-fill; with an accurate estimate 38 % of queries still under-fill (B). A literal per-user permission does not scale to many users (one permission per
 user, OR'ed), which is why NEEDLE keeps the entitlement-table permission and routes outside the engine.
 
 <!-- RESULTS: generated sections follow -->

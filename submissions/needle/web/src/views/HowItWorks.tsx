@@ -25,7 +25,7 @@ const EVIDENCE = [
   ["docs/evidence/rcac_real.md", "The finding: recall vs visibility, the shared plan, the router"],
   ["docs/evidence/g1_vector_index.md", "Access plans: IXSCAN on the vector index, and why k must be a literal"],
   ["docs/evidence/eval_final.md", "Retrieval quality: hybrid vs vector vs BM25 on synthetic paraphrases"],
-  ["docs/evidence/rcac_posting_overhead.md", "The 9x RCAC slowdown in the keyword leg, and the LATERAL fix"],
+  ["docs/evidence/rcac_posting_overhead.md", "The 6x RCAC slowdown in the keyword leg, and the LATERAL fix"],
   ["docs/evidence/triage_router_explain.md", "The router's depth per identity, with plans"],
   ["eval/results/rcac_recall_vs_selectivity.json", "The numbers behind the Finding charts"],
 ];

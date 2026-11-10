@@ -13,13 +13,13 @@
     "name": "Needlepoint",
     "members": [
       {
-        "name": "Kartikeya",
+        "name": "Kartikeya Lathi",
         "github": "KnigguKniggu-droid",
         "email": "",
         "role": "Db2 retrieval, row and column access control, evaluation"
       },
       {
-        "name": "William",
+        "name": "William Lu",
         "github": "wiiqz",
         "email": "",
         "role": "User interface, demo and presentation"
@@ -46,6 +46,6 @@
   "tech_stack": {
     "languages": ["Python", "SQL", "SQL PL", "TypeScript"],
     "frameworks": ["LangChain", "Haystack", "FastAPI", "React", "Vite", "Tailwind CSS", "Streamlit", "pytest"],
-    "ai_models": ["Ollama nomic-embed-text (768-dim embeddings)", "Ollama qwen3:14b (memo in the evidence runs; set by LLM_MODEL, the screenshots used qwen3:4b-instruct)"]
+    "ai_models": ["Ollama nomic-embed-text (768-dim embeddings)", "Ollama qwen3:14b (memo model, selected by LLM_MODEL)"]
   }
 }

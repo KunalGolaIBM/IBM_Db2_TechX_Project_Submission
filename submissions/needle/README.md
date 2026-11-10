@@ -3,8 +3,8 @@
 > **One-line pitch:** paste a vague security message ("the yaml loader can run code, no CVE yet"). NEEDLE returns the
 > matching advisories, the services that run an affected version, and since when. Keyword (BM25) and vector (DiskANN)
 > search run and fuse in one Db2 SQL statement, and Db2 row access control (RCAC) decides what each analyst may see.
-> We found that under row permissions Db2's vector index returns about 2 of 10 results to an analyst who may see 10 %
-> of the rows. NEEDLE measures why and routes around it: 10 of 10 rows, 0 leaks.
+> We found that under row permissions `FETCH APPROX FIRST 10` returns about 2 of 10 rows to an analyst who may see
+> 10 % of the rows. NEEDLE measures why and routes around it: 10 of 10 rows, 0 leaks.
 
 **Demo video:** TODO(final): YouTube link (under 3 minutes).
 
@@ -49,7 +49,8 @@ Source: [`docs/evidence/rcac_real.md`](docs/evidence/rcac_real.md).
    0.205; 36 of 170 queries returned zero rows. Every row that was returned was in the user's exact top-10.
 5. **The control: same RCAC, same 10 % set, permission written with a literal.** With row access control still
    active, `ROW_BUCKET < 10` as the permission moves the estimate to FF 0.0989 (IXSCAN est. 102) and recall goes
-   **0.205 -> 0.765** (rows 2.05 -> 8.66). So the predicate's visibility to the optimizer drives the under-fill.
+   **0.205 -> 0.765** (rows 2.05 -> 8.66). So the estimate sets the size of the under-fill; with an accurate
+   estimate 38 % of queries still under-fill.
 6. **What it is.** This is **a selectivity-estimation and filtered top-K interaction, not an RCAC defect; RCAC makes
    it unavoidable and invisible to the application.** The entitlement subquery hides the per-user value from the
    optimizer, and the application cannot add a better predicate because the permission is outside its SQL.
@@ -110,8 +111,8 @@ P50 the router's depth-100 statement with the `SEARCH_LIST_SIZE` guideline kept 
 table scan on `ADV_DOC`.
 
 **More findings from the same run** ([`docs/evidence/rcac_real.md`](docs/evidence/rcac_real.md)):
-- **Plan switch.** Db2 keeps the vector index while n / FF stays at about 100-134 estimated candidates and switches
-  to a table scan above that. Under RCAC, `FETCH APPROX FIRST 50` uses the index (est. 102) and `FETCH APPROX FIRST
+- **Plan switch.** On `ADV_DOC`, Db2 keeps the vector index up to 134 estimated candidates and switches to a table
+  scan at about 200 or more. Under RCAC, `FETCH APPROX FIRST 50` uses the index (est. 102) and `FETCH APPROX FIRST
   100` is an exact table scan.
 - **`SEARCH_LIST_SIZE` fixes quality, not count.** With L = 200 the vector IXSCAN estimate stays 21. NDL_P10 stays
   at 2.06 rows; NDL_P75 recall goes 0.952 -> 0.995. Only the FETCH depth changes the candidate count.
@@ -245,8 +246,7 @@ Query: "heap overflow in the image library's FlashPix JPEG decoder can lead to c
 ## AI / LLM Architecture
 - **Framework:** LangChain (`langchain-core` `BaseRetriever`, `ChatOllama`).
 - **Models:** Ollama `nomic-embed-text` (768-dim embeddings; prefixes `search_document: ` / `search_query: `);
-  Ollama `qwen3:14b` for the memo in the evidence runs (`LLM_MODEL` selects it; the screenshots used
-  `qwen3:4b-instruct`). Everything runs locally. No cloud key is needed.
+  the memo model is Ollama `qwen3:14b`, selected by `LLM_MODEL`. Everything runs locally. No cloud key is needed.
 - **Workflow:** sign-in -> query -> tokens + embedding -> router picks the search depth for the session user ->
   `NEEDLE.TRIAGE` on the analyst's own connection -> fused rows -> exact SBOM join -> optional memo -> verifier -> UI.
 - **What the LLM does not do:** it does not decide which advisory matches, which service is affected, or who may see
@@ -408,7 +408,7 @@ finally:
 
 **Search depth.** The web UI, the Streamlit page, `Db2HybridRetriever`, `needle.triage.triage()` and the CLI ask the router
 unless a depth is given. `TRIAGE` then uses depth 50 for high-visibility users (the vector leg keeps IXSCAN on
-`ADV_DOC_VIX`) and depth 128 for low-visibility users (Db2 runs the vector leg as an exact table scan)
+`ADV_DOC_VIX`) and depth 128 for low-visibility users (at 26,210 rows Db2 chose an exact table scan; a plan choice, not a guarantee)
 ([`docs/evidence/triage_router_explain.md`](docs/evidence/triage_router_explain.md)). The page prints the depth it
 used, for example "Search depth 128 chosen for your visibility (2,616 of 26,210 advisories visible): exact scan" for
 NDL_P10, which then gets 10 of 10 rows per leg ([`docs/evidence/fix_h1.txt`](docs/evidence/fix_h1.txt)).
@@ -514,6 +514,7 @@ Recorded test runs (each file holds the output; the "What" column says what ran)
 
 | What | Result | Evidence |
 |---|---|---|
+| Full suite, final run: unit tests and `-m db` tests against live Db2 | 206 passed (166 unit + 40 DB) | [`docs/evidence/pytest_final.txt`](docs/evidence/pytest_final.txt) |
 | RCAC leak tests + TRIAGE as each user, after the demo embargo and the statistics fix | 35 passed (11 unit + 24 DB) | `docs/evidence/rcac_raw/pytest_all_after_demo_embargo.log` |
 | BM25 statistics fix: no SELECT on TERM_DF / CORPUS_STATS, difference attack empty, SQL BM25 = rank_bm25 | 6 passed | [`docs/evidence/fix_c1_h2.txt`](docs/evidence/fix_c1_h2.txt) |
 | Memo verifier (H1 status claims, M1 obfuscated IDs, M2 payloads) | 48 passed | [`docs/evidence/fix_h1.txt`](docs/evidence/fix_h1.txt) |
@@ -608,8 +609,7 @@ them. The router line shows the depth chosen for this identity.
 
 **2. Services and the verified memo.** An exposure timeline from the temporal SBOM history (AFFECTED since 2020-02-27,
 and the windows that ended), exposure grouped by service with the advisories behind each status; the memo
-from the local model (`qwen3:4b-instruct` via LangChain in this screenshot; the evidence runs used `qwen3:14b`)
-after the verifier.
+from the local model (`qwen3:14b` via LangChain, selected by `LLM_MODEL`) after the verifier.
 ![Affected services and the verified memo](docs/screenshots/02_exposure_memo.png)
 
 **3. Same query, three Db2 identities.** The Pillow FlashPix prompt: Db2 returns the two embargoed advisories to
@@ -621,7 +621,7 @@ NDL_SENIOR (hybrid ranks 1 and 2) and to nobody else; NDL_P10 (10% visibility) g
 ![Recall vs visibility under RCAC, with the router](docs/screenshots/04_rcac_recall_chart.png)
 
 **5. Access plans.** `FETCH APPROX FIRST 10` uses `IXSCAN` on `VECIDX: NEEDLE.ADV_DOC_VIX`; `FETCH APPROX FIRST ?`
-falls back to a table scan (from `docs/evidence/g1_vector_index.md`).
+falls back to a table scan (standalone SELECT before RCAC; from `docs/evidence/g1_vector_index.md`).
 ![Access plans: literal k vs parameter marker](docs/screenshots/05_explain_vector_index.png)
 
 **6. One plan for everyone.** Package-cache deltas after each identity: one executable id, the same rows read,
@@ -632,9 +632,10 @@ different rows returned (`eval/results/rcac_plancache.json`).
 period, 27 embargoed rows; then the visible rows per identity ([`docs/evidence/verify_db2.txt`](docs/evidence/verify_db2.txt)).
 ![Db2 CLP verification](docs/screenshots/07_verify_db2_clp.png)
 
-**8. Tests.** RCAC leak tests against the live database, and the verifier + API tests. This screenshot is a later
-run than the logs in the table above: `-m db` on `tests/test_rcac.py` and `tests/test_triage_rcac.py` shows 28 passed,
-11 deselected; `tests/test_verify.py` and `tests/test_api.py` show 67 passed.
+**8. Tests.** RCAC leak tests against the live database, and the verifier + API tests. The screenshot shows `-m db`
+on `tests/test_rcac.py` and `tests/test_triage_rcac.py`: 28 passed, 11 deselected; `tests/test_verify.py` and
+`tests/test_api.py`: 67 passed. The final full run (206 passed, 40 of them against live Db2) is in
+[`docs/evidence/pytest_final.txt`](docs/evidence/pytest_final.txt).
 ![Tests passing](docs/screenshots/08_tests_passing.png)
 
 ## Security
@@ -712,6 +713,9 @@ run than the logs in the table above: `-m db` on `tests/test_rcac.py` and `tests
   indicative, not as benchmarks.
 - **Low visibility changes the plan.** Cells that run as a table scan are exact search, not approximate recall, and
   are labelled that way.
+- **TRIAGE vs the evaluated router.** The held-out recall@10 0.987-1.000 is the vector leg run through `needle.rcac`
+  with the `SEARCH_LIST_SIZE` guideline. `NEEDLE.TRIAGE` uses depth 50 or 128 without the guideline; its recall per
+  user is not measured ([`docs/evidence/triage_router_explain.md`](docs/evidence/triage_router_explain.md)).
 - **Version matching is exact.** AFFECTED needs an enumerated version in OSV. If an advisory names a deployed package
   but lists only ranges, the service is UNKNOWN_COVERAGE. NEEDLE never reports "safe".
 - **Synthetic parts:** the service fleet, the embargo dates and the injection test are synthetic. OSV has no embargo
@@ -732,13 +736,13 @@ post-filtering, `TRUNCATE` with a vector index, temporary space) in [`docs/CONNE
 - **[PR #49 (AsOf)](https://github.com/KunalGolaIBM/IBM_Db2_TechX_Project_Submission/pull/49):** published APPROX vs
   EXACT, including a filtered case (one 50 %-selective date filter on synthetic 384-dim vectors), and
   the finding that `FETCH APPROX FIRST ? ROWS` does not use the index. NEEDLE extends this to row permissions: real
-  768-dim text embeddings, six real Db2 users, the shared plan and its filter factor, a control, and a router.
+  768-dim text embeddings, six real Db2 analyst identities (five visibility levels plus NDL_JUNIOR), the shared plan and its filter factor, a control, and a router.
 
 ## Team Members & Credits
 | Name | GitHub Handle | Role / Contribution |
 |---|---|---|
-| Kartikeya | [@KnigguKniggu-droid](https://github.com/KnigguKniggu-droid) | Db2 retrieval, RCAC, evaluation |
-| William | [@wiiqz](https://github.com/wiiqz) | User interface, demo and presentation |
+| Kartikeya Lathi | [@KnigguKniggu-droid](https://github.com/KnigguKniggu-droid) | Db2 retrieval, RCAC, evaluation |
+| William Lu | [@wiiqz](https://github.com/wiiqz) | User interface, demo and presentation |
 
 Team name: **Needlepoint**.
 

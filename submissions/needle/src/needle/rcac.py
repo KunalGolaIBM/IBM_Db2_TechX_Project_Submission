@@ -6,7 +6,8 @@ other predicates, and applies those predicates to the candidates at FETCH (over-
 21 rows out of the vector IXSCAN for n = 10). A row permission compares ROW_BUCKET with a per-user value from a
 subquery on SESSION_USER, so every user shares one plan with the constant observed estimate FF = 0.495. Users who
 see less than about half the table get fewer than k rows (NDL_P10: 2.05 of 10, recall 0.205). SEARCH_LIST_SIZE does
-not change the candidate count; only n does, and from n / FF > ~100-134 Db2 switches to an exact table scan.
+not change the candidate count; only n does. On ADV_DOC, Db2 keeps the vector index up to 134 estimated candidates
+(n / FF) and switches to an exact table scan at about 200 or more.
 
 The router looks up, once per (session user, table, k), how many rows that user can see (COUNT(*) under RCAC) and
 the table cardinality (SYSCAT.TABLES.CARD), and picks one of a few fixed statement texts:

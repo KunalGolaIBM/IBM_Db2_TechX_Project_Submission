@@ -34,7 +34,8 @@ MODES = ("HYBRID", "KW", "VEC")
 # depth / 0.495: depth 50 (~101 candidates) keeps IXSCAN on ADV_DOC_VIX; from depth 100 Db2 switches to an exact
 # table scan (docs/evidence/rcac_real.md, docs/evidence/triage_router_explain.md).
 TRIAGE_APPROX_DEPTH = 50   # router says APPROX with depth <= 50 (high visibility): ANN through the vector index
-TRIAGE_DEEP_DEPTH = 128    # router says EXACT or a deeper APPROX (low visibility): exact scan, full recall
+TRIAGE_DEEP_DEPTH = 128    # router says EXACT or a deeper APPROX (low visibility): exact scan (the optimizer's
+                           # choice at 26,210 rows), full recall in our runs
 SQL0901N_DEPTHS = (99, 100)  # FETCH APPROX FIRST 99/100 raised SQL0901N on 12.1.5.0 (eval_sql0901n_fetch_approx.md)
 
 

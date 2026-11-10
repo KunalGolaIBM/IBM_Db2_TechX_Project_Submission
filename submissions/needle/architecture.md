@@ -49,7 +49,7 @@ graph TD
     F -->|"ADV_ID, RRF, KW_RANK, VEC_RANK, VEC_DIST"| R
     R -->|"ADV_DOC rows readable on the same connection"| X
     X -->|"AFFECTED / PREVIOUSLY_AFFECTED / NOT_CONFIRMED / UNKNOWN_COVERAGE"| UI2["UI tables"]
-    X -->|"rows as delimited untrusted data"| LLM["Ollama LLM_MODEL via LangChain<br/>qwen3:14b in the evidence runs<br/>qwen3:4b-instruct in the screenshots"]
+    X -->|"rows as delimited untrusted data"| LLM["Ollama LLM_MODEL via LangChain<br/>memo model qwen3:14b"]
     LLM --> V["Verifier: deterministic sentence filter"]
     V --> UI2
     UI2 --> U
@@ -344,8 +344,8 @@ Design points, each measured (`docs/evidence/triage_explain.md`, `docs/evidence/
   so the caller's row permission applies to both legs. A temporary-table variant was built, measured and replaced.
 - **`FETCH APPROX` inside a CTE keeps the vector index.** EXPLAIN of the fused statement shows IXSCAN on
   `VECIDX NEEDLE.ADV_DOC_VIX` inside the vector CTE; the fusion is a full outer hash join.
-- **Depth is a literal.** `FETCH APPROX FIRST ? ROWS` (a parameter marker) never uses the vector index on 12.1.5
-  (TBSCAN in EXPLAIN), so the procedure validates k and depth and writes them as literals. The vector and the terms
+- **Depth is a literal.** `FETCH APPROX FIRST ? ROWS` (a parameter marker) did not use, in our EXPLAIN, the vector
+  index on 12.1.5 (TBSCAN), so the procedure validates k and depth and writes them as literals. The vector and the terms
   stay bound (`OPEN ... USING`).
 - **Deterministic order.** `RANK() OVER` uses `ADV_ID` as tie-break in both legs and in the final `ORDER BY`.
 - **Depth per user under RCAC.** Depth 50 runs IXSCAN on the vector index (est. 102 candidates, about 50 after the
