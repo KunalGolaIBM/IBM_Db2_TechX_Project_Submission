@@ -1,0 +1,545 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ask the Data (Natural Language to IBM Db2 SQL) | CPGRAMS</title>
+    <meta name="description" content="Query live IBM Db2 citizen grievance database using plain English with LangChain AI and strict read-only security guardrails.">
+        <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%231a2744'/><text y='68' x='12' font-size='58' font-family='Arial,sans-serif' font-weight='bold' fill='white'>CP</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        .query-box-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+        }
+        .sql-code-box {
+            background: #0f172a;
+            color: #38bdf8;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            padding: 1.25rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            position: relative;
+            margin: 1rem 0;
+            border-left: 4px solid #0284c7;
+        }
+        .sql-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        .chip-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+        .question-chip {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8125rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .question-chip:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+            border-color: #94a3b8;
+        }
+        .guardrail-badge {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+        }
+        .results-table th {
+            background: #f8fafc;
+            color: #475569;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .results-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            color: #1e293b;
+        }
+        .results-table tr:hover {
+            background: #f8fafc;
+        }
+        .meta-pill {
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+        .copy-sql-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .copy-sql-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .db2-chip {
+            background: #0043ce;
+            color: #ffffff;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="container">
+            <div class="top-bar__inner">
+                <div class="top-bar__left">
+                    <span class="gov-text">GOVERNMENT OF INDIA &bull; CPGRAMS PORTAL</span>
+                </div>
+                <div class="top-bar__right">
+                    <span class="db2-chip">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                        IBM Db2 & LangChain Engine
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Header -->
+    <header class="main-header">
+        <div class="container">
+            <div class="brand">
+                <div class="brand-logo" aria-hidden="true">CP</div>
+                <div class="brand-text">
+                    <h1>CPGRAMS</h1>
+                    <span class="brand-subtitle">Centralized Public Grievance Redress & Monitoring System</span>
+                </div>
+            </div>
+                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                <span id="db2-live-badge" class="db2-live-badge db2-badge--checking" title="IBM Db2 connection status" aria-live="polite">
+                    <span class="db2-pulse"></span>
+                    <span id="db2-badge-text">IBM Db2…</span>
+                </span>
+                <button class="menu-toggle" aria-expanded="false" aria-controls="main-nav" aria-label="Toggle navigation menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            </button>
+            </div>
+            <nav id="main-nav" class="main-nav">
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="lodge-grievance.html">Lodge Grievance</a></li>
+                    <li><a href="track-status.html">Track Status</a></li>
+                    <li><a href="officer.html">Officer Portal</a></li>
+                    <li><a href="dashboard.html">Analytics Dashboard</a></li>
+                    <li><a href="ask-data.html" class="active" aria-current="page">Ask the Data (AI)</a></li>
+                    <li><a href="help-faq.html">Help & FAQs</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Breadcrumb -->
+    <nav aria-label="Breadcrumb" class="breadcrumb-container">
+        <div class="container">
+            <ol class="breadcrumb">
+                <li><a href="index.html">Home</a></li>
+                <li aria-current="page">Ask the Data (Natural Language SQL Engine)</li>
+            </ol>
+        </div>
+    </nav>
+
+    <main id="main-content" class="container" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        <!-- Header Banner -->
+        <div style="margin-bottom: 2rem;">
+            <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+                <span class="guardrail-badge">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    Strict Read-Only Guardrails Active
+                </span>
+                <span class="meta-pill">LangChain SQL Chain</span>
+                <span class="meta-pill" style="background: #f1f5f9; color: #475569;">Db2 Dialect: FETCH FIRST</span>
+            </div>
+            <h2 style="font-size: 2rem; color: #0f172a; margin: 0 0 0.5rem; font-weight: 800;">"Ask the Data" Natural Language Query Engine</h2>
+            <p style="color: #64748b; margin: 0; max-width: 820px;">
+                Ask questions about citizen grievances in plain English. LangChain translates your question into compliant 
+                <strong>IBM Db2 SQL</strong>, validates security guardrails (rejecting DDL/DML, multi-statement injection, and unlisted tables), 
+                and executes directly against <strong>IBM Db2 GRIEVDB</strong>.
+            </p>
+        </div>
+
+        <!-- Query Input Card -->
+        <div class="query-box-card">
+            <label for="query-input" style="font-weight: 700; color: #1e293b; display: block; margin-bottom: 0.5rem; font-size: 1rem;">
+                Enter your question in plain English:
+            </label>
+            <div style="display: flex; gap: 0.75rem;">
+                <input 
+                    type="text" 
+                    id="query-input" 
+                    placeholder="e.g., Which municipal ward has the highest number of complaints?" 
+                    style="flex: 1; padding: 0.75rem 1rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1rem;"
+                >
+                <button type="button" class="btn btn--primary" id="btn-ask" style="padding: 0.75rem 1.75rem; font-weight: 600;">
+                    Ask Db2 &rarr;
+                </button>
+            </div>
+
+            <!-- Suggestion Chips -->
+            <div style="margin-top: 1.25rem;">
+                <span style="font-size: 0.8125rem; color: #64748b; font-weight: 600;">Try these suggested queries:</span>
+                <div class="chip-container">
+                    <button type="button" class="question-chip" data-q="Which municipal ward has the highest number of grievances?">Top complaint wards</button>
+                    <button type="button" class="question-chip" data-q="Show all grievances that have breached the 15 day SLA">SLA breaches (>15 days)</button>
+                    <button type="button" class="question-chip" data-q="What are the most critical unresolved grievances?">Critical unresolved issues</button>
+                    <button type="button" class="question-chip" data-q="List grievance breakdown by government department">Department breakdown</button>
+                    <button type="button" class="question-chip" data-q="Show all water contamination and supply complaints">Water supply complaints</button>
+                    <button type="button" class="question-chip" data-q="How many grievances are currently resolved vs pending?">Resolution breakdown</button>
+                    <button type="button" class="question-chip" data-q="DROP TABLE grievances;" style="color: #b91c1c; border-color: #fecaca; background: #fff5f5;">Test Security Guardrail (DROP)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="query-loading" style="display: none; text-align: center; padding: 2rem;">
+            <div style="display: inline-block; width: 36px; height: 36px; border: 3px solid #e2e8f0; border-top-color: #0043ce; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <p style="color: #64748b; font-weight: 500; margin-top: 0.75rem;">Executing query via LangChain on IBM Db2...</p>
+        </div>
+        <style>
+            @keyframes spin { to { transform: rotate(360deg); } }
+        </style>
+
+        <!-- Guardrail Error Alert -->
+        <div id="guardrail-alert" style="display: none; background: #fef2f2; border-left: 4px solid #dc2626; padding: 1.25rem; border-radius: 6px; margin-bottom: 2rem;">
+            <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" style="flex-shrink: 0;"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <div>
+                    <h4 style="margin: 0 0 0.25rem; color: #991b1b; font-size: 0.9375rem;">Security Guardrail Triggered</h4>
+                    <p id="guardrail-alert-msg" style="margin: 0; color: #b91c1c; font-size: 0.875rem;">Access violation.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Card -->
+        <div id="results-card" style="display: none;" class="analytics-section">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <span class="sql-label">Generated IBM Db2 SQL Query</span>
+                    <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
+                        <span class="meta-pill" id="meta-engine">IBM Db2 Community Edition</span>
+                        <span class="meta-pill" id="meta-method" style="background: #f0fdf4; color: #166534;">LangChain SQL Chain</span>
+                        <span class="meta-pill" id="meta-time" style="background: #faf5ff; color: #7e22ce;">-- ms</span>
+                        <span class="meta-pill" id="meta-rows" style="background: #f8fafc; color: #334155;">-- rows</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Natural Language Summary (Explain the Query) -->
+            <div id="natural-summary-box" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 1rem 1.25rem; margin-top: 1rem; display: flex; align-items: flex-start; gap: 0.75rem;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <div>
+                    <span style="font-size: 0.75rem; font-weight: 700; color: #166534; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.25rem;">
+                        LangChain Data Insight (Executive Takeaway)
+                    </span>
+                    <p id="natural-summary-text" style="margin: 0; font-size: 0.9375rem; color: #14532d; font-weight: 500; line-height: 1.4;">
+                        Analyzing data...
+                    </p>
+                </div>
+            </div>
+
+            <!-- SQL Code Block -->
+            <div class="sql-code-box">
+                <button type="button" class="copy-sql-btn" id="btn-copy-sql">Copy SQL</button>
+                <code id="sql-display">-- SQL will render here</code>
+            </div>
+
+            <!-- Tabular Live Db2 Results -->
+            <div style="margin-top: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <h3 style="font-size: 1.125rem; margin: 0; color: #0f172a; font-weight: 700;">Live Query Results</h3>
+                        <span id="results-count-label" style="font-size: 0.8125rem; color: #64748b;">Showing live rows from Db2</span>
+                    </div>
+                    <button type="button" class="btn btn--secondary" id="btn-export-csv" style="font-size: 0.8125rem; padding: 0.4rem 0.8rem; display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Export CSV
+                    </button>
+                </div>
+                <div style="overflow-x: auto; max-height: 450px;">
+                    <table class="results-table" id="query-results-table">
+                        <thead id="query-table-head"></thead>
+                        <tbody id="query-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Guardrail Architectural Reference -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; margin-top: 2rem;">
+            <h4 style="margin: 0 0 0.5rem; color: #334155; font-size: 0.9375rem;">🛡️ Db2Hack Guardrail Architecture & Security Rules</h4>
+            <p style="margin: 0 0 0.75rem; font-size: 0.875rem; color: #64748b; line-height: 1.5;">
+                To guarantee zero risk to production government data, all natural language queries pass through a multi-tier deterministic validation pipeline before reaching the Db2 query compiler:
+            </p>
+            <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.8125rem; color: #475569; line-height: 1.6;">
+                <li><strong>Read-Only Enforcement:</strong> Query must start with <code>SELECT</code>. Keywords like <code>INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, MERGE, CALL, EXEC</code> are rejected immediately.</li>
+                <li><strong>Injection Prevention:</strong> Semicolons (statement chaining) and SQL comments (<code>--</code>, <code>/* */</code>) are banned.</li>
+                <li><strong>Table Whitelisting:</strong> Access is restricted strictly to <code>departments</code>, <code>grievances</code>, and <code>grievance_updates</code>. Access to catalog tables (e.g. <code>SYSCAT</code>) is blocked.</li>
+                <li><strong>Dialect Compliance:</strong> Postgres/MySQL <code>LIMIT</code> is converted to Db2-native <code>FETCH FIRST N ROWS ONLY</code>.</li>
+            </ul>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer__grid">
+                <div class="footer__col">
+                    <h3 class="footer__title">CPGRAMS</h3>
+                    <p class="footer__desc">Centralized Public Grievance Redress and Monitoring System, Department of Administrative Reforms & Public Grievances, Government of India.</p>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">Quick Links</h4>
+                    <ul class="footer__links">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="lodge-grievance.html">Lodge Grievance</a></li>
+                        <li><a href="track-status.html">Track Status</a></li>
+                        <li><a href="dashboard.html">Analytics Dashboard</a></li>
+                        <li><a href="ask-data.html">Ask the Data (AI)</a></li>
+                        <li><a href="help-faq.html">Help & FAQs</a></li>
+                    </ul>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">IBM Db2 Integration</h4>
+                    <p style="font-size: 0.8125rem; color: #94a3b8; line-height: 1.6;">
+                        IBM Db2Hack 2026 Submission.<br>
+                        Engine: IBM Db2 Community Edition<br>
+                        Database: GRIEVDB (port 50000)<br>
+                        AI Framework: LangChain Core
+                    </p>
+                </div>
+            </div>
+            <div class="footer__bottom">
+                <p>&copy; 2026 CPGRAMS Portal &bull; IBM Db2Hack Submission &bull; Government of India</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const queryInput = document.getElementById("query-input");
+            const btnAsk = document.getElementById("btn-ask");
+            const loading = document.getElementById("query-loading");
+            const alertBox = document.getElementById("guardrail-alert");
+            const alertMsg = document.getElementById("guardrail-alert-msg");
+            const resultsCard = document.getElementById("results-card");
+            const sqlDisplay = document.getElementById("sql-display");
+            const naturalSummaryText = document.getElementById("natural-summary-text");
+            const tableHead = document.getElementById("query-table-head");
+            const tableBody = document.getElementById("query-table-body");
+            const metaTime = document.getElementById("meta-time");
+            const metaRows = document.getElementById("meta-rows");
+            const metaMethod = document.getElementById("meta-method");
+            const copyBtn = document.getElementById("btn-copy-sql");
+            const exportCsvBtn = document.getElementById("btn-export-csv");
+
+            let activeQueryRows = [];
+            let activeQueryColumns = [];
+
+            // Chip click handler
+            document.querySelectorAll(".question-chip").forEach(chip => {
+                chip.addEventListener("click", () => {
+                    queryInput.value = chip.getAttribute("data-q");
+                    submitQuery();
+                });
+            });
+
+            btnAsk.addEventListener("click", submitQuery);
+            queryInput.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") submitQuery();
+            });
+
+            copyBtn.addEventListener("click", () => {
+                navigator.clipboard.writeText(sqlDisplay.textContent);
+                copyBtn.textContent = "Copied!";
+                setTimeout(() => copyBtn.textContent = "Copy SQL", 2000);
+            });
+
+            // CSV Export Handler
+            exportCsvBtn.addEventListener("click", () => {
+                if (!activeQueryRows || activeQueryRows.length === 0) {
+                    alert("No data available to export.");
+                    return;
+                }
+                const header = activeQueryColumns.join(",");
+                const csvLines = activeQueryRows.map(row => 
+                    activeQueryColumns.map(col => {
+                        let val = row[col] === null || row[col] === undefined ? "" : String(row[col]);
+                        if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+                            val = `"${val.replace(/"/g, '""')}"`;
+                        }
+                        return val;
+                    }).join(",")
+                );
+                const csvContent = "data:text/csv;charset=utf-8," + [header, ...csvLines].join("\n");
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "db2_grievance_export.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+
+            async function submitQuery() {
+                const question = queryInput.value.trim();
+                if (!question) return;
+
+                // Reset state
+                alertBox.style.display = "none";
+                resultsCard.style.display = "none";
+                loading.style.display = "block";
+
+                try {
+                    const response = await fetch("/api/ask", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ question: question })
+                    });
+
+                    loading.style.display = "none";
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        alertMsg.textContent = err.detail || "Query was rejected by security guardrails or failed execution.";
+                        alertBox.style.display = "block";
+                        return;
+                    }
+
+                    const data = await response.json();
+
+                    activeQueryRows = data.rows || [];
+                    activeQueryColumns = data.columns || [];
+
+                    // Show Results
+                    sqlDisplay.textContent = data.generated_sql;
+                    naturalSummaryText.textContent = data.natural_summary || data.explanation || "Query executed successfully on IBM Db2.";
+                    metaTime.textContent = `${data.execution_time_ms} ms`;
+                    metaRows.textContent = `${data.row_count} rows`;
+                    metaMethod.textContent = data.method === "langchain_llm" ? "LangChain LLM Chain" : "Deterministic Fallback";
+
+                    // Build Table
+                    tableHead.innerHTML = "";
+                    tableBody.innerHTML = "";
+
+                    if (data.columns && data.columns.length > 0) {
+                        const trHead = document.createElement("tr");
+                        data.columns.forEach(col => {
+                            const th = document.createElement("th");
+                            th.textContent = col.toUpperCase();
+                            trHead.appendChild(th);
+                        });
+                        tableHead.appendChild(trHead);
+
+                        if (data.rows.length === 0) {
+                            tableBody.innerHTML = `<tr><td colspan="${data.columns.length}" style="text-align: center; color: #94a3b8; padding: 2rem;">No matching records found in IBM Db2.</td></tr>`;
+                        } else {
+                            data.rows.forEach(row => {
+                                const tr = document.createElement("tr");
+                                data.columns.forEach(col => {
+                                    const td = document.createElement("td");
+                                    const val = row[col];
+                                    td.textContent = (val !== null && val !== undefined) ? val : "NULL";
+                                    tr.appendChild(td);
+                                });
+                                tableBody.appendChild(tr);
+                            });
+                        }
+                    }
+
+                    resultsCard.style.display = "block";
+                } catch (e) {
+                    loading.style.display = "none";
+                    alertMsg.textContent = `Network / Execution Error: ${e.message}`;
+                    alertBox.style.display = "block";
+                }
+            }
+
+            // Run initial default query
+            submitQuery();
+        });
+    </script>
+    <script>
+    (function() {
+        var badge = document.getElementById('db2-live-badge');
+        var badgeText = document.getElementById('db2-badge-text');
+        if (!badge) return;
+        var API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:8000/api' : '/api';
+        function checkDb2() {
+            fetch(API + '/health', { method: 'GET', cache: 'no-cache' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.database && data.database.status === 'connected') {
+                        badge.className = 'db2-live-badge';
+                        badgeText.textContent = 'IBM Db2 Live ✓';
+                        badge.title = 'Connected to ' + data.database.database + ' · ' + data.database.total_grievances + ' dockets';
+                    } else {
+                        badge.className = 'db2-live-badge db2-badge--error';
+                        badgeText.textContent = 'Db2 Degraded';
+                    }
+                }).catch(function() {
+                    badge.className = 'db2-live-badge db2-badge--error';
+                    badgeText.textContent = 'Db2 Offline';
+                });
+        }
+        checkDb2();
+        setInterval(checkDb2, 30000);
+    })();
+    </script>
+</body>
+</html>
+

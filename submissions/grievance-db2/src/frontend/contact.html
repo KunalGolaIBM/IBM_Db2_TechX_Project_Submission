@@ -1,0 +1,275 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Contact & Support - CPGRAMS, Department of Administrative Reforms and Public Grievances, Government of India.">
+    <title>Contact & Support - CPGRAMS | Government of India</title>
+        <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%231a2744'/><text y='68' x='12' font-size='58' font-family='Arial,sans-serif' font-weight='bold' fill='white'>CP</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <!-- 1. Government Identity Bar -->
+    <div class="gov-bar">
+        <div class="container">
+            <div class="gov-identity">
+                <svg width="20" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="emblem" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                <span data-i18n="gov_identity">Government of India</span>
+            </div>
+            <div class="gov-tools">
+                <div class="accessibility-tools" aria-label="Accessibility options">
+                    <button type="button" aria-label="Decrease text size">A-</button>
+                    <button type="button" aria-label="Normal text size">A</button>
+                    <button type="button" aria-label="Increase text size">A+</button>
+                    <button type="button" aria-label="High contrast mode">Contrast</button>
+                    <button type="button" id="btn-theme-toggle" aria-label="Toggle Dark Mode" title="Toggle Dark/Light Mode">🌙 Dark</button>
+                    <button type="button" id="btn-history-toggle" class="btn-history-toggle" aria-label="View Recent Grievances" title="View Recent Grievances">📋 My Grievances</button>
+                </div>
+                <div class="language-selector">
+                    <label for="lang-select" class="sr-only">Select Language</label>
+                    <select id="lang-select" class="lang-select" aria-label="Select Language">
+                        <option value="en">English</option>
+                        <option value="hi">हिन्दी (Hindi)</option>
+                        <option value="bn">বাংলা (Bengali)</option>
+                        <option value="ta">தமிழ் (Tamil)</option>
+                        <option value="te">తెలుగు (Telugu)</option>
+                        <option value="mr">मराठी (Marathi)</option>
+                        <option value="gu">ગુજરાતી (Gujarati)</option>
+                        <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                        <option value="ml">മലയാളം (Malayalam)</option>
+                        <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                        <option value="or">ଓଡ଼ିଆ (Odia)</option>
+                        <option value="as">অসমীয়া (Assamese)</option>
+                        <option value="ur">اردو (Urdu)</option>
+                        <option value="sa">संस्कृतम् (Sanskrit)</option>
+                        <option value="mai">मैथिली (Maithili)</option>
+                        <option value="doi">डोगरी (Dogri)</option>
+                        <option value="kok">कोंकणी (Konkani)</option>
+                        <option value="ne">नेपाली (Nepali)</option>
+                        <option value="sd">سنڌي (Sindhi)</option>
+                        <option value="ks">کٲشُر (Kashmiri)</option>
+                        <option value="sat">संथाली (Santali)</option>
+                        <option value="brx">बर' (Bodo)</option>
+                        <option value="mni">মৈতৈলোন্ (Manipuri)</option>
+                    </select>
+                    <div id="google_translate_element" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Main Header -->
+    <header class="main-header">
+        <div class="container">
+            <div class="brand">
+                <div class="brand-logo" aria-hidden="true">CP</div>
+                <div class="brand-text">
+                    <h1 data-i18n="cpgrams_title">CPGRAMS</h1>
+                    <span class="brand-subtitle" data-i18n="cpgrams_subtitle">Centralized Public Grievance Redress & Monitoring System</span>
+                </div>
+            </div>
+                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                <span id="db2-live-badge" class="db2-live-badge db2-badge--checking" title="IBM Db2 connection status" aria-live="polite">
+                    <span class="db2-pulse"></span>
+                    <span id="db2-badge-text">IBM Db2…</span>
+                </span>
+                <button class="menu-toggle" aria-expanded="false" aria-controls="main-nav" aria-label="Toggle navigation menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            </button>
+            </div>
+            <nav id="main-nav" class="main-nav">
+                <ul>
+                    <li><a href="index.html" data-i18n="nav_home">Home</a></li>
+                    <li><a href="lodge-grievance.html" data-i18n="nav_lodge">Lodge Grievance</a></li>
+                    <li><a href="track-status.html" data-i18n="nav_track">Track Status</a></li>
+                    <li><a href="officer.html">Officer Portal</a></li>
+                    <li><a href="dashboard.html">Analytics Dashboard</a></li>
+                    <li><a href="ask-data.html">Ask the Data (AI)</a></li>
+                    <li><a href="help-faq.html" data-i18n="nav_help">Help & FAQs</a></li>
+                    <li><a href="contact.html" class="active" aria-current="page" data-i18n="nav_contact">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main id="main-content">
+        <!-- 3. Breadcrumb -->
+        <nav aria-label="Breadcrumb" class="breadcrumb-container">
+            <div class="container">
+                <ol class="breadcrumb">
+                    <li><a href="index.html" data-i18n="nav_home">Home</a></li>
+                    <li aria-current="page" data-i18n="nav_contact">Contact & Support</li>
+                </ol>
+            </div>
+        </nav>
+
+        <!-- 4. Page Header -->
+        <section class="page-header">
+            <div class="container">
+                <h2 data-i18n="contact_heading">Contact & Support</h2>
+                <p>Get assistance with your grievance or reach out to the CPGRAMS citizen support desk.</p>
+            </div>
+        </section>
+
+        <!-- 5. Contact Cards Section -->
+        <section class="section--white contact-cards-section">
+            <div class="container">
+                <div class="quick-links__grid">
+                    <div class="card text-center" style="padding: 2.25rem 1.5rem;">
+                        <div class="icon-circle bg-navy" aria-hidden="true" style="background-color: var(--color-navy); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto;">
+                            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        </div>
+                        <h3 style="margin: 0 0 0.5rem 0; color: var(--color-navy);">National Helpline</h3>
+                        <p style="margin-bottom: 0.75rem; color: var(--color-text-muted); font-size: 0.9rem;">Monday to Friday, 9:30 AM to 5:30 PM IST</p>
+                        <strong style="font-size: 1.2rem; color: var(--color-maroon);">1800-11-0000 (Toll Free)</strong>
+                    </div>
+
+                    <div class="card text-center" style="padding: 2.25rem 1.5rem;">
+                        <div class="icon-circle bg-maroon" aria-hidden="true" style="background-color: var(--color-maroon); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto;">
+                            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                        </div>
+                        <h3 style="margin: 0 0 0.5rem 0; color: var(--color-navy);">Email Support Desk</h3>
+                        <p style="margin-bottom: 0.75rem; color: var(--color-text-muted); font-size: 0.9rem;">Official queries and support ticket responses</p>
+                        <strong style="font-size: 1.1rem; color: var(--color-maroon);">grievance-darpg@gov.in</strong>
+                    </div>
+
+                    <div class="card text-center" style="padding: 2.25rem 1.5rem;">
+                        <div class="icon-circle bg-accent" aria-hidden="true" style="background-color: var(--color-orange); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto;">
+                            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        </div>
+                        <h3 style="margin: 0 0 0.5rem 0; color: var(--color-navy);">Headquarters</h3>
+                        <p style="margin-bottom: 0.75rem; color: var(--color-text-muted); font-size: 0.9rem;">Dept of Administrative Reforms & Public Grievances</p>
+                        <strong style="font-size: 0.95rem; color: var(--color-navy);">Sardar Patel Bhavan, Sansad Marg, New Delhi - 110001</strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. Escalation Process Guide Section -->
+        <section class="section escalation-section">
+            <div class="container" style="max-width: 900px;">
+                <h2 style="color: var(--color-navy); margin-bottom: 0.5rem;">Citizen Escalation Protocol</h2>
+                <p style="color: var(--color-text-muted); margin-bottom: 2rem;">If your public grievance is not resolved within charter limits, follow these escalation stages.</p>
+                
+                <div class="card" style="padding: 2rem;">
+                    <ol class="escalation-steps" style="padding-left: 1.25rem; margin: 0;">
+                        <li style="margin-bottom: 1.25rem;">
+                            <strong style="color: var(--color-navy); font-size: 1.05rem;">Step 1: Standard Department Review (0–12 Days)</strong>
+                            <p style="color: var(--color-text-muted); margin: 0.25rem 0 0 0;">The concerned ministry or department reviews your case file and assigns a designated redressal officer.</p>
+                        </li>
+                        <li style="margin-bottom: 1.25rem;">
+                            <strong style="color: var(--color-maroon); font-size: 1.05rem;">Step 2: 12-Day Online Portal Escalation</strong>
+                            <p style="color: var(--color-text-muted); margin: 0.25rem 0 0 0;">If your grievance remains in "Under Review" for 12 days, use the <strong>Escalate This Grievance</strong> button on the Track Status page to flag your case directly to the Appellate Nodal Authority.</p>
+                        </li>
+                        <li style="margin-bottom: 1.25rem;">
+                            <strong style="color: var(--color-navy); font-size: 1.05rem;">Step 3: Appellate Authority Review</strong>
+                            <p style="color: var(--color-text-muted); margin: 0.25rem 0 0 0;">The Senior Joint Secretary / Appellate Authority reviews the unaddressed delay and issues binding instructions to the zonal officer.</p>
+                        </li>
+                        <li>
+                            <strong style="color: var(--color-navy); font-size: 1.05rem;">Step 4: Formal Representation to DARPG</strong>
+                            <p style="color: var(--color-text-muted); margin: 0.25rem 0 0 0;">If extraordinary circumstances persist, you may submit formal representation citing your registration number to the Secretary (DARPG).</p>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. Important Alerts -->
+        <section class="section--alt info-section" style="padding: 2.5rem 0;">
+            <div class="container" style="max-width: 900px;">
+                <div class="alert alert--warning" role="alert">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-icon"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <div>
+                        <strong>Notice regarding fraudulent agents:</strong> CPGRAMS is completely free of charge. No intermediary or agent is authorized by the Government of India to demand payment for grievance redressal.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 8. Quick Links -->
+        <section class="section quick-links-section">
+            <div class="container text-center">
+                <h2 style="color: var(--color-navy); margin-bottom: 1.5rem;">Quick Navigation</h2>
+                <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+                    <a href="lodge-grievance.html" class="btn btn--primary">Lodge a Grievance</a>
+                    <a href="track-status.html" class="btn btn--outline">Track Status</a>
+                    <a href="help-faq.html" class="btn btn--ghost">Help & FAQs</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 9. Footer -->
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer__grid">
+                <div class="footer__col">
+                    <h3 class="footer__title">CPGRAMS</h3>
+                    <p class="footer__desc">Centralized Public Grievance Redress and Monitoring System, Department of Administrative Reforms & Public Grievances, Government of India.</p>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">Quick Links</h4>
+                    <ul class="footer__links">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="lodge-grievance.html">Lodge Grievance</a></li>
+                        <li><a href="track-status.html">Track Status</a></li>
+                        <li><a href="help-faq.html">Help & FAQs</a></li>
+                        <li><a href="contact.html">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">Legal & Policies</h4>
+                    <ul class="footer__links">
+                        <li><a href="#" data-i18n="footer_privacy">Privacy Policy</a></li>
+                        <li><a href="#" data-i18n="footer_terms">Terms of Use</a></li>
+                        <li><a href="#" data-i18n="footer_a11y">Accessibility Statement</a></li>
+                    </ul>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">Helpline</h4>
+                    <p style="color: #cbd5e1; font-size: 0.875rem; margin: 0 0 0.5rem 0;">Toll-Free Helpline: <strong>1800-11-0000</strong></p>
+                    <p style="color: #cbd5e1; font-size: 0.875rem; margin: 0;">Hours: 9:30 AM – 5:30 PM (Mon–Fri)</p>
+                </div>
+            </div>
+            <div class="footer__bottom">
+                <div data-i18n="footer_copyright">&copy; 2026 Government of India. All rights reserved.</div>
+                <div style="opacity: 0.8;">Designed for IBM Db2Hack 2026 - AI & Modern Data Apps Track.</div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+    <script>
+    (function() {
+        var badge = document.getElementById('db2-live-badge');
+        var badgeText = document.getElementById('db2-badge-text');
+        if (!badge) return;
+        var API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:8000/api' : '/api';
+        function checkDb2() {
+            fetch(API + '/health', { method: 'GET', cache: 'no-cache' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.database && data.database.status === 'connected') {
+                        badge.className = 'db2-live-badge';
+                        badgeText.textContent = 'IBM Db2 Live ✓';
+                        badge.title = 'Connected to ' + data.database.database + ' · ' + data.database.total_grievances + ' dockets';
+                    } else {
+                        badge.className = 'db2-live-badge db2-badge--error';
+                        badgeText.textContent = 'Db2 Degraded';
+                    }
+                }).catch(function() {
+                    badge.className = 'db2-live-badge db2-badge--error';
+                    badgeText.textContent = 'Db2 Offline';
+                });
+        }
+        checkDb2();
+        setInterval(checkDb2, 30000);
+    })();
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,83 @@
+services:
+  # ============================================================================
+  # 1. IBM Db2 Community Edition (OLTP Database Engine)
+  # ============================================================================
+  db2:
+    image: icr.io/db2_community/db2:11.5.8.0
+    container_name: grievance-db2
+    privileged: true
+    restart: always
+    environment:
+      - LICENSE=accept
+      - DB2INSTANCE=${DB2_USER:-db2inst1}
+      - DB2INST1_PASSWORD=${DB2_PASSWORD:-Db2Hack2026!}
+      - DBNAME=${DB2_DATABASE:-GRIEVDB}
+      - BLU=false
+      - ENABLE_ORACLE_COMPATIBILITY=false
+      - UPDATE_CONFIG=false
+      - AUTOCONFIG=false
+      - ARCHIVE_LOGS=false
+    ports:
+      - "${DB2_PORT:-50000}:50000"
+    volumes:
+      - db2data:/database
+    healthcheck:
+      test: ["CMD-SHELL", "su - ${DB2_USER:-db2inst1} -c 'db2 connect to ${DB2_DATABASE:-GRIEVDB}' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 25
+      start_period: 45s
+
+  # ============================================================================
+  # 2. FastAPI Python Backend with ibm_db / ibm_db_sa (SQLAlchemy) Driver
+  # ============================================================================
+  backend:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    container_name: grievance-api
+    restart: unless-stopped
+    depends_on:
+      db2:
+        condition: service_healthy
+    environment:
+      - APP_ENV=${APP_ENV:-production}
+      - DB2_HOST=db2
+      - DB2_PORT=50000
+      - DB2_DATABASE=${DB2_DATABASE:-GRIEVDB}
+      - DB2_USER=${DB2_USER:-db2inst1}
+      - DB2_PASSWORD=${DB2_PASSWORD:-Db2Hack2026!}
+      - DATABASE_URL=db2+ibm_db://${DB2_USER:-db2inst1}:${DB2_PASSWORD:-Db2Hack2026!}@db2:50000/${DB2_DATABASE:-GRIEVDB}
+      - CORS_ORIGINS=*
+      - API_PREFIX=/api
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-}
+      - WATSONX_API_KEY=${WATSONX_API_KEY:-}
+      - WATSONX_PROJECT_ID=${WATSONX_PROJECT_ID:-}
+      - WATSONX_URL=${WATSONX_URL:-https://us-south.ml.cloud.ibm.com}
+      - AI_PROVIDER=${AI_PROVIDER:-}
+      - AI_MODEL=${AI_MODEL:-}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+
+  # ============================================================================
+  # 3. High-Performance Static Frontend & Reverse Proxy
+  # ============================================================================
+  frontend:
+    image: nginx:alpine
+    container_name: grievance-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+      - "3000:80"
+    volumes:
+      - ./src/frontend:/usr/share/nginx/html:ro
+      - ./src/frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  db2data:
+    driver: local
