@@ -844,10 +844,13 @@ function sentView(s) {
 
 // ---------- Ask the ledger ----------
 let ASK_EXAMPLES = [];  // from scenarios.json
-const ask = { question: "", result: null, busy: false, scope: "all", scopes: null };
+const ask = { question: "", result: null, busy: false, scope: "all", scopes: null, attacks: null };
 async function Ask() {
   if (!ask.scopes) {
     try { ask.scopes = (await api("/api/ledger/ask/scopes")).body; } catch { ask.scopes = [{ key: "all", label: "All domains", user: "asofread", doc_ids: [] }]; }
+  }
+  if (!ask.attacks) {
+    try { ask.attacks = (await api("/api/ledger/attacks")).body; } catch { ask.attacks = []; }
   }
   const scope = ask.scopes.find((s) => s.key === ask.scope) || ask.scopes[0];
   mount(view, html`
@@ -861,6 +864,9 @@ async function Ask() {
         <div class="sep"></div>
         <div class="field"><label>Examples</label>
           <div class="chips">${ASK_EXAMPLES.map((x, i) => html`<button type="button" class="chip ${x === ask.question ? "on" : ""}" data-ex="${i}">${x}</button>`)}</div></div>
+        <div class="field"><label>Try to break it</label>
+          <div class="chips">${ask.attacks.map((a) => html`<button type="button" class="chip" data-attack="${a.key}" title="${a.sql}">${a.label}</button>`)}</div>
+          <div class="hint">Each sends the SQL a manipulated model might write, with no model involved, and shows the layer that stops it.</div></div>
         <div class="sep"></div>
         <div class="field"><label for="aq">Question</label>
           <textarea id="aq" rows="3" minlength="3" maxlength="500" required>${ask.question}</textarea>
@@ -875,6 +881,8 @@ async function Ask() {
     if (b) { ask.question = ASK_EXAMPLES[Number(b.dataset.ex)]; Ask(); }
     const s = e.target.closest("[data-scope]");
     if (s) { ask.question = $("#aq").value; ask.scope = s.dataset.scope; Ask(); }
+    const a = e.target.closest("[data-attack]");
+    if (a) runAttack(a.dataset.attack, scope);
   });
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -891,7 +899,27 @@ async function Ask() {
     Ask();
   });
 }
+async function runAttack(key, scope) {
+  ask.question = $("#aq").value;
+  mount($("#ask-result"), html`<div class="loading"><div class="spinner"></div>Sending the attack through the SQL check and Db2 as ${scope.user}...</div>`);
+  try {
+    ask.result = (await post("/api/ledger/attack", { attack: key, scope: scope.key })).body;
+  } catch (err) {
+    ask.result = { status: "ERROR", reason: err.message, attempts: [], rows: [], columns: [] };
+  }
+  Ask();
+}
+function attackView(r) {
+  return html`<div class="banner bad"><strong>Stopped by ${r.stopped_by || "nothing"}.</strong><span>${r.reason || ""}</span></div>
+    <div class="card"><div class="card-head"><h2>Layer by layer</h2><span class="sub">${r.question}</span></div>
+      <pre class="sql">${r.attempts && r.attempts[0] ? r.attempts[0].proposed_sql : ""}</pre>
+      <table><thead><tr><th>Layer</th><th>Outcome</th><th>What it said</th></tr></thead>
+      <tbody>${(r.layers || []).map((l) => html`<tr><td>${l.layer}</td><td>${l.outcome}</td><td class="small">${l.detail}</td></tr>`)}</tbody></table></div>`;
+}
 function askView(r) {
+  if (r.attack) return html`${attackView(r)}${r.columns && r.columns.length ? html`<div class="card"><div class="card-head"><h2>Rows</h2><span class="sub">straight from Db2; [masked] is Db2's column mask</span></div>
+      <div class="scroll-x"><table><thead><tr>${r.columns.map((c) => html`<th>${c}</th>`)}</tr></thead>
+      <tbody>${r.rows.slice(0, 20).map((row) => html`<tr>${row.map((v) => html`<td class="${v === "[masked]" ? "muted" : ""}">${v === null ? "null" : v}</td>`)}</tr>`)}</tbody></table></div></div>` : ""}`;
   const head = {
     ANSWERED: html`<div class="banner ok"><strong>Answered.</strong><span>${r.rows.length} row${r.rows.length === 1 ? "" : "s"}${r.truncated ? " (capped)" : ""} in ${(r.latency_ms / 1000).toFixed(1)} s, as ${r.runs_as}.${r.scope_applied ? html` Scope Db2 applied: ${r.scope_applied.length ? r.scope_applied.join(", ") : "no policy document"}.` : ""}</span></div>`,
     REFUSED: html`<div class="banner bad"><strong>Refused.</strong><span>No query ran. ${r.reason}</span></div>`,

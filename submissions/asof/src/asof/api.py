@@ -43,6 +43,7 @@ from . import (
     ledger,
     notices,
     policy,
+    redteam,
     review,
     router,
     rowaccess,
@@ -278,6 +279,11 @@ def row_ref(value: str) -> tuple[date, datetime]:
 class LedgerQuestionIn(_In):
     question: Annotated[str, Field(min_length=3, max_length=500), AfterValidator(_text(500))]
     # "all" (the all-domain analyst) or a domain key from GET /api/ledger/ask/scopes (that domain's analyst).
+    scope: str = Field("all", pattern=r"^[a-z]{1,20}$")
+
+
+class LedgerAttackIn(_In):
+    attack: Literal["delete", "messages", "tables", "update", "heavy"]
     scope: str = Field("all", pattern=r"^[a-z]{1,20}$")
 
 
@@ -631,6 +637,19 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         if body.scope not in {s.key for s in rowaccess.scopes(settings)}:
             raise HTTPException(422, f"unknown scope {body.scope!r}: see GET /api/ledger/ask/scopes")
         return ledger_asker().ask(body.question, scope=body.scope).as_dict()
+
+    @app.post("/api/ledger/attack")
+    def ask_the_ledger_attack(body: LedgerAttackIn):
+        """An attack chip: fixed SQL of the kind a manipulated model might write, sent through the same layers as the
+        model's SQL, with the layer that stopped it (asof/redteam.py). No model is called."""
+        if body.scope not in {s.key for s in rowaccess.scopes(settings)}:
+            raise HTTPException(422, f"unknown scope {body.scope!r}: see GET /api/ledger/ask/scopes")
+        return redteam.run(ledger_asker(), body.attack, body.scope).as_dict()
+
+    @app.get("/api/ledger/attacks")
+    def ask_the_ledger_attacks():
+        """The attack chips: key, label and the SQL each sends."""
+        return [{"key": a.key, "label": a.label, "sql": a.sql} for a in redteam.ATTACKS.values()]
 
     @app.get("/api/ledger/ask/scopes")
     def ask_the_ledger_scopes():

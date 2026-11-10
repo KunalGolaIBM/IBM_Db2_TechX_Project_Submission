@@ -240,6 +240,9 @@ class AskResult:
     scope: str = "all"  # "all" or a domain key (asof/rowaccess.py)
     scope_label: str = "All domains"
     scope_applied: list[str] | None = None  # the policy documents Db2's row permissions let this user see
+    attack: str | None = None  # an attack chip (asof/redteam.py), not a question for the model
+    stopped_by: str | None = None  # the layer that stopped the attack
+    layers: list[dict[str, Any]] = field(default_factory=list)  # each layer's outcome, in order
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -318,14 +321,14 @@ class LedgerAsker:
             finally:
                 c.rollback()
 
-    def run_sql(self, sql: str, scope: str = "all") -> tuple[list[str], list[list[Any]], bool]:
+    def run_sql(self, sql: str, scope: str = "all", timeout_s: int | None = None) -> tuple[list[str], list[list[Any]], bool]:
         """Run checked SQL as the scope's analyst, with Db2's statement timeout and the row cap."""
         with self.engine(scope).connect() as c:
             handle = c.connection.dbapi_connection.conn_handler
             stmt = None
             try:
                 stmt = ibm_db.prepare(handle, sql)
-                ibm_db.set_option(stmt, {ibm_db.SQL_ATTR_QUERY_TIMEOUT: self.timeout_s}, 0)
+                ibm_db.set_option(stmt, {ibm_db.SQL_ATTR_QUERY_TIMEOUT: timeout_s or self.timeout_s}, 0)
                 ibm_db.execute(stmt)
                 columns = [ibm_db.field_name(stmt, i) for i in range(ibm_db.num_fields(stmt))]
                 rows: list[list[Any]] = []
