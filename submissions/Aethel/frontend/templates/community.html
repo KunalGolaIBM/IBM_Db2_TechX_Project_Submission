@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading section-wrap" id="top">
+  <span class="eyebrow">AETHEL COMMUNITY · SHARED NOTES</span>
+  <h1>Care is better <span class="accent-text">together.</span></h1>
+  <p>Leave a little note for the community. Please keep personal and medical details private; notes posted here are visible to everyone.</p>
+</section>
+
+<section class="community-layout section-wrap">
+  <section class="glass community-form-card">
+    <span class="eyebrow">ADD YOUR VOICE</span>
+    <h2>A note for the board</h2>
+    <form id="review-form" class="form-stack">
+      <label for="review-name">Display name</label>
+      <input id="review-name" name="name" maxlength="36" placeholder="A family member" required>
+      <label for="review-message">Your note</label>
+      <textarea id="review-message" name="message" rows="5" minlength="4" maxlength="320" placeholder="What would make a companion feel more thoughtful?" required></textarea>
+      <div class="form-footnote"><span id="review-count">0 / 320</span><span>Public · No private details</span></div>
+      <button class="button button-glow" type="submit">Pin my note <span aria-hidden="true">↗</span></button>
+    </form>
+    <p class="community-disclaimer">Notes are stored in Db2 when connected, or temporarily in local memory during fallback. Community notes are public and are not an appropriate place for personal or medical details.</p>
+  </section>
+  <section class="community-board-wrap">
+    <div class="section-heading board-heading">
+      <div><span class="eyebrow">THE COMMUNITY BOARD</span><h2>Words from <span class="accent-text">real people.</span></h2></div>
+    </div>
+    <div class="review-board glass" id="review-board" aria-live="polite">
+      <p class="empty-state">Community notes will appear when storage is ready.</p>
+    </div>
+  </section>
+</section>
+{% endblock %}

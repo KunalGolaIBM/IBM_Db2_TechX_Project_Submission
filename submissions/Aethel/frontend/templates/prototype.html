@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading section-wrap" id="top">
+  <span class="eyebrow">THE AETHEL COMPANION · PROTOTYPE</span>
+  <h1>A steady presence, <span class="accent-text">on your terms.</span></h1>
+  <p>Set preferences and shape gentle reminders. Your private workspace is scoped to this browser session; local fallback data stays in memory until the app restarts.</p>
+  <div class="connection-line"><span class="state-light" id="db2-indicator" aria-hidden="true"></span><span id="service-copy">Checking local Db2…</span></div>
+</section>
+
+<section class="prototype-showcase section-wrap">
+  <div class="prototype-copy">
+    <span class="eyebrow">PRESENT, NOT INTRUSIVE</span>
+    <h2>Care that starts with <span class="accent-text">listening.</span></h2>
+    <p>Keep the experience grounded in a person’s own preferences. Aethel can help organize routines while leaving decisions and care in human hands.</p>
+    <div class="prototype-points">
+      <div><span>01</span><p>Preferences saved to your private session</p></div>
+      <div><span>02</span><p>User-authored pill and health check-in reminders</p></div>
+      <div><span>03</span><p>A private workspace scoped to your browser session</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section-block section-wrap prototype-tools">
+  <div class="section-heading">
+    <div><span class="eyebrow">YOUR PRIVATE WORKSPACE</span><h2>Shape your <span class="accent-text">companion.</span></h2></div>
+    <p class="section-intro">Use Db2 for persistent storage, or try the prototype with temporary local memory storage when Db2 is unavailable.</p>
+  </div>
+  <div class="tool-grid">
+    <section class="glass tool-card">
+      <div class="card-heading"><span class="step-number">01</span><div><span class="eyebrow">GETTING TO KNOW YOU</span><h3>Profile &amp; preferences</h3></div></div>
+      <form id="profile-form" class="form-stack">
+        <label for="profile-name">What should Aethel call you?</label>
+        <input id="profile-name" name="name" autocomplete="given-name" maxlength="60" required placeholder="Your preferred name">
+        <label for="time-zone">Your time zone</label>
+        <select id="time-zone" name="time_zone" required></select>
+        <label class="check-row"><input type="checkbox" name="check_ins_enabled" checked><span>Enable gentle wellbeing check-ins</span></label>
+        <button class="button button-glow" type="submit">Save my preferences <span aria-hidden="true">↗</span></button>
+        <p class="form-feedback" id="profile-feedback" role="status"></p>
+      </form>
+    </section>
+
+    <section class="glass tool-card">
+      <div class="card-heading"><span class="step-number">02</span><div><span class="eyebrow">A ROUTINE, YOUR WAY</span><h3>Set a reminder</h3></div></div>
+      <form id="task-form" class="form-stack">
+        <label for="task-type">Reminder type</label>
+        <select id="task-type" name="task_type"><option value="pill">Pill reminder</option><option value="health_check">Wellbeing check-in</option></select>
+        <label for="task-description">Reminder note</label>
+        <input id="task-description" name="description" maxlength="160" required placeholder="Use the wording that works for you">
+        <label for="due-at">Date and time in your time zone</label>
+        <input id="due-at" name="due_at" type="datetime-local" required>
+        <button class="button button-outline" type="submit">Add reminder <span aria-hidden="true">+</span></button>
+      </form>
+      <div class="task-list" id="task-list"><p class="empty-state">Set up your profile to add a reminder.</p></div>
+      <button class="text-button" id="enable-notifications" type="button">Enable browser notifications</button>
+    </section>
+
+  </div>
+</section>
+{% endblock %}

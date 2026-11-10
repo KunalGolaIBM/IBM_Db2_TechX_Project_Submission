@@ -1,0 +1,6 @@
+Aethel automated test run
+Command: python -m unittest discover -s backend/tests -v
+Environment: isolated ChatGPT build container; IBM Db2 driver and LangChain/LangGraph packages were not installed and outbound package download was unavailable.
+Result: 15 tests discovered; 14 passed; 1 skipped.
+Skipped: test_langgraph_agent_uses_safety_context_and_recent_history (requires requirements.txt AI packages).
+Notes: The API and local-memory fallback tests passed. This does not prove a live IBM Db2 connection. Run the setup steps in README.md on the submitter's machine and confirm /api/health returns db2=true and storage_mode=db2 before claiming live Db2 verification.
