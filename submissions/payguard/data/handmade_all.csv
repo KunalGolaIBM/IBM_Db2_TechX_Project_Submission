@@ -1,0 +1,106 @@
+label,text,source
+bank_phishing,"Dear customer, your account has been restricted. Verify your BVN and ATM PIN now at bit.ly/verify-acct to avoid closure.",hand_reviewed
+bank_phishing,"ALERT: N150,000 debit attempt on your account. If not you, click http://secure-bank-ng.co/block to cancel.",hand_reviewed
+bank_phishing,Your NIN-BVN linkage is incomplete. Update within 24hrs or your account will be frozen. Reply with your BVN.,hand_reviewed
+bank_phishing,"Oga, bank don block your account. Send your BVN and OTP make we unlock am sharp sharp.",hand_reviewed
+fake_job,"Congratulations! You are selected for a remote data entry job, N250,000/week. Pay N5,000 registration fee to start.",hand_reviewed
+fake_job,"Oil company recruitment 2026. No experience needed. Send N10,000 for medical and uniform to secure your slot.",hand_reviewed
+fake_job,"Dem dey hire pipo for abroad, na N500k monthly. Just pay N15k for processing, we go send your visa.",hand_reviewed
+loan_scam,"Instant loan up to N500,000, no BVN, no collateral. Pay N10,000 insurance fee first and get funds in 5 mins.",hand_reviewed
+loan_scam,"Your loan has been approved! Send N7,500 processing fee to account 0123456789 to receive your funds.",hand_reviewed
+loan_scam,You don qualify for N300k loan. Abeg send N5k first make we process am.,hand_reviewed
+prize_scam,"You have won N2,000,000 in the Mega Promo! Call 0803XXXXXXX to claim. Do not tell anyone.",hand_reviewed
+prize_scam,"Congratulations! Your number was picked in the weekly draw. Pay N3,000 delivery fee to receive your iPhone.",hand_reviewed
+prize_scam,Na you win o! N1m don enter. Send your name and account number make we pay you.,hand_reviewed
+investment_scam,"Double your money in 7 days! Invest N20,000 and receive N40,000. Join our crypto group today.",hand_reviewed
+investment_scam,"Forex signals guaranteed 300% profit weekly. Deposit now, withdraw anytime, 100% legit.",hand_reviewed
+investment_scam,"Put N50k, collect N100k after one week. No wahala, na real business. Many people don collect.",hand_reviewed
+other_scam,"This is the Customs office. Your parcel is held. Pay N25,000 clearance fee to release it.",hand_reviewed
+other_scam,"Hello dear, I am a widow with $5.5M inheritance and need a trusted partner abroad. Reply for details.",hand_reviewed
+other_scam,Your electricity token is about to expire. Click link to update meter details and avoid disconnection.,hand_reviewed
+other_scam,"Hi mum, I lost my phone, this is my new number. Please send N30,000 urgently, I'll explain later.",hand_reviewed
+safe,Your OTP is 482913. It expires in 5 minutes. Do not share this code with anyone.,hand_reviewed
+safe,"Hi, are we still meeting at 4pm for the study group session?",hand_reviewed
+safe,"Credit alert: N5,000.00 received from Chidi. Balance: N12,340.50.",hand_reviewed
+safe,"I don reach school o, which hall una dey?",hand_reviewed
+safe,Reminder: your CSC 221 assignment is due Friday at 11:59pm. Submit on the portal.,hand_reviewed
+investment_scam,"This is a real and legit platform that gives you 100% payback of your investment without doubt of losing your hard earned money. Remember it's only a trial that can convince you better. GENUINE & TRUSTED, VERY REAL, VERY RELIABLE & SAFE",hand_reviewed
+investment_scam,"Pay 40k to unlock your withdrawal, then your full money will be released.",hand_reviewed
+safe,"Debit Amt:NGN10,026.88 Acc:012******345 Desc:NIP transfer Time:31/05/2024",hand_reviewed
+bank_phishing,GTBank: Your account will be deactivated today due to incomplete KYC. Update now: gtb-kyc-update.com/ng,hand_reviewed
+bank_phishing,"Dear customer, a login from a new device was detected. Confirm your identity by sending your card number and CVV to 08031234567.",hand_reviewed
+bank_phishing,Access Bank: Your BVN has been suspended. Click http://accessbank-bvn.online to reactivate within 12 hours.,hand_reviewed
+bank_phishing,Your Opay wallet is on hold. Share the 6-digit code we just sent you to restore access.,hand_reviewed
+bank_phishing,"Customer, your ATM card don expire. Send your card details and PIN make we renew am for you today.",hand_reviewed
+bank_phishing,"CBN notice: all accounts must be re-verified before Friday. Send your account number, BVN and OTP to continue banking.",hand_reviewed
+bank_phishing,Abeg your bank don flag your account for fraud o. Click this link quick quick and enter your PIN to unblock am.,hand_reviewed
+bank_phishing,"Zenith Bank alert: N89,500 transfer pending. If you did not authorise this, call 09012345678 and give your OTP to cancel.",hand_reviewed
+fake_job,"URGENT HIRING: Customer care agents needed at Dangote Group. Salary N180,000. Pay N7,000 for ID card and training to be confirmed.",hand_reviewed
+fake_job,"You have been shortlisted for a NNPC internship. Send N12,500 acceptance fee to account 3012345678 before Monday.",hand_reviewed
+fake_job,"Work from home and earn N20,000 daily by liking and sharing posts. Pay N3,000 to activate your account.",hand_reviewed
+fake_job,"Canada work visa and job offer ready for you. Pay N350,000 processing fee and fly in 30 days. No interview needed.",hand_reviewed
+fake_job,"Dem dey recruit for Shell, no experience, no certificate. Just send N8k for form make we put your name.",hand_reviewed
+fake_job,"Congratulations, your CV don pass screening. Pay N5,500 for interview slot, job na N300k monthly.",hand_reviewed
+fake_job,"Bank recruitment 2026! Send N6,000 for aptitude test pass and get guaranteed employment letter in 48 hours.",hand_reviewed
+fake_job,"Amazon is hiring part-time reviewers in Nigeria. Earn $50 per product. Send your BVN and N4,000 registration fee to start.",hand_reviewed
+loan_scam,"Get N1,000,000 loan today with no credit check. Pay N15,000 upfront for approval. Funds in 30 minutes.",hand_reviewed
+loan_scam,"FastCash Loan: Your N200,000 loan is approved. To receive it, send N9,800 for loan insurance to 2098765432.",hand_reviewed
+loan_scam,"Your loan application has been processed. Pay N4,500 stamp duty first, then your N150,000 will drop instantly.",hand_reviewed
+loan_scam,"Need money urgent? We give loans without BVN or guarantor. Send N6,000 verification fee on WhatsApp 08091234567.",hand_reviewed
+loan_scam,"Abeg, your N250k loan don ready. Just pay N12k clearance make e enter your account.",hand_reviewed
+loan_scam,Loan wey you apply for don approve o! Send N3k first for processing and we go credit you inside 10 minutes.,hand_reviewed
+loan_scam,"Government empowerment loan N500,000 interest free. Register with N5,000 and your BVN to qualify.",hand_reviewed
+loan_scam,"We noticed you missed a repayment. Send N20,000 to this personal account today or we will call all your contacts and post your photo online.",hand_reviewed
+prize_scam,"MTN Promo: You've won N5,000,000 in the end of year draw. To claim, send N5,500 for tax and processing.",hand_reviewed
+prize_scam,"Congratulations! You are today's lucky winner of a Toyota Camry. Contact Mr Okafor on 08123456789 and pay N30,000 delivery fee.",hand_reviewed
+prize_scam,"Your WhatsApp number won $100,000 in the Coca-Cola Anniversary Lottery. Reply with your full name, address and bank details.",hand_reviewed
+prize_scam,"Glo Wonder Promo! Your line was selected. Send recharge card PIN worth N5,000 to receive your N1,000,000 prize.",hand_reviewed
+prize_scam,"Oga you don win iPhone 15 for our giveaway o. Pay N4,500 for shipping and we go send am tomorrow.",hand_reviewed
+prize_scam,"Na your lucky day! You win N2m for Betking promo. Send your account number and N2,000 for validation.",hand_reviewed
+prize_scam,"You have won a free scholarship to study in UK. Pay N25,000 admin fee within 48 hours to secure it.",hand_reviewed
+prize_scam,"Facebook Lottery Board: your email won £850,000. Send your passport photo and N20,000 fee to claim.",hand_reviewed
+investment_scam,"Invest N10,000 today and get N100,000 in 14 days. Guaranteed returns. Over 5,000 satisfied investors. Join our WhatsApp group.",hand_reviewed
+investment_scam,"CBEX crypto mining platform: deposit N50,000 and earn 15% daily. Withdraw anytime. Limited slots left.",hand_reviewed
+investment_scam,Our trading bot makes 40% weekly profit with zero risk. Send USDT to the wallet below to start earning.,hand_reviewed
+investment_scam,"Doubling business: send N20k, receive N60k in 24 hours. Screenshots of payment proof attached. Don't miss out.",hand_reviewed
+investment_scam,"Abeg join our investment, you put N30k na N90k you go collect after 3 days. Many people don collect already.",hand_reviewed
+investment_scam,"This na legit business o. Put your money, e go double inside one week, we no dey cheat person.",hand_reviewed
+investment_scam,"Your withdrawal is ready but you must pay 20% tax first. Send N40,000 to unlock your N200,000 profit.",hand_reviewed
+investment_scam,"Real estate flip: invest N500,000 and receive N1.5m in 30 days. Guaranteed by our CEO. Pay into this personal account to secure your slot.",hand_reviewed
+other_scam,"Dear beneficiary, I am Barrister Williams. A client left $8.2M and you are the next of kin. Send your details to claim.",hand_reviewed
+other_scam,"NEPA: Your meter will be disconnected today. Pay N15,000 to avoid disconnection to account 1234567890.",hand_reviewed
+other_scam,"Hello, I am stuck at the airport and my card is blocked. Please transfer N50,000 now, I will refund you tonight.",hand_reviewed
+other_scam,"Your DHL parcel from UK is held at the airport. Pay N18,000 customs duty to release it today.",hand_reviewed
+other_scam,"Daddy, I'm in trouble and need N100,000 urgently. Don't call, just send to this account now.",hand_reviewed
+other_scam,"Dear friend, I am a soldier in Syria with $4M I need to move out. I will give you 30% if you help me. Reply privately.",hand_reviewed
+other_scam,Hello I'm a lonely lady looking for a serious man. Add me on WhatsApp and I will show you my pictures. Please send airtime first.,hand_reviewed
+other_scam,Your SIM will be blocked in 24 hours. Click this link to link your NIN: nin-link-ng.com/update,hand_reviewed
+safe,"Credit Alert! Amt: NGN25,000.00 Acc: 012*****34 Desc: Transfer from ADA OKON Bal: NGN41,200.50 Date: 02/10/2026",hand_reviewed
+safe,GTBank: Your OTP for transaction is 394821. Valid for 5 minutes. GTBank will never ask you for your OTP or PIN.,hand_reviewed
+safe,"Your NEPA unit purchase of N5,000 was successful. Token: 1234-5678-9012-3456-7890. Units: 38.2kWh.",hand_reviewed
+safe,"Hi, your Jumia order #23847 has been shipped and will be delivered tomorrow. Track it in the app.",hand_reviewed
+safe,"Abeg, I wan send you money for the book. Wetin be your account number?",hand_reviewed
+safe,Reminder: lecture for CSC 301 starts at 8am tomorrow in LT2. Please come with your laptop.,hand_reviewed
+safe,Your MTN data subscription of 2GB has been renewed for N500. Valid till 03/11/2026. Dial *131# to check balance.,hand_reviewed
+safe,"Hello, this is the HOD's office. Kindly submit your project proposal before Friday.",hand_reviewed
+safe,Debit Amt:NGN150.00 Acc:012******345 Desc:112ABCD2612345xY/FGN Stamp Duty for 3 txns 27/09--03/10/26 Date:03/10/2026,hand_reviewed
+safe,"Oga, I don send the money. Check your account, e don enter.",hand_reviewed
+safe,Happy birthday Chidi! Wishing you a great year ahead. Let's celebrate this weekend.,hand_reviewed
+safe,"Your Opay transfer of N1,000.00 to your friend was successful. Ref: 240531...",hand_reviewed
+safe,"Debit Amt:NGN2,000.00 Acc:012******345 Desc:112EFGH2612346aB/MOBILE TRF TO MMF/ /JOHN DOE Date:03/10/2026",hand_reviewed
+safe,Don't Miss Out! Grab your N100 FREE airtime now! Only 24h left. Grab here: https://opayapp.onelink.me/xxxx/xxxxxxx,hand_reviewed
+bank_phishing,Your account will be blocked within 24 hours. Click here to verify your BVN at example-bank-verify.com.,external_heldout
+fake_job,"You've been shortlisted for a job. Pay a N7,500 registration fee to secure your slot.",external_heldout
+fake_job,"A reputable company in Abuja is recruiting. Job title: Office Assistant, Salary: 250,000 naira. No experience required. Send your CV to 08012345678.",external_heldout
+fake_job,"Congratulations, your name is on the shortlist for NNPC/Customs. Send N15,000 to secure your slot.",external_heldout
+other_scam,ONDO GOVT COMMENCES DISBURSEMENT OF N220M TO BUSINESS OWNERS AND ARTISANS MSMES. The 2024 online registration is now out. Check Eligibility and Apply here example-grant-portal.com,external_heldout
+other_scam,"N150,000 grant by OPay. Offer is ending this week. Click the link to apply.",external_heldout
+other_scam,"FG Youth Empowerment Grant: apply now to receive N250,000.",external_heldout
+other_scam,"Hi mummy, this is my new number. Abeg send 20k urgently.",external_heldout
+other_scam,Your parcel is held at customs. Pay the clearance fee to release it.,external_heldout
+investment_scam,Guaranteed 30% weekly returns. Our account manager will guide you.,external_heldout
+safe,"AlertZ: You have a credit of NGN 5,000.00 to your account 0123****. Ref: 123456. Bal: NGN 20,000.00. Thank you for banking with us.",external_heldout
+safe,"Your account has been debited with NGN 2,000.00. Available balance: NGN 18,000.00. Transaction ref: 123456. Contact us for assistance.",external_heldout
+safe,"Never share your 16-digit card number, password, PIN, CVV, BVN, or OTP with anyone. We will NEVER ask for such information.",external_heldout
+safe,"Dear Customer, With the Central Bank of Nigeria's recent review of the Monetary Policy Rate (MPR) the interest rate on your Savings Account has been reviewed to 6.9% per annum.",external_heldout
+safe,"Dear Esteemed Customer, we will be conducting a scheduled system maintenance on our online banking platform. Time: 10:00 PM - 7:00 AM.",external_heldout

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MarketSquare (demo) - checkout protected by PayGuard</title>
+  <link rel="icon" href="/static/icon-192.png" />
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    /* A fictional marketplace that integrates PayGuard's platform API. Its own brand, PayGuard appears only as a badge/sheet. */
+    body.ms { background: #f3f4f6; background-image: none; font-family: var(--sans); }
+    .ms-top { background: #ff6a13; color: #fff; padding: 12px clamp(16px, 4vw, 40px); display: flex; align-items: center; gap: 14px; }
+    .ms-top b { font: 700 1.3rem/1 var(--sans); letter-spacing: -.02em; }
+    .ms-top .search { flex: 1; max-width: 520px; background: #fff; border-radius: 10px; padding: 9px 12px; color: #8a8f98; font-size: .9rem; }
+    .ms-top .demo { margin-left: auto; font-size: .78rem; background: rgba(0, 0, 0, .18); padding: 4px 10px; border-radius: 99px; }
+    .ms-wrap { width: min(1100px, 100% - 28px); margin: 18px auto 40px; }
+    .ms-note { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px 14px; font-size: .9rem; color: #4b5563; margin-bottom: 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .ms-note a { font-weight: 600; }
+    .tabs-ms { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .tabs-ms button { border: 1px solid #e5e7eb; background: #fff; border-radius: 10px; padding: 8px 14px; cursor: pointer; font-weight: 500; }
+    .tabs-ms button.on { border-color: #ff6a13; color: #c2470a; background: #fff4ec; }
+    .ms-grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 16px; }
+    .ms-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 18px; }
+    .photo { height: 230px; border-radius: 12px; display: grid; place-items: center; font-size: 4.2rem; margin-bottom: 14px; }
+    .ms-title { font-size: 1.35rem; font-weight: 600; margin: 0 0 4px; }
+    .ms-price { font-size: 1.6rem; font-weight: 700; color: #111827; }
+    .ms-price s { font-size: .95rem; color: #9ca3af; font-weight: 400; margin-left: 8px; }
+    .seller { display: flex; gap: 12px; align-items: center; border-top: 1px solid #f0f1f3; margin-top: 14px; padding-top: 14px; }
+    .avatar { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; }
+    .seller small { color: #6b7280; display: block; }
+    .chat { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow: auto; padding: 4px; }
+    .msg { max-width: 82%; padding: 9px 12px; border-radius: 14px; font-size: .92rem; line-height: 1.4; }
+    .msg.seller { background: #f3f4f6; align-self: flex-start; border-bottom-left-radius: 4px; }
+    .msg.buyer { background: #ffedd5; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .buy { margin-top: 16px; }
+    .buy .btn.pp { width: 100%; justify-content: center; background: #ffc439; color: #111; font-size: 1.02rem; border-radius: 99px; padding: 14px; }
+    .protected { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: .82rem; color: #374151; margin-top: 8px; }
+    .protected svg { color: var(--brand); }
+    .sheet-back { position: fixed; inset: 0; background: rgba(15, 28, 46, .45); display: none; align-items: flex-end; justify-content: center; z-index: 20; padding: 16px; }
+    .sheet-back.on { display: flex; animation: rise .25s ease both; }
+    .sheet { width: min(560px, 100%); max-height: 90vh; overflow: auto; border-radius: 24px; background: var(--card); box-shadow: 0 30px 60px -20px rgba(0,0,0,.4); }
+    .sheet .pg-head { display: flex; align-items: center; gap: 8px; padding: 14px 20px; border-bottom: 1px solid var(--line); font-size: .85rem; color: var(--ink-2); }
+    .sheet .pg-head b { font: 650 1rem var(--serif); color: var(--ink); }
+    .sheet .pg-head button { margin-left: auto; border: 0; background: none; font-size: 1.3rem; cursor: pointer; color: var(--muted); }
+    .api { margin-top: 14px; }
+    @media (min-width: 640px) { .sheet-back { align-items: center; } }
+    @media (max-width: 820px) { .ms-grid { grid-template-columns: 1fr; } .ms-top .search { display: none; } }
+  </style>
+</head>
+<body class="ms">
+  <header class="ms-top"><b>MarketSquare</b><div class="search">Search phones, books, gadgets…</div><span class="demo">Demo marketplace</span></header>
+
+  <div class="ms-wrap">
+    <div class="ms-note">
+      <span><b>How platforms use PayGuard:</b> when the buyer taps Pay, the marketplace sends the chat and seller details to the PayGuard API. The buyer copies nothing. PayPal only opens if PayGuard says it's safe.</span>
+      <a href="/">← Back to PayGuard</a>
+    </div>
+    <div class="tabs-ms" id="tabs"></div>
+    <div class="ms-grid">
+      <div class="ms-card" id="listing"></div>
+      <div class="ms-card">
+        <h3 style="margin:0 0 10px">Chat with seller</h3>
+        <div class="chat" id="chat"></div>
+        <div class="buy">
+          <button class="btn pp" id="pay-btn">Buy now with PayPal</button>
+          <div class="protected"><svg width="16" height="16" viewBox="0 0 32 32"><path d="M16 2.5 5 7v8.2c0 7 4.7 12.6 11 14.3 6.3-1.7 11-7.3 11-14.3V7L16 2.5Z" fill="currentColor"/></svg> Checkout protected by <b>PayGuard</b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet-back" id="sheet-back" role="dialog" aria-modal="true" aria-label="PayGuard check">
+    <div class="sheet">
+      <div class="pg-head"><svg width="20" height="20" viewBox="0 0 32 32"><path d="M16 2.5 5 7v8.2c0 7 4.7 12.6 11 14.3 6.3-1.7 11-7.3 11-14.3V7L16 2.5Z" fill="#0e7a55"/></svg><b>PayGuard</b> checked this payment for you <button id="close" aria-label="Close">×</button></div>
+      <div id="sheet-body"></div>
+    </div>
+  </div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const LISTINGS = [
+  { key: "ps5", tab: "PS5 · FastDeals NG", emoji: "🎮", bg: "linear-gradient(135deg,#dbeafe,#e0e7ff)",
+    title: "PlayStation 5 Slim, brand new (sealed)", price: 210, market: 480, payment_method: "friends_family",
+    seller: { name: "FastDeals NG", email: "fastdeals.ng@mail.example", phone: "", account: "0000012345", age: 3, rating: "No reviews yet", color: "#6366f1" },
+    chat: [["buyer", "Hi, is the PS5 still available?"],
+           ["seller", "Yes bro, brand new. Only 2 left and many people are interested."],
+           ["buyer", "Can I pay on delivery?"],
+           ["seller", "No pay on delivery. Send it as friends and family to avoid fees, or transfer to my OPay 0000012345. Account name is different, don't mind."],
+           ["seller", "Let's continue on WhatsApp, I'll send the waybill."]] },
+  { key: "books", tab: "Textbooks · Akwa Books", emoji: "📚", bg: "linear-gradient(135deg,#dcfce7,#fef9c3)",
+    title: "CSC 301 textbooks (set of 3)", price: 45, market: 50, payment_method: "goods_services",
+    seller: { name: "Akwa Books", email: "orders@akwa-books.example", phone: "", account: "", age: 912, rating: "★ 4.8 · 230 sales", color: "#059669" },
+    chat: [["buyer", "Hello, do you have the CSC 301 set?"],
+           ["seller", "Yes, all three books are in stock. $45 including delivery within Uyo."],
+           ["buyer", "Great, I'll pay now."],
+           ["seller", "Thank you! Please pay through the PayPal button here so you're covered. We'll ship tomorrow."]] },
+];
+let current = LISTINGS[0], CONFIG = {}, paypalReady = null;
+
+function render() {
+  $("#tabs").innerHTML = LISTINGS.map((l) => `<button class="${l === current ? "on" : ""}" data-k="${l.key}">${esc(l.tab)}</button>`).join("");
+  document.querySelectorAll("#tabs button").forEach((b) => b.onclick = () => { current = LISTINGS.find((l) => l.key === b.dataset.k); render(); });
+  const s = current.seller;
+  $("#listing").innerHTML = `
+    <div class="photo" style="background:${current.bg}">${current.emoji}</div>
+    <p class="ms-title">${esc(current.title)}</p>
+    <div class="ms-price">$${current.price}<s>usually ~$${current.market}</s></div>
+    <div class="seller"><div class="avatar" style="background:${s.color}">${esc(s.name[0])}</div>
+      <div><b>${esc(s.name)}</b><small>Joined ${s.age} days ago · ${esc(s.rating)}</small></div></div>`;
+  $("#chat").innerHTML = current.chat.map(([who, t]) => `<div class="msg ${who}">${esc(t)}</div>`).join("");
+}
+
+$("#pay-btn").onclick = async () => {
+  const s = current.seller;
+  const request = {
+    platform: "MarketSquare", seller_name: s.name, seller_email: s.email, seller_phone: s.phone,
+    seller_account_number: s.account, seller_account_age_days: s.age, listing_title: current.title,
+    amount: current.price, currency: "USD", market_price: current.market, payment_method: current.payment_method,
+    chat: current.chat.map(([sender, text]) => ({ sender, text })),
+  };
+  $("#sheet-back").classList.add("on");
+  $("#sheet-body").innerHTML = `<div class="loading on"><div class="scan"></div><span>Checking the seller and the chat…</span></div>`;
+  try {
+    const r = await fetch("/api/v1/checkout/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) });
+    const res = await r.json();
+    if (!r.ok) throw new Error(res.detail || "Check failed");
+    showSheet(res, request);
+  } catch (e) { $("#sheet-body").innerHTML = `<div class="body"><p class="err">${esc(e.message)}</p></div>`; }
+};
+
+const SEAL = { BLOCK: "✕", REVIEW: "!", ALLOW: "✓" };
+function showSheet(res, request) {
+  const why = res.reasons.map((r) => `<li class="${r.tone}"><i>${r.tone === "good" ? "✓" : "!"}</i><span>${esc(r.text)}</span></li>`).join("");
+  $("#sheet-body").innerHTML = `
+    <div class="band ${res.verdict}" style="border-radius:0">
+      <div class="seal" style="font:700 1.9rem var(--sans)"><span style="color:#fff">${SEAL[res.verdict]}</span></div>
+      <div><h2>${esc(res.headline)}</h2><p>${esc(res.summary)}</p></div>
+    </div>
+    <div class="body">
+      ${why ? `<ul class="why">${why}</ul>` : ""}
+      <div id="pp-area"></div>
+      <details class="tech api"><summary>Platform API call (for developers)</summary>
+        <p class="note">POST /api/v1/checkout/verify</p><pre>${esc(JSON.stringify(request, null, 2))}</pre>
+        <p class="note">Response</p><pre>${esc(JSON.stringify(res, null, 2))}</pre></details>
+    </div>`;
+  const area = $("#pp-area");
+  if (!res.allow_payment) {
+    area.innerHTML = `<p class="err"><b>MarketSquare has paused this payment.</b> The seller has been flagged for review.</p>
+      <button class="btn ghost" onclick="document.getElementById('sheet-back').classList.remove('on')">Back to listing</button>`;
+    return;
+  }
+  if (!CONFIG.paypal_client_id) { area.innerHTML = `<p class="note">PayPal sandbox checkout appears here when keys are configured.</p>`; return; }
+  area.innerHTML = `${res.require_confirmation ? `<label class="ack"><input type="checkbox" id="ack"> I've read the warning and want to continue.</label>` : ""}<div id="ppb"></div><p class="note" id="ppm"></p>`;
+  paypalReady ||= new Promise((ok, fail) => { const sc = document.createElement("script");
+    sc.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(CONFIG.paypal_client_id)}&currency=${CONFIG.currency}&intent=capture&components=buttons`;
+    sc.onload = () => ok(window.paypal); sc.onerror = () => fail(new Error("PayPal could not load")); document.head.appendChild(sc); });
+  const post = async (url, body) => { const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); const d = await r.json(); if (!r.ok) throw new Error(d.detail); return d; };
+  paypalReady.then((paypal) => paypal.Buttons({
+    style: { shape: "pill", label: "pay", height: 46 },
+    onClick: (_d, a) => { const k = $("#ack"); if (k && !k.checked) { $("#ppm").textContent = "Tick the box first."; return a.reject(); } return a.resolve(); },
+    createOrder: async () => (await post("/api/paypal/orders", { screening_id: res.screening_id, acknowledge_risk: !!$("#ack")?.checked })).id,
+    onApprove: async (d) => { const c = await post(`/api/paypal/orders/${d.orderID}/capture`, { screening_id: res.screening_id });
+      area.innerHTML = `<p class="ok"><b>Payment complete (sandbox) ✓</b> ${esc(c.status)} · ${esc(c.capture_id || "")}</p>`; },
+    onError: (e) => { $("#ppm").textContent = e.message || String(e); },
+  }).render("#ppb")).catch((e) => { area.innerHTML = `<p class="note">${esc(e.message)}</p>`; });
+}
+$("#close").onclick = () => $("#sheet-back").classList.remove("on");
+$("#sheet-back").onclick = (e) => { if (e.target.id === "sheet-back") $("#sheet-back").classList.remove("on"); };
+fetch("/api/config").then((r) => r.json()).then((c) => { CONFIG = c; }).catch(() => {});
+render();
+</script>
+</body>
+</html>
