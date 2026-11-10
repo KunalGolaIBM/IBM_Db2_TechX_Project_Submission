@@ -44,7 +44,7 @@ def test_the_frozen_number_matches_the_files_and_the_readme():
     assert f"{fa} of {wrong} wrong drafts released" in item["text"] and f"{fb} of {correct} correct" in item["text"]
     readme = (ROOT / "README.md").read_text()
     m = re.search(r"Latest run: (\d+) of (\d+) wrong drafts released across (\w+) frozen splits, (\d+) of (\d+) correct "
-                  r"drafts held", readme)
+                  r"drafts (?:held|stopped)", readme)
     assert m, "the README's Safety row changed shape; update this test with it"
     assert (int(m[1]), int(m[2]), WORDS.get(m[3], m[3]), int(m[4]), int(m[5])) == (fa, wrong, n, fb, correct), \
         "the README's Safety row and the latest frozen-split runs disagree"

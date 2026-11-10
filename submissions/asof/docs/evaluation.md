@@ -17,7 +17,21 @@ Routing and policy intake have evaluations of their own: [routing_eval.md](routi
 
 **The headline banner** on the console's Playground and the customer chat page shows two results, each read from the files in [eval/](eval/) by [headline.py](../src/asof/headline.py) and served by `/healthz`: the frozen-split total over the newest run of each split whose case file matches its pinned SHA-256 (no file is named), and the unseen railway policy's first run, AsOf against the plain LLM judge ([unseen results](eval/unseen-results.md)). A number whose files are missing is left out. An installed package has no `docs/` folder and reads the copy in `src/asof/data/headline.json`; after a new run, `python -m asof.headline` regenerates it, and `tests/test_headline.py` fails until it matches the files, the README's Safety row and the unseen report.
 
-**Latest run** (Sun 8 Nov, OpenRouter `google/gemini-3.1-flash-lite`, all nine frozen splits, at `19a3e28`). It adds one change to the check: when extraction finds no claim, each sentence of the draft that names something a policy decides is judged as a claim of its own (an independent review found that a model which extracts nothing released such a draft as `NO_POLICY_CLAIMS`). The five dev splits were run first and released nothing.
+**Latest run** (Tue 10 Nov, OpenRouter `google/gemini-3.1-flash-lite`, all nine frozen splits, at `1df152e`). Re-run because two changes reached the check: Db2 now refuses to record a release the policy in force does not back ([release-rules.md](release-rules.md)), and the rule checker reads "48 h" and "7 calendar days" as durations (made for the unseen railway domain before any of its cases was read; no frozen case uses either form). 0 of 121 wrong drafts released; 1 of 70 correct drafts stopped: T24, a correct change-fee answer on a version boundary that the check rewrote from the clause instead of releasing as written. L10, held in every earlier run, was released this time.
+
+| Frozen split | Cases | False allow | False block | Safe | Ideal | Citation | p50 |
+|---|---|---|---|---|---|---|---|
+| Airline `test` | 40 | **0 of 26** | 1 of 14 | 97.5% | 95% | 100% | 5.9 s |
+| Bank `bank-test` (not blind) | 26 | **0 of 16** | 0 of 10 | 100% | 96.2% | 100% | 5.6 s |
+| Bank `bank-test2` | 22 | **0 of 14** | 0 of 8 | 100% | 100% | 100% | 5.9 s |
+| `escalation-test` | 33 | **0 of 22** | 0 of 11 | 100% | 97% | 100% | 6.4 s |
+| `extractor-test` | 10 | **0 of 8** | 0 of 2 | 100% | 100% | 100% | 6.3 s |
+| `situation-test` | 12 | **0 of 7** | 0 of 5 | 100% | 83.3% | 83.3% | 6.1 s |
+| `situation-test2` | 12 | **0 of 7** | 0 of 5 | 100% | 75% | 91.7% | 5.9 s |
+| `situation-test3` | 20 | **0 of 12** | 0 of 8 | 100% | 95% | 95% | 5.6 s |
+| `list-test` | 16 | **0 of 9** | 0 of 7 | 100% | 93.8% | 100% | 6.5 s |
+
+**The run before** (Sun 8 Nov, OpenRouter `google/gemini-3.1-flash-lite`, all nine frozen splits, at `19a3e28`). It adds one change to the check: when extraction finds no claim, each sentence of the draft that names something a policy decides is judged as a claim of its own (an independent review found that a model which extracts nothing released such a draft as `NO_POLICY_CLAIMS`). The five dev splits were run first and released nothing.
 
 | Frozen split | Cases | False allow | False block | Safe | Ideal | Citation | p50 |
 |---|---|---|---|---|---|---|---|
@@ -31,7 +45,7 @@ Routing and policy intake have evaluations of their own: [routing_eval.md](routi
 | Bank `bank-test` (not blind) | 26 | **0 of 16** | 0 of 10 | 100% | 96.2% | 100% | 5.5 s |
 | `extractor-test`: drafts that try to talk the claim extractor out of a wrong claim | 10 | **0 of 8** | 0 of 2 | 100% | 100% | 100% | 6.0 s |
 
-0 of 121 wrong drafts released; 1 of 70 correct drafts held (L10, as in every run).
+0 of 121 wrong drafts released; 1 of 70 correct drafts held (L10, as in every run until `1df152e`).
 
 **Which splits are blind.** Every split was pinned before its first run, but four later motivated a fix: `bank-test` (its first run found missing rule data), `situation-test` and `situation-test2` (the premise gap, then SU01), and the airline `test` split (T20, misread on watsonx.ai, led to the list check; T06, T12 and T33 led to the needless-hold work). Their results show the check holding up after fixes, not a blind rate. Five never motivated one: `bank-test2` (written after the bank fix), `escalation-test` (its own holds, such as ET09 and ET12, were reported and not tuned away), `extractor-test` (committed with the coverage check it measures), and `situation-test3` and `list-test` (each pinned before the change it measures, which was developed on dev cases). Together they hold 65 wrong drafts, and no run since the changes they measure released one: a 95% upper bound of about 4.6% on the false-allow rate, by the rule of three. The caveat: the rules' author wrote every split, and three of the five were written to measure a specific change, so they show the checks work on the phrasings their author anticipated, not how far they generalise.
 

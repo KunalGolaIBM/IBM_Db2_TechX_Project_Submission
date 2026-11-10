@@ -18,11 +18,11 @@
 | | |
 |---|---|
 | **The date decides** | Checked against today's policy instead of the customer's date, the same check released 6 of 16 date-sensitive wrong drafts; with the customer's date, none ([measured](docs/evaluation.md#why-the-date-matters-measured)). |
-| **Safety** | Latest run: 0 of 121 wrong drafts released across nine frozen splits, 1 of 70 correct drafts held for a person. On the five splits that never motivated a fix, 0 of 65 (95% upper bound about 4.6%) ([results](#testing--verification)). |
+| **Safety** | Latest run: 0 of 121 wrong drafts released across nine frozen splits, 1 of 70 correct drafts stopped (rewritten from the clause instead of released as written). On the five splits that never motivated a fix, 0 of 65 (95% upper bound about 4.6%) ([results](#testing--verification)). |
 | **Db2 does the work** | `FOR BUSINESS_TIME AS OF` with `VECTOR_DISTANCE` in one statement, a hash-chained ledger in SQL PL, `JSON_TABLE`, column masks, in-database embeddings, partitions and MQTs measured at 1,000,000 decisions; `python -m asof.db2check` runs 34 feature checks. |
 | **Tamper evidence** | Triggers stop even the owner; `VERIFY_CHAIN` finds an edited row; receipts and anchors kept outside Db2 catch a rebuilt ledger. |
 | **People where the check stops** | Held answers go to a specialist inbox, and Db2 records a reply only if it passes the same check; customers told a rule that later changed get a checked correction notice a specialist approves. |
-| **Engineering** | A LangGraph check with fixed edges that fails closed, five least-privilege Db2 users, 1050 tests (80% line coverage), mypy, and three CI jobs including IBM's stock Db2 image. |
+| **Engineering** | A LangGraph check with fixed edges that fails closed, five least-privilege Db2 users, 1097 tests (80% line coverage), mypy, and three CI jobs including IBM's stock Db2 image. |
 
 > **Fictional data.** "Aurelia Air", "Fernhollow Bank" and every policy, fee schedule, FAQ and help-centre answer in this repository are invented for the demo. The airline is modelled on the kind of policy at issue in *Moffatt v. Air Canada*; neither describes a real company.
 
@@ -265,7 +265,7 @@ python -m asof.demo          # optional: thirteen sample decisions, three of the
 ## Testing & Verification
 
 ```bash
-pytest -q                                 # 1050 tests; 9 need an opt-in flag, 3 need TLS on and 1 the watsonx.ai extra (CI provides both)
+pytest -q                                 # 1097 tests; 9 need an opt-in flag, 3 need TLS on and 1 the watsonx.ai extra (CI provides both)
 pytest -q -m "not db2"                    # unit tests only, no database needed
 python scripts/audit_deps.py && mypy      # dependency audit, type check
 python -m asof.eval --split test          # the frozen airline split (needs a model)
@@ -287,7 +287,7 @@ Db2 tests run in throwaway schemas as the real least-privilege users ([what they
 | Bank `bank-test` | 26 | **0 of 16** | 0 of 10 | 100% | 96.2% | 100% | 5.5 s |
 | `extractor-test` (attacks on the extractor, blind) | 10 | **0 of 8** | 0 of 2 | 100% | 100% | 100% | 6.0 s |
 
-0 of 121 wrong drafts released, 1 of 70 correct drafts held. Four splits motivated a fix at some point and are not blind; the five that never did released **0 of 65** (95% upper bound about 4.6%). One earlier run released a draft; that gap is closed. Every run and miss: [docs/evaluation.md](docs/evaluation.md); routing: [docs/routing_eval.md](docs/routing_eval.md); intake: [docs/intake_eval.md](docs/intake_eval.md).
+0 of 121 wrong drafts released, 1 of 70 correct drafts stopped (latest run, at `1df152e`, after the Db2 release rules). Four splits motivated a fix at some point and are not blind; the five that never did released **0 of 65** (95% upper bound about 4.6%). One earlier run released a draft; that gap is closed. Every run and miss: [docs/evaluation.md](docs/evaluation.md); routing: [docs/routing_eval.md](docs/routing_eval.md); intake: [docs/intake_eval.md](docs/intake_eval.md).
 
 **Unseen domain.** Another AI (GPT) wrote a fictional railway's three-version refund policy and 40 cases meant to make AsOf fail; the policy went in through Policy intake, and the runner and metrics were committed before any case was read. First run: AsOf released **2 of 25** wrong drafts and held 2 of 15 correct ones, with 30 of 40 ideal outcomes; a plain LLM judge given only the latest version, on the same model, also released 2 of 25 but held 9 of 15 correct drafts and reached 6 of 40. AsOf's two releases were both at a fare-table band boundary. [docs/eval/unseen-results.md](docs/eval/unseen-results.md), intake: [docs/eval/unseen-intake.md](docs/eval/unseen-intake.md).
 

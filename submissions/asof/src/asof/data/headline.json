@@ -7,19 +7,19 @@
    "href": "https://github.com/JustJay7/asof/blob/main/docs/evaluation.md#the-frozen-test-splits",
    "id": "frozen",
    "runs": {
-    "bank-test": "bank-test__openrouter__google-gemini-3.1-flash-lite__19a3e28.json",
-    "bank-test2": "bank-test2__openrouter__google-gemini-3.1-flash-lite__19a3e28.json",
-    "escalation-test": "escalation-test__openrouter__google-gemini-3.1-flash-lite__19a3e28.json",
-    "extractor-test": "extractor-test__openrouter__google-gemini-3.1-flash-lite__19a3e28.json",
-    "list-test": "list-test__openrouter__google-gemini-3.1-flash-lite__19a3e28.json",
-    "situation-test": "situation-test__openrouter__google-gemini-3.1-flash-lite__19a3e28.json",
-    "situation-test2": "situation-test2__openrouter__google-gemini-3.1-flash-lite__19a3e28.json",
-    "situation-test3": "situation-test3__openrouter__google-gemini-3.1-flash-lite__19a3e28.json",
-    "test": "test__openrouter__google-gemini-3.1-flash-lite__19a3e28.json"
+    "bank-test": "bank-test__openrouter__google-gemini-3.1-flash-lite__1df152e.json",
+    "bank-test2": "bank-test2__openrouter__google-gemini-3.1-flash-lite__1df152e.json",
+    "escalation-test": "escalation-test__openrouter__google-gemini-3.1-flash-lite__1df152e.json",
+    "extractor-test": "extractor-test__openrouter__google-gemini-3.1-flash-lite__1df152e.json",
+    "list-test": "list-test__openrouter__google-gemini-3.1-flash-lite__1df152e.json",
+    "situation-test": "situation-test__openrouter__google-gemini-3.1-flash-lite__1df152e.json",
+    "situation-test2": "situation-test2__openrouter__google-gemini-3.1-flash-lite__1df152e.json",
+    "situation-test3": "situation-test3__openrouter__google-gemini-3.1-flash-lite__1df152e.json",
+    "test": "test__openrouter__google-gemini-3.1-flash-lite__1df152e.json"
    },
-   "short": "9 frozen splits: 0/121 wrong released, 1/70 correct held",
+   "short": "9 frozen splits: 0/121 wrong released, 1/70 correct stopped",
    "splits": 9,
-   "text": "Nine frozen test splits: 0 of 121 wrong drafts released, 1 of 70 correct ones held",
+   "text": "Nine frozen test splits: 0 of 121 wrong drafts released, 1 of 70 correct ones stopped",
    "wrong_drafts": 121
   },
   {
