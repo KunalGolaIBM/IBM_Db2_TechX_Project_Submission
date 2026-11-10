@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "StockSage – Agentic AI Inventory Intelligence Assistant",
+    "slug": "stock-sage",
+    "short_description": "Agentic AI and deterministic inventory intelligence assistant for small grocery and dairy retailers, powered by IBM Db2 and LangGraph.",
+    "category": "AI / Analytics / Retail Inventory",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/mahima04sahu-lgtm/Mahima_IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "StockSage Innovators",
+    "members": [
+      {
+        "name": "Mahima Sahu",
+        "github": "mahima04sahu-lgtm",
+        "email": "mahima.techx@example.com",
+        "role": "Full Stack & AI Developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition (Docker)",
+    "connector": "ibm_db (official IBM Python connector)",
+    "features_used": [
+      "Relational Tables with Foreign Key Constraints",
+      "B-Tree Indexing on Expiry Dates and Foreign Keys",
+      "Deterministic Sales Velocity & Aggregation Queries",
+      "Parameterized Query Execution & Injection Protection"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python"],
+    "frameworks": ["Streamlit", "LangGraph", "LangChain", "Pandas", "Plotly"],
+    "ai_models": ["Google Gemini 2.5 Flash"]
+  }
+}
