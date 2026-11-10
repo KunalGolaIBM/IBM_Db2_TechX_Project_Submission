@@ -120,6 +120,7 @@ def run_fuzz(n: int = 1000, seed: int = 7) -> dict:
     by_cat: Counter = Counter()
     outcomes: Counter = Counter()
     mismatches: list[dict] = []
+    autonomous = 0
     t0 = time.time()
     ibm_db.autocommit(agent.conn, ibm_db.SQL_AUTOCOMMIT_OFF)
     try:
@@ -137,12 +138,18 @@ def run_fuzz(n: int = 1000, seed: int = 7) -> dict:
                 got = msg.split(":")[0].strip()
             except Db2Error as exc:  # a crash is a finding too: the procedure must always answer cleanly
                 msg, got = str(exc), "ERROR"
+            if got.startswith(("AUTO-APPLIED", "AUTONOMY BLOCKED")):
+                # Earned autonomy is switched on: Db2 accepted the proposal and decided it itself, so it is
+                # an accepted proposal that is no longer pending (a repeat of it is not a duplicate).
+                got = "PENDING"
+                oracle.pending.discard((action_type, payload))
+                autonomous += 1
             by_cat[cat] += 1
             outcomes[(expected, got)] += 1
             if expected != got:
                 mismatches.append({"category": cat, "type": action_type, "payload": payload,
                                    "expected": expected, "db2": msg[:160]})
-            if got == "PENDING":
+            if got == "PENDING" and (action_type, payload) in oracle.pending:
                 history.append((action_type, payload))
     finally:
         ibm_db.rollback(agent.conn)
@@ -152,4 +159,4 @@ def run_fuzz(n: int = 1000, seed: int = 7) -> dict:
             "by_category": dict(by_cat), "rejected": sum(v for (e, g), v in outcomes.items() if g == "REJECTED"),
             "accepted": sum(v for (e, g), v in outcomes.items() if g == "PENDING"),
             "duplicates": sum(v for (e, g), v in outcomes.items() if g == "DUPLICATE"),
-            "seconds": round(time.time() - t0, 1), "seed": seed}
+            "autonomous": autonomous, "seconds": round(time.time() - t0, 1), "seed": seed}

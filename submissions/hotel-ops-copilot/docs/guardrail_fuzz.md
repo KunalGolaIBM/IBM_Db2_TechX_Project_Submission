@@ -1,6 +1,6 @@
 # Guardrail fuzz: Db2 against an independent oracle
 
-**10,000 / 10,000 decisions agree** · seed 7 · 7.7 s · run 2026-11-10 02:42 UTC · no LLM · one transaction, rolled back.
+**10,000 / 10,000 decisions agree** · seed 7 · 14.7 s · run 2026-11-10 05:08 UTC · no LLM · one transaction, rolled back.
 
 Random agent proposals (valid ones, near-misses on every boundary: rate exactly at the floor and ceiling and one paisa outside, today, today+90 and today+91, end before start, unknown room types and rooms, over-long fields, opted-out guests, inactive reservations, bad priorities, malformed JSON, unknown action types and exact repeats) are sent to `SP_PROPOSE_ACTION` with the **agent's own Db2 credentials**. Each Db2 decision (PENDING, REJECTED or DUPLICATE) is compared with a Python oracle written from the business rules, not from the SQL.
 

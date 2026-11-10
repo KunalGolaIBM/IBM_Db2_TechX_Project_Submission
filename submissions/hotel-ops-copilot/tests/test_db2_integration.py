@@ -447,3 +447,17 @@ def test_policy_search_leaves_no_lock_behind():
     finally:
         ibm_db.rollback(db.conn)
         db.close()
+
+
+def test_guardrail_fuzz_still_agrees_when_earned_autonomy_is_on():
+    """Found in a rehearsal: with autonomy granted, Db2 auto-applies small changes; the oracle must accept that."""
+    from hotelops.fuzz import run_fuzz
+
+    manager.set_autonomy("RATE_CHANGE", True, "pytest", "fuzz with autonomy", max_change_pct=5, min_lead_days=7,
+                         daily_limit=50)
+    try:
+        r = run_fuzz(400, seed=13)
+    finally:
+        manager.set_autonomy("RATE_CHANGE", False, "pytest", "fuzz done")
+    assert r["agree"] == r["proposals"], r["mismatches"][:3]
+    assert r["autonomous"] > 0
