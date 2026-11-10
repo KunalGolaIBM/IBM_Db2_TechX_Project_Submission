@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero" id="top" aria-labelledby="hero-title">
+  <div class="hero-frame">
+    <img class="hero-background" src="/assets/Purple%20robot.jpg" alt="" aria-hidden="true">
+    <div class="hero-copy hero-copy-left">
+      <h1 id="hero-title">AGENTIC<br>MEDICATION<br>&amp; HEALTH<br>COMPANION</h1>
+      <p>EMPATHETIC AI COMPANION ACTING LIKE A CARING FAMILY MEMBER FOR MEDICATION REMINDERS, HEALTH TRACKING, AND DAILY WELLNESS</p>
+    </div>
+    <div class="hero-copy hero-copy-right">
+      <h2>24/7<br>HUMANIZED<br>CARE</h2>
+      <p>POWERED BY IBM DB2 &amp; AGENTIC AI FOR SECURE, REAL-TIME HEALTH LOGS, PROACTIVE CARE CONTINUITY, AND EMOTIONAL SUPPORT</p>
+    </div>
+  </div>
+</section>
+
+<section class="section-block section-wrap home-intro">
+  <div class="section-heading">
+    <div><span class="eyebrow">CARE THAT FITS REAL LIFE</span><h2>Technology that <span class="accent-text">remembers to care.</span></h2></div>
+    <p class="section-intro">Aethel brings a family member’s preferences and daily rhythms into a calm, supportive companion experience.</p>
+  </div>
+  <div class="home-cards">
+    <a class="glass home-card" href="/prototype"><span class="eyebrow">01 · COMPANION</span><h3>Meet Aethel</h3><p>Explore the interactive companion, profile setup, and reminders.</p><span class="card-arrow" aria-hidden="true">↗</span></a>
+    <a class="glass home-card" href="/architecture"><span class="eyebrow">02 · SYSTEM</span><h3>Turn through the care loop</h3><p>Discover how profile context, agent workflow, trigger checks, and Db2 connect.</p><span class="card-arrow" aria-hidden="true">↗</span></a>
+    <a class="glass home-card" href="/community"><span class="eyebrow">03 · COMMUNITY</span><h3>Leave a kind note</h3><p>Share feedback with the Aethel community on its own dedicated board.</p><span class="card-arrow" aria-hidden="true">↗</span></a>
+  </div>
+</section>
+
+<section class="section-block section-wrap notes-section">
+  <div class="section-heading">
+    <div><span class="eyebrow">SMALL MOMENTS, HELD GENTLY</span><h2>A little room for <span class="accent-text">what matters.</span></h2></div>
+    <p class="section-intro">Click or drag a note to peel it away. Each note returns to the stack for another turn.</p>
+  </div>
+  <div class="sticky-board" aria-label="Interactive Aethel notes">
+    <article class="sticky-note note-lilac" role="button" tabindex="0" aria-label="Peel note: The routines that bring comfort.">
+      <span>01 / REMEMBER</span><p>The routines that bring comfort.</p><small>CLICK OR DRAG TO PEEL</small>
+    </article>
+    <article class="sticky-note note-rose" role="button" tabindex="-1" aria-hidden="true" aria-label="Peel note: A gentle check-in, right on time.">
+      <span>02 / NOTICE</span><p>A gentle check-in, right on time.</p><small>CLICK OR DRAG TO PEEL</small>
+    </article>
+    <article class="sticky-note note-violet" role="button" tabindex="-1" aria-hidden="true" aria-label="Peel note: Space for someone to be heard.">
+      <span>03 / LISTEN</span><p>Space for someone to be heard.</p><small>CLICK OR DRAG TO PEEL</small>
+    </article>
+  </div>
+</section>
+{% endblock %}

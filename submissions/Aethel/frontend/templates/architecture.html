@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading section-wrap" id="top">
+  <span class="eyebrow">THE AETHEL SYSTEM · FIELD GUIDE</span>
+  <h1>A care loop, <span class="accent-text">page by page.</span></h1>
+  <p>Turn through the system architecture and its five connected steps. Use the controls, keyboard arrows, or drag across the open book.</p>
+</section>
+
+<section class="book-section section-wrap">
+  <div class="book-shell">
+    <div class="book" id="architecture-book" aria-label="Interactive Aethel architecture book">
+      <div class="book-spread">
+        <div class="book-page book-left-page" id="book-left-page" aria-live="polite"></div>
+        <div class="book-page book-right-page" id="book-right-page" aria-live="polite"></div>
+        <div class="book-leaf" id="book-leaf" aria-hidden="true">
+          <div class="book-leaf-face book-leaf-front" id="book-leaf-front"></div>
+          <div class="book-leaf-face book-leaf-back" id="book-leaf-back"></div>
+        </div>
+        <div class="book-spine" aria-hidden="true"></div>
+      </div>
+    </div>
+    <div class="book-controls">
+      <button class="button button-outline" id="book-prev" type="button" aria-label="Turn to previous page">← Previous</button>
+      <span class="book-page-count" id="book-page-count" aria-live="polite">Page 1 of 6</span>
+      <button class="button button-glow" id="book-next" type="button" aria-label="Turn to next page">Next →</button>
+    </div>
+    <p class="book-hint">Tip: drag the right-hand page, or use your keyboard’s arrow keys.</p>
+  </div>
+</section>
+
+<div class="book-sources" id="book-sources" hidden>
+  <article class="book-cover-source">
+    <span class="eyebrow">AETHEL / SYSTEM NOTES</span>
+    <h2>Care, made <span class="accent-text">connected.</span></h2>
+    <p>A field guide to the signals, people, and services that come together in a thoughtful companion.</p>
+    <div class="cover-mark" aria-hidden="true">A</div>
+    <span class="page-meta">AETHEL · ARCHITECTURE</span>
+  </article>
+  <article class="book-source-page">
+    <span class="eyebrow">SYSTEM OVERVIEW · 01</span>
+    <h2>The care loop</h2>
+    <p>Personal preferences flow into contextual analysis, trigger evaluation, and a humanized companion. Relational history is stored in local IBM Db2.</p>
+    <figure class="architecture-figure">
+      <img src="/assets/architecture.png" alt="System diagram showing profile preferences flowing through a care analyzer and proactive trigger check to a voice and chat agent, companion mode, and IBM Db2 TESTDB.">
+      <figcaption>System architecture · IBM Db2 TESTDB at localhost:5000</figcaption>
+    </figure>
+    <span class="page-meta">OVERVIEW · 01 / 06</span>
+  </article>
+  <article class="book-source-page">
+    <span class="eyebrow">STEP 01 · CONTEXT</span>
+    <h2>User Profile &amp; Health Preferences Ingestion</h2>
+    <p>The experience begins with what a person chooses to share: preferred name, local time zone, check-in preference, and their own reminder details.</p>
+    <div class="page-callout"><span>DESIGN PRINCIPLE</span><p>Ask only for what the companion needs. Keep preferences editable and connected to the person’s session.</p></div>
+    <span class="page-meta">CONTEXT · 02 / 06</span>
+  </article>
+  <article class="book-source-page">
+    <span class="eyebrow">STEP 02 · SYNC</span>
+    <h2>Interactive Profile &amp; Preference Sync</h2>
+    <p>Onboarding writes preferences to the application API, which stores the profile and user-authored routines in the local Db2 database.</p>
+    <div class="data-flow"><span>PERSON</span><b aria-hidden="true">→</b><span>AETHEL API</span><b aria-hidden="true">→</b><span>IBM Db2</span></div>
+    <div class="page-callout"><span>PRIVATE BY SESSION</span><p>The signed browser session scopes profile, reminders, and conversation history.</p></div>
+    <span class="page-meta">PREFERENCE SYNC · 03 / 06</span>
+  </article>
+  <article class="book-source-page">
+    <span class="eyebrow">STEP 03 · REASONING</span>
+    <h2>Contextual Care Analyzer</h2>
+    <p>LangGraph coordinates contextual checks and LangChain supports the chat response using the current message and recent conversation history.</p>
+    <div class="graph-nodes"><span>PROFILE + HISTORY</span><b aria-hidden="true">→</b><span>LANGGRAPH STATE</span><b aria-hidden="true">→</b><span>LANGCHAIN RESPONSE</span></div>
+    <div class="page-callout"><span>BOUNDED SUPPORT</span><p>The agent does not diagnose, select medicines, prescribe doses, or claim a reminder was acted on.</p></div>
+    <span class="page-meta">CONTEXTUAL ANALYSIS · 04 / 06</span>
+  </article>
+  <article class="book-source-page">
+    <span class="eyebrow">STEP 04 · MOMENT</span>
+    <h2>Proactive Trigger Evaluation Engine</h2>
+    <p>While the app is open, it checks user-authored reminders and evaluates whether a pill reminder or wellbeing check-in is due.</p>
+    <div class="trigger-branches"><div><span>TRIGGER MATCH</span><strong>Gentle reminder</strong></div><div><span>NORMAL STATE</span><strong>Companion mode</strong></div></div>
+    <div class="page-callout"><span>HONEST DELIVERY</span><p>This prototype does not send reminders when the app is closed and does not verify medication ingestion.</p></div>
+    <span class="page-meta">TRIGGER EVALUATION · 05 / 06</span>
+  </article>
+  <article class="book-source-page">
+    <span class="eyebrow">STEP 05 · CONVERSATION</span>
+    <h2>Humanized Voice &amp; Chat Agent</h2>
+    <p>A supportive chat experience uses recent context and the person’s preferences. Private conversation history is written to the relational store.</p>
+    <div class="database-card"><span class="db-glyph" aria-hidden="true">DB</span><div><strong>IBM Db2 · TESTDB</strong><span>localhost:5000 · user db2inst1</span></div></div>
+    <p class="last-note">Aethel is a companion prototype, not an always-on monitor, medical device, or emergency service.</p>
+    <span class="page-meta">HUMANIZED COMPANION · 06 / 06</span>
+  </article>
+</div>
+{% endblock %}

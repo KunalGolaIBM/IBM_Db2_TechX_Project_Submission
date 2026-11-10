@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="Aethel is a human-centered family companion for preferences, reminders, supportive conversation, and community feedback.">
+  <title>{{ title }}</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body class="page-{{ page }}">
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-grid section-wrap">
+      <div class="footer-brand">
+        <a class="wordmark" href="/"><span class="brand-glyph" aria-hidden="true">A</span><span>AETHEL<span class="wordmark-period">.</span></span></a>
+        <p>A quieter kind of support, designed around the people and routines that matter.</p>
+      </div>
+      <div class="footer-column">
+        <h2>Explore</h2>
+        <a href="/">Home</a>
+        <a href="/prototype">The companion</a>
+        <a href="/architecture">How it works</a>
+      </div>
+      <div class="footer-column">
+        <h2>Community</h2>
+        <a href="/community">Feedback board</a>
+        <a href="/api/docs">API documentation</a>
+        <span>Created by Sonali Sharma</span>
+      </div>
+      <div class="footer-note">
+        <span class="eyebrow">BUILT WITH CARE</span>
+        <p>Aethel is a prototype, not a medical device or emergency service.</p>
+      </div>
+    </div>
+    <div class="footer-bottom section-wrap">
+      <span>© Aethel · Human-centered companion prototype</span>
+      <a href="#top">Back to top ↑</a>
+    </div>
+  </footer>
+
+  <nav class="icon-dock" aria-label="Site navigation">
+    <a class="dock-link" href="/" aria-label="Home" {% if page == "home" %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3.5 10 8.5-7 8.5 7v10.5h-6v-7h-5v7h-6z"/></svg>
+    </a>
+    <a class="dock-link" href="/prototype" aria-label="Explore the companion" {% if page == "prototype" %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M9 7h6M9 11h6M10 17h4"/></svg>
+    </a>
+    <a class="dock-link" href="/architecture" aria-label="Architecture" {% if page == "architecture" %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5c3.5-1.6 6.5-1.2 9 1v14c-2.5-2.2-5.5-2.6-9-1zM21 5.5c-3.5-1.6-6.5-1.2-9 1v14c2.5-2.2 5.5-2.6 9-1z"/></svg>
+    </a>
+    <a class="dock-link" href="/community" aria-label="Community" {% if page == "community" %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v11H11l-5 4v-4H4z"/><path d="M8 10h8M8 13h5"/></svg>
+    </a>
+  </nav>
+
+  <div class="service-alert section-wrap" id="service-alert" role="status" hidden></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
