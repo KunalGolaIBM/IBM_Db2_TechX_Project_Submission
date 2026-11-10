@@ -4,7 +4,8 @@
 > matching advisories, the services that run an affected version, and since when. Keyword (BM25) and vector (DiskANN)
 > search run and fuse in one Db2 SQL statement, and Db2 row access control (RCAC) decides what each analyst may see.
 > We found that under row permissions `FETCH APPROX FIRST 10` returns about 2 of 10 rows to an analyst who may see
-> 10 % of the rows. NEEDLE measures why and routes around it: 10 of 10 rows, 0 leaks.
+> 10 % of the rows. NEEDLE measures why and routes around it: on 89 held-out queries the router's vector leg returned
+> 10 of 10 rows, 0 leaks.
 
 **Demo video:** TODO(final): YouTube link (under 3 minutes).
 
@@ -16,10 +17,19 @@ over time, and says which services are AFFECTED and since when. Each analyst sig
 itself hides what they may not see. The model only writes a short memo; Db2 decides what matches, what is affected,
 and who may see it.
 
+**Why a Db2 user should care.** Any `FETCH APPROX` on a table whose row permission reads the user's scope from an
+entitlement table (tenant, region, clearance) shares one plan. On our table that plan gives the permission 21
+candidates for k = 10, so a user who may see a share p of the rows gets about 21 × p rows (at most 10), with no
+error (we measured 2.05 at 10 %). A `WHERE` with a scalar subquery does the same (2.06). We measured one table of
+26,210 rows; we expect the same shape on larger tables but did not measure it.
+Source: [`docs/evidence/rcac_real.md`](docs/evidence/rcac_real.md), findings 2-4.
+
 **For reviewers, in 3 minutes**
 1. [What we found](#what-we-found): the RCAC x DiskANN result, with the chart and the control experiment.
 2. [Steps to verify Db2 integration](#steps-to-verify-db2-integration): copy-paste SQL for the catalog, the vector-index plan, a `TRIAGE` call and an RCAC check as `NDL_JUNIOR`.
 3. [`architecture.md`](architecture.md): schema, the `TRIAGE` statement, the request sequence, the RCAC model, and why each Db2 feature is there.
+4. Run it: `PYTHONPATH=src python -m pytest -q -m "not db" tests` (no Docker; 166 passed), or [sample mode](#setup--installation)
+   (Docker, no Ollama; 197 s on a clean host, see [`docs/evidence/clean_host_run.md`](docs/evidence/clean_host_run.md)).
 
 Every number in this README comes from a file in [`docs/evidence/`](docs/evidence/) or [`eval/results/`](eval/results/).
 The file is named next to each table.
@@ -246,11 +256,42 @@ Query: "heap overflow in the image library's FlashPix JPEG decoder can lead to c
 ## AI / LLM Architecture
 - **Framework:** LangChain (`langchain-core` `BaseRetriever`, `ChatOllama`).
 - **Models:** Ollama `nomic-embed-text` (768-dim embeddings; prefixes `search_document: ` / `search_query: `);
-  the memo model is Ollama `qwen3:14b`, selected by `LLM_MODEL`. Everything runs locally. No cloud key is needed.
+  the memo model is selected by `LLM_MODEL` (`qwen3:14b` in our runs; `qwen3:4b-instruct` also tested, see
+  [`docs/evidence/web_ui_acceptance.txt`](docs/evidence/web_ui_acceptance.txt)). Everything runs locally. No cloud key
+  is needed.
 - **Workflow:** sign-in -> query -> tokens + embedding -> router picks the search depth for the session user ->
   `NEEDLE.TRIAGE` on the analyst's own connection -> fused rows -> exact SBOM join -> optional memo -> verifier -> UI.
 - **What the LLM does not do:** it does not decide which advisory matches, which service is affected, or who may see
   what. Db2 decides all three.
+
+The whole chain in Python, on the analyst's own connection (run from this folder with `PYTHONPATH=src`):
+```python
+import ibm_db
+from haystack import Pipeline
+from needle.haystack_component import NeedleTriageComponent
+from needle.llm_summary import evidence_for, generate_memo
+from needle.retriever import Db2HybridRetriever
+from needle.sbom import connect_as, fetch_exposure, password_for
+from needle.triage import connect
+from needle.verify import verify_memo
+
+q = "the yaml loader everyone uses runs python code from a crafted file"
+conn = connect_as("NDL_JUNIOR")                                   # password from .env; RCAC applies to this user
+docs = Db2HybridRetriever(conn=conn, authid="NDL_JUNIOR", k=8).invoke(q)  # NEEDLE.TRIAGE; the router picks the depth
+rows = fetch_exposure(conn, [d.metadata["adv_id"] for d in docs])       # exact SBOM join on the same connection
+memo = generate_memo(docs, rows)                                  # ChatOllama(LLM_MODEL) writes the memo
+checked = verify_memo(memo.raw, evidence_for(docs, rows))         # deterministic check (generate_memo also runs it)
+print(memo.model, [d.metadata["adv_id"] for d in docs], len(rows), checked.kept, checked.removed, checked.text, sep="\n")
+ibm_db.close(conn)
+
+p = Pipeline(); p.add_component("triage", NeedleTriageComponent(lambda: connect("NDL_JUNIOR", password_for("NDL_JUNIOR")), top_k=5))
+print([d.meta["adv_id"] for d in p.run({"triage": {"query": q}})["triage"]["documents"]])
+```
+Our run of exactly this code against the live Db2 (exit 0, 30.1 s with `qwen3:14b`): 8 advisories, 18 exposure rows,
+legacy-reporting AFFECTED for 2,448 days. The verifier kept 4 sentences and removed 2. Its reasons: it read an
+AFFECTED claim for two services whose SQL status is NOT_CONFIRMED / PREVIOUSLY_AFFECTED, and "919 days" does not match
+their SQL day counts (179, 383). The Haystack pipeline returned 5 advisories.
+Output: [`docs/evidence/readme_snippet_run.txt`](docs/evidence/readme_snippet_run.txt).
 
 ## Tech Stack
 - **Backend / core:** Python 3.12+ (built with 3.13), `ibm_db`, SQL and SQL PL.
@@ -326,6 +367,8 @@ python scripts/run_sample_queries.py                    # NEEDLE.TRIAGE as NDL_J
 At about 2,000 rows the cost-based optimizer will probably not choose the vector index (a table scan is cheap at
 this size; `run_sample_queries.py` prints the plan it gets). Every vector-index and recall result in this README
 needs the full corpus below. Sample mode shows that the pipeline runs; it does not reproduce the measurements.
+`pytest -m db` on the clean host: 34 passed, 4 failed, 2 skipped on the 2,000-row sample (tests that assume the full
+corpus or Ollama; [`docs/evidence/clean_host_run.md`](docs/evidence/clean_host_run.md), open problem 3).
 
 **Full corpus (needs Ollama for the document embeddings).** Continue after step 4:
 ```bash
@@ -515,9 +558,9 @@ Recorded test runs (each file holds the output; the "What" column says what ran)
 | What | Result | Evidence |
 |---|---|---|
 | Full suite, final run: unit tests and `-m db` tests against live Db2 | 206 passed (166 unit + 40 DB) | [`docs/evidence/pytest_final.txt`](docs/evidence/pytest_final.txt) |
-| RCAC leak tests + TRIAGE as each user, after the demo embargo and the statistics fix | 35 passed (11 unit + 24 DB) | `docs/evidence/rcac_raw/pytest_all_after_demo_embargo.log` |
+| RCAC leak tests + TRIAGE as each user (`tests/test_rcac.py`, `tests/test_triage_rcac.py`), in the final run above | 39 passed (28 DB + 11 unit) | [`docs/evidence/pytest_final.txt`](docs/evidence/pytest_final.txt) (an earlier run after the demo embargo: 35 passed, `docs/evidence/rcac_raw/pytest_all_after_demo_embargo.log`) |
 | BM25 statistics fix: no SELECT on TERM_DF / CORPUS_STATS, difference attack empty, SQL BM25 = rank_bm25 | 6 passed | [`docs/evidence/fix_c1_h2.txt`](docs/evidence/fix_c1_h2.txt) |
-| Memo verifier (H1 status claims, M1 obfuscated IDs, M2 payloads) | 48 passed | [`docs/evidence/fix_h1.txt`](docs/evidence/fix_h1.txt) |
+| Memo verifier (`tests/test_verify.py`: H1 status claims, M1 obfuscated IDs, M2 payloads, durations), in the final run above | 59 passed | [`docs/evidence/pytest_final.txt`](docs/evidence/pytest_final.txt) (the H1/M1/M2 fix run: 48 passed, [`docs/evidence/fix_h1.txt`](docs/evidence/fix_h1.txt)) |
 | Verifier + SBOM + retriever + UI + app DB tests (sign-in binds to the typed identity, UNKNOWN_COVERAGE, router depth, NDL_P10 identity) | 83 passed | [`docs/evidence/fix_h1.txt`](docs/evidence/fix_h1.txt) |
 | BM25 parity, RCAC, router and tokenizer tests after the keyword-leg `LATERAL` rewrite (DB tests included) | 60 passed | [`docs/evidence/rcac_posting_overhead.md`](docs/evidence/rcac_posting_overhead.md) |
 | Retrieval evaluation, 450 frozen queries under RCAC, quality gate | passed (hybrid named hit@10 0.993 >= 0.80) | [`docs/evidence/eval_final.md`](docs/evidence/eval_final.md) |
@@ -604,7 +647,9 @@ back; switch to the NEEDLE router and 10 of 10 do. Drag to turn it.
 **1. Triage as NDL_JUNIOR.** The PyYAML chat message (no CVE): one Db2 call ranks keyword, vector and hybrid; the
 verdict slab names legacy-reporting (pyyaml 5.1, AFFECTED since 2020-02-27) from the exact SBOM join. Keywords alone
 rank MS SWIFT first; hybrid puts the PyYAML advisories on top, and the rank-flow chart shows how the fusion reorders
-them. The router line shows the depth chosen for this identity.
+them. The router line shows the depth chosen for this identity. Its "triage SQL 696 ms" is the wall clock in the local
+Python service: it includes the router's visibility count, 2 × depth result rows and the round trips through the SSH
+tunnel to the Codespace Db2. The 53.5 ms p50 in [Results](#results) is one `TRIAGE` call measured inside the Codespace.
 ![Triage: verdict slab, router line, keyword / vector / hybrid columns](docs/screenshots/01_triage_ranking.png)
 
 **2. Services and the verified memo.** An exposure timeline from the temporal SBOM history (AFFECTED since 2020-02-27,
@@ -674,7 +719,8 @@ on `tests/test_rcac.py` and `tests/test_triage_rcac.py`: 28 passed, 11 deselecte
   (5) contains a URL, a shell or package-manager command, or a package-like token not in the evidence;
   (6) states a duration ("over 900 days", "6 years") that does not match the SQL `DAYS_EXPOSED` of the services it
   names. A qwen3:4b draft once said "over 900 days" for a 2,447-day exposure; rule 6 now removes that sentence.
-  It checks identifiers, status words and durations, not the full meaning of a sentence. The raw model output is still shown
+  It checks identifiers, status words and durations, not the full meaning of a sentence. It does not check that every
+  affected service is mentioned; the exposure table is the source of truth. The raw model output is still shown
   in a collapsed panel labelled "unverified".
 - **SQL.** In `src/needle/` and in `NEEDLE.TRIAGE_MODE` every value from a user or a query is a bound parameter;
   query terms enter as one bound JSON value. The only values written into SQL text are integers validated in code

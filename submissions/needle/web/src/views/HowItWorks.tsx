@@ -121,7 +121,16 @@ const ms1 = (n: number) => `${n.toFixed(1)} ms`;
 
 function Measured() {
   const [st, setSt] = useState<Stats | null>(null);
-  useEffect(() => { api.stats().then(setSt).catch(() => setSt(null)); }, []);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => { api.stats().then(setSt).catch((e) => setErr(e instanceof Error ? e.message : String(e))); }, []);
+  if (err) {
+    return (
+      <section aria-labelledby="measured-title" className="min-w-0">
+        <h2 id="measured-title" className="mb-3 text-xl font-semibold tracking-[-0.01em]">Measured</h2>
+        <p role="status" title={err} className="text-sm text-mute" data-testid="measured-error">Could not load the measured results from the local API.</p>
+      </section>
+    );
+  }
   if (!st) return null;
   const r = st.recall10, l = st.latency_ms, run = st.eval_run;
   const rows: { what: string; value: ReactNode; how: string; file: string }[] = [

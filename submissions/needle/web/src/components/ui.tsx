@@ -9,10 +9,17 @@ const STATUS_STYLE: Record<Status, string> = {
   NOT_CONFIRMED: "bg-ink text-[#c4c8ca]",
   PREVIOUSLY_AFFECTED: "border border-rule text-mute",
 };
+/* Plain words for each status code, for tooltips and the verdict slab. Never "safe". */
+export const STATUS_PLAIN: Record<Status, string> = {
+  AFFECTED: "exact version match",
+  NOT_CONFIRMED: "version not listed; check",
+  UNKNOWN_COVERAGE: "advisory lists no versions",
+  PREVIOUSLY_AFFECTED: "was exposed, now upgraded",
+};
 export function StatusLabel({ status, onInk = false }: { status: Status; onInk?: boolean }) {
   const cls = onInk && status === "PREVIOUSLY_AFFECTED" ? "border border-slab-rule text-slab-mute" : STATUS_STYLE[status];
   return (
-    <span className={`inline-flex items-center rounded-[3px] px-1.5 py-[1px] font-mono text-[11px] font-semibold leading-4 tracking-[0.02em] whitespace-nowrap ${cls}`}>
+    <span title={`${status}: ${STATUS_PLAIN[status]}`} className={`inline-flex items-center rounded-[3px] px-1.5 py-[1px] font-mono text-[11px] font-semibold leading-4 tracking-[0.02em] whitespace-nowrap ${cls}`}>
       {status}
     </span>
   );

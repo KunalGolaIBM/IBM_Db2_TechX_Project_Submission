@@ -88,7 +88,7 @@ export default function App() {
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b border-hair bg-ground/95 backdrop-blur-sm">
         <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-3 px-4 sm:gap-6 sm:px-6 lg:px-8">
-          <a href="#/home" onClick={() => go("home")} className="flex items-center gap-2.5 text-ink no-underline">
+          <a href="#/home" onClick={() => go("home")} aria-label="NEEDLE home" className="flex items-center gap-2.5 text-ink no-underline">
             <Mark />
             <span className="hidden font-mono text-[15px] font-semibold tracking-[0.08em] sm:inline">NEEDLE</span>
           </a>

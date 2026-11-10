@@ -81,7 +81,7 @@ function Row({ r, mode, doc, fleet, onOpen, hot, onHot }: {
 
 function Cross({ label, v }: { label: string; v: number | null }) {
   return (
-    <span className={`inline-flex w-[3.4rem] justify-between rounded-[3px] px-1 ${v == null ? "text-rule" : "bg-surface text-ink-2"}`}>
+    <span className={`inline-flex w-[3.4rem] justify-between rounded-[3px] px-1 ${v == null ? "text-mute" : "bg-surface text-ink-2"}`}>
       <span>{label}</span><span>{v ?? "–"}</span>
     </span>
   );

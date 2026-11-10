@@ -1,5 +1,5 @@
 import { fmt, type ExposureRow, type Mode, type TriageResult } from "../api";
-import { StatusLabel } from "./ui";
+import { STATUS_PLAIN, StatusLabel } from "./ui";
 
 /* The one strong panel: the answer to "which services does this hit?", from the SQL exposure rows only. */
 export default function Verdict({ result, modeIds, mode }: { result: TriageResult; modeIds: Set<string>; mode: Mode }) {
@@ -71,7 +71,18 @@ function Kpi({ label, value, tone, status }: { label: string; value: number | st
   return (
     <div className="flex min-w-[9.5rem] flex-col justify-between gap-2 border-slab-rule px-5 py-4 odd:border-r sm:border-r sm:last:border-r-0 lg:py-6">
       <dd className={`font-mono text-2xl font-semibold num ${color}`}>{value}</dd>
-      <dt className="text-xs text-slab-mute">{status ? <StatusLabel status={status} onInk /> : label}</dt>
+      <dt className="text-xs text-slab-mute">
+        {status ? (
+          <>
+            <StatusLabel status={status} onInk />
+            {/* Plain words under the code. Shown from lg up, where the slab's left column already sets the height
+                (11px keeps each hint on one line; w-0 min-w-full keeps it from widening the KPI column). Below lg
+                the line would make the slab taller, so there it is for screen readers only; the title stays. */}
+            <span className="sr-only lg:hidden">{STATUS_PLAIN[status]}</span>
+            <span className="mt-0.5 hidden w-0 min-w-full text-[11px] leading-4 lg:block" data-testid={`kpi-hint-${status}`}>{STATUS_PLAIN[status]}</span>
+          </>
+        ) : label}
+      </dt>
     </div>
   );
 }

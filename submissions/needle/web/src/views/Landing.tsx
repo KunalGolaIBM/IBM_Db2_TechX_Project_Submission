@@ -54,7 +54,8 @@ function Hero() {
   const [who, setWho] = useState<"all" | "p10">("all");
   const [plan, setPlan] = useState<"shared" | "router">("shared");
   const [ready, setReady] = useState(false);
-  const [nogl, setNogl] = useState(false);
+  // why the 3D view is missing: the browser has no WebGL, or the corpus map (cloud.json / cloud.bin) did not load
+  const [heroErr, setHeroErr] = useState<{ kind: "webgl" | "data"; message: string } | null>(null);
   const [paused, setPaused] = useState(() => matchMedia("(prefers-reduced-motion: reduce)").matches);
   const lens: Lens = who === "all" ? "all" : plan === "shared" ? "p10-shared" : "p10-router";
   const query: CloudQuery | undefined = info?.queries.find((x) => x.key === q);
@@ -78,11 +79,11 @@ function Hero() {
         sceneRef.current = s;
         setInfo(data.info);
         requestAnimationFrame(() => setReady(true));
-      } catch {
+      } catch (e) {
         setInfo(data.info);
-        setNogl(true);
+        setHeroErr({ kind: "webgl", message: errText(e) });
       }
-    }).catch(() => setNogl(true));
+    }).catch((e) => { if (!disposed) setHeroErr({ kind: "data", message: errText(e) }); });
     const io = new IntersectionObserver(([e]) => sceneRef.current?.setRunning(e.isIntersecting));
     if (host.current) io.observe(host.current);
     return () => { disposed = true; io.disconnect(); sceneRef.current?.dispose(); sceneRef.current = null; };
@@ -168,7 +169,13 @@ function Hero() {
         <div ref={label} aria-hidden className="pointer-events-none absolute top-0 left-0 opacity-0 transition-opacity duration-300">
           <span className="ml-3 -translate-y-1/2 inline-block whitespace-nowrap rounded-[3px] bg-paper px-1.5 py-[1px] font-mono text-[11px] font-semibold text-ink">your question</span>
         </div>
-        {nogl && <p className="absolute top-6 left-6 text-sm text-slab-mute">The 3D view needs WebGL; everything below works without it.</p>}
+        {heroErr && (
+          <p className="absolute top-6 left-6 max-w-[60ch] text-sm text-slab-mute" data-testid="hero-fallback">
+            {heroErr.kind === "webgl"
+              ? "The 3D view needs WebGL; everything below works without it."
+              : `Could not load the corpus map (${heroErr.message}); everything below works without it.`}
+          </p>
+        )}
 
         <div className={`pointer-events-none relative z-10 mx-auto flex max-w-[1600px] flex-col justify-end gap-8 px-4 pb-10 transition-opacity duration-300 ease-out sm:px-6 lg:h-full lg:px-8 lg:pb-14 ${chapter ? "lg:opacity-0" : ""}`}
           style={chapter ? { visibility: "hidden" } : undefined}>
@@ -289,11 +296,21 @@ function Ctl<T extends string>({ label, value, onChange, options }: { label: str
   );
 }
 
+const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
 function FindingTeaser() {
   const [f, setF] = useState<Finding | null>(null);
-  useEffect(() => { api.finding().then(setF).catch(() => setF(null)); }, []);
-  if (!f) return null;
-  const p10 = f.selectivity.series.rcac[0], r10 = f.selectivity.series.router[0];
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => { api.finding().then(setF).catch((e) => setErr(errText(e))); }, []);
+  const p10 = f?.selectivity?.series?.rcac?.[0], r10 = f?.selectivity?.series?.router?.[0];
+  if (err || (f && (!p10 || !r10))) {
+    return (
+      <p role="status" title={err ?? "The finding has no selectivity series"} className="border-b border-hair py-6 text-sm text-mute" data-testid="finding-teaser-error">
+        Could not load the measured results from the local API.
+      </p>
+    );
+  }
+  if (!f || !p10 || !r10) return null;
   return (
     <section className="grid gap-10 border-b border-hair py-16 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-16 lg:py-24">
       <div>

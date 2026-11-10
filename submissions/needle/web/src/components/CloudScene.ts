@@ -115,11 +115,17 @@ void main() {
 }`;
 
 export async function loadCloud(): Promise<{ info: CloudInfo; pos: Float32Array; bucket: Float32Array }> {
+  const get = async (url: string) => {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`cloud data missing: HTTP ${r.status}`);
+    return r;
+  };
   const [info, buf] = await Promise.all([
-    fetch("/cloud/cloud.json").then((r) => r.json() as Promise<CloudInfo>),
-    fetch("/cloud/cloud.bin").then((r) => r.arrayBuffer()),
+    get("/cloud/cloud.json").then((r) => r.json() as Promise<CloudInfo>),
+    get("/cloud/cloud.bin").then((r) => r.arrayBuffer()),
   ]);
   const n = info.n;
+  if (buf.byteLength < n * 7) throw new Error(`cloud data incomplete: cloud.bin has ${buf.byteLength} bytes, expected ${n * 7}`);
   const q = new Int16Array(buf, 0, n * 3);
   const b = new Uint8Array(buf, n * 6, n);
   const pos = new Float32Array(n * 3);
