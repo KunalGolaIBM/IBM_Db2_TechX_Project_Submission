@@ -153,7 +153,7 @@ class Repository:
                     "INSERT INTO RECOMMENDATION (RECOMMENDATION_ID, CASE_ID, OPTION_NAME, RATIONALE, STATUS) VALUES (?,?,?,?,?)")
                 self.ibm.execute(stmt,(rid,case_id,opt["name"],opt["rationale"],"PROPOSED"))
             else:
-                self.conn.execute("INSERT OR REPLACE INTO recommendation VALUES (?,?,?,?,?,?,?)",
+                self.conn.execute("INSERT OR REPLACE INTO recommendation VALUES (?,?,?,?,?,?)",
                     (rid,case_id,opt["name"],opt["rationale"],"PROPOSED",datetime.utcnow().isoformat()))
         if self.mode == "IBM Db2": self.ibm.commit(self.conn)
         else: self.conn.commit()
