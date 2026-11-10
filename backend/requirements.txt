@@ -1,0 +1,1 @@
+fastapi==0.115.12\nuvicorn[standard]==0.34.0\npython-dotenv==1.0.1\nibm_db==3.2.5\n
