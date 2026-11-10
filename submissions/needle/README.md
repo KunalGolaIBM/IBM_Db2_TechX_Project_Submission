@@ -7,7 +7,7 @@
 > 10 % of the rows. NEEDLE measures why and routes around it: on 89 held-out queries the router's vector leg returned
 > 10 of 10 rows, 0 leaks.
 
-**Demo video (2:46):** https://youtu.be/5ZcVFBsjYLE
+**Demo video (2:46):** https://youtu.be/OFGFV6zC5QE
 
 ![NEEDLE triage console: verdict, rank-flow chart and the keyword, vector and hybrid rankings from one Db2 call](docs/screenshots/01_triage_ranking.png)
 
@@ -633,7 +633,7 @@ router is recall and row count, not speed. `NEEDLE.TRIAGE` under RCAC (NDL_SENIO
 ([`docs/evidence/eval_final.md`](docs/evidence/eval_final.md)).
 
 ## Screenshots & Demo
-- **Demo video (2:46, public):** https://youtu.be/5ZcVFBsjYLE (download: https://github.com/wiiqz/IBM2026/releases/tag/needle-demo-video-2026-11-10)
+- **Demo video (2:46, public):** https://youtu.be/OFGFV6zC5QE (download: https://github.com/wiiqz/IBM2026/releases/tag/needle-demo-video-2026-11-10)
 - **Live demo:** none (the app runs locally against your Db2).
 - Screenshots (`docs/screenshots/`), web UI against the full corpus (26,210 advisories), light theme. Live checks
   behind them: [`docs/evidence/web_ui_acceptance.txt`](docs/evidence/web_ui_acceptance.txt).
