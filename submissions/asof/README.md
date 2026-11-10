@@ -273,7 +273,7 @@ Db2 tests run in throwaway schemas as the real least-privilege users ([what they
 | ![The playground: the Moffatt draft for a March booking contradicted by BRV-002 v1 and corrected from the clause](docs/screenshots/01-playground-moffatt-march.png) | ![Ledger replay: the row the decision used, what Db2 held at that moment, and what applies today](docs/screenshots/05-replay-after-change.png) |
 | ![The specialist inbox: a held decision, its claims and the policy in force, and a reply that contradicts BRV-002 v1 refused](docs/screenshots/20-specialist-inbox.png) | ![The customer chat: a reply corrected before sending, with its source clause version](docs/screenshots/18-customer-chat-corrected.png) |
 
-- **Live Demo Link:** none, on purpose. Db2 on Cloud's free plan has no `VECTOR`, no new schemas and no row and column access control, and hosting AsOf's write paths publicly would expose a writable database or a funded API key ([Known Limitations](#known-limitations--future-roadmap)). The video, the screenshots and replay mode (one command, no key) cover it.
+- **Live Demo Link:** https://136-108-251-170.sslip.io, a public demo for judging on one Google Cloud VM with Db2 12.1.5 Community Edition. It runs in replay mode with no model key on the server: every page, every built-in scenario, checks, previews and Ask the ledger work, with Db2 live. Anything that would change policy or send something (applying a change, approving a draft, sending a reply or a notice) is refused with a "disabled in the public demo" message, and requests are rate-limited per address (`ASOF_PUBLIC_DEMO`, [api.py](src/asof/api.py)). To try those too, run `./quickstart.sh`.
 - **Demo Video Link:** https://www.youtube.com/watch?v=mntehVWQn8E (2:58, with captions)
 
 **Demo walkthrough:** the chat corrects the March bereavement answer from `BRV-002` v1; a policy PDF becomes checked versions; the pet-fee change finds the customer told the old fee and drafts a notice; the inbox answers a held decision; the ledger replays a decision. Every screen: [docs/screenshots.md](docs/screenshots.md).
@@ -288,7 +288,7 @@ Db2 tests run in throwaway schemas as the real least-privilege users ([what they
 - **About 6 s per check** on the hosted model: fine before a reply is sent, not for token streaming.
 - **`VERIFY_CHAIN` reads the whole chain:** [46 minutes at 1,000,000 decisions](docs/db2.md#verify_chain-at-1000000-decisions); receipt checks and evidence packs call it, so a large ledger needs checkpointed verification.
 - **One date per check,** and policy intake reads PDFs with a text layer only (no OCR).
-- **No live demo URL:** Db2 on Cloud's free plan lacks what AsOf needs (`VECTOR`, new schemas, row and column access control), so the demo is the video, the screenshots and replay mode.
+- **The public demo is read-mostly:** it replays recorded model outputs and refuses policy changes and sends. It runs on a VM with Db2 Community Edition because Db2 on Cloud's free plan lacks what AsOf needs (`VECTOR`, new schemas, row and column access control).
 - **Next:** incremental chain verification from a checkpoint, a larger routing split and a third document, the remaining frozen splits on watsonx.ai, and `db2audit` on the policy history.
 
 Every limit, what was done since the Round 1 proposal, and the full roadmap: [docs/limitations.md](docs/limitations.md). The temporal search pattern is also packaged as a module for IBM's db2-ai-cookbook ([cookbook/](cookbook/)).
