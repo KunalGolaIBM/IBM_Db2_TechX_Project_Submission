@@ -12,6 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+import urllib.parse
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -22,6 +23,7 @@ from src.config import DB2_DATABASE, DB2_HOST, DB2_PORT, GEMINI_API_KEY
 from src.database_setup import initialize_database
 from src.db_connection import db_manager
 from src.inventory_tools import (
+    generate_whatsapp_order_text,
     get_category_performance_df,
     get_current_stock_df,
     get_expiry_risk_analysis,
@@ -29,6 +31,7 @@ from src.inventory_tools import (
     get_inventory_health_summary,
     get_low_stock_alerts,
     get_reorder_recommendations,
+    get_reorders_grouped_by_supplier,
     get_sales_trends_df,
     get_stockout_risk_forecast,
 )
@@ -44,34 +47,107 @@ st.set_page_config(
 # Custom Styling for polished retail dashboard
 st.markdown("""
 <style>
+    /* App Canvas & Base Typography */
+    .stApp {
+        background-color: #F7F8FA;
+        color: #172B4D;
+    }
+
+    /* Sidebar Customization */
+    [data-testid="stSidebar"] {
+        background-color: #FFFFFF;
+        border-right: 1px solid #E2E8F0;
+    }
+    [data-testid="stSidebar"] h3, [data-testid="stSidebar"] h4 {
+        color: #172B4D !important;
+    }
+
+    /* Compact, Balanced Header */
     .main-title {
-        font-size: 2.2rem;
+        font-size: 1.65rem;
         font-weight: 700;
-        color: #1E3A8A;
-        margin-bottom: 0.2rem;
+        color: #172B4D;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.15rem;
     }
     .sub-title {
-        font-size: 1.05rem;
-        color: #4B5563;
-        margin-bottom: 1.2rem;
+        font-size: 0.95rem;
+        color: #64748B;
+        margin-bottom: 1.1rem;
+        font-weight: 400;
     }
-    .metric-card {
-        background-color: #F8FAFC;
+
+    /* KPI Metric Cards */
+    [data-testid="stMetric"] {
+        background-color: #FFFFFF;
         border: 1px solid #E2E8F0;
         border-radius: 8px;
-        padding: 12px;
-        text-align: center;
+        padding: 12px 14px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
     }
+    [data-testid="stMetricLabel"] {
+        color: #64748B !important;
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+    }
+    [data-testid="stMetricValue"] {
+        color: #172B4D !important;
+        font-size: 1.35rem !important;
+        font-weight: 700 !important;
+        white-space: nowrap;
+    }
+
+    /* Navigation Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 6px;
+        background-color: transparent;
+        border-bottom: 1px solid #E2E8F0;
+        padding-bottom: 2px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 38px;
+        background-color: transparent;
+        border-radius: 6px 6px 0 0;
+        color: #64748B;
+        font-size: 0.88rem;
+        font-weight: 600;
+        padding: 0 14px;
+        border: none;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #FFFFFF !important;
+        color: #172B4D !important;
+        border-bottom: 2px solid #168B72 !important;
+    }
+
+    /* Status Badges */
     .status-badge {
         display: inline-block;
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-size: 0.85rem;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 0.8rem;
         font-weight: 600;
     }
-    .badge-critical { background-color: #FEE2E2; color: #991B1B; }
-    .badge-warning { background-color: #FEF3C7; color: #92400E; }
-    .badge-safe { background-color: #D1FAE5; color: #065F46; }
+    .badge-critical { background-color: #FEE2E2; color: #D9534F; }
+    .badge-warning { background-color: #FEF3C7; color: #D99A37; }
+    .badge-safe { background-color: #E6F4EA; color: #168B72; }
+
+    /* Preset & Action Buttons */
+    .stButton > button {
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        border: 1px solid #E2E8F0;
+        color: #172B4D;
+        background-color: #FFFFFF;
+        transition: all 0.15s ease;
+    }
+    .stButton > button:hover {
+        border-color: #168B72;
+        color: #168B72;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -264,19 +340,23 @@ with tab_alerts:
                 x=stock_df["product_name"],
                 y=stock_df["total_available_stock"],
                 name="Current Stock",
-                marker_color="#2563EB"
+                marker_color="#168B72"
             ))
             fig.add_trace(go.Bar(
                 x=stock_df["product_name"],
                 y=stock_df["reorder_level"],
                 name="Reorder Level",
-                marker_color="#EF4444"
+                marker_color="#D9534F"
             ))
             fig.update_layout(
                 barmode="group",
                 xaxis_tickangle=-45,
                 margin=dict(l=20, r=20, t=30, b=100),
                 height=420,
+                paper_bgcolor="#FFFFFF",
+                plot_bgcolor="#FFFFFF",
+                font=dict(color="#172B4D", family="sans-serif"),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
             st.plotly_chart(fig, use_container_width=True)
 
@@ -343,10 +423,16 @@ with tab_expiry:
             y="product_name",
             size="available_quantity",
             color="status",
-            color_discrete_map={"CRITICAL": "#DC2626", "WARNING": "#F59E0B", "SAFE": "#10B981", "EXPIRED": "#6B7280"},
+            color_discrete_map={"CRITICAL": "#D9534F", "WARNING": "#D99A37", "SAFE": "#168B72", "EXPIRED": "#64748B"},
             labels={"days_to_expiry": "Days Remaining Until Expiry", "product_name": "Product"},
             title="Batch Expiry Countdown (Bubble size = Available Quantity)",
             height=400,
+        )
+        fig_exp.update_layout(
+            paper_bgcolor="#FFFFFF",
+            plot_bgcolor="#FFFFFF",
+            font=dict(color="#172B4D"),
+            margin=dict(l=20, r=20, t=40, b=20),
         )
         st.plotly_chart(fig_exp, use_container_width=True)
 
@@ -387,6 +473,28 @@ with tab_reorder:
             use_container_width=True,
         )
 
+        # Action: CSV Export
+        csv_data = r_df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="📥 Download Purchase Order CSV",
+            data=csv_data,
+            file_name=f"stock_sage_purchase_orders_{date.today().strftime('%Y%m%d')}.csv",
+            mime="text/csv",
+        )
+
+        st.markdown("---")
+        st.markdown("#### **Supplier Dispatch & WhatsApp Purchase Orders**")
+        st.caption("One-click direct dispatch to suppliers via WhatsApp with formatted order quantities and cost breakdown.")
+        grouped_orders = get_reorders_grouped_by_supplier(db_manager)
+
+        for supp_name, s_data in grouped_orders.items():
+            with st.expander(f"📦 Order for {supp_name} — {s_data['total_quantity']} units (₹{s_data['total_cost']:,.2f})", expanded=False):
+                wa_text = generate_whatsapp_order_text(supp_name, s_data)
+                st.text_area("Message Preview", value=wa_text, height=130, key=f"wa_txt_{supp_name}")
+                encoded_msg = urllib.parse.quote(wa_text)
+                wa_url = f"https://api.whatsapp.com/send?text={encoded_msg}"
+                st.link_button(f"📲 Send via WhatsApp to {supp_name}", wa_url)
+
 # -------------------------------------------------------------
 # TAB 5: Sales Analytics & Velocity
 # -------------------------------------------------------------
@@ -406,9 +514,15 @@ with tab_analytics:
                 title="Daily Store Revenue (₹)",
                 markers=True,
                 line_shape="spline",
-                color_discrete_sequence=["#2563EB"],
+                color_discrete_sequence=["#168B72"],
             )
-            fig_trend.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20))
+            fig_trend.update_layout(
+                height=350,
+                margin=dict(l=20, r=20, t=40, b=20),
+                paper_bgcolor="#FFFFFF",
+                plot_bgcolor="#FFFFFF",
+                font=dict(color="#172B4D"),
+            )
             st.plotly_chart(fig_trend, use_container_width=True)
 
     with col_cat:
@@ -420,9 +534,14 @@ with tab_analytics:
                 names="category",
                 values="category_revenue",
                 hole=0.45,
-                color_discrete_sequence=px.colors.qualitative.Pastel,
+                color_discrete_sequence=["#168B72", "#172B4D", "#D99A37", "#64748B", "#4A7C59", "#2A52BE"],
             )
-            fig_pie.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20))
+            fig_pie.update_layout(
+                height=350,
+                margin=dict(l=20, r=20, t=40, b=20),
+                paper_bgcolor="#FFFFFF",
+                font=dict(color="#172B4D"),
+            )
             st.plotly_chart(fig_pie, use_container_width=True)
 
     st.markdown("#### **Fast-Moving vs. Slow-Moving Product Analysis (Last 7 Days)**")

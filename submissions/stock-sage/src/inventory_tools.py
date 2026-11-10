@@ -318,6 +318,45 @@ def get_reorder_recommendations(
     return recommendations
 
 
+def get_reorders_grouped_by_supplier(db: Db2ConnectionManager = db_manager) -> Dict[str, Dict[str, Any]]:
+    """Group purchase recommendations by supplier for streamlined order placement."""
+    reorders = get_reorder_recommendations(db)
+    grouped: Dict[str, Dict[str, Any]] = {}
+
+    for r in reorders:
+        supp = r["supplier_name"]
+        if supp not in grouped:
+            grouped[supp] = {
+                "supplier_name": supp,
+                "lead_time_days": r["lead_time_days"],
+                "items": [],
+                "total_quantity": 0,
+                "total_cost": 0.0,
+            }
+        grouped[supp]["items"].append(r)
+        grouped[supp]["total_quantity"] += r["recommended_order_quantity"]
+        grouped[supp]["total_cost"] += r["estimated_purchase_cost"]
+
+    return grouped
+
+
+def generate_whatsapp_order_text(supplier_name: str, supplier_data: Dict[str, Any], store_name: str = "Shree Ganesh Kirana & Dairy") -> str:
+    """Format a clean, professional order message for WhatsApp supplier dispatch."""
+    today_str = date.today().strftime("%d %b %Y")
+    lines = [
+        f"Namaste {supplier_name},",
+        f"Order from *{store_name}* for today ({today_str}):\n",
+    ]
+    for item in supplier_data["items"]:
+        lines.append(f"• {item['product_name']}: *{item['recommended_order_quantity']} units* (₹{item['estimated_purchase_cost']:.2f})")
+
+    lines.append(f"\n*Total Items:* {supplier_data['total_quantity']} units")
+    lines.append(f"*Estimated Value:* ₹{supplier_data['total_cost']:,.2f}")
+    lines.append(f"*Lead Time Expected:* {supplier_data['lead_time_days']} day(s)")
+    lines.append("\nPlease confirm dispatch. Thank you!")
+    return "\n".join(lines)
+
+
 def get_sales_trends_df(db: Db2ConnectionManager = db_manager) -> pd.DataFrame:
     """Fetch daily aggregated sales history for timeline charts."""
     rows = db.execute_query(QUERY_DAILY_SALES_TREND)
