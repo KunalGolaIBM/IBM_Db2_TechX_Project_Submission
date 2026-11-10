@@ -22,7 +22,7 @@
 | **Db2 does the work** | `FOR BUSINESS_TIME AS OF` with `VECTOR_DISTANCE` in one statement, a hash-chained ledger in SQL PL, `JSON_TABLE`, column masks, in-database embeddings, partitions and MQTs measured at 1,000,000 decisions; `python -m asof.db2check` runs 34 feature checks. |
 | **Tamper evidence** | Triggers stop even the owner; `VERIFY_CHAIN` finds an edited row; receipts and anchors kept outside Db2 catch a rebuilt ledger. |
 | **People where the check stops** | Held answers go to a specialist inbox, and Db2 records a reply only if it passes the same check; customers told a rule that later changed get a checked correction notice a specialist approves. |
-| **Engineering** | A LangGraph check with fixed edges that fails closed, five least-privilege Db2 users, 1215 tests (80% line coverage), mypy, and three CI jobs including IBM's stock Db2 image. |
+| **Engineering** | A LangGraph check with fixed edges that fails closed, five least-privilege Db2 users, 1227 tests (80% line coverage), mypy, and three CI jobs including IBM's stock Db2 image. |
 
 > **Fictional data.** "Aurelia Air", "Fernhollow Bank" and every policy, fee schedule, FAQ and help-centre answer in this repository are invented for the demo. The airline is modelled on the kind of policy at issue in *Moffatt v. Air Canada*; neither describes a real company.
 
@@ -266,7 +266,7 @@ python -m asof.demo          # optional: thirteen sample decisions, three of the
 ## Testing & Verification
 
 ```bash
-pytest -q                                 # 1215 tests; 9 need an opt-in flag, 3 need TLS on and 1 the watsonx.ai extra (CI provides both)
+pytest -q                                 # 1227 tests; 9 need an opt-in flag, 3 need TLS on and 1 the watsonx.ai extra (CI provides both)
 pytest -q -m "not db2"                    # unit tests only, no database needed
 python scripts/audit_deps.py && mypy      # dependency audit, type check
 python -m asof.eval --split test          # the frozen airline split (needs a model)
