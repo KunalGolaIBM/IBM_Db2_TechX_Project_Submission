@@ -1,6 +1,7 @@
 """Every console page paints the shared view only while its own route is shown, so a slow answer (an Ask, a preview,
-a backtest poll) that lands after the visitor has moved on cannot overwrite the next page. Found by a browser tour of
-the public demo: Ask the ledger's last answer painted over Change impact."""
+a backtest poll) that lands after the visitor has moved on cannot overwrite the next page. Ask the ledger, for
+example, re-renders itself when its answer arrives; without the check, an answer that arrived after the visitor
+opened Change impact would be drawn over it."""
 from __future__ import annotations
 
 import pathlib

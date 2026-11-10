@@ -94,13 +94,12 @@ def unseen_result(eval_dir: Path = EVAL_DIR) -> dict[str, Any] | None:
         log.warning("headline: no unseen-domain result (%d rewrites not graded yet)", asof["pending_grades"])
         return None
     fa, fb, pfa, pfb = asof["false_allow"], asof["false_block"], plain["false_allow"], plain["false_block"]
-    # A false block is a correct draft not sent as written: held, or (AsOf only) rewritten.
-    held = "held" if asof["outcomes"]["correct"]["rewritten"] == 0 else "stopped"
-    both = (f"both released {fa['k']} of {fa['n']} wrong ones" if (fa["k"], fa["n"]) == (pfa["k"], pfa["n"]) else
-            f"AsOf released {fa['k']} of {fa['n']} wrong ones, the plain judge {pfa['k']} of {pfa['n']}")
-    text = (f"Unseen railway policy: AsOf {held} {fb['k']} of {fb['n']} correct drafts, a plain LLM judge "
-            f"{pfb['k']} of {pfb['n']}; {both}")
-    short = f"Unseen policy: {fb['k']}/{fb['n']} correct {held}, plain LLM judge {pfb['k']}/{pfb['n']}"
+    ideal, pideal = asof["ideal"], plain["ideal"]
+    let_through = (f"both let {fa['k']} of {fa['n']} wrong drafts through" if (fa["k"], fa["n"]) == (pfa["k"], pfa["n"])
+                   else f"AsOf let {fa['k']} of {fa['n']} wrong drafts through, the plain judge {pfa['k']}")
+    text = (f"On a railway refund policy written by another AI: AsOf made the right call on {ideal['k']} of "
+            f"{ideal['n']} drafts, a plain LLM judge on {pideal['k']} of {pideal['n']} ({let_through})")
+    short = f"Unseen policy: right call {ideal['k']}/{ideal['n']}, plain LLM judge {pideal['k']}/{pideal['n']}"
     return {"id": "unseen", "text": text, "short": short, "href": UNSEEN_HREF, "run": first["run"],
             "git_commit": first.get("git_commit"),
             "asof": {"false_allows": fa["k"], "wrong_drafts": fa["n"], "false_blocks": fb["k"], "correct_drafts": fb["n"]},

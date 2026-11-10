@@ -65,8 +65,9 @@ def test_the_unseen_number_matches_the_files_and_the_published_report():
         row = next(line for line in section.splitlines() if line.startswith(f"| {label}:"))
         published = [tuple(map(int, c)) for c in re.findall(r"(\d+) of (\d+),", row)]
         assert published[1:] == [(plain[metric]["k"], plain[metric]["n"]), (asof[metric]["k"], asof[metric]["n"])], label
-    assert f"AsOf held {asof['false_block']['k']} of {asof['false_block']['n']} correct drafts" in item["text"]
-    assert f"a plain LLM judge {plain['false_block']['k']} of {plain['false_block']['n']}" in item["text"]
+    assert f"AsOf made the right call on {asof['ideal']['k']} of {asof['ideal']['n']} drafts" in item["text"]
+    assert f"a plain LLM judge on {plain['ideal']['k']} of {plain['ideal']['n']}" in item["text"]
+    assert f"let {asof['false_allow']['k']} of {asof['false_allow']['n']} wrong drafts through" in item["text"]
 
 
 def test_the_copy_in_the_package_matches_the_files():
