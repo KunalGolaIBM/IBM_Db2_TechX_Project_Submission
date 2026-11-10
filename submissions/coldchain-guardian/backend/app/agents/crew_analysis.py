@@ -154,6 +154,11 @@ def _llm():
     provider client cannot be constructed (missing SDK, malformed proxy, invalid
     key), so the caller falls back to deterministic analysis instead of failing.
     """
+    from pathlib import Path
+    from dotenv import load_dotenv
+
+    env_path = Path(__file__).resolve().parents[2] / ".env"
+    load_dotenv(dotenv_path=env_path, override=False)
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     openai_key = os.getenv("OPENAI_API_KEY")
     crew_key = os.getenv("CREWAI_API_KEY")
