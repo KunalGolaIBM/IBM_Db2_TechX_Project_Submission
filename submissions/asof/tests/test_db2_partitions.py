@@ -39,7 +39,7 @@ def scratch(admin_conn, embeddings, settings):
     name = f"ASOF_P{uuid.uuid4().hex[:6].upper()}"
     try:
         schema.install(admin_conn, name)
-        seed.seed_documents(admin_conn, name)
+        seed.seed_policy(admin_conn, embeddings, name)  # the PASS and CORRECTED rows cite it (release rules)
         seed.seed_chain_head(admin_conn, name)
         seed.seed_faq(admin_conn, embeddings, name)
         schema.apply_grants(admin_conn, settings.asof_app_user, settings.asof_editor_user, name)

@@ -30,8 +30,25 @@ def entry(**over) -> ledger.LedgerEntry:
              "llm_verdict": "NOT_COVERED", "rule_check": "NOT_APPLICABLE", "clause_id": None, "clause_version": None,
              "clause_bus_start": None, "clause_sys_start": None, "distance": None, "quoted_span": None}]},
     )
+    if over.get("decision") in ("PASS", "CORRECTED") and "verdicts" not in over:
+        base["verdicts"] = released_verdicts(over["decision"])
     base.update(over)
     return ledger.LedgerEntry(**base)
+
+
+def released_verdicts(decision: str) -> dict:
+    """Two claims Db2's release rules (08_release_rules.sql) accept for a release on 2026-03-10: SUPPORTED, citing
+    BRV-002 v1 and quoting it (a CORRECTED answer: the draft's contradiction, then the re-check of its rewrite).
+    The schema needs the seeded policy."""
+    def claim(pass_no: int, no: int, verdict: str, quote: str) -> dict:
+        return {"pass": pass_no, "claim_no": no, "text": "ask before you travel", "area": "bereavement", "verdict": verdict,
+                "llm_verdict": verdict, "rule_check": "NOT_APPLICABLE", "clause_id": "BRV-002", "clause_version": "v1",
+                "clause_bus_start": "2026-01-01", "clause_sys_start": None, "distance": 0.2, "quoted_span": quote}
+    before = "Bereavement fares must be requested before travel begins"
+    after = "cannot be applied retroactively once any part of the journey has been flown"
+    if decision == "CORRECTED":
+        return {"version": 1, "claims": [claim(1, 1, "CONTRADICTED", after), claim(2, 1, "SUPPORTED", before)]}
+    return {"version": 1, "claims": [claim(1, 1, "SUPPORTED", before), claim(1, 2, "SUPPORTED", after)]}
 
 
 @pytest.fixture
@@ -328,8 +345,9 @@ def test_demo_ledger_reset_recreates_the_tables(admin_conn, embeddings, settings
     triggers = {r[0].strip() for r in db.query(admin_conn, "SELECT TRIGNAME FROM SYSCAT.TRIGGERS WHERE TRIGSCHEMA = ? "
                                                             "AND VALID = 'Y'", (scratch,))}
     assert {"ANSWER_LEDGER_NO_UPDATE", "ANSWER_LEDGER_NO_DELETE", "CLAIM_CITATION_NO_UPDATE"} <= triggers
-    invalid = db.query(admin_conn, "SELECT ROUTINENAME FROM SYSCAT.ROUTINES WHERE ROUTINESCHEMA = ? AND VALID <> 'Y'",
-                       (scratch,))
+    # ORIGIN 'S': the constructors Db2 generates for PREVIEW_POLICY_CHANGE's row and array types carry VALID ' '.
+    invalid = db.query(admin_conn, "SELECT ROUTINENAME FROM SYSCAT.ROUTINES WHERE ROUTINESCHEMA = ? AND VALID <> 'Y' "
+                                   "AND ORIGIN <> 'S'", (scratch,))
     assert invalid == []
     app = db.connect(settings, "app")
     try:
