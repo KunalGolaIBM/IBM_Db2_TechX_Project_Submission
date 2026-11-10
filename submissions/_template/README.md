@@ -193,4 +193,4 @@ python scripts/validate_submission.py submissions/coldchain-guardian
 ## Team Members & Credits
 | Name | Role / Contribution |
 |---|---|
-| Project Lead & Architect | Full-stack Engineering, IBM Db2 Design, LangGraph Orchestration & CrewAI Integration |
+| Yasaswini Yarraguntla | Full-stack Engineering, IBM Db2 Design, LangGraph Orchestration & CrewAI Integration |

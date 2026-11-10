@@ -59,9 +59,9 @@ graph TD
     RiskAgent -.->|Context Enrichment| CollaborativeAI
 
     CollaborativeAI -->|LLM Reasoning| Gemini["Google Gemini (or Fallback)"]
-    RecAgent -->|Insert Actions (PENDING)| DatabaseLayer
+    RecAgent -->|Insert Actions - PENDING| DatabaseLayer
 
-    RecsView -->|PATCH /approval| DatabaseLayer
+    RecsView -->|"PATCH /approval"| DatabaseLayer
     DatabaseLayer -->|Immutable Action Logging| T_Audit
 ```
 
