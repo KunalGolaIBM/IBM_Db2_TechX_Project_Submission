@@ -1,0 +1,10 @@
+fastapi>=0.110.0
+uvicorn>=0.28.0
+pydantic>=2.7.0
+langgraph>=0.2.0
+langchain-core>=0.3.0
+ibm_db>=3.2.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+python-multipart>=0.0.9
+
