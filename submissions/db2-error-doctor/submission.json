@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Db2 Error Doctor",
+    "slug": "db2-error-doctor",
+    "short_description": "Paste a Db2 error and get its cause and fix: exact SQLCODE lookup first, Db2 vector search through LangChain when the message has no code.",
+    "category": "AI / RAG / Developer Tooling",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/Prabodh1231/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "Prabodh1231 (solo)",
+    "members": [
+      {
+        "name": "Prabodh1231",
+        "github": "Prabodh1231",
+        "email": "Prabodh1231@users.noreply.github.com",
+        "role": "Solo developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker, via the IBM Db2 Developer Extension for VS Code)",
+    "connector": "ibm_db / ibm_db_dbi, langchain-db2 (DB2VS)",
+    "features_used": [
+      "VECTOR column and VECTOR_DISTANCE cosine search",
+      "Relational tables with primary key and identity column",
+      "Index and GROUP BY / JOIN analytics",
+      "Parameterised SQL and explicit transactions",
+      "SYSCAT catalog queries"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python"],
+    "frameworks": ["LangChain", "langchain-db2", "sentence-transformers", "pytest"],
+    "ai_models": ["sentence-transformers/all-MiniLM-L6-v2 (embeddings)", "Ollama llama3.2 (optional explanation)"]
+  }
+}
