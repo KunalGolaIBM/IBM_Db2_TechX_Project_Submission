@@ -11,7 +11,6 @@ sqlglot==30.30.0
 db2-sqlglot-dialect==1.1.0
 
 # LangChain core, providers and local embeddings
-langchain==1.4.9
 langchain-core==1.7.6
 langchain-community==0.4.2
 langchain-openai==1.7.4
@@ -23,6 +22,8 @@ torch==2.15.0
 
 # API, validation and configuration
 fastapi==0.162.0
+# imported directly (run_in_threadpool, TrustedHostMiddleware): pinned at the version FastAPI 0.162.0 resolves to
+starlette==1.10.0
 uvicorn[standard]==0.54.0
 pydantic==2.14.3
 pydantic-settings==2.16.2

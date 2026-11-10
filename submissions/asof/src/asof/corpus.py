@@ -78,13 +78,6 @@ class Corpus(_Strict):
             seen.add(c.clause_id)
         return self
 
-    def version_in_force(self, clause_id: str, on: date) -> ClauseVersion | None:
-        """Pure-Python reference for the Db2 as-of query, used by tests and the eval set."""
-        clause = next((c for c in self.clauses if c.clause_id == clause_id), None)
-        if clause is None:
-            return None
-        return next((v for v in clause.versions if v.bus_start <= on < v.bus_end), None)
-
 
 @lru_cache(maxsize=4)
 def load_corpus(paths: tuple[Path, ...] = CORPUS_PATHS) -> Corpus:

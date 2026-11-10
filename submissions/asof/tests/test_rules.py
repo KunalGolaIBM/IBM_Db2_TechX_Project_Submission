@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
+from fakes import version_in_force
 
 from asof.corpus import load_corpus
 from asof.rules import RuleClause, asserted_flag, check, extract_quantities, situation_conflicts
@@ -13,7 +14,7 @@ MARCH, JUNE, JULY, OCT = date(2026, 3, 10), date(2026, 6, 2), date(2026, 7, 15),
 
 
 def rc(clause_id: str, on: date = MARCH) -> RuleClause:
-    return RuleClause(clause_id, load_corpus().version_in_force(clause_id, on).rule)
+    return RuleClause(clause_id, version_in_force(load_corpus(), clause_id, on).rule)
 
 
 @pytest.mark.parametrize("claim, clause, on, expected", [

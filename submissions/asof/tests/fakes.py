@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from asof.corpus import load_corpus
+from asof.corpus import ClauseVersion, Corpus, load_corpus
 from asof.llm import LLMError, LLMResult
 from asof.retriever import RetrievedClause
 from asof.schemas import ClaimVerdict, ExtractedClaim, ExtractionResult, JudgeResult, LedgerAnswer, LedgerSql, RewriteResult
@@ -66,9 +66,17 @@ def judge(*vs) -> JudgeResult:
     return JudgeResult(verdicts=list(vs))
 
 
+def version_in_force(corpus: Corpus, clause_id: str, on: date) -> ClauseVersion | None:
+    """Pure-Python reference for the Db2 as-of query: the clause version in force on a date, for tests and eval checks."""
+    c = next((x for x in corpus.clauses if x.clause_id == clause_id), None)
+    if c is None:
+        return None
+    return next((v for v in c.versions if v.bus_start <= on < v.bus_end), None)
+
+
 def clause(clause_id: str, on: date, distance: float = 0.3) -> RetrievedClause:
     corpus = load_corpus()
     c = next(x for x in corpus.clauses if x.clause_id == clause_id)
-    v = corpus.version_in_force(clause_id, on)
+    v = version_in_force(corpus, clause_id, on)
     return RetrievedClause(clause_id, c.area, c.title, v.version_label, v.clause_text, v.rule, v.bus_start,
                            v.bus_end, datetime(2026, 11, 6, 4, 0, 0), distance)

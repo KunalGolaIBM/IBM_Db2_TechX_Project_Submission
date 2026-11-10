@@ -20,7 +20,6 @@ It uses the following third-party software. No third-party code is copied into t
 | apache-airflow-providers-ibm-db2 (own environment) | 0.1.0 | Apache-2.0 |
 | lfx (Langflow executor; own environment, [langflow/requirements-langflow.txt](langflow/requirements-langflow.txt)) | 1.13.1 | MIT |
 | lfx-ibm (IBM's Langflow bundle; own environment) | 0.3.2 | MIT |
-| langchain | 1.4.9 | MIT |
 | langchain-core | 1.7.6 | MIT |
 | langchain-community | 0.4.2 | MIT |
 | langchain-openai | 1.7.4 | MIT |
@@ -30,6 +29,7 @@ It uses the following third-party software. No third-party code is copied into t
 | sentence-transformers | 6.2.0 | Apache-2.0 |
 | torch | 2.15.0 | Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND ISC AND MIT AND Zlib |
 | fastapi | 0.162.0 | MIT |
+| starlette | 1.10.0 | BSD-3-Clause |
 | uvicorn | 0.54.0 | BSD-3-Clause |
 | pydantic | 2.14.3 | MIT |
 | pydantic-settings | 2.16.2 | MIT |

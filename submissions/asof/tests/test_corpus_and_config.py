@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
+from fakes import version_in_force
 from pydantic import ValidationError
 
 from asof.config import ConfigError, Settings
@@ -28,7 +29,7 @@ def test_corpus_shape():
 
 @pytest.mark.parametrize("on, label", [(date(2026, 6, 30), "v1"), (date(2026, 7, 1), "v2")])
 def test_the_bank_overdraft_fee_changes_on_1_july(on, label):
-    v = load_corpus().version_in_force("OVD-001", on)
+    v = version_in_force(load_corpus(), "OVD-001", on)
     assert v.version_label == label and v.rule["overdraft_fee_usd"] == (35 if label == "v1" else 25)
 
 
@@ -36,11 +37,11 @@ def test_the_bank_overdraft_fee_changes_on_1_july(on, label):
     (date(2026, 3, 10), "v1"), (date(2026, 4, 30), "v1"), (date(2026, 5, 1), "v2"), (date(2026, 6, 2), "v2"),
 ])
 def test_brv_002_version_boundary(on, label):
-    assert load_corpus().version_in_force("BRV-002", on).version_label == label
+    assert version_in_force(load_corpus(), "BRV-002", on).version_label == label
 
 
 def test_no_version_before_policy_start():
-    assert load_corpus().version_in_force("BRV-002", date(2025, 12, 31)) is None
+    assert version_in_force(load_corpus(), "BRV-002", date(2025, 12, 31)) is None
 
 
 def _clause(versions):

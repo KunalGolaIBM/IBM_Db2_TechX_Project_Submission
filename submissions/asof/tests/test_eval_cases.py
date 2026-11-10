@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from fakes import version_in_force
 
 from asof.corpus import load_corpus
 from asof.eval import DECISIONS, FROZEN, FROZEN_TEST_SHA256, SPLITS, load_cases, split_sha256, summarize
@@ -50,7 +51,7 @@ def test_labels_are_consistent_with_the_corpus(split):
         assert c.draft_ok == (c.expected == "PASS"), c.id
         assert ("PASS" in c.acceptable) == c.draft_ok, c.id
         if c.key_clause:
-            v = corpus.version_in_force(c.key_clause, c.as_of)
+            v = version_in_force(corpus, c.key_clause, c.as_of)
             assert v is not None and v.version_label == c.key_version, c.id
         else:
             assert c.category == "not_covered", c.id
