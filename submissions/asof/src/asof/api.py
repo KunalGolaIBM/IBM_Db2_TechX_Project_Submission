@@ -293,7 +293,7 @@ class ReplyIn(_In):
 
 def create_app(settings: Settings | None = None, *, gate: Gate | None = None, assistant: DemoAssistant | None = None,
                asker: LedgerAsker | None = None, schema: str = db.SCHEMA, rate_limit: int = 30,
-               intake_model: Any = None) -> FastAPI:
+               intake_model: Any = None, read_limit: int = 240) -> FastAPI:
     settings = settings or get_settings()
     state: dict[str, Any] = {"gate": gate, "assistant": assistant, "asker": asker, "intake_llm": intake_model}
     users_mode = settings.asof_auth == "users"
@@ -301,6 +301,25 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     if users_mode and (settings.asof_api_token or settings.asof_editor_token):
         log.warning("ASOF_AUTH=users: the shared ASOF_API_TOKEN and ASOF_EDITOR_TOKEN are not used")
     limiter = RateLimiter(rate_limit)
+    demo = settings.asof_public_demo
+    reads = RateLimiter(read_limit)  # public demo only: every API read is limited per address too
+
+    def client_address(request: Request) -> str:
+        """The caller's address. The public demo sits behind its own Caddy on the same machine, so the peer is always
+        local: the caller is the last X-Forwarded-For entry, which Caddy sets (it drops whatever the client sent)."""
+        host = request.client.host if request.client else "unknown"
+        if demo and host in LOCAL_CLIENTS:
+            return request.headers.get("x-forwarded-for", "").split(",")[-1].strip() or "proxy"
+        return host
+
+    def is_local(request: Request) -> bool:
+        return not demo and (request.client.host if request.client else "") in LOCAL_CLIENTS
+
+    def demo_off(what: str) -> None:
+        """Refuse an action that changes policy or sends something, in the public demo only."""
+        if demo:
+            raise HTTPException(403, f"Disabled in the public demo: {what}. Every check and every read works here; "
+                                     "to try this too, run AsOf locally with ./quickstart.sh (one command, no API key).")
 
     # Runtime connections are pooled: on the dev machine opening one costs about 0.2 s and closing it
     # about 0.9 s, and a check uses three (see db.ConnectionPool).
@@ -409,8 +428,10 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
                                     status_code=401, headers={"WWW-Authenticate": "Bearer"})
         costly = (request.method == "POST" or request.url.path in COSTLY_GETS
                   or request.url.path.endswith(COSTLY_GET_SUFFIXES))
-        caller = f"user:{user.name}" if user else (request.client.host if request.client else "unknown")
+        caller = f"user:{user.name}" if user else client_address(request)
         if costly and not limiter.allow(caller):
+            return JSONResponse({"error": "too many requests, try again in a minute"}, status_code=429)
+        if demo and not costly and request.url.path.startswith("/api/") and not reads.allow(caller):
             return JSONResponse({"error": "too many requests, try again in a minute"}, status_code=429)
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -436,6 +457,10 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     @app.exception_handler(LLMError)
     async def _llm_error(_: Request, exc: LLMError):
         log.error("LLM error: %s", exc)
+        if isinstance(exc, ReplayMiss) and demo:
+            return JSONResponse({"error": "This public demo runs in replay mode, with recorded model outputs for the "
+                                          "built-in scenarios only: pick one of the suggested questions. To ask anything "
+                                          "else, run AsOf locally with a model key."}, status_code=503)
         if isinstance(exc, ReplayMiss):  # replay mode on an input it has no recording for: say so, plainly
             return JSONResponse({"error": "Replay mode has recorded model outputs only for the built-in scenarios. "
                                           "To ask anything else, add OPENROUTER_API_KEY and set LLM_PROVIDER=openrouter "
@@ -467,7 +492,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
                 "replay": settings.llm_provider == "replay", "replay_model": replay_model(),
                 "anchoring": "on" if anchors is not None else "off", "db2_tls": settings.db2_ssl,
                 "auth": "users" if users_mode else ("token" if api_token else "local"),
-                "version": __version__}
+                "public_demo": demo, "version": __version__}
 
     def respond(result: GateResult) -> JSONResponse:
         body = gate_out(result).model_dump(mode="json")
@@ -645,21 +670,23 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     def require_editor(request: Request, token_header: str | None) -> None:
         """Editor actions: localhost only, or a matching ASOF_EDITOR_TOKEN (constant-time compare). With
         ASOF_AUTH=users the middleware has already required the editor role, from any client."""
+        demo_off("changing policy")
         if users_mode:
             return
         token = settings.asof_editor_token.get_secret_value() if settings.asof_editor_token else None
         if token:
             if not token_matches(token_header, token):
                 raise HTTPException(403, "policy changes need a valid X-AsOf-Editor-Token")
-        elif (request.client.host if request.client else "") not in LOCAL_CLIENTS:
+        elif not is_local(request):
             raise HTTPException(403, "policy changes are only accepted from localhost unless ASOF_EDITOR_TOKEN is set")
 
     def require_local_reviewer(request: Request) -> None:
         """Specialist actions in local mode: localhost only, as for editors, unless a token already authenticated the
         caller (ASOF_API_TOKEN, or ASOF_AUTH=users, where the middleware required the reviewer role)."""
+        demo_off("specialist actions that record or send something")
         if users_mode or api_token:
             return
-        if (request.client.host if request.client else "") not in LOCAL_CLIENTS:
+        if not is_local(request):
             raise HTTPException(403, "specialist actions are only accepted from localhost unless ASOF_AUTH=users or "
                                      "ASOF_API_TOKEN is set")
 
@@ -667,6 +694,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     def draft_suggestions(clause_id: Annotated[str, Path(pattern=r"^[A-Z]{3}-[0-9]{3}$")], request: Request,
                           x_asof_editor_token: Annotated[str | None, Header()] = None):
         """Run the change-impact agent: draft and check corrections for stale help-centre answers."""
+        demo_off("drafting help-centre corrections")
         require_editor(request, x_asof_editor_token)
         drafted = impactagent.draft_fixes(components()[0], clause_id)
         conn = app_conn()
@@ -687,6 +715,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     def decide(suggestion_id: Annotated[int, Path(ge=1, le=10**12)], body: SuggestionDecision, request: Request,
                x_asof_editor_token: Annotated[str | None, Header()] = None):
         """The policy editor approves (publishes) or rejects a drafted correction."""
+        demo_off("publishing or rejecting a help-centre correction")
         require_editor(request, x_asof_editor_token)
         editor = db.connect(settings, "editor")
         try:
@@ -703,7 +732,10 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         return {"suggestion_id": suggestion_id, "approved": body.approve, "published_answer_id": published or None}
 
     def as_editor(body: policy.PolicyChange, request: Request, token: str | None, preview: bool) -> dict[str, Any]:
-        require_editor(request, token)
+        if not preview:
+            demo_off("applying a policy change (Preview impact works: Db2 rolls it back)")
+        if not (demo and preview):  # the demo's previews run in a transaction Db2 rolls back
+            require_editor(request, token)
         if (who := requested_by(request)) is not None:  # the editor's name goes into the clause's change note
             body = body.model_copy(update={"change_note": f"[{who}] {body.change_note}"[:400]})
         editor = db.connect(settings, "editor")
@@ -747,11 +779,14 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
                                      name: Annotated[str | None, Query(max_length=200)] = None,
                                      x_asof_editor_token: Annotated[str | None, Header()] = None):
         """A policy PDF becomes a draft of checked clause versions. Nothing is in force until an editor approves.
-        The body is the PDF itself (Content-Type: application/pdf), at most 2 MB."""
-        require_editor(request, x_asof_editor_token)
+        The body is the PDF itself (Content-Type: application/pdf), at most 2 MB. The public demo takes the sample only."""
+        if not demo:
+            require_editor(request, x_asof_editor_token)
         if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/pdf":
             raise HTTPException(415, "send the PDF itself as the request body, with Content-Type: application/pdf")
         data = await request.body()
+        if demo and data != intake.SAMPLE_PDF.read_bytes():
+            demo_off("uploading your own policy document (Use the sample works)")
         try:
             source = await run_in_threadpool(intake.read_pdf, data, name)
         except intake.IntakeError as exc:
@@ -826,7 +861,10 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
                             x_asof_editor_token: Annotated[str | None, Header()] = None):
         """Approve (with the items to accept), reject, or preview: preview applies the draft and runs CHANGE_IMPACT
         in one transaction, then rolls it back."""
-        require_editor(request, x_asof_editor_token)
+        if not body.preview:
+            demo_off("approving or rejecting a policy draft (Preview impact works: Db2 rolls it back)")
+        if not (demo and body.preview):
+            require_editor(request, x_asof_editor_token)
         if body.preview and not body.approve:
             raise HTTPException(422, "only an approval can be previewed")
         editor = db.connect(settings, "editor")
@@ -881,7 +919,8 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     @app.post("/api/reviews/{ledger_id}/check")
     def review_check(ledger_id: Annotated[int, Path(ge=1, le=10**12)], body: ReplyIn, request: Request):
         """The full check of a draft reply on the customer's date. Nothing is recorded or sent."""
-        require_local_reviewer(request)
+        if not demo:  # nothing is recorded, so the public demo allows it
+            require_local_reviewer(request)
         g, _ = components()
         try:
             result = review.check_reply(g, ledger_id, body.reply, body.doc_id, requested_by(request))
@@ -892,6 +931,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     @app.post("/api/reviews/{ledger_id}/resolve")
     def review_resolve(ledger_id: Annotated[int, Path(ge=1, le=10**12)], body: ReplyIn, request: Request):
         """Check the reply and send it: appended to the ledger as a REVIEWED decision through RESOLVE_ESCALATION."""
+        demo_off("sending a specialist's reply (Check reply works)")
         require_local_reviewer(request)
         g, _ = components()
         try:
@@ -916,6 +956,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     @app.post("/api/notices/draft")
     def notice_draft(body: NoticeDraftIn, request: Request):
         """Run the change-impact agent: a checked correction notice for every answer now stale for its date."""
+        demo_off("drafting correction notices")
         require_local_reviewer(request)
         drafted = impactagent.draft_notices(components()[0], body.clause_id, requested_by(request))
         conn = app_conn()
@@ -927,6 +968,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
     @app.post("/api/notices/{notice_id}/decision")
     def notice_decision(notice_id: Annotated[int, Path(ge=1, le=10**12)], body: NoticeDecision, request: Request):
         """A specialist approves a notice for sending (it is marked SENT; AsOf sends nothing itself) or rejects it."""
+        demo_off("approving or rejecting a correction notice")
         require_local_reviewer(request)
         conn = db.connect(settings, "review")  # the reviewer account: the runtime user cannot decide notices
         try:

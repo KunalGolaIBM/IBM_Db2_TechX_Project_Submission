@@ -100,6 +100,9 @@ class Settings(BaseSettings):
     # Host headers the API answers to (comma-separated). A browser page on another site cannot reach
     # the localhost API through DNS rebinding, because its Host header is not on this list.
     asof_allowed_hosts: str = "127.0.0.1,localhost,::1"
+    # A hosted public demo for judges: replay mode only, no model keys, and nothing that changes policy or sends
+    # anything (see api.py). Behind its own reverse proxy on the same machine; off by default.
+    asof_public_demo: bool = False
 
     # LLM provider
     llm_provider: LLMProvider = "openrouter"
@@ -169,6 +172,17 @@ class Settings(BaseSettings):
         if value is not None and value.get_secret_value() and not re.fullmatch(r"[\x21-\x7e]{16,256}", value.get_secret_value()):
             raise ValueError("tokens must be 16 to 256 printable ASCII characters, no spaces")
         return value
+
+    @model_validator(mode="after")
+    def _public_demo(self) -> Settings:
+        if self.asof_public_demo:
+            if self.llm_provider != "replay":
+                raise ValueError("ASOF_PUBLIC_DEMO=true runs in replay mode only: set LLM_PROVIDER=replay")
+            keys = [name.upper() for name in ("openrouter_api_key", "openai_compat_api_key", "watsonx_api_key",
+                                              "embedding_api_key") if _is_set(getattr(self, name))]
+            if keys:
+                raise ValueError("ASOF_PUBLIC_DEMO=true holds no model keys; remove " + ", ".join(keys))
+        return self
 
     @model_validator(mode="after")
     def _tls(self) -> Settings:
