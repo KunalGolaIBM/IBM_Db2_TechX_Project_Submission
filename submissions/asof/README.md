@@ -97,6 +97,11 @@ Given an AI-generated answer and the date that matters (booking or travel date, 
 
 ## IBM Db2 Integration
 
+- **Db2 Edition & Environment:** IBM Db2 12.1.5.0 Community Edition in Docker: the VS Code extension's instance, IBM's stock image or AsOf's Compose service ([setup paths](#setup--installation)); database `testdb`, schema `ASOF`. The public demo runs the Compose path on a Google Cloud VM.
+- **Connector / Driver Used:** `ibm_db` / `ibm_db_dbi` with parameter markers only; SQLAlchemy with `ibm_db_sa` (Ask the ledger); LangChain's official `langchain-db2` (`DB2VS`); IBM's `db2-sqlglot-dialect`, `ibm-dbt-db2` adapter, the Airflow IBM Db2 provider and the `lfx-ibm` Langflow bundle.
+- **Database Schema / Data Models:** a bitemporal `POLICY_CLAUSE` (business and system time, history table, `VECTOR(384, FLOAT32)` embeddings, `RULE_JSON` checked as JSON), an append-only hash-chained `ANSWER_LEDGER` with `CLAIM_CITATION` rows, and the help-centre, review, notice and intake tables ([schema](docs/schema.md)).
+- **Key Queries & Operations:** the as-of plus vector query below; replay with `FOR SYSTEM_TIME AS OF`; policy changes through `UPDATE ... FOR PORTION OF BUSINESS_TIME` in SQL PL; every decision appended and hash-chained by `APPEND_LEDGER` and verified by `VERIFY_CHAIN`; `CHANGE_IMPACT` for stale answers; analytics over views and MQTs ([db2.md](docs/db2.md)).
+
 Db2 12.1.5 does the work, not just the storage ([everything, with the SQL and the measurements](docs/db2.md)):
 
 - **Bitemporal policy versions.** `POLICY_CLAUSE` has a business-time period (when a version applies) and a system-time period (when Db2 recorded it), with a history table. Policy changes run `UPDATE ... FOR PORTION OF BUSINESS_TIME` inside the SQL PL procedure `APPLY_POLICY_CHANGE`, so Db2 splits the version itself.
@@ -119,6 +124,10 @@ Db2 12.1.5 does the work, not just the storage ([everything, with the SQL and th
 ---
 
 ## AI / LLM Architecture (if applicable)
+
+- **Framework:** LangGraph for the check, the change-impact agent and the router (graphs with fixed edges); LangChain for structured outputs, the Db2 retriever, `langchain-db2`'s `DB2VS` and the Ask the ledger SQL chain; plus a Langflow component and an MCP server.
+- **Model Provider & Model:** OpenRouter with `google/gemini-3.1-flash-lite` by default; local Ollama `qwen2.5:7b-instruct` with no key, also the fallback when a hosted call fails; IBM watsonx.ai or any OpenAI-compatible endpoint; replay mode with no model. Embeddings: `all-MiniLM-L6-v2` (384 dimensions) on CPU, or in Db2 with `TO_EMBEDDING`.
+- **RAG / Tool Calling Workflow:** each claim retrieves the clauses in force on the customer's date from Db2; the judge must quote them verbatim from escaped data blocks and the rule check on `RULE_JSON` can overrule it; an uncovered claim goes to an agent with Db2 tools (at most 3 calls); the decision and its citations go to the ledger (steps below, [in depth](docs/ai.md)).
 
 A LangGraph graph with fixed edges ([checkgraph.py](src/asof/checkgraph.py)); no model decides whether a check, the re-check or the ledger write happens ([in depth](docs/ai.md)):
 
@@ -282,14 +291,18 @@ Db2 tests run in throwaway schemas as the real least-privilege users ([what they
 
 ## Known Limitations & Future Roadmap
 
+- **Current Limitations:** a probabilistic judge, bounded by rule checks and verbatim quotes; the author's own evaluation on a fictional corpus; a single-node demo; about 6 s per check; a full-scan chain verification; one date per check and PDFs with a text layer only; and a read-mostly public demo. Each is below.
+- **Next Steps:** incremental chain verification from a checkpoint, a larger routing split and a third document, the remaining frozen splits on watsonx.ai, and `db2audit` on the policy history ([full roadmap](docs/limitations.md)).
+
+In detail:
+
 - **The judge is probabilistic.** Rule checks and the verbatim-quote rule bound its mistakes; they do not remove them.
 - **The evaluation is the author's,** on a fictional corpus: four of the nine frozen splits motivated a fix and are no longer blind.
 - **Synthetic, single-node demo;** Db2 runs under emulation on Apple Silicon.
 - **About 6 s per check** on the hosted model: fine before a reply is sent, not for token streaming.
 - **`VERIFY_CHAIN` reads the whole chain:** [46 minutes at 1,000,000 decisions](docs/db2.md#verify_chain-at-1000000-decisions); receipt checks and evidence packs call it, so a large ledger needs checkpointed verification.
 - **One date per check,** and policy intake reads PDFs with a text layer only (no OCR).
-- **The public demo is read-mostly:** it replays recorded model outputs and refuses policy changes and sends. It runs on a VM with Db2 Community Edition because Db2 on Cloud's free plan lacks what AsOf needs (`VECTOR`, new schemas, row and column access control).
-- **Next:** incremental chain verification from a checkpoint, a larger routing split and a third document, the remaining frozen splits on watsonx.ai, and `db2audit` on the policy history.
+- **The public demo is read-mostly:** with `ASOF_PUBLIC_DEMO=true` it replays recorded model outputs and refuses policy changes and sends; everything else works, with Db2 live.
 
 Every limit, what was done since the Round 1 proposal, and the full roadmap: [docs/limitations.md](docs/limitations.md). The temporal search pattern is also packaged as a module for IBM's db2-ai-cookbook ([cookbook/](cookbook/)).
 
