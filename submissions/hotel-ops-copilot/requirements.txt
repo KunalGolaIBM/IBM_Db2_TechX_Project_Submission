@@ -1,0 +1,16 @@
+# IBM Db2 native driver
+ibm_db>=3.2.6
+# Agent orchestration (LangGraph + LangChain core)
+langgraph>=0.6
+langchain-core>=0.3
+langchain-google-genai>=2.1
+# IBM's official LangChain integration for Db2 (DB2VS vector store)
+langchain-db2>=1.0
+# Local embeddings (ONNX, no GPU/torch needed)
+fastembed>=0.6
+# UI and utilities
+streamlit>=1.40
+pandas>=2.2
+python-dotenv>=1.0
+# Tests
+pytest>=8.0

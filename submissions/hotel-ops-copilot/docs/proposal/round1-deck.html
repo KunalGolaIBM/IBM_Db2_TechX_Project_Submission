@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hotel Ops Copilot · Db2Hack 2026 Proposal</title>
+<style>
+  @page { size: 13.333in 7.5in; margin: 0; }
+  :root {
+    --ink:#161616; --muted:#525252; --soft:#6f6f6f; --blue:#0f62fe; --navy:#001d6c; --teal:#007d79;
+    --purple:#6929c4; --red:#da1e28; --green:#198038; --amber:#b28600; --line:#e0e0e0; --bg:#f4f4f4; --tint:#edf5ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  body { font-family: "Segoe UI", "IBM Plex Sans", Arial, sans-serif; color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .slide { width: 13.333in; height: 7.5in; position: relative; overflow: hidden; page-break-after: always; break-after: page;
+           padding: 0.42in 0.6in 0.5in; display: flex; flex-direction: column; }
+  .slide:last-child { page-break-after: auto; break-after: auto; }
+  .kicker { font-size: 10.5pt; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; color: var(--blue); }
+  h1 { font-size: 30pt; margin: 2px 0 10px; letter-spacing: -0.6px; line-height: 1.08; }
+  h2 { font-size: 25pt; margin: 2px 0 12px; letter-spacing: -0.4px; line-height: 1.12; }
+  h3 { font-size: 13.5pt; margin: 0 0 6px; }
+  p, li { font-size: 12.2pt; line-height: 1.42; }
+  p { margin: 0 0 8px; }
+  ul { margin: 0; padding-left: 18px; }
+  li { margin: 3px 0; }
+  .lead { font-size: 14.5pt; color: var(--muted); margin-bottom: 14px; line-height: 1.4; }
+  .muted { color: var(--soft); }
+  .small { font-size: 10.5pt; }
+  b, strong { font-weight: 650; }
+  .grid { display: grid; gap: 14px; }
+  .g2 { grid-template-columns: 1fr 1fr; } .g3 { grid-template-columns: repeat(3, 1fr); } .g4 { grid-template-columns: repeat(4, 1fr); }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 13px 15px; background: #fff; }
+  .card.t { background: var(--bg); border-color: var(--bg); }
+  .card.b { background: var(--tint); border-color: #d0e2ff; }
+  .card h3 { display: flex; align-items: center; gap: 8px; }
+  .card p, .card li { font-size: 11.3pt; }
+  .ico { width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;
+         font-size: 15pt; background: var(--tint); flex: none; }
+  .pill { display: inline-block; font-size: 9.6pt; font-weight: 600; padding: 2px 9px; border-radius: 12px; background: #d0e2ff;
+          color: #0043ce; margin: 0 4px 4px 0; white-space: nowrap; }
+  .pill.t { background: #9ef0f0; color: #004144; } .pill.p { background: #e8daff; color: #491d8b; }
+  .pill.r { background: #ffd7d9; color: #750e13; } .pill.g { background: #a7f0ba; color: #044317; }
+  code { font-family: "Cascadia Mono", Consolas, monospace; font-size: 10.2pt; background: #f2f4f8; padding: 1px 5px; border-radius: 4px; }
+  pre { font-family: "Cascadia Mono", Consolas, monospace; font-size: 9.6pt; background: #161616; color: #f4f4f4; padding: 11px 13px;
+        border-radius: 9px; margin: 0; line-height: 1.45; white-space: pre-wrap; }
+  pre .k { color: #78a9ff; } pre .s { color: #42be65; } pre .c { color: #8d8d8d; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 9px; font-size: 10.8pt; border-bottom: 1px solid var(--line); line-height: 1.32; }
+  th { font-size: 9.8pt; text-transform: uppercase; letter-spacing: .5px; color: var(--soft); border-bottom: 2px solid var(--ink); }
+  .shot { border: 1px solid #c6c6c6; border-radius: 9px; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,.10); background: #fff; }
+  .shot img { display: block; width: 100%; }
+  .cap { font-size: 10pt; color: var(--soft); margin-top: 6px; }
+  .foot { position: absolute; left: 0.6in; right: 0.6in; bottom: 0.2in; display: flex; justify-content: space-between;
+          font-size: 9pt; color: #8d8d8d; border-top: 1px solid var(--line); padding-top: 6px; }
+  .num { font-size: 30pt; font-weight: 700; color: var(--blue); line-height: 1; letter-spacing: -1px; }
+  .numl { font-size: 10.5pt; color: var(--muted); margin-top: 4px; line-height: 1.3; }
+  .tagline { display: inline-block; background: var(--ink); color: #fff; padding: 7px 14px; border-radius: 8px; font-size: 13pt; font-weight: 600; }
+  .flow { display: flex; align-items: stretch; gap: 0; }
+  .flow .st { flex: 1; background: var(--bg); border-radius: 9px; padding: 10px 11px; position: relative; }
+  .flow .st b { display: block; color: var(--blue); font-size: 11.5pt; margin-bottom: 3px; }
+  .flow .st span { font-size: 10.3pt; color: var(--muted); line-height: 1.32; display: block; }
+  .flow .ar { width: 24px; display: flex; align-items: center; justify-content: center; color: #a8a8a8; font-size: 16pt; flex: none; }
+  .flow .st.db { background: #e5f6ff; border: 1.5px solid #82cfff; }
+  .flow .st.hu { background: #defbe6; border: 1.5px solid #6fdc8c; }
+  .bar { height: 15px; background: var(--blue); border-radius: 4px; }
+  .barrow { display: grid; grid-template-columns: 2.7in 1fr 26px; align-items: center; gap: 9px; margin: 4px 0; font-size: 10.6pt; }
+  svg text { font-family: "Segoe UI", Arial, sans-serif; }
+  .req { position: absolute; top: 0.42in; right: 0.6in; font-size: 9pt; font-weight: 600; color: var(--blue); background: var(--tint);
+         border: 1px solid #a6c8ff; padding: 3px 10px; border-radius: 12px; }
+  /* cover */
+  .cover { background: radial-gradient(120% 140% at 85% 10%, #0f62fe 0%, #002d9c 45%, #001141 100%); color: #fff; }
+  .cover .kicker { color: #a6c8ff; }
+  .cover h1 { font-size: 46pt; margin: 8px 0 6px; letter-spacing: -1.2px; }
+  .cover .sub { font-size: 18pt; color: #d0e2ff; max-width: 9.6in; line-height: 1.35; }
+  .cover .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: auto; }
+  .cover .stat { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); border-radius: 12px; padding: 13px 15px; }
+  .cover .stat .num { color: #fff; font-size: 30pt; }
+  .cover .stat .numl { color: #c6c6c6; }
+  .cover .meta { display: flex; gap: 26px; font-size: 11.5pt; color: #c6c6c6; margin-top: 16px; flex-wrap: wrap; }
+  .cover .meta b { color: #fff; }
+  .section { background: var(--ink); color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- 1 COVER -->
+<section class="slide cover">
+  <div class="kicker">Db2Hack 2026 · Round 1 Proposal · IBM Db2 + Agentic AI</div>
+  <h1>Hotel Ops Copilot</h1>
+  <div class="sub">A team of AI agents that runs a hotel's daily operations on <b>IBM Db2</b>.
+    The AI only <b>proposes</b>; Db2 decides what it may read, <b>dry-runs</b> every action, enforces the
+    business rules, and can <b>undo</b> any change.</div>
+  <div style="margin-top:22px"><span class="tagline" style="background:#fff;color:#001d6c">"The database governs the AI, not the prompt."</span></div>
+  <div class="stats">
+    <div class="stat"><div class="num">30/30</div><div class="numl">evaluation questions correct, checked against ground truth computed in Db2</div></div>
+    <div class="stat"><div class="num">24/24</div><div class="numl">red-team attacks blocked, 22 of them by Db2 itself</div></div>
+    <div class="stat"><div class="num">15+</div><div class="numl">Db2 capabilities doing real work: vectors, temporal tables, SQL PL, RCAC, EXPLAIN…</div></div>
+    <div class="stat"><div class="num">~4</div><div class="numl">LLM calls per question on average (30-question evaluation); a full morning brief takes ~16</div></div>
+  </div>
+  <div class="meta"><span><b>Participant</b> Clark Fernandes (solo) · GitHub clarkf19</span><span><b>Framework</b> LangGraph + LangChain</span>
+    <span><b>Database</b> IBM Db2 12.1 Community Edition</span><span><b>Status</b> working prototype, 106 automated tests</span></div>
+</section>
+
+<!-- 2 PROBLEM -->
+<section class="slide">
+  <div class="req">Problem statement</div>
+  <div class="kicker">The problem</div>
+  <h2>Every morning, a hotel duty manager must make revenue, guest and maintenance decisions from scattered data, and AI is too risky to hand the keys to</h2>
+  <div class="grid g3" style="margin-top:6px">
+    <div class="card t"><h3><span class="ico">🧩</span>Fragmented insight</h3>
+      <p>Occupancy lives in the property-management system, rates in a spreadsheet, and reviews across Google, TripAdvisor and OTAs.
+         A rattling AC in room 307 is noticed only after <b>many</b> bad reviews, because nobody connects "aircon humming" and "AC noise" to one room.</p></div>
+    <div class="card t"><h3><span class="ico">📉</span>Slow, manual revenue decisions</h3>
+      <p>Mid-size and independent hotels cannot afford revenue-management systems or analysts. Weak nights are discounted too late, sold-out
+         conference nights are under-priced, and loyal VIPs arrive without anyone noticing it is their anniversary.</p></div>
+    <div class="card t"><h3><span class="ico">⚠️</span>AI is unsafe to deploy</h3>
+      <p>"Chat with your database" tools can run any SQL, leak guest PII to a third-party model, follow instructions hidden in a review
+         (prompt injection), and make changes nobody can audit or <b>undo</b>.</p></div>
+  </div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card b"><h3>Who feels it</h3>
+      <ul><li><b>Duty and general managers</b> of independent and mid-size hotels: the morning brief, approvals and escalations</li>
+          <li><b>Revenue managers</b>: pricing soft and peak nights inside policy</li>
+          <li><b>Engineering and front office</b>: fixing the right room first, upgrading the right guest</li></ul></div>
+    <div class="card" style="border-color:#ffb3b8;background:#fff1f1"><h3>The trust gap</h3>
+      <p style="font-size:12pt">No hotel will let an AI change prices or block rooms unless every change is <b>explainable, checked against business
+      rules, approved by a human and reversible</b>. Prompts cannot guarantee that. <b>The database can.</b></p></div>
+  </div>
+  <div class="foot"><span>Hotel Ops Copilot · Db2Hack 2026</span><span>2</span></div>
+</section>
+
+<!-- 3 SOLUTION -->
+<section class="slide">
+  <div class="req">Proposed solution</div>
+  <div class="kicker">The solution</div>
+  <h2>A governed multi-agent copilot: the AI proposes, a human approves, and Db2 enforces and can undo</h2>
+  <p class="lead">The manager talks in plain English. LangGraph agents read Db2, find problems and opportunities, and queue evidence-backed actions.
+    Every safety guarantee lives <b>inside IBM Db2</b>.</p>
+  <div class="flow">
+    <div class="st"><b>1 · Ask</b><span>"Give me this morning's brief" or any question in plain English</span></div><div class="ar">›</div>
+    <div class="st"><b>2 · Analyse</b><span>Router plus 3 specialist agents query Db2 (SQL, vectors, time travel)</span></div><div class="ar">›</div>
+    <div class="st db"><b>3 · Propose</b><span>Actions go through <code>SP_PROPOSE_ACTION</code>, which validates them and blocks bad ones</span></div><div class="ar">›</div>
+    <div class="st db"><b>4 · Dry run</b><span>Db2 executes the action in a transaction, shows its impact, then rolls back</span></div><div class="ar">›</div>
+    <div class="st hu"><b>5 · Approve</b><span>A human manager decides; <code>SP_APPLY_ACTION</code> re-checks the guardrails</span></div><div class="ar">›</div>
+    <div class="st db"><b>6 · Undo</b><span>Any change is rolled back with <code>FOR SYSTEM_TIME AS OF</code></span></div>
+  </div>
+  <div class="grid g4" style="margin-top:16px">
+    <div class="card"><h3><span class="ico">☀️</span>Morning brief</h3><p>One click: KPIs, guest issues and the actions to approve, composed from three agents' findings.</p></div>
+    <div class="card"><h3><span class="ico">📡</span>Complaint radar</h3><p>Db2 vector search sorts every review sentence into themes and finds <i>where</i> each one clusters.</p></div>
+    <div class="card"><h3><span class="ico">🔍</span>Dry run</h3><p>See exactly what an approval would change, including oversold nights, before you approve.</p></div>
+    <div class="card"><h3><span class="ico">🕰️</span>Time travel</h3><p>Every rate and booking version is kept; there's a change feed and one-click rollback.</p></div>
+    <div class="card"><h3><span class="ico">📊</span>Text-to-SQL analyst</h3><p>Occupancy, ADR, RevPAR and pick-up from Db2 views, grounded in catalog comments.</p></div>
+    <div class="card"><h3><span class="ico">📚</span>Policy-grounded</h3><p>The hotel handbook lives in Db2 via IBM <code>langchain-db2</code>; proposals cite policy IDs.</p></div>
+    <div class="card"><h3><span class="ico">🔐</span>Privacy by Db2</h3><p>Guest e-mail and phone are masked for the AI; opted-out guests are invisible to it (DPDP Act 2023).</p></div>
+    <div class="card"><h3><span class="ico">🤖</span>Earned autonomy</h3><p>Managers grant the AI low-risk autonomy (e.g. ±5% price nudges). Db2 enforces the limits, and every change can be undone. 24/24 attacks are blocked.</p></div>
+  </div>
+  <div class="foot"><span>Hotel Ops Copilot · Db2Hack 2026</span><span>3</span></div>
+</section>
+
+<!-- 4 KEY FEATURES IN ACTION -->
+<section class="slide">
+  <div class="req">Key features</div>
+  <div class="kicker">Key features, already working</div>
+  <h2>From question to governed action in under a minute</h2>
+  <div class="grid g2" style="gap:22px">
+    <div>
+      <div class="shot"><img src="../screenshots/03-live-agent-trace.png" alt="Live agent trace"></div>
+      <div class="cap"><b>Live multi-agent trace.</b> The router picks the briefing route, then the analyst calls Db2 tools (SQL, change feed, outlook) with timings shown live. Every step is stored in Db2.</div>
+    </div>
+    <div>
+      <div class="shot"><img src="../screenshots/06-complaint-radar.png" alt="Complaint radar"></div>
+      <div class="cap"><b>Complaint radar.</b> One Db2 query classifies every complaint sentence. AC (rooms 307/312) and hot water (512) are <i>localised</i> faults; Wi-Fi and check-in are <i>systemic</i>.</div>
+    </div>
+  </div>
+  <div class="grid g4" style="margin-top:14px;flex:none">
+    <div class="card b"><div class="num" style="font-size:24pt">~16</div><div class="numl">LLM calls for a full morning brief across four agents (router, 3 specialists, composer)</div></div>
+    <div class="card b"><div class="num" style="font-size:24pt">12</div><div class="numl">Db2 tool calls in that brief: SQL, vectors, time travel and change feed</div></div>
+    <div class="card b"><div class="num" style="font-size:24pt">6</div><div class="numl">evidence-backed actions queued: two repairs, a VIP upgrade, three rate changes</div></div>
+    <div class="card b"><div class="num" style="font-size:24pt">100%</div><div class="numl">of steps stored in Db2: replayable, auditable and explainable</div></div>
+  </div>
+  <div class="foot"><span>Hotel Ops Copilot · Db2Hack 2026</span><span>4</span></div>
+</section>
+
+<!-- 5 DIFFERENTIATOR -->
+<section class="slide">
+  <div class="req">What makes it different</div>
+  <div class="kicker">What makes it different</div>
+  <h2>When the AI is wrong, Db2 catches it before any human approves</h2>
+  <div class="grid" style="grid-template-columns: 1.25fr 1fr; gap: 24px; flex: 1">
+    <div>
+      <div class="shot"><img src="../screenshots/12-dry-run-catches-oversell.png" alt="Dry run catches oversell"></div>
+      <div class="cap">Real run on Gemini, not staged.</div>
+    </div>
+    <div>
+      <p style="font-size:12.5pt">The operations agent cited policy <code>POL-ENG-01</code>, claimed Deluxe was "not ≥ 90% sold", and proposed taking AC-fault
+        room 307 <b>out of order</b>.</p>
+      <p style="font-size:12.5pt">The manager pressed <b>Dry run</b>. Db2 executed the real stored procedure inside a transaction, recomputed sellable
+        inventory, and <b>rolled back</b>:</p>
+      <div class="card" style="background:#fcf4d6;border-color:#f1c21b;margin:8px 0 12px"><p style="margin:0;font-size:12pt">⚠️ Taking the room out of order leaves
+        <b>DLX OVERSOLD on 17–18 Nov</b> (the conference nights). <b>5 reservations</b> are assigned to this room.</p></div>
+      <h3 style="margin-top:6px">Why this matters</h3>
+      <ul><li>Safety comes from <b>Db2</b> (procedures, transactions, privileges, RCAC), not from hoping the LLM behaves</li>
+          <li>The AI can be fooled or wrong; the system stays correct</li>
+          <li>Managers see <b>impact before approval</b> and can <b>undo after</b></li></ul>
+    </div>
+  </div>
+  <div class="foot"><span>Hotel Ops Copilot · Db2Hack 2026</span><span>5</span></div>
+</section>
+
+<!-- 6 AGENTIC FRAMEWORK -->
+<section class="slide">
+  <div class="req">Agentic AI framework</div>
+  <div class="kicker">Selected Agentic AI framework</div>
+  <h2>LangGraph: explicit, auditable multi-agent control flow</h2>
+  <div class="grid" style="grid-template-columns: 1.08fr 1fr; gap: 22px">
+    <svg viewBox="0 0 600 380" width="100%" style="max-height:4.6in">
+      <defs><marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#8d8d8d"/></marker></defs>
+      <rect x="215" y="8" width="170" height="46" rx="10" fill="#161616"/><text x="300" y="29" fill="#fff" font-size="15" font-weight="700" text-anchor="middle">Manager question</text>
+      <text x="300" y="45" fill="#c6c6c6" font-size="11" text-anchor="middle">+ thread memory from Db2</text>
+      <line x1="300" y1="54" x2="300" y2="80" stroke="#8d8d8d" stroke-width="2" marker-end="url(#a)"/>
+      <rect x="200" y="82" width="200" height="50" rx="10" fill="#e8daff" stroke="#8a3ffc" stroke-width="1.5"/>
+      <text x="300" y="104" font-size="15" font-weight="700" text-anchor="middle" fill="#491d8b">Router</text>
+      <text x="300" y="121" font-size="11" text-anchor="middle" fill="#491d8b">structured output → RouteDecision</text>
+      <line x1="300" y1="132" x2="95" y2="170" stroke="#8d8d8d" stroke-width="2" marker-end="url(#a)"/>
+      <line x1="300" y1="132" x2="300" y2="170" stroke="#8d8d8d" stroke-width="2" marker-end="url(#a)"/>
+      <line x1="300" y1="132" x2="505" y2="170" stroke="#8d8d8d" stroke-width="2" marker-end="url(#a)"/>
+      <g font-size="11">
+        <rect x="10" y="172" width="170" height="104" rx="10" fill="#edf5ff" stroke="#4589ff" stroke-width="1.5"/>
+        <text x="95" y="194" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0043ce">Analyst</text>
+        <text x="95" y="213" text-anchor="middle">run_sql (guarded + EXPLAIN)</text><text x="95" y="229" text-anchor="middle">occupancy_outlook</text>
+        <text x="95" y="245" text-anchor="middle">rate_history · what_changed</text><text x="95" y="261" text-anchor="middle">describe_schema</text>
+        <rect x="215" y="172" width="170" height="104" rx="10" fill="#e5f6ff" stroke="#1192e8" stroke-width="1.5"/>
+        <text x="300" y="194" font-size="14.5" font-weight="700" text-anchor="middle" fill="#00539a">Guest experience</text>
+        <text x="300" y="213" text-anchor="middle">complaint_radar</text><text x="300" y="229" text-anchor="middle">search_reviews (VECTOR)</text>
+        <text x="300" y="245" text-anchor="middle">review_hotspots</text><text x="300" y="261" text-anchor="middle">run_sql</text>
+        <rect x="420" y="172" width="170" height="104" rx="10" fill="#d9fbfb" stroke="#009d9a" stroke-width="1.5"/>
+        <text x="505" y="194" font-size="14.5" font-weight="700" text-anchor="middle" fill="#005d5d">Operations</text>
+        <text x="505" y="213" text-anchor="middle">search_policies (DB2VS)</text><text x="505" y="229" text-anchor="middle">find_upgrade_candidates</text>
+        <text x="505" y="245" text-anchor="middle">list_actions</text><text x="505" y="261" text-anchor="middle">propose_rate / upgrade / fix</text>
+      </g>
+      <path d="M180,224 L215,224" stroke="#0f62fe" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+      <path d="M385,224 L420,224" stroke="#0f62fe" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+      <line x1="505" y1="276" x2="505" y2="306" stroke="#8d8d8d" stroke-width="2" marker-end="url(#a)"/>
+      <rect x="405" y="308" width="200" height="46" rx="10" fill="#161616"/><text x="505" y="330" fill="#fff" font-size="14.5" font-weight="700" text-anchor="middle">Composer</text>
+      <text x="505" y="346" fill="#c6c6c6" font-size="11" text-anchor="middle">writes the morning brief</text>
+      <text x="300" y="300" font-size="11.5" text-anchor="middle" fill="#0f62fe">- - -  briefing route: each agent reads the previous findings</text>
+      <text x="20" y="330" font-size="11.5" fill="#525252">Each specialist = its own compiled StateGraph</text>
+      <text x="20" y="347" font-size="11.5" fill="#525252">(LLM node ⇄ tool node, bounded tool budget)</text>
+    </svg>
+    <div>
+      <h3>Why LangGraph</h3>
+      <ul style="margin-bottom:10px">
+        <li><b>Explicit graph</b>: deterministic routing, bounded loops and sub-graphs. Every step is inspectable and stored in Db2.</li>
+        <li><b>Least-privilege tools per agent</b>: the Analyst <i>cannot</i> propose actions, and only Operations can.</li>
+        <li><b>Multi-agent collaboration</b>: in a briefing, each specialist builds on the previous agents' findings.</li>
+      </ul>
+      <h3>Production-minded AI integration</h3>
+      <ul>
+        <li><b>Model</b>: Google Gemini 3.5 Flash through LangChain, swappable for watsonx.ai, OpenAI or Ollama</li>
+        <li><b>Quota-aware fallback chain</b> switches models mid-run, visible in the trace</li>
+        <li><b>Memory in Db2</b>: earlier turns are replayed from <code>AGENT_RUNS</code></li>
+        <li><b>Untrusted data</b>: review text is never treated as instructions</li>
+        <li><b>Efficient</b>: batched tool calls, 3.4 LLM calls per answer on average</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>Hotel Ops Copilot · Db2Hack 2026</span><span>6</span></div>
+</section>
+
+<!-- 7 DB2 CONNECTOR -->
+<section class="slide">
+  <div class="req">IBM Db2 connector</div>
+  <div class="kicker">IBM Db2 connector and integration</div>
+  <h2>Native <code style="font-size:21pt">ibm_db</code> plus IBM's official <code style="font-size:21pt">langchain-db2</code>, with two Db2 identities</h2>
+  <div class="grid g2" style="gap:20px">
+    <div>
+      <div class="grid g2" style="gap:12px;margin-bottom:12px">
+        <div class="card b"><h3>🤖 Agent identity</h3><p style="margin:0"><code>OPSAGENT</code>, role <code>HOTELOPS_AGENT</code>: <b>SELECT</b> plus <b>EXECUTE SP_PROPOSE_ACTION</b> only. It sees PII masked and opted-out guests hidden.</p></div>
+        <div class="card" style="background:#defbe6;border-color:#a7f0ba"><h3>🧑‍💼 Manager identity</h3><p style="margin:0">Approves, rejects, dry-runs and rolls back through stored procedures. Runs the EXPLAIN cost check.</p></div>
+      </div>
+      <table>
+        <tr><th>Connector</th><th>Used for</th></tr>
+        <tr><td><code>ibm_db</code> 3.3 (native driver)</td><td>All agent tools as LangChain <code>@tool</code>s; stored procedure calls with OUT parameters; prepared statements</td></tr>
+        <tr><td><b>IBM <code>langchain-db2</code></b> (<code>DB2VS</code>)</td><td>Policy handbook as a LangChain <code>VectorStore</code> on Db2 <code>VECTOR(384)</code>, through <code>ibm_db_dbi</code></td></tr>
+        <tr><td>Local embeddings (BGE-small, ONNX)</td><td>Review and policy vectors, so text never leaves the machine to be embedded</td></tr>
+        <tr><td>Docker: Db2 Community Edition 12.1</td><td><code>docker compose up</code> starts Db2 and the app together</td></tr>
+      </table>
+    </div>
+    <div>
+<pre><span class="c"># every agent tool runs as the least-privileged identity</span>
+agent_db = get_db(<span class="s">"agent"</span>)        <span class="c"># OPSAGENT, role HOTELOPS_AGENT</span>
+
+<span class="k">def</span> run_sql(query: str) -> str:
+    safe = validate_select(query)    <span class="c"># 1 statement, SELECT only</span>
+    check_cost(safe)                 <span class="c"># Db2 EXPLAIN PLAN, cost ceiling</span>
+    <span class="k">return</span> agent_db.query(safe)       <span class="c"># Db2 privileges + RCAC apply</span>
+
+<span class="c"># agents can only PROPOSE: the procedure validates and queues</span>
+agent_db.call(<span class="s">"HOTELOPS.SP_PROPOSE_ACTION"</span>, run_id, <span class="s">"RATE_CHANGE"</span>,
+              json.dumps(payload), rationale, 0, OUT_TEXT)
+
+<span class="c"># IBM langchain-db2: policy knowledge base on Db2 vectors</span>
+kb = DB2VS(embedding_function=LocalBgeEmbeddings(),
+           table_name=<span class="s">"POLICY_KB"</span>, client=ibm_db_dbi_conn,
+           distance_strategy=DistanceStrategy.COSINE)
+kb.similarity_search_with_score(<span class="s">"upgrade a platinum guest"</span>)</pre>
+      <p class="small muted" style="margin-top:8px">The connection string sets <code>CURRENTSCHEMA=HOTELOPS</code>. Every credential comes from <code>.env</code>; none is committed.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Hotel Ops Copilot · Db2Hack 2026</span><span>7</span></div>
+</section>
+
+<!-- 8 DB2 DEPTH -->
+<section class="slide">
+  <div class="req">Intended Db2 integration</div>
+  <div class="kicker">IBM Db2 integration in depth</div>
+  <h2>Db2 is the system of record <i>and</i> the AI's control plane</h2>
+  <table>
+    <tr><th style="width:26%">Db2 capability</th><th style="width:30%">Where</th><th>What it does for the copilot</th></tr>
+    <tr><td><span class="pill">VECTOR(384, FLOAT32)</span><span class="pill">VECTOR_DISTANCE</span></td><td><code>REVIEW_CHUNKS</code>, <code>POLICY_KB</code></td><td>Sentence-level semantic review search; a complaint radar in one query (anchor vectors <code>CROSS JOIN</code>, <code>ROW_NUMBER() OVER</code>, <code>GROUPING SETS</code>)</td></tr>
+    <tr><td><span class="pill t">System-period temporal</span></td><td><code>RATE_PLAN</code>, <code>RESERVATIONS</code>, <code>ROOMS</code></td><td>"What was the rate, who changed it?"; a trigger-free change feed; one-click rollback with <code>FOR SYSTEM_TIME AS OF</code></td></tr>
+    <tr><td><span class="pill p">SQL PL procedures</span></td><td><code>SP_PROPOSE / APPLY / REJECT / ROLLBACK</code></td><td>Price band, 35% cap, no past dates, real upgrades only, free room for the whole stay, consent, duplicates, and rollback integrity</td></tr>
+    <tr><td><span class="pill p">Transactional dry run</span></td><td>dedicated unit of work + <code>ROLLBACK</code></td><td>Runs the real apply procedure, diffs the impact (oversold nights, guests to move, revenue at stake), then persists nothing</td></tr>
+    <tr><td><span class="pill r">RCAC masks + row permission</span></td><td><code>GUESTS</code></td><td>E-mail and phone masked for the AI; guests who withdrew consent are invisible to it (DPDP Act 2023)</td></tr>
+    <tr><td><span class="pill r">Roles &amp; GRANT / REVOKE</span></td><td><code>HOTELOPS_AGENT</code></td><td>The AI can read and propose, never write. <code>CREATETAB</code> and <code>IMPLICIT_SCHEMA</code> are revoked from PUBLIC</td></tr>
+    <tr><td><span class="pill">EXPLAIN PLAN</span></td><td><code>SYSTOOLS.EXPLAIN_*</code></td><td>The optimizer costs every AI-written query before it runs; runaway plans are refused (legitimate queries cost 78–2,089 timerons)</td></tr>
+    <tr><td><span class="pill g">JSON_EXISTS / JSON_VALUE</span></td><td><code>AGENT_ACTIONS</code></td><td>Validated structured proposals (check constraint) parsed inside the procedures</td></tr>
+    <tr><td><span class="pill t">Views, COMMENT ON, SYSCAT, LISTAGG</span></td><td><code>V_DAILY_KPIS</code>, catalog</td><td>A semantic layer for text-to-SQL; exact column lists are fed to the agents, so they don't guess</td></tr>
+    <tr><td><span class="pill g">Audit and memory tables</span></td><td><code>AGENT_RUNS</code>, <code>AGENT_STEPS</code></td><td>Every run, tool call, model and LLM-call count stored; conversation memory; replay without an LLM</td></tr>
+  </table>
+  <div class="foot"><span>Hotel Ops Copilot · Db2Hack 2026</span><span>8</span></div>
+</section>
+
+<!-- 9 ARCHITECTURE -->
+<section class="slide">
+  <div class="req">System architecture</div>
+  <div class="kicker">System architecture</div>
+  <h2>Four layers; the guarantees live in the bottom one</h2>
+  <svg viewBox="0 0 1220 520" width="100%" style="flex:1;max-height:5.55in">
+    <defs><marker id="b" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6f6f6f"/></marker></defs>
+    <!-- layer labels -->
+    <g font-size="13" font-weight="700" fill="#6f6f6f">
+      <text x="8" y="44">EXPERIENCE</text><text x="8" y="160">AGENTS</text><text x="8" y="282">TOOLS</text><text x="8" y="418">IBM Db2 12.1</text>
+    </g>
+    <!-- experience -->
+    <rect x="150" y="14" width="520" height="56" rx="10" fill="#f4f4f4" stroke="#c6c6c6"/>
+    <text x="410" y="38" font-size="15" font-weight="700" text-anchor="middle">Streamlit UI · CLI</text>
+    <text x="410" y="57" font-size="12" text-anchor="middle" fill="#525252">Copilot · Approvals + Dry run · Time travel · Dashboard · Red team · Audit</text>
+    <rect x="700" y="14" width="250" height="56" rx="10" fill="#defbe6" stroke="#6fdc8c"/>
+    <text x="825" y="38" font-size="15" font-weight="700" text-anchor="middle" fill="#044317">Duty manager</text>
+    <text x="825" y="57" font-size="12" text-anchor="middle" fill="#044317">asks · approves · rolls back</text>
+    <rect x="980" y="14" width="230" height="56" rx="10" fill="#fff" stroke="#c6c6c6"/>
+    <text x="1095" y="38" font-size="14" font-weight="700" text-anchor="middle">LLM (Gemini 3.5 Flash)</text>
+    <text x="1095" y="57" font-size="11.5" text-anchor="middle" fill="#525252">fallback chain · swappable</text>
+    <!-- agents -->
+    <rect x="150" y="112" width="800" height="78" rx="10" fill="#f6f2ff" stroke="#a56eff"/>
+    <text x="550" y="135" font-size="15" font-weight="700" text-anchor="middle" fill="#491d8b">LangGraph: Router → Analyst · Guest experience · Operations → Composer</text>
+    <text x="550" y="157" font-size="12" text-anchor="middle" fill="#491d8b">restricted tool set per agent · bounded loops · memory replayed from Db2 · every step written to AGENT_STEPS</text>
+    <text x="550" y="177" font-size="12" text-anchor="middle" fill="#491d8b">review text treated as untrusted data · proposals must cite evidence and policy IDs</text>
+    <line x1="1095" y1="70" x2="950" y2="140" stroke="#6f6f6f" stroke-width="1.6" stroke-dasharray="5 4"/>
+    <!-- tools -->
+    <g font-size="12">
+      <rect x="150" y="232" width="190" height="88" rx="10" fill="#fff" stroke="#c6c6c6"/>
+      <text x="245" y="255" font-weight="700" text-anchor="middle" font-size="13.5">run_sql</text>
+      <text x="245" y="274" text-anchor="middle">SELECT-only guard</text><text x="245" y="291" text-anchor="middle">+ EXPLAIN cost ceiling</text><text x="245" y="308" text-anchor="middle">+ row limit</text>
+      <rect x="353" y="232" width="190" height="88" rx="10" fill="#fff" stroke="#c6c6c6"/>
+      <text x="448" y="255" font-weight="700" text-anchor="middle" font-size="13.5">Vector tools</text>
+      <text x="448" y="274" text-anchor="middle">search_reviews</text><text x="448" y="291" text-anchor="middle">complaint_radar · hotspots</text><text x="448" y="308" text-anchor="middle">search_policies (DB2VS)</text>
+      <rect x="556" y="232" width="190" height="88" rx="10" fill="#fff" stroke="#c6c6c6"/>
+      <text x="651" y="255" font-weight="700" text-anchor="middle" font-size="13.5">Time-travel tools</text>
+      <text x="651" y="274" text-anchor="middle">rate_history</text><text x="651" y="291" text-anchor="middle">what_changed</text><text x="651" y="308" text-anchor="middle">occupancy_outlook</text>
+      <rect x="759" y="232" width="190" height="88" rx="10" fill="#fff" stroke="#c6c6c6"/>
+      <text x="854" y="255" font-weight="700" text-anchor="middle" font-size="13.5">propose_* tools</text>
+      <text x="854" y="274" text-anchor="middle">rate change</text><text x="854" y="291" text-anchor="middle">room upgrade</text><text x="854" y="308" text-anchor="middle">maintenance</text>
+      <rect x="980" y="232" width="230" height="88" rx="10" fill="#fff" stroke="#c6c6c6"/>
+      <text x="1095" y="255" font-weight="700" text-anchor="middle" font-size="13.5">Local embeddings</text>
+      <text x="1095" y="274" text-anchor="middle">BGE-small (ONNX)</text><text x="1095" y="291" text-anchor="middle">384-d vectors</text><text x="1095" y="308" text-anchor="middle">no text leaves the machine</text>
+    </g>
+    <g stroke="#6f6f6f" stroke-width="1.6" marker-end="url(#b)">
+      <line x1="245" y1="190" x2="245" y2="230"/><line x1="448" y1="190" x2="448" y2="230"/><line x1="651" y1="190" x2="651" y2="230"/><line x1="854" y1="190" x2="854" y2="230"/>
+      <line x1="410" y1="70" x2="410" y2="110"/><line x1="825" y1="70" x2="825" y2="110"/>
+    </g>
+    <!-- db2 -->
+    <rect x="150" y="352" width="1060" height="160" rx="12" fill="#e5f6ff" stroke="#0f62fe" stroke-width="2"/>
+    <g font-size="12">
+      <rect x="168" y="368" width="240" height="128" rx="9" fill="#fff" stroke="#82cfff"/>
+      <text x="288" y="390" font-weight="700" text-anchor="middle" font-size="13.5" fill="#0043ce">Agent identity</text>
+      <text x="288" y="410" text-anchor="middle">OPSAGENT · HOTELOPS_AGENT</text><text x="288" y="428" text-anchor="middle">SELECT + EXECUTE propose</text>
+      <text x="288" y="446" text-anchor="middle">RCAC masks · consent rows</text><text x="288" y="464" text-anchor="middle">no INSERT / UPDATE / DELETE</text>
+      <text x="288" y="482" text-anchor="middle" fill="#da1e28" font-weight="700">writes refused by Db2</text>
+      <rect x="420" y="368" width="250" height="128" rx="9" fill="#fff" stroke="#82cfff"/>
+      <text x="545" y="390" font-weight="700" text-anchor="middle" font-size="13.5" fill="#0043ce">Vectors &amp; knowledge</text>
+      <text x="545" y="410" text-anchor="middle">GUEST_REVIEWS · REVIEW_CHUNKS</text><text x="545" y="428" text-anchor="middle">POLICY_KB (langchain-db2)</text>
+      <text x="545" y="446" text-anchor="middle">VECTOR(384, FLOAT32)</text><text x="545" y="464" text-anchor="middle">VECTOR_DISTANCE COSINE</text>
+      <text x="545" y="482" text-anchor="middle">EXPLAIN tables (SYSTOOLS)</text>
+      <rect x="682" y="368" width="250" height="128" rx="9" fill="#fff" stroke="#82cfff"/>
+      <text x="807" y="390" font-weight="700" text-anchor="middle" font-size="13.5" fill="#0043ce">Business data</text>
+      <text x="807" y="410" text-anchor="middle">ROOMS* · RESERVATIONS* · RATE_PLAN*</text><text x="807" y="428" text-anchor="middle">GUESTS · ROOM_TYPES · CALENDAR</text>
+      <text x="807" y="446" text-anchor="middle">* system-period temporal</text><text x="807" y="464" text-anchor="middle">+ *_HISTORY tables</text>
+      <text x="807" y="482" text-anchor="middle">KPI views + COMMENT ON</text>
+      <rect x="944" y="368" width="250" height="128" rx="9" fill="#fff" stroke="#82cfff"/>
+      <text x="1069" y="390" font-weight="700" text-anchor="middle" font-size="13.5" fill="#0043ce">Governance</text>
+      <text x="1069" y="410" text-anchor="middle">SP_PROPOSE / APPLY / ROLLBACK</text><text x="1069" y="428" text-anchor="middle">AGENT_ACTIONS (JSON check)</text>
+      <text x="1069" y="446" text-anchor="middle">AGENT_RUNS · AGENT_STEPS</text><text x="1069" y="464" text-anchor="middle">dry run = txn + ROLLBACK</text>
+      <text x="1069" y="482" text-anchor="middle">rollback = FOR SYSTEM_TIME</text>
+    </g>
+    <g stroke="#0f62fe" stroke-width="1.8" marker-end="url(#b)">
+      <line x1="245" y1="320" x2="270" y2="366"/><line x1="448" y1="320" x2="520" y2="366"/><line x1="651" y1="320" x2="770" y2="366"/><line x1="854" y1="320" x2="1010" y2="366"/>
+    </g>
+    <path d="M825,70 C1210,90 1215,300 1180,366" fill="none" stroke="#24a148" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#b)"/>
+    <text x="1140" y="200" font-size="12" fill="#198038" font-weight="700" text-anchor="end">approve / roll back</text>
+    <text x="1140" y="216" font-size="12" fill="#198038" text-anchor="end">as manager</text>
+  </svg>
+  <div class="foot"><span>Hotel Ops Copilot · Db2Hack 2026</span><span>9</span></div>
+</section>
+
+<!-- 10 WORKFLOW -->
+<section class="slide">
+  <div class="req">Workflow</div>
+  <div class="kicker">Workflow: the life of one governed action</div>
+  <h2>Seven steps, five Db2 checkpoints</h2>
+  <div class="grid" style="grid-template-columns: 1.15fr 1fr; gap: 24px">
+    <div>
+      <table>
+        <tr><th style="width:6%">#</th><th style="width:26%">Step</th><th>What happens</th></tr>
+        <tr><td>1</td><td><b>Question</b></td><td>The manager asks; the run is logged in <code>AGENT_RUNS</code>, with memory replayed from earlier turns of the thread</td></tr>
+        <tr><td>2</td><td><b>Routing</b></td><td>The LLM router returns a typed <code>RouteDecision</code>, with a keyword fallback if structured output fails</td></tr>
+        <tr><td>3</td><td><b>Evidence</b> <span class="pill">Db2</span></td><td>Specialists query as <code>OPSAGENT</code>: SQL costed by EXPLAIN, vector search, time travel. Privileges and RCAC apply</td></tr>
+        <tr><td>4</td><td><b>Proposal</b> <span class="pill">Db2</span></td><td><code>SP_PROPOSE_ACTION</code> validates the JSON, references, price band, dates, consent and duplicates, then queues it as PENDING</td></tr>
+        <tr><td>5</td><td><b>Dry run</b> <span class="pill">Db2</span></td><td>The real apply procedure runs in a transaction; the UI shows the diff and warnings, then <code>ROLLBACK</code></td></tr>
+        <tr><td>6</td><td><b>Approval</b> <span class="pill">Db2</span></td><td>A human approves, or Db2 auto-applies the action if it is within the earned-autonomy limits (<code>AUTONOMY_POLICY</code>); <code>SP_APPLY_ACTION</code> re-checks the 35% cap, upgrade tier and room availability, then applies the change to the temporal tables</td></tr>
+        <tr><td>7</td><td><b>Undo</b> <span class="pill">Db2</span></td><td><code>SP_ROLLBACK_ACTION</code> restores the rows <code>AS OF</code> the moment before the change, and refuses if someone changed them again</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>Red-team scoreboard: 24/24 attacks blocked</h3>
+      <p class="small muted" style="margin-bottom:8px">The attacks bypass the app and use the agent's own Db2 credentials. Each runs in a transaction that is rolled back.</p>
+      <div class="barrow"><span>Db2 privileges (agent role)</span><div class="bar" style="width:100%"></div><b>9</b></div>
+      <div class="barrow"><span>SQL PL guardrail at proposal</span><div class="bar" style="width:55.5%"></div><b>5</b></div>
+      <div class="barrow"><span>SQL PL guardrail at approval</span><div class="bar" style="width:22.2%"></div><b>2</b></div>
+      <div class="barrow"><span>RCAC column masks</span><div class="bar" style="width:22.2%"></div><b>2</b></div>
+      <div class="barrow"><span>RCAC row permission (consent)</span><div class="bar" style="width:11.1%"></div><b>1</b></div>
+      <div class="barrow"><span>EXPLAIN cost guard</span><div class="bar" style="width:11.1%"></div><b>1</b></div>
+      <div class="barrow"><span>JSON check</span><div class="bar" style="width:11.1%"></div><b>1</b></div>
+      <div class="barrow"><span>App SQL guard</span><div class="bar" style="width:22.2%;background:#a8a8a8"></div><b>2</b></div>
+      <p class="small" style="margin-top:10px">Attacks include deleting guests, a ₹500 suite, self-approval, dumping PII, bypassing consent, a cross-join overload,
+        a −40% price swing, a fake "upgrade", and <b>a prompt injection hidden in a guest review</b>.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Hotel Ops Copilot · Db2Hack 2026</span><span>10</span></div>
+</section>
+
+<!-- 11 FEASIBILITY / EVIDENCE -->
+<section class="slide">
+  <div class="req">Feasibility: built and measured</div>
+  <div class="kicker">Feasibility: this is already built and measured</div>
+  <h2>Measured results, not just intentions</h2>
+  <div class="grid g4" style="margin-bottom:16px">
+    <div class="card b"><div class="num">30/30</div><div class="numl">accuracy evaluation: KPIs, time travel, vector search, change feed and safety, with ground truth computed in Db2</div></div>
+    <div class="card b"><div class="num">24/24</div><div class="numl">red-team attacks blocked; the database is proven unchanged afterwards</div></div>
+    <div class="card b"><div class="num">106</div><div class="numl">automated tests, unit plus live Db2, none needing an LLM key</div></div>
+    <div class="card b"><div class="num">24 s</div><div class="numl">median answer time; 3.4 LLM calls per question; 8–10 per full brief</div></div>
+  </div>
+  <div class="grid g3" style="gap:16px">
+    <div><div class="shot"><img src="../screenshots/02-dry-run-rate-change.png" alt="Dry run rate change"></div>
+      <div class="cap"><b>Dry run</b> shows the break-even: the agent's Junior Suite cut pays off only if it sells <b>19% more rooms</b>.</div></div>
+    <div><div class="shot"><img src="../screenshots/05-change-feed.png" alt="Change feed"></div>
+      <div class="cap"><b>Change feed</b> from history tables: before and after, who, why, and the action ID.</div></div>
+    <div><div class="shot"><img src="../screenshots/11-red-team-scoreboard.png" alt="Red team scoreboard"></div>
+      <div class="cap"><b>Red team</b>: one click runs 24 attacks against the live Db2.</div></div>
+  </div>
+  <div class="foot"><span>Hotel Ops Copilot · Db2Hack 2026</span><span>11</span></div>
+</section>
+
+<!-- 12 IMPACT -->
+<section class="slide">
+  <div class="req">Expected impact &amp; use case</div>
+  <div class="kicker">Expected impact and use case</div>
+  <h2>Better decisions every morning, without giving up control</h2>
+  <div class="grid g3" style="margin-bottom:14px">
+    <div class="card t"><h3><span class="ico">💰</span>Revenue</h3>
+      <ul><li>Soft nights are found days earlier and discounted <b>within policy</b></li><li>Sold-out conference nights are priced up, not left on the table</li>
+          <li>The dry run shows money at stake and break-even before approval</li></ul></div>
+    <div class="card t"><h3><span class="ico">⭐</span>Guest experience</h3>
+      <ul><li>Faulty rooms are found from the <b>first few</b> reviews, not the fiftieth</li><li>VIPs and special occasions are recognised automatically</li>
+          <li>Process issues (Wi-Fi, check-in) are separated from room faults</li></ul></div>
+    <div class="card t"><h3><span class="ico">🛡️</span>Trust &amp; compliance</h3>
+      <ul><li>The AI never writes data; every action is approved, audited and reversible</li><li>PII never reaches the model; consent is enforced by Db2 (DPDP Act)</li>
+          <li>Resistant to prompt injection by design</li></ul></div>
+  </div>
+  <div class="grid g2">
+    <div class="card b"><h3>Use case: Monday, 07:30, Saltwater Bay (Goa)</h3>
+      <p style="font-size:11.3pt;margin:0">The duty manager clicks <b>Morning brief</b>. In under a minute the copilot reports 62.5% occupancy, flags AC faults in rooms
+        307/312 and no hot water in 512, spots zero suite pick-up for 20–23 Nov and the sold-out conference nights, and queues 6 actions: two repairs,
+        an anniversary upgrade for a Platinum guest, and three rate changes. The dry run catches one action that would oversell Deluxe. The manager approves the rest,
+        and can undo any of them later.</p></div>
+    <div class="card"><h3>Who can use it and how it scales</h3>
+      <ul><li><b>Independent and mid-size hotels</b> that lack revenue-management tools</li>
+          <li><b>Hotel chains</b>: the same Db2 row permissions can scope each manager and agent to their own property</li>
+          <li><b>Any regulated domain</b> where AI must propose and humans must approve: hospitals, retail, banking ops</li>
+          <li>The domain is swappable; the <b>Db2 governance pattern is reusable</b></li></ul></div>
+  </div>
+  <div class="foot"><span>Hotel Ops Copilot · Db2Hack 2026</span><span>12</span></div>
+</section>
+
+<!-- 13 IMPLEMENTATION -->
+<section class="slide">
+  <div class="kicker">Implementation plan, tech stack and reproducibility</div>
+  <h2>Reproducible in one command, built to be judged</h2>
+  <div class="grid g3" style="gap:16px">
+    <div class="card"><h3>Tech stack</h3>
+      <ul><li><b>Database</b>: IBM Db2 12.1 Community Edition (Docker)</li><li><b>Connectors</b>: <code>ibm_db</code>, IBM <code>langchain-db2</code>, <code>ibm_db_dbi</code></li>
+          <li><b>Agents</b>: LangGraph + LangChain</li><li><b>LLM</b>: Gemini 3.5 Flash (fallback chain); watsonx.ai, OpenAI and Ollama ready</li>
+          <li><b>Embeddings</b>: BGE-small (fastembed, ONNX)</li><li><b>UI</b>: Streamlit + CLI; <b>tests</b>: pytest</li></ul></div>
+    <div class="card"><h3>Run it</h3>
+<pre style="font-size:9.6pt"><span class="c"># Db2 + app, no local Python</span>
+cp .env.example .env
+docker compose up -d
+<span class="c"># open http://localhost:8501</span>
+
+<span class="c"># or step by step</span>
+bash scripts/quickstart.sh
+pytest -q tests/          <span class="c"># 106 tests</span>
+python src/redteam.py     <span class="c"># 24/24</span>
+python src/evaluate.py    <span class="c"># 30/30</span></pre>
+      <p class="small muted" style="margin-top:8px">It works without an API key too: approvals, dry run, time travel, radar, red team and replay of recorded runs.</p></div>
+    <div class="card"><h3>Plan and roadmap</h3>
+      <ul><li>✅ Schema, temporal tables, vectors, SQL PL guardrails, RCAC</li><li>✅ LangGraph agents, tools, memory, fallback</li>
+          <li>✅ Dry run, radar, change feed, red team, evaluation, earned autonomy</li><li>✅ Docker, docs, screenshots</li>
+          <li>➜ Next: PMS and channel-manager connectors, forecasting with Db2 ML / watsonx.ai, Granite as the default model, multi-property row permissions</li></ul></div>
+  </div>
+  <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;background:var(--ink);color:#fff;border-radius:12px;padding:16px 22px">
+    <div><div style="font-size:19pt;font-weight:700">Hotel Ops Copilot</div><div style="color:#c6c6c6;font-size:12pt">AI that proposes. Db2 that decides, dry-runs and can undo.</div></div>
+    <div style="text-align:right;font-size:11.5pt;color:#c6c6c6">Clark Fernandes · solo · GitHub <b style="color:#fff">clarkf19</b><br>IBM Db2 12.1 · LangGraph · Gemini</div>
+  </div>
+  <div class="foot"><span>Hotel Ops Copilot · Db2Hack 2026</span><span>13</span></div>
+</section>
+
+</body>
+</html>

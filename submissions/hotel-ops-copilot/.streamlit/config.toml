@@ -1,0 +1,19 @@
+# IBM Carbon-inspired theme for the Hotel Ops Copilot UI (read by `streamlit run` from the project root).
+[theme]
+base = "light"
+primaryColor = "#0f62fe"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f4f4f4"
+textColor = "#161616"
+linkColor = "#0f62fe"
+borderColor = "#e0e0e0"
+showWidgetBorder = true
+baseRadius = "medium"
+font = "IBM Plex Sans:https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+codeFont = "IBM Plex Mono:https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap"
+
+[theme.sidebar]
+backgroundColor = "#f4f4f4"
+
+[client]
+toolbarMode = "minimal"
