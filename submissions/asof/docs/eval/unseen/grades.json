@@ -1,0 +1,72 @@
+{
+ "run-1": {
+  "R02": {
+   "grade": "right",
+   "why": "v2 2A at 36 h: INR 220 charge and INR 780 refund, as P-03 gives."
+  },
+  "R08": {
+   "grade": "right",
+   "why": "Booking date governs (P-01), so v1: 2S at 40 h is the 12 to 48 h band, INR 30."
+  },
+  "R09": {
+   "grade": "right",
+   "why": "v2 2S at 40 h (36 h or more): INR 70 charge, INR 430 refund."
+  },
+  "R16": {
+   "grade": "right",
+   "why": "v2 P-05: a confirmed PQ ticket with less than 36 h left is non-refundable; it does not apply v3."
+  },
+  "R18": {
+   "grade": "right",
+   "why": "v2 P-06: voluntary cancellation closed under 3 h; automatic refund less INR 25 if still waitlisted at departure."
+  },
+  "R20": {
+   "grade": "right",
+   "why": "Says the waitlist rule does not apply to a promoted ticket, which is right; it states no amount (P-03 gives INR 110) but nothing it says is wrong."
+  },
+  "R21": {
+   "grade": "right",
+   "why": "v1 P-07 partial cancellation allowed; SL at 55 h: INR 120 charge, INR 580 refund; no extra processing fee (P-04)."
+  },
+  "R24": {
+   "grade": "right",
+   "why": "v3: confirmed SL at 20 h is INR 80; the waitlisted passenger gets base fare less INR 30 (P-06)."
+  },
+  "R28": {
+   "grade": "right",
+   "why": "v3 E1: a claim no later than 14 calendar days gets 100% of the base fare."
+  },
+  "R30": {
+   "grade": "right",
+   "why": "v2 E2: 120 minutes needed; one minute less does not qualify."
+  },
+  "R31": {
+   "grade": "right",
+   "why": "v3 E2: 100% of base fare and the booking service fee refunded."
+  },
+  "R32": {
+   "grade": "right",
+   "why": "v2 E2: a claim after actual departure cannot be made."
+  },
+  "R34": {
+   "grade": "right",
+   "why": "v2 E3: base fare less INR 125 within 48 h; booking fee not reimbursed."
+  },
+  "R35": {
+   "grade": "right",
+   "why": "v2 E3 excludes PQ passengers."
+  },
+  "R37": {
+   "grade": "right",
+   "why": "v2 E3 excludes tickets from an unauthorized resale broker, whatever the medical evidence."
+  },
+  "R39": {
+   "grade": "right",
+   "why": "v2 E4: full second-PNR base fare plus its booking fee within 20 minutes; no extra charges (P-04)."
+  },
+  "R40": {
+   "grade": "right",
+   "why": "v3 E5: an advisory is not an evacuation order; an explicit evacuation order is required."
+  }
+ }
+}

@@ -289,6 +289,8 @@ Db2 tests run in throwaway schemas as the real least-privilege users ([what they
 
 0 of 121 wrong drafts released, 1 of 70 correct drafts held. Four splits motivated a fix at some point and are not blind; the five that never did released **0 of 65** (95% upper bound about 4.6%). One earlier run released a draft; that gap is closed. Every run and miss: [docs/evaluation.md](docs/evaluation.md); routing: [docs/routing_eval.md](docs/routing_eval.md); intake: [docs/intake_eval.md](docs/intake_eval.md).
 
+**Unseen domain.** Another AI (GPT) wrote a fictional railway's three-version refund policy and 40 cases meant to make AsOf fail; the policy went in through Policy intake, and the runner and metrics were committed before any case was read. First run: AsOf released **2 of 25** wrong drafts and held 2 of 15 correct ones, with 30 of 40 ideal outcomes; a plain LLM judge given only the latest version, on the same model, also released 2 of 25 but held 9 of 15 correct drafts and reached 6 of 40. AsOf's two releases were both at a fare-table band boundary. [docs/eval/unseen-results.md](docs/eval/unseen-results.md), intake: [docs/eval/unseen-intake.md](docs/eval/unseen-intake.md).
+
 ---
 
 ## Screenshots & Demo
