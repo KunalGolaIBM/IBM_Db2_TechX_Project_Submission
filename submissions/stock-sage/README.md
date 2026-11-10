@@ -160,7 +160,9 @@ python ../../scripts/validate_submission.py submissions/stock-sage
 
 ---
 
-## Screenshots & Demo
+## Documentation & Demo
+- **Official Project Proposal (PDF):** [docs/StockSage_IBM_Db2_TechX_Proposal.pdf](docs/StockSage_IBM_Db2_TechX_Proposal.pdf)
+- **Architecture Specification:** [architecture.md](architecture.md)
 - **Demo Walkthrough Video:** *(To be added)*
 - Screenshots stored in `docs/screenshots/`:
   - *Main Dashboard & Inventory Health KPIs*
