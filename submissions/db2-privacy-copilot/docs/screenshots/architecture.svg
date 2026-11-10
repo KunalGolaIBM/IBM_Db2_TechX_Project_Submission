@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1040" viewBox="0 0 1600 1040" role="img" aria-labelledby="title desc">
+  <title id="title">Db2 Privacy Copilot architecture</title>
+  <desc id="desc">A human-reviewed privacy workflow connecting a Streamlit and FastAPI application, Python modules, CrewAI planning tools, deterministic SQL guardrails, and IBM Db2 with catalog, relational, temporal, audit, and vector storage.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7faff"/><stop offset="1" stop-color="#edf3f9"/></linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1769aa"/><stop offset="1" stop-color="#0f4c81"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#16324f" flood-opacity=".10"/></filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M1 1 L11 6 L1 11 Z" fill="#52718d"/></marker>
+    <marker id="arrowBlue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M1 1 L11 6 L1 11 Z" fill="#1769aa"/></marker>
+    <style>
+      text{font-family:Inter,'Segoe UI',Arial,sans-serif;fill:#1c2f43}
+      .title{font-size:36px;font-weight:750;letter-spacing:-.7px}
+      .subtitle{font-size:17px;fill:#60758a}
+      .kicker{font-size:12px;font-weight:700;letter-spacing:1.7px;fill:#1769aa}
+      .card{fill:#fff;stroke:#dce6ef;stroke-width:1.5;filter:url(#shadow)}
+      .cardtitle{font-size:21px;font-weight:700}
+      .body{font-size:15px;fill:#52677c}
+      .small{font-size:13px;fill:#667b90}
+      .label{font-size:12px;font-weight:700;letter-spacing:1px;fill:#6c8093}
+      .chip{fill:#f1f6fb;stroke:#dbe6ef}
+      .chiptext{font-size:14px;font-weight:600;fill:#304b65}
+      .line{fill:none;stroke:#52718d;stroke-width:3;marker-end:url(#arrow)}
+      .blueLine{fill:none;stroke:#1769aa;stroke-width:3.5;marker-end:url(#arrowBlue)}
+      .dashed{fill:none;stroke:#8196a9;stroke-width:2.5;stroke-dasharray:8 8;marker-end:url(#arrow)}
+      .number{font-size:13px;font-weight:700;fill:#fff}
+    </style>
+  </defs>
+
+  <rect width="1600" height="1040" rx="28" fill="url(#bg)"/>
+  <text x="68" y="76" class="kicker">SYSTEM DESIGN</text>
+  <text x="68" y="124" class="title">Db2 Privacy Copilot</text>
+  <text x="68" y="157" class="subtitle">Discover personal data, prepare privacy actions, and keep approval with people.</text>
+  <rect x="1320" y="65" width="210" height="40" rx="20" fill="#e4f0fa"/>
+  <circle cx="1343" cy="85" r="6" fill="#2f8b75"/>
+  <text x="1360" y="90" font-size="13" font-weight="700" fill="#245a72">HUMAN-REVIEWED</text>
+
+  <!-- Primary flow -->
+  <text x="68" y="218" class="label">REQUEST &amp; REVIEW</text>
+  <rect x="68" y="244" width="250" height="142" rx="18" class="card"/>
+  <circle cx="100" cy="278" r="17" fill="#e5f1fb"/>
+  <text x="95" y="284" font-size="16" font-weight="800" fill="#1769aa">1</text>
+  <text x="128" y="284" class="cardtitle">Privacy team</text>
+  <text x="94" y="323" class="body">DPO, privacy analyst,</text>
+  <text x="94" y="346" class="body">or Db2 administrator</text>
+  <text x="94" y="371" class="small">Reviews plans and approves actions</text>
+
+  <path d="M318 314 H390" class="line"/>
+  <rect x="392" y="244" width="356" height="142" rx="18" class="card"/>
+  <circle cx="424" cy="278" r="17" fill="#e5f1fb"/>
+  <text x="419" y="284" class="number">2</text>
+  <text x="452" y="284" class="cardtitle">Web interface &amp; API</text>
+  <rect x="420" y="308" width="145" height="44" rx="10" class="chip"/>
+  <text x="438" y="336" class="chiptext">Streamlit UI</text>
+  <rect x="580" y="308" width="140" height="44" rx="10" class="chip"/>
+  <text x="603" y="336" class="chiptext">FastAPI</text>
+  <text x="420" y="373" class="small">Workspace for review · REST endpoints</text>
+
+  <path d="M748 314 H820" class="line"/>
+  <rect x="822" y="244" width="710" height="142" rx="18" class="card"/>
+  <circle cx="854" cy="278" r="17" fill="#e5f1fb"/>
+  <text x="849" y="284" class="number">3</text>
+  <text x="882" y="284" class="cardtitle">Python privacy workflows</text>
+  <rect x="850" y="308" width="145" height="44" rx="10" class="chip"/><text x="873" y="336" class="chiptext">Discovery</text>
+  <rect x="1008" y="308" width="145" height="44" rx="10" class="chip"/><text x="1031" y="336" class="chiptext">Classification</text>
+  <rect x="1166" y="308" width="145" height="44" rx="10" class="chip"/><text x="1201" y="336" class="chiptext">Consent</text>
+  <rect x="1324" y="308" width="176" height="44" rx="10" class="chip"/><text x="1343" y="336" class="chiptext">Rights planning</text>
+  <text x="850" y="373" class="small">NetworkX maps foreign-key relationships; rules and embeddings surface PII candidates.</text>
+
+  <!-- Supporting intelligence and execution lane -->
+  <text x="68" y="452" class="label">PLANNING, SAFETY &amp; DATA</text>
+  <rect x="68" y="478" width="385" height="212" rx="18" class="card"/>
+  <rect x="94" y="502" width="43" height="32" rx="16" fill="#e6f4f0"/>
+  <text x="108" y="523" font-size="12" font-weight="800" fill="#27725f">AI</text>
+  <text x="151" y="525" class="cardtitle">CrewAI planning tools</text>
+  <text x="96" y="563" class="body">Agents can discover, classify, and draft</text>
+  <text x="96" y="586" class="body">dry-run plans. They cannot execute erasure.</text>
+  <path d="M98 618 H420" stroke="#dce6ef" stroke-width="1.5"/>
+  <text x="96" y="647" class="small">Proposal only → returned for human review</text>
+  <path d="M455 574 C510 574 505 386 505 386" class="dashed"/>
+  <text x="461" y="550" class="small">read-only tools</text>
+
+  <rect x="500" y="478" width="387" height="212" rx="18" class="card"/>
+  <circle cx="534" cy="514" r="17" fill="#fff1df"/>
+  <path d="M527 514 l5 5 10-12" fill="none" stroke="#a66a14" stroke-width="2.5"/>
+  <text x="564" y="521" class="cardtitle">Human approval &amp; guardrail</text>
+  <text x="528" y="560" class="body">Reviewer approves the regenerated plan.</text>
+  <text x="528" y="584" class="body">Deterministic SQL checks enforce scope,</text>
+  <text x="528" y="608" class="body">filters, and safe statements before writes.</text>
+  <rect x="528" y="631" width="331" height="36" rx="9" fill="#fff7eb" stroke="#f0dfc2"/>
+  <text x="545" y="654" font-size="13" font-weight="700" fill="#8b5a13">No approval → no sensitive execution</text>
+  <path d="M1035 386 V447 H696 V478" class="blueLine"/>
+  <text x="755" y="438" class="small">proposed plan</text>
+
+  <rect x="930" y="478" width="602" height="410" rx="20" fill="#123b5d" filter="url(#shadow)"/>
+  <text x="968" y="523" font-size="13" font-weight="700" letter-spacing="1.5" fill="#a8d1ec">SYSTEM OF RECORD</text>
+  <text x="968" y="562" font-size="27" font-weight="750" fill="#fff">IBM Db2</text>
+  <text x="968" y="590" font-size="15" fill="#d3e4f2">Community Edition · 12.1.2+ for vector search</text>
+  <rect x="968" y="621" width="252" height="92" rx="13" fill="#1b4c70" stroke="#397193"/>
+  <text x="990" y="652" font-size="15" font-weight="700" fill="#fff">Relational records</text>
+  <text x="990" y="680" font-size="13" fill="#d4e5f2">Clinic data · requests · PII map</text>
+  <rect x="1240" y="621" width="254" height="92" rx="13" fill="#1b4c70" stroke="#397193"/>
+  <text x="1262" y="652" font-size="15" font-weight="700" fill="#fff">Temporal consent</text>
+  <text x="1262" y="680" font-size="13" fill="#d4e5f2">Current state + history table</text>
+  <rect x="968" y="731" width="252" height="92" rx="13" fill="#1b4c70" stroke="#397193"/>
+  <text x="990" y="762" font-size="15" font-weight="700" fill="#fff">Catalog metadata</text>
+  <text x="990" y="790" font-size="13" fill="#d4e5f2">SYSCAT tables + relationships</text>
+  <rect x="1240" y="731" width="254" height="92" rx="13" fill="#1b4c70" stroke="#397193"/>
+  <text x="1262" y="762" font-size="15" font-weight="700" fill="#fff">DB2VS + audit chain</text>
+  <text x="1262" y="790" font-size="13" fill="#d4e5f2">Taxonomy vectors · SHA-256 events</text>
+
+  <!-- Vector classification -->
+  <rect x="500" y="744" width="387" height="144" rx="18" class="card"/>
+  <text x="528" y="781" class="cardtitle">Semantic PII matching</text>
+  <text x="528" y="812" class="body">Local Sentence Transformer embeddings</text>
+  <text x="528" y="836" class="body">→ LangChain DB2VS taxonomy search</text>
+  <text x="528" y="865" class="small">Column names matched to privacy labels</text>
+  <path d="M887 815 H930" class="blueLine"/>
+  <path d="M696 744 V690" class="dashed"/>
+  <path d="M887 835 C910 835 910 675 930 675" class="blueLine"/>
+  <text x="893" y="716" class="small">vectors</text>
+
+  <!-- Guardrail to Db2 and audit -->
+  <path d="M887 590 H930" class="blueLine"/>
+  <text x="890" y="570" class="small">approved writes</text>
+  <text x="968" y="857" font-size="12" font-weight="600" fill="#b9d5e8">Transactional execution · tamper-evident audit history</text>
+
+  <text x="68" y="974" class="small">AI suggests. People approve. Deterministic controls validate. Db2 stores the state and evidence.</text>
+  <text x="1532" y="974" text-anchor="end" class="small">DB2 PRIVACY COPILOT</text>
+</svg>
+

@@ -4,6 +4,8 @@
 
 Db2 Privacy Copilot is a working privacy-operations demo for teams that use IBM Db2. It brings database discovery, personal-data classification, consent history, and data-removal planning into one web application. AI-assisted tools can suggest what to review; deterministic guardrails and human approval control sensitive execution.
 
+![Architecture of Db2 Privacy Copilot](docs/screenshots/architecture.svg)
+
 ## The problem
 
 Personal information can be spread across related database tables. Privacy teams need to know where it is, whether consent applies, and which records may need action when a person makes a rights request. Doing this by hand can be slow and make decisions harder to explain or audit.

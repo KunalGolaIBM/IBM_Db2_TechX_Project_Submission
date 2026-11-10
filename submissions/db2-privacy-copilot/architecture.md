@@ -4,6 +4,8 @@
 
 Db2 Privacy Copilot is a Streamlit and FastAPI application backed by IBM Db2. Python modules perform schema discovery, classification, consent management, rights-request planning, deterministic SQL validation, and audit logging. CrewAI agents can call planning and discovery tools; they cannot execute erasure SQL.
 
+![Architecture of Db2 Privacy Copilot](docs/screenshots/architecture.svg)
+
 ## Component diagram
 
 ```mermaid
