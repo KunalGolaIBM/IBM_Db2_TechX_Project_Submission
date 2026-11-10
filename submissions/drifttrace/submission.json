@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "DriftTrace — calibration failure impact tracing",
+    "slug": "drifttrace",
+    "short_description": "When a measuring instrument fails calibration, DriftTrace uses LangChain + Gemini to extract the notice with verbatim source quotes, then traces the instrument through IBM Db2 to the inspections, lots and shipments that need review, with a reason for every record, illustrative error-bound sensitivity, and a transactionally saved, auditable investigation case.",
+    "category": "AI / Data Engineering / Manufacturing Quality",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/LordBusiness011124/IBM_Db2_TechX_Project_Submission/tree/submission/drifttrace/submissions/drifttrace"
+  },
+  "team": {
+    "name": "DriftTrace",
+    "members": [
+      {
+        "name": "Noah Stiggins",
+        "github": "LordBusiness011124",
+        "email": "",
+        "role": "Solo developer — Db2, AI and UI"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1.5 (Docker, linux/amd64)",
+    "connector": "ibm_db 3.3.0 (native Python driver, prepared statements)",
+    "features_used": [
+      "Relational Tables (8) with Primary/Foreign Keys and CHECK Constraints",
+      "Composite Foreign Key (review events -> findings)",
+      "Unique Constraint for Idempotent Saves",
+      "Indexing",
+      "Aggregate View (DT_LOT_EXPOSURE_V) used as an in-database cross-check",
+      "Triggers enforcing append-only cases, findings, audit and review history",
+      "Least-privilege GRANTs for a dedicated application user",
+      "Multi-statement Transactions with Rollback",
+      "CLOB JSON Evidence Snapshots",
+      "SYSCAT Catalog Queries for Idempotent Migrations",
+      "Prepared Statements with Bound Parameters"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "SQL"
+    ],
+    "frameworks": [
+      "Streamlit",
+      "LangChain",
+      "Pydantic",
+      "pytest"
+    ],
+    "ai_models": [
+      "Google Gemini gemini-3.5-flash-lite"
+    ]
+  }
+}
