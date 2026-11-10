@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Db2 Cortex",
+    "slug": "db2-cortex",
+    "short_description": "Governed, self-auditing multi-agent analytics copilot: LangGraph agents use Db2 VECTOR search, a Db2 semantic cache, session memory tables, and a hash-chained audit table.",
+    "category": "AI / Agentic Text-to-SQL / Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/Pavan3030-pr/IBM_Db2_TechX_Project_Submission/tree/submission/db2-cortex/submissions/db2-cortex"
+  },
+  "team": {
+    "name": "Chandra Pavansai (Solo)",
+    "members": [
+      {
+        "name": "Chandra Pavansai",
+        "github": "Pavan3030-pr",
+        "email": "pavan20053010@gmail.com",
+        "role": "Solo: Backend, Db2 and AI Developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1.x (Docker)",
+    "connector": "ibm_db / ibm_db_dbi + langchain-db2 (DB2VS)",
+    "features_used": [
+      "Relational Tables",
+      "VECTOR(384, FLOAT32) + VECTOR_DISTANCE (COSINE)",
+      "Semantic query cache in Db2",
+      "Session memory tables",
+      "Hash-chained audit table"
+    ]
+  }
+}
