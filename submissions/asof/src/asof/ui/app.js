@@ -195,6 +195,7 @@ function explain(r, asOf) {
     case "ERROR_FAIL_CLOSED": return "A check could not complete, so the answer was held (fail closed)."
       + (health.replay && !health.live ? " In replay mode this is what happens to any input without a recorded model output." : "");
     case "LEDGER_UNAVAILABLE": return "The decision could not be recorded in the ledger, so nothing was released.";
+    case "RELEASE_REFUSED": return `Db2 refused to record this release: a claim was not quoted from a clause version in force on ${date}. It was held instead.`;
     case "ROUTE_UNCERTAIN": return "AsOf could not tell which policy document this is about, so it did not guess: a specialist picks the document and answers, in the inbox.";
     default: return r.reason_code;
   }
@@ -684,6 +685,7 @@ const WHY_HELD = {
   TOO_MANY_CLAIMS: "The draft makes more than 8 policy claims.",
   ERROR_FAIL_CLOSED: "A check step failed, so the answer was held (fail closed).",
   LEDGER_UNAVAILABLE: "The decision could not be recorded, so nothing was released.",
+  RELEASE_REFUSED: "Db2 refused to record the release: a claim lacked a quoted clause version in force on the customer's date.",
   ROUTE_UNCERTAIN: "AsOf could not tell which policy document the question is about, so it did not guess.",
 };
 function reviewLink(e) {

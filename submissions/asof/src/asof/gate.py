@@ -578,20 +578,37 @@ class Gate:
     def _record(self, req: GateRequest, q_red: str, d_red: str, result: GateResult,
                 q_counts: dict[str, int], d_counts: dict[str, int]) -> None:
         prompt_version = self.domain(req.doc_id).prompt_version
-        verdicts = self.verdicts(req, result, q_counts, d_counts)
-        entry = ledger.LedgerEntry(
-            request_id=result.request_id, channel=req.channel, doc_id=req.doc_id, as_of=req.as_of,
-            # The caller gets the answer as written; the ledger keeps the redacted form.
-            question_redacted=q_red, draft_redacted=d_red, final_answer=redact(result.final_answer).text[:4000],
-            decision=result.decision, reason_code=result.reason_code, model_info=result.model_info[:200],
-            prompt_version=prompt_version, latency_ms=result.latency_ms, verdicts=verdicts,
-        )
-        try:
+
+        def append(extra: dict[str, Any] | None = None) -> ledger.Appended:
+            verdicts = self.verdicts(req, result, q_counts, d_counts) | (extra or {})
+            entry = ledger.LedgerEntry(
+                request_id=result.request_id, channel=req.channel, doc_id=req.doc_id, as_of=req.as_of,
+                # The caller gets the answer as written; the ledger keeps the redacted form.
+                question_redacted=q_red, draft_redacted=d_red, final_answer=redact(result.final_answer).text[:4000],
+                decision=result.decision, reason_code=result.reason_code, model_info=result.model_info[:200],
+                prompt_version=prompt_version, latency_ms=result.latency_ms, verdicts=verdicts,
+            )
             conn = self.connect()
             try:
-                appended = ledger.append(conn, entry, self.schema)
+                return ledger.append(conn, entry, self.schema)
             finally:
                 conn.close()
+
+        try:
+            try:
+                appended = append()
+            except db.DatabaseError as exc:
+                if exc.sqlstate not in ledger.RELEASE_REFUSALS or result.decision == "ESCALATED":
+                    raise
+                # Db2 will not back this release (08_release_rules.sql): hold it. The holding reply goes out, never
+                # the text Db2 refused, and the held decision is recorded with what Db2 said.
+                refused = {"decision": result.decision, "reason_code": result.reason_code, "sqlstate": exc.sqlstate,
+                           "detail": ledger.RELEASE_REFUSALS[exc.sqlstate]}
+                log.warning("Db2 refused to record %s (%s, SQLSTATE %s); holding the answer", result.decision,
+                            refused["detail"], exc.sqlstate)
+                result.decision, result.reason_code, result.final_answer = "ESCALATED", "RELEASE_REFUSED", HOLDING_REPLY
+                result.error = f"Db2 refused the release: {refused['detail']} (SQLSTATE {exc.sqlstate})"
+                appended = append({"release_refused": refused})
             result.ledger_id, result.row_hash = appended.ledger_id, appended.row_hash
         except Exception as exc:  # noqa: BLE001 - no record, no release
             log.error("ledger append failed; answer withheld: %s", exc)

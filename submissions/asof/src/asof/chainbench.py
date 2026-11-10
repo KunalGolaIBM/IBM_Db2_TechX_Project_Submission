@@ -32,7 +32,9 @@ OUT_DIR = PROJECT_ROOT / "docs" / "chainbench"
 REPORT = PROJECT_ROOT / "docs" / "chain_benchmark.md"
 CHECKPOINTS = (10_000, 100_000)
 
-# Two claims, as a typical check records them; APPEND_LEDGER_ROW shreds them into CLAIM_CITATION.
+# Two claims, as a typical check records them; APPEND_LEDGER_ROW shreds them into CLAIM_CITATION. The re-check's
+# claim quotes BRV-002 v1 (in force from 2026-01-01 to 2026-04-30), and every row's customer date falls in that
+# period, so each append passes Db2's release rules (08_release_rules.sql) like a real CORRECTED decision.
 VERDICTS = json.dumps({"version": 1, "claims": [
     {"pass": 1, "claim_no": 1, "text": "Bereavement fares can be requested after travel.", "area": "bereavement",
      "verdict": "CONTRADICTED", "llm_verdict": "CONTRADICTED", "rule_check": "MISMATCH", "clause_id": "BRV-002",
@@ -56,7 +58,7 @@ BEGIN
   SET V_BASE = (SELECT COALESCE(MAX(LEDGER_ID), 0) FROM ANSWER_LEDGER);
   WHILE I < P_ROWS DO
     CALL APPEND_LEDGER_ROW(RIGHT(REPEAT('0', 36) || RTRIM(CHAR(V_BASE + I + 1)), 36), 'api', 'AURELIA-CSP',
-                           DATE('2026-03-10') + MOD(I, 300) DAYS,
+                           DATE('2026-01-01') + MOD(I, 120) DAYS,
                            'My grandmother died. Can I get the bereavement fare after I travel?',
                            'Yes, you can request it after you travel.',
                            'Bereavement fares must be requested before travel begins.',
@@ -78,9 +80,10 @@ def prepare(settings: Settings, target: str = BENCH_SCHEMA) -> None:
     with db.connection(settings, "admin") as conn:
         schema.drop(conn, target)
         schema.install(conn, target)
-        seed.seed_documents(conn, target)
+        embeddings = get_embeddings(settings.embedding_model)
+        seed.seed_policy(conn, embeddings, target)  # the release rules check each row's citation against it
         seed.seed_chain_head(conn, target)
-        seed.seed_faq(conn, get_embeddings(settings.embedding_model), target)  # the grants name every table
+        seed.seed_faq(conn, embeddings, target)  # the grants name every table
         schema.apply_grants(conn, settings.asof_app_user, settings.asof_editor_user, target)
         db.use_schema(conn, target)
         db.execute(conn, SQL_FILL)

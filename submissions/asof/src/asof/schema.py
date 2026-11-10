@@ -22,7 +22,7 @@ SCHEMA_RE = db.SCHEMA_RE
 USER_RE = re.compile(r"^[a-z][a-z0-9]{0,7}$")
 GRANTS_PREFIX = "90_"
 NOT_HELD = "42504"  # REVOKE of a privilege that is not held
-_MARKER = re.compile(r"^--\s*(bufferpool|tablespace|table|mqt|index|versioning|trigger|procedure|function|view|mask|role"
+_MARKER = re.compile(r"^--\s*(bufferpool|tablespace|table|mqt|index|versioning|trigger|procedure|function|type|view|mask|role"
                      r"|grant|other):"
                      r"\s*([A-Z0-9_]+)\s*$", re.M)
 _SCHEMA_TOKEN = re.compile(r"\bASOF\.")
@@ -72,6 +72,8 @@ def _exists(conn: ibm_db_dbi.Connection, schema: str, st: Statement) -> bool:
         return bool(db.query(conn, "SELECT 1 FROM SYSCAT.BUFFERPOOLS WHERE BPNAME = ?", (st.name,)))
     elif st.kind == "tablespace":
         return bool(db.query(conn, "SELECT 1 FROM SYSCAT.TABLESPACES WHERE TBSPACE = ?", (st.name,)))
+    elif st.kind == "type":  # user-defined row and array types (CREATE TYPE has no OR REPLACE)
+        sql = "SELECT 1 FROM SYSCAT.DATATYPES WHERE TYPESCHEMA = ? AND TYPENAME = ?"
     else:
         return False  # triggers, procedures, views and grants use CREATE OR REPLACE or are idempotent
     return bool(db.query(conn, sql, (schema, st.name)))
@@ -164,7 +166,7 @@ def apply_grants(conn: ibm_db_dbi.Connection, app_user: str, editor_user: str, s
 
 
 def _drop_code_objects(conn: ibm_db_dbi.Connection, schema: str) -> None:
-    """Drop every view, trigger, procedure and function in `schema`, whatever depends on what.
+    """Drop every view, trigger, procedure, function and type in `schema`, whatever depends on what.
 
     Each pass drops what it can; objects still needed by another are retried in the next
     pass. Recreating routines from scratch (rather than CREATE OR REPLACE over invalidated
@@ -180,8 +182,11 @@ def _drop_code_objects(conn: ibm_db_dbi.Connection, schema: str) -> None:
            for n in q("SELECT TRIGNAME FROM SYSCAT.TRIGGERS WHERE TRIGSCHEMA = ?")]
         + [f"DROP SPECIFIC PROCEDURE {db.ident(schema)}.{db.ident(n)}" for n in q(
             "SELECT SPECIFICNAME FROM SYSCAT.ROUTINES WHERE ROUTINESCHEMA = ? AND ROUTINETYPE = 'P'")]
+        # ORIGIN 'S': the constructor functions Db2 generates for a row or array type, dropped with the type.
         + [f"DROP SPECIFIC FUNCTION {db.ident(schema)}.{db.ident(n)}" for n in q(
-            "SELECT SPECIFICNAME FROM SYSCAT.ROUTINES WHERE ROUTINESCHEMA = ? AND ROUTINETYPE = 'F'")]
+            "SELECT SPECIFICNAME FROM SYSCAT.ROUTINES WHERE ROUTINESCHEMA = ? AND ROUTINETYPE = 'F' AND ORIGIN <> 'S'")]
+        + [f"DROP TYPE {db.ident(schema)}.{db.ident(n)}"  # after the routines that use them; arrays before rows
+           for n in q("SELECT TYPENAME FROM SYSCAT.DATATYPES WHERE TYPESCHEMA = ? ORDER BY METATYPE")]
     )
     for _ in range(len(pending) + 1):
         if not pending:

@@ -148,10 +148,16 @@ def flat_statements(target: str) -> list[schema.Statement]:
     return out
 
 
+# The synthetic decisions cite no seeded clause (this benchmark loads no policy), so Db2's release rules
+# (08_release_rules.sql) would refuse every PASS and CORRECTED row: they are left out of both designs here.
+NOT_INSTALLED = {"ANSWER_LEDGER_RELEASE_RULES"}
+
+
 def _install(conn: ibm_db_dbi.Connection, target: str, flat: bool) -> None:
     if db.query(conn, "SELECT 1 FROM SYSCAT.SCHEMATA WHERE SCHEMANAME = ?", (target,)):
         schema.drop(conn, target)
-    schema.install(conn, target, flat_statements(target) if flat else None)
+    statements = flat_statements(target) if flat else schema.load_statements(target)
+    schema.install(conn, target, [st for st in statements if st.name not in NOT_INSTALLED])
     seed.seed_documents(conn, target)
     seed.seed_chain_head(conn, target)
 

@@ -21,6 +21,15 @@ if TYPE_CHECKING:
 
 MAX_VERDICTS_BYTES = 30000
 DECISIONS = ("PASS", "CORRECTED", "ESCALATED", "REVIEWED")  # REVIEWED: only RESOLVE_ESCALATION writes it
+# Db2's release rules (08_release_rules.sql): the ledger refuses a PASS or CORRECTED row whose released claims are not
+# each SUPPORTED by a clause version in force on the customer's date and quoted from its text. 75003 (too many
+# claims) is APPEND_LEDGER_ROW's own limit, which the trigger repeats for direct inserts.
+RELEASE_REFUSALS = {
+    "75080": "a released claim is not SUPPORTED by a cited clause",
+    "75081": "a released claim cites a clause version not in force on the customer's date",
+    "75082": "a released claim's quote is not in the cited clause version's text",
+    "75083": "the claims do not match the decision (draft check for a PASS, re-check for a CORRECTED answer)",
+}
 
 
 @dataclass(frozen=True)
@@ -63,7 +72,8 @@ def verdicts_json(verdicts: dict[str, Any]) -> str:
 
 
 def append(conn: ibm_db_dbi.Connection, entry: LedgerEntry, schema: str = db.SCHEMA) -> Appended:
-    """Append one decision and commit. Raises DatabaseError if Db2 refuses it."""
+    """Append one decision and commit. Raises DatabaseError if Db2 refuses it (a release Db2 will not back raises
+    one whose sqlstate is in RELEASE_REFUSALS)."""
     db.use_schema(conn, schema)
     if entry.decision not in DECISIONS[:3]:  # a REVIEWED row goes through review.resolve, never through here
         raise ValueError(f"unknown decision {entry.decision!r}")

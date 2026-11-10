@@ -12,7 +12,6 @@ from collections.abc import Callable
 from datetime import date
 from typing import Annotated, Any
 
-import ibm_db
 import ibm_db_dbi
 from langchain_core.embeddings import Embeddings
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
@@ -82,6 +81,13 @@ def apply_change(conn: ibm_db_dbi.Connection, change: PolicyChange, embeddings: 
     in-database model is registered (in_db=None means: use it if it exists), otherwise here.
     Returns rows split, help-centre answers flagged, and where the embedding was made.
     """
+    applied, _ = _run_change(conn, change, embeddings, schema, in_db, preview=False, commit=commit)
+    return applied
+
+
+def _run_change(conn: ibm_db_dbi.Connection, change: PolicyChange, embeddings: Embeddings | None, schema: str,
+                in_db: bool | None, preview: bool, commit: bool) -> tuple[dict[str, Any], list[tuple[Any, ...]]]:
+    """CALL APPLY_POLICY_CHANGE or PREVIEW_POLICY_CHANGE (same arguments). Returns the counts and any result rows."""
     if change.end <= change.effective_from:
         raise ValueError("effective_to must be after effective_from")
     db.use_schema(conn, schema)
@@ -98,53 +104,56 @@ def apply_change(conn: ibm_db_dbi.Connection, change: PolicyChange, embeddings: 
             raise ValueError("no local embeddings model to fall back on")
         return db.vector_literal(embeddings.embed_query(clause_embedding_text(rows[0][0], change.clause_text)))
 
-    def call(vector: str | None) -> list[Any]:
+    def call(vector: str | None) -> tuple[list[Any], list[tuple[Any, ...]]]:
+        args = (change.clause_id, change.effective_from, change.end, change.version_label, change.clause_text,
+                json.dumps(change.rule, sort_keys=True), vector, change.change_note, 0, 0)
         cur = conn.cursor()
         try:
-            out = cur.callproc("APPLY_POLICY_CHANGE", (
-                change.clause_id, change.effective_from, change.end, change.version_label, change.clause_text,
-                json.dumps(change.rule, sort_keys=True), vector, change.change_note, 0, 0))
+            result: list[tuple[Any, ...]] = []
+            if preview:
+                out = cur.callproc("PREVIEW_POLICY_CHANGE", args)
+                result = cur.fetchall() or []
+            else:
+                out = cur.callproc("APPLY_POLICY_CHANGE", args)
             if commit:
                 conn.commit()
-            return list(out)
+            return list(out), result
         except Exception as exc:  # noqa: BLE001
             conn.rollback()
-            raise db.wrap_error(exc, "APPLY_POLICY_CHANGE failed") from None
+            raise db.wrap_error(exc, f"{'PREVIEW' if preview else 'APPLY'}_POLICY_CHANGE failed") from None
         finally:
             cur.close()
 
     embedded_in = "db2" if in_db else "app"
     try:
-        out = call(None if in_db else local_vector())
+        out, result = call(None if in_db else local_vector())
     except db.DatabaseError as exc:
         # 75014: the in-database model failed (endpoint down, key revoked). The change still goes
         # through, with the same model run here; the response says so.
         if not (in_db and exc.sqlstate == "75014" and embeddings is not None):
             raise
         log.warning("in-database embedding failed for %s; embedding locally instead", change.clause_id)
-        out, embedded_in = call(local_vector()), "app (Db2 model unavailable)"
-    return {"rows_changed": int(out[8]), "published_flagged": int(out[9]), "embedded_in": embedded_in}
+        (out, result), embedded_in = call(local_vector()), "app (Db2 model unavailable)"
+    return {"rows_changed": int(out[8]), "published_flagged": int(out[9]), "embedded_in": embedded_in}, result
 
 
 def preview_change(conn: ibm_db_dbi.Connection, change: PolicyChange, embeddings: Embeddings | None,
                    schema: str = db.SCHEMA) -> dict[str, Any]:
     """What a change would do, without making it.
 
-    APPLY_POLICY_CHANGE and CHANGE_IMPACT run in one transaction, which is then rolled back: the
-    impact is read from Db2's own view of the changed policy, and afterwards there is no new version,
-    no history row and no flagged help-centre answer. The caller's connection must not autocommit.
+    PREVIEW_POLICY_CHANGE (08_release_rules.sql) applies the change under a savepoint, runs CHANGE_IMPACT on the
+    changed policy, and rolls back to the savepoint before it returns: the impact is Db2's own view of the changed
+    policy, and Db2 itself guarantees there is no new version, no history row and no flagged help-centre answer
+    afterwards, whatever the connection's commit mode. The transaction is rolled back here too, to release its locks.
     """
-    if ibm_db.autocommit(conn.conn_handler):
-        raise ValueError("a preview needs a connection without autocommit, or the change would be saved")
     try:
-        applied = apply_change(conn, change, embeddings, schema, commit=False)
-        impact = change_impact(conn, change.clause_id, schema)
+        applied, rows = _run_change(conn, change, embeddings, schema, None, preview=True, commit=False)
     finally:
         try:
             conn.rollback()
         except Exception as exc:  # noqa: BLE001 - closing the connection then rolls the transaction back
             raise db.wrap_error(exc, "The preview could not be rolled back; close this connection") from None
-    return applied | {"impact": impact, "preview": True}
+    return applied | {"impact": _impact_rows(rows), "preview": True}
 
 
 SQL_PUBLISHED = ("SELECT ANSWER_ID, DOC_ID, QUESTION, ANSWER_TEXT, CITED_CLAUSE_ID, CITED_VERSION, APPLIES_FROM, "
@@ -228,6 +237,10 @@ def change_impact(conn: ibm_db_dbi.Connection, clause_id: str, schema: str = db.
         raise db.wrap_error(exc, "CHANGE_IMPACT failed") from None
     finally:
         cur.close()
+    return _impact_rows(rows)
+
+
+def _impact_rows(rows: list[tuple[Any, ...]]) -> list[dict[str, Any]]:
     out = []
     for r in rows:
         d = dict(zip(_IMPACT_KEYS, r, strict=True))

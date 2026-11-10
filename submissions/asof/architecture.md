@@ -172,7 +172,7 @@ Each line is a choice and the reason for it. Findings marked "spike" were verifi
 |---|---|---|
 | Policy versions live in Db2 temporal tables, and one query filters by date and ranks by meaning | The version in force on the customer's date is a database fact, with its history kept by Db2, not by application code | [retriever.py](src/asof/retriever.py), [01_tables.sql](src/asof/sql/01_tables.sql) |
 | A deterministic rule check on `RULE_JSON` overrides the model judge | Wrong numbers, permissions and list memberships are where an answer costs money; it flagged 66 of the 100 wrong drafts on its own in the latest run (63 to 66 in the four before), and overruled a correct judge on ET09 in two runs | [rules.py](src/asof/rules.py) |
-| A SUPPORTED verdict needs a verbatim quote from a retrieved clause | A judge cannot release a claim with grounding it made up | [gate.py](src/asof/gate.py) |
+| A SUPPORTED verdict needs a verbatim quote from a retrieved clause | A judge cannot release a claim with grounding it made up; Db2 enforces it too, refusing to record a PASS or CORRECTED answer whose released claims are not quoted from a version in force on the customer's date ([release rules](docs/release-rules.md)) | [gate.py](src/asof/gate.py), [08_release_rules.sql](src/asof/sql/08_release_rules.sql) |
 | Fail closed, and no record means no release | Any error, timeout or ledger outage holds the answer for a person | [checkgraph.py](src/asof/checkgraph.py) |
 | The ledger is written only by `APPEND_LEDGER`, hash-chained with SHA-256 in SQL | The runtime user cannot write a ledger row any other way, and every row commits to all before it | [03_procedures.sql](src/asof/sql/03_procedures.sql) |
 | Receipts and chain-head anchors outside Db2 | A hash chain cannot vouch for itself against its own owner | [ledger.py](src/asof/ledger.py), [anchor.py](src/asof/anchor.py) |
@@ -224,7 +224,7 @@ sequenceDiagram
 5. **Judgement.** One LLM call judges every claim against the deduplicated clauses, with the question as data, quotes the deciding clause text verbatim, and flags any claim that assumes a situation the question states differently.
 6. **Checks in code.** A verdict whose clause was not retrieved, or a SUPPORTED verdict whose quote is not in the clause, becomes NOT_COVERED; a situation conflict turns SUPPORTED into CONTRADICTED; the rule check compares numbers, limits, delay tiers, permissions and lists with `RULE_JSON`, and a mismatch forces CONTRADICTED.
 7. **Decision.** All claims supported: PASS, with policy references. Any contradiction: rewrite from the cited clauses and a full re-check, released as CORRECTED only if every claim in the rewrite is supported. Uncovered claims with nothing contradicted, or any error: ESCALATED.
-8. **Record.** `APPEND_LEDGER` writes the decision and both checks' citations in one transaction. If it fails, the answer is withheld (HTTP 503).
+8. **Record.** `APPEND_LEDGER` writes the decision and both checks' citations in one transaction. If Db2's release rules refuse a PASS or CORRECTED row (SQLSTATE 75080 to 75083), the answer is held and the hold is recorded instead (`RELEASE_REFUSED`). If the write fails, the answer is withheld (HTTP 503).
 
 ### The other flows
 

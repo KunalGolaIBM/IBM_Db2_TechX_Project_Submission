@@ -139,7 +139,7 @@ def test_without_a_db2_model_or_local_embeddings_the_procedure_refuses(settings,
 
 
 def test_a_preview_reports_the_real_impact_and_leaves_nothing_behind(settings, embeddings, world, admin_conn):
-    """POST /api/policy/preview: APPLY_POLICY_CHANGE and CHANGE_IMPACT in one transaction, rolled back."""
+    """POST /api/policy/preview: PREVIEW_POLICY_CHANGE applies the change, runs CHANGE_IMPACT and rolls it back."""
     def state():
         db.use_schema(admin_conn, world)
         clauses = db.query(admin_conn, "SELECT COUNT(*) FROM POLICY_CLAUSE WHERE CLAUSE_ID = ?", ("PET-001",))[0][0]
@@ -167,11 +167,11 @@ def test_a_preview_reports_the_real_impact_and_leaves_nothing_behind(settings, e
     assert state() == (2, 1, "NEEDS_REVIEW")  # the real change did land
 
 
-def test_a_preview_refuses_an_autocommit_connection(settings, embeddings, world, admin_conn):
+def test_a_preview_on_an_autocommit_connection_still_saves_nothing(settings, embeddings, world, admin_conn):
+    """PREVIEW_POLICY_CHANGE rolls back to its own savepoint, so the caller's commit mode no longer matters."""
     editor = db.connect(settings, "editor", autocommit=True)
     try:
-        with pytest.raises(ValueError, match="autocommit"):
-            policy.preview_change(editor, PET_CHANGE, embeddings, world)
+        assert policy.preview_change(editor, PET_CHANGE, embeddings, world)["rows_changed"] == 1
     finally:
         editor.close()
     db.use_schema(admin_conn, world)
