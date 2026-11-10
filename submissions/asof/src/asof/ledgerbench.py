@@ -59,7 +59,8 @@ OLD_VIEWS = {
   WHERE PASS_NO = 1
   GROUP BY AREA""",
 }
-NEW_ONLY = {"IX_LEDGER_GROUP_CREATED", "P_MQT_DECISION_STATS_ALL_ROWS"}
+NEW_ONLY = {"IX_LEDGER_GROUP_CREATED", "P_MQT_DECISION_STATS_ALL_DOMAINS", "P_MQT_CLAIM_OUTCOMES_ALL_DOMAINS",
+            "P_MQT_DOMAIN_DECISION_STATS", "P_MQT_DOMAIN_CLAIM_OUTCOMES"}  # the MQTs' row permissions
 PARTITION_CLAUSE = re.compile(r"\n\s*PARTITION BY RANGE \(CREATED_AT\) \(.*?MAXVALUE\)", re.S)
 
 # One batch of synthetic decisions: ledger IDs from ? up to ?, one every ? microseconds from 1 Jan 2026.

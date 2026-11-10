@@ -31,7 +31,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationErr
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from . import __version__, db, demolive, headline, impactagent, intake, ledger, notices, policy, review, router
+from . import __version__, db, demolive, headline, impactagent, intake, ledger, notices, policy, review, router, rowaccess
 from .anchor import AnchorLog
 from .anchor import verify as verify_anchors
 from .askledger import LedgerAsker
@@ -259,6 +259,8 @@ def row_ref(value: str) -> tuple[date, datetime]:
 
 class LedgerQuestionIn(_In):
     question: Annotated[str, Field(min_length=3, max_length=500), AfterValidator(_text(500))]
+    # "all" (the all-domain analyst) or a domain key from GET /api/ledger/ask/scopes (that domain's analyst).
+    scope: str = Field("all", pattern=r"^[a-z]{1,20}$")
 
 
 class ReceiptIn(BaseModel):
@@ -606,7 +608,15 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         answer can be checked against them. The SQL and any Db2 message shown are the analyst's
         own query, never the application's.
         """
-        return ledger_asker().ask(body.question).as_dict()
+        if body.scope not in {s.key for s in rowaccess.scopes(settings)}:
+            raise HTTPException(422, f"unknown scope {body.scope!r}: see GET /api/ledger/ask/scopes")
+        return ledger_asker().ask(body.question, scope=body.scope).as_dict()
+
+    @app.get("/api/ledger/ask/scopes")
+    def ask_the_ledger_scopes():
+        """Who Ask the ledger can run as: every domain (the all-domain analyst), then one analyst per domain whose
+        decisions alone Db2's row permissions return."""
+        return [s.as_dict() for s in rowaccess.scopes(settings)]
 
     @app.get("/api/ledger/{ledger_id}")
     def ledger_entry(ledger_id: Annotated[int, Path(ge=1, le=10**12)]):

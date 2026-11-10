@@ -2,7 +2,8 @@
 
 Rules this module enforces:
 - One connection role per purpose: `admin` (setup only), `app` (runtime), `editor` (policy changes),
-  `analyst` (read-only audit views, ledger text masked).
+  `analyst` (read-only audit views, ledger text masked), and per policy domain an analyst and a specialist whom
+  Db2's row permissions show only that domain's decisions.
 - Credentials are passed to the driver as separate arguments, never spliced into a DSN string.
 - SQL text is a string literal in the source; every value goes through a `?` parameter marker.
   Runtime SQL uses unqualified names, and `use_schema` points the connection at a schema with
@@ -32,8 +33,13 @@ from .config import ConfigError, Settings
 
 log = logging.getLogger(__name__)
 
-Role = Literal["admin", "app", "editor", "review", "analyst", "mart"]
+Role = Literal["admin", "app", "editor", "review", "analyst", "mart",
+               "analyst_airline", "review_airline", "analyst_bank", "review_bank"]
 SCHEMA = "ASOF"
+# Domain-scoped users (row permissions, asof/rowaccess.py): connection role -> the settings that name the user and
+# hold the password (<prefix>_user, <prefix>_password).
+DOMAIN_ROLES: dict[str, str] = {"analyst_airline": "asof_airline_analyst", "review_airline": "asof_airline_review",
+                                "analyst_bank": "asof_bank_analyst", "review_bank": "asof_bank_review"}
 
 IDENT_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,127}$")
 SCHEMA_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,29}$")
@@ -98,6 +104,10 @@ def _credentials(settings: Settings, role: Role) -> tuple[str, str]:
     if role == "mart":
         settings.require("asof_mart_password")
         return settings.asof_mart_user, settings.asof_mart_password.get_secret_value()  # type: ignore[union-attr]
+    if role in DOMAIN_ROLES:
+        prefix = DOMAIN_ROLES[role]
+        settings.require(f"{prefix}_password")
+        return getattr(settings, f"{prefix}_user"), getattr(settings, f"{prefix}_password").get_secret_value()
     raise ValueError(f"unknown role {role!r}")
 
 

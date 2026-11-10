@@ -76,6 +76,16 @@ class Settings(BaseSettings):
     # its own schema, <schema>_MART. Setup creates it and generates the password.
     asof_mart_user: str = Field("asofmart", pattern=r"^[a-z][a-z0-9]{0,7}$")
     asof_mart_password: SecretStr | None = None
+    # Domain-scoped users (row permissions, sql/06_domain_permissions.sql): per policy domain, an analyst for "Ask the
+    # ledger" and a specialist, each of whom Db2 shows only that domain's decisions. Setup generates the passwords.
+    asof_airline_analyst_user: str = Field("airread", pattern=r"^[a-z][a-z0-9]{0,7}$")
+    asof_airline_analyst_password: SecretStr | None = None
+    asof_airline_review_user: str = Field("airrev", pattern=r"^[a-z][a-z0-9]{0,7}$")
+    asof_airline_review_password: SecretStr | None = None
+    asof_bank_analyst_user: str = Field("bankread", pattern=r"^[a-z][a-z0-9]{0,7}$")
+    asof_bank_analyst_password: SecretStr | None = None
+    asof_bank_review_user: str = Field("bankrev", pattern=r"^[a-z][a-z0-9]{0,7}$")
+    asof_bank_review_password: SecretStr | None = None
     # Policy changes over HTTP: localhost only, unless this token is set, in which case the
     # X-AsOf-Editor-Token header must match it.
     asof_editor_token: SecretStr | None = None

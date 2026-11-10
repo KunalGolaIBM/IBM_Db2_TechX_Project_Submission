@@ -451,7 +451,7 @@ def check_mqt_over_masked_table(c: Ctx) -> str:
     c.conn.commit()
     shown = c.q("SELECT COUNT(*) FROM LSTATS")[0][0]
     assert hidden == 0 and shown == 2, (hidden, shown)
-    return "0 rows visible until a row permission is created, then 2 (why AsOf defines P_MQT_DECISION_STATS_ALL_ROWS)"
+    return "0 rows visible until a row permission is created, then 2 (why AsOf gives each MQT one)"
 
 
 def check_one_open_row_per_key(c: Ctx) -> str:

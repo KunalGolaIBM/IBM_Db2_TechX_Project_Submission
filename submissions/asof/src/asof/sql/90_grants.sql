@@ -273,3 +273,47 @@ GRANT EXECUTE ON PROCEDURE ASOF.RECORD_DEMO_SPEND TO USER ASOF_APP_USER
 -- grant: EDITOR_EXECUTE_PREVIEW_POLICY_CHANGE
 GRANT EXECUTE ON PROCEDURE ASOF.PREVIEW_POLICY_CHANGE TO USER ASOF_EDITOR_USER
 @
+
+-- Lane b-rcac-wlm: domain row permissions (06_domain_permissions.sql, docs/row-permissions.md).
+-- ASOF_ALL_DOMAINS: every policy domain's decisions. The runtime user appends and verifies over every row; the
+-- editor's change impact, the all-domain specialist and analyst, and dbt's marts read across domains. The
+-- domain-scoped users get a role per domain instead (asof/rowaccess.py), never this one.
+-- role: ASOF_ALL_DOMAINS
+CREATE ROLE ASOF_ALL_DOMAINS
+@
+-- grant: ALL_DOMAINS_APP
+GRANT ROLE ASOF_ALL_DOMAINS TO USER ASOF_APP_USER
+@
+-- grant: ALL_DOMAINS_EDITOR
+GRANT ROLE ASOF_ALL_DOMAINS TO USER ASOF_EDITOR_USER
+@
+-- grant: ALL_DOMAINS_REVIEW
+GRANT ROLE ASOF_ALL_DOMAINS TO USER ASOF_REVIEW_USER
+@
+-- grant: ALL_DOMAINS_ANALYST
+GRANT ROLE ASOF_ALL_DOMAINS TO USER ASOF_ANALYST_USER
+@
+-- grant: ALL_DOMAINS_MART
+GRANT ROLE ASOF_ALL_DOMAINS TO USER ASOF_MART_USER
+@
+-- ASOF_SPECIALIST: what a domain-scoped specialist may do, the same as the all-domain reviewer user above: connect,
+-- read ledger text, and the two procedures. Which held decisions and notices it reaches is the row permissions' call.
+-- role: ASOF_SPECIALIST
+CREATE ROLE ASOF_SPECIALIST
+@
+-- grant: SPECIALIST_CONNECT
+GRANT CONNECT ON DATABASE TO ROLE ASOF_SPECIALIST
+@
+-- grant: SPECIALIST_TEXT_READER
+GRANT ROLE ASOF_TEXT_READER TO ROLE ASOF_SPECIALIST
+@
+-- grant: SPECIALIST_EXECUTE_RESOLVE_ESCALATION
+GRANT EXECUTE ON PROCEDURE ASOF.RESOLVE_ESCALATION TO ROLE ASOF_SPECIALIST
+@
+-- grant: SPECIALIST_EXECUTE_DECIDE_NOTICE
+GRANT EXECUTE ON PROCEDURE ASOF.DECIDE_NOTICE TO ROLE ASOF_SPECIALIST
+@
+-- Every analyst (all-domain or domain-scoped) can ask which policy documents Db2 lets it see.
+-- grant: ANALYST_SELECT_V_DOMAIN_SCOPE
+GRANT SELECT ON TABLE ASOF.V_DOMAIN_SCOPE TO ROLE ASOF_ANALYST
+@

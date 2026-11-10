@@ -1,8 +1,8 @@
 -- Append-only rules for the audit tables. Any UPDATE or DELETE, by any user including the
 -- owner, is rejected with SQLSTATE 75001. Only APPEND_LEDGER may move the chain head.
 -- (The hash chain in 03_procedures.sql catches changes made by someone who drops these.)
--- SECURED: Db2 requires it for triggers on tables with column access control (05_masks.sql);
--- creating one needs SECADM, which the database creator (db2inst1) holds.
+-- SECURED: Db2 requires it for triggers on tables with column or row access control (05_masks.sql,
+-- 06_domain_permissions.sql); creating one needs SECADM, which the database creator (db2inst1) holds.
 
 -- trigger: ANSWER_LEDGER_NO_UPDATE
 CREATE OR REPLACE TRIGGER ASOF.ANSWER_LEDGER_NO_UPDATE
@@ -42,14 +42,14 @@ CREATE OR REPLACE TRIGGER ASOF.CHAIN_HEAD_NO_DELETE
 -- trigger: ESCALATION_REVIEW_NO_UPDATE
 CREATE OR REPLACE TRIGGER ASOF.ESCALATION_REVIEW_NO_UPDATE
   NO CASCADE BEFORE UPDATE ON ASOF.ESCALATION_REVIEW
-  FOR EACH ROW
+  FOR EACH ROW SECURED
   SIGNAL SQLSTATE '75001' SET MESSAGE_TEXT = 'ESCALATION_REVIEW is append-only: rows cannot be updated'
 @
 
 -- trigger: ESCALATION_REVIEW_NO_DELETE
 CREATE OR REPLACE TRIGGER ASOF.ESCALATION_REVIEW_NO_DELETE
   NO CASCADE BEFORE DELETE ON ASOF.ESCALATION_REVIEW
-  FOR EACH ROW
+  FOR EACH ROW SECURED
   SIGNAL SQLSTATE '75001' SET MESSAGE_TEXT = 'ESCALATION_REVIEW is append-only: rows cannot be deleted'
 @
 
@@ -57,7 +57,7 @@ CREATE OR REPLACE TRIGGER ASOF.ESCALATION_REVIEW_NO_DELETE
 -- A notice is a record of what a customer was told (or was going to be told): it is never deleted.
 CREATE OR REPLACE TRIGGER ASOF.CORRECTION_NOTICE_NO_DELETE
   NO CASCADE BEFORE DELETE ON ASOF.CORRECTION_NOTICE
-  FOR EACH ROW
+  FOR EACH ROW SECURED
   SIGNAL SQLSTATE '75001' SET MESSAGE_TEXT = 'CORRECTION_NOTICE rows cannot be deleted'
 @
 
@@ -66,7 +66,7 @@ CREATE OR REPLACE TRIGGER ASOF.CORRECTION_NOTICE_NO_DELETE
 CREATE OR REPLACE TRIGGER ASOF.CORRECTION_NOTICE_DECIDED_ONCE
   NO CASCADE BEFORE UPDATE ON ASOF.CORRECTION_NOTICE
   REFERENCING OLD AS O NEW AS N
-  FOR EACH ROW
+  FOR EACH ROW SECURED
   WHEN (O.STATUS <> 'PENDING' OR N.NOTICE_TEXT <> O.NOTICE_TEXT OR N.CORRECTION_TEXT <> O.CORRECTION_TEXT
         OR N.LEDGER_ID <> O.LEDGER_ID OR N.CHECK_DECISION <> O.CHECK_DECISION
         OR COALESCE(N.CHECK_LEDGER_ID, 0) <> COALESCE(O.CHECK_LEDGER_ID, 0))

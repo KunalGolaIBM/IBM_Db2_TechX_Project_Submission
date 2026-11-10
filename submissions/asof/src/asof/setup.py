@@ -5,7 +5,7 @@
     python -m asof.setup --reset-ledger  # DEMO ONLY: empty the ledger, keep the policy data
 
 Steps:
- 1. Generate passwords for the five least-privilege users and the chain-head anchor key if .env has
+ 1. Generate passwords for the least-privilege users and the chain-head anchor key if .env has
     none (never printed).
  2. Wait until Db2 accepts connections as the owner.
  3. Create the OS users inside the Db2 container (Db2 authenticates against the OS).
@@ -31,15 +31,18 @@ from urllib.parse import urlparse
 
 import ibm_db_dbi
 from langchain_core.embeddings import Embeddings
+from pydantic import SecretStr
 
-from . import db, indb, schema, seed
+from . import db, indb, rowaccess, schema, seed
 from .anchor import AnchorLog
 from .config import DEFAULT_ENV_FILE, PROJECT_ROOT, ConfigError, Settings, get_settings
 from .embeddings import get_embeddings
 from .retriever import clauses_as_of
 
 GENERATED_KEYS = ("ASOF_APP_PASSWORD", "ASOF_EDITOR_PASSWORD", "ASOF_REVIEW_PASSWORD", "ASOF_ANALYST_PASSWORD",
-                  "ASOF_MART_PASSWORD")
+                  "ASOF_MART_PASSWORD",
+                  # the domain-scoped users (asof/rowaccess.py): an analyst and a specialist per policy domain
+                  *(f"{prefix.upper()}_PASSWORD" for prefix in db.DOMAIN_ROLES.values()))
 DOCKER_TIMEOUT_S = 60
 
 
@@ -147,7 +150,7 @@ def _docker(args: list[str], stdin: str | None = None) -> subprocess.CompletedPr
 
 
 def ensure_os_users(settings: Settings) -> bool:
-    """Create the five users inside the Db2 container and set their passwords from .env.
+    """Create the users inside the Db2 container and set their passwords from .env.
 
     Passwords go to chpasswd on stdin, so they never show up in a process list.
     Returns False (with instructions) when the container cannot be reached.
@@ -162,11 +165,7 @@ def ensure_os_users(settings: Settings) -> bool:
         return _manual_user_help(settings)
     if container != settings.db2_container:
         say(f"  DB2_CONTAINER '{settings.db2_container}' is not running; using the Db2 container '{container}' instead")
-    for user, secret in ((settings.asof_app_user, settings.asof_app_password),
-                         (settings.asof_editor_user, settings.asof_editor_password),
-                         (settings.asof_review_user, settings.asof_review_password),
-                         (settings.asof_analyst_user, settings.asof_analyst_password),
-                         (settings.asof_mart_user, settings.asof_mart_password)):
+    for user, secret in _users(settings):
         if _docker(["exec", container, "id", "-u", user]).returncode != 0:
             made = _docker(["exec", container, "useradd", "--no-create-home", "--shell", "/sbin/nologin", user])
             if made.returncode != 0:
@@ -175,9 +174,21 @@ def ensure_os_users(settings: Settings) -> bool:
         pw = _docker(["exec", "-i", container, "chpasswd"], stdin=f"{user}:{secret.get_secret_value()}\n")  # type: ignore[union-attr]
         if pw.returncode != 0:
             raise SetupError(f"setting the password for {user} failed: {pw.stderr.strip()}")
-    say(f"  OS users {settings.asof_app_user}, {settings.asof_editor_user}, {settings.asof_review_user}, "
-        f"{settings.asof_analyst_user} and {settings.asof_mart_user} ready (passwords from .env)")
+    names = [user for user, _ in _users(settings)]
+    say(f"  OS users {', '.join(names[:-1])} and {names[-1]} ready (passwords from .env)")
     return True
+
+
+def _users(settings: Settings) -> list[tuple[str, SecretStr | None]]:
+    """Every least-privilege user setup creates, with its password: the five that see every domain, then each
+    domain's analyst and specialist."""
+    return [(settings.asof_app_user, settings.asof_app_password),
+            (settings.asof_editor_user, settings.asof_editor_password),
+            (settings.asof_review_user, settings.asof_review_password),
+            (settings.asof_analyst_user, settings.asof_analyst_password),
+            (settings.asof_mart_user, settings.asof_mart_password),
+            *((getattr(settings, f"{prefix}_user"), getattr(settings, f"{prefix}_password"))
+              for prefix in db.DOMAIN_ROLES.values())]
 
 
 # The organizers' guide and the IBM Db2 VS Code extension both name the container db2server;
@@ -205,9 +216,7 @@ def find_db2_container(preferred: str) -> str | None:
 
 def _manual_user_help(settings: Settings) -> bool:
     say("  Db2 authenticates against operating-system users on the Db2 server. Create them there:")
-    for user, key in ((settings.asof_app_user, "ASOF_APP_PASSWORD"), (settings.asof_editor_user, "ASOF_EDITOR_PASSWORD"),
-                      (settings.asof_review_user, "ASOF_REVIEW_PASSWORD"),
-                      (settings.asof_analyst_user, "ASOF_ANALYST_PASSWORD"), (settings.asof_mart_user, "ASOF_MART_PASSWORD")):
+    for (user, _), key in zip(_users(settings), GENERATED_KEYS, strict=True):
         say(f"    useradd --no-create-home --shell /sbin/nologin {user} && passwd {user}   # password = {key} in .env")
     say("  Setup continues; the grants work without the OS users, but the app cannot log in until they exist.")
     return False
@@ -317,8 +326,7 @@ def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False
     say(f"  generated {', '.join(filled)} and saved to .env (not shown)" if filled else "  already set in .env")
     get_settings.cache_clear()
     settings = get_settings()
-    settings.require("db2_admin_password", "asof_app_password", "asof_editor_password", "asof_review_password",
-                     "asof_analyst_password", "asof_mart_password")
+    settings.require("db2_admin_password", *(key.lower() for key in GENERATED_KEYS))
     say(f"  chain-head anchor key: {ensure_anchor_key(settings)}")
     get_settings.cache_clear()
     settings = get_settings()
@@ -361,7 +369,7 @@ def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False
         say("7/9 Least-privilege grants")
         g = schema.apply_grants(conn, settings.asof_app_user, settings.asof_editor_user, target,
                                 analyst_user=settings.asof_analyst_user, mart_user=settings.asof_mart_user,
-                                review_user=settings.asof_review_user)
+                                review_user=settings.asof_review_user, domain_users=rowaccess.domain_users(settings))
         say(f"  {g['applied']} grants and revokes applied"
             + (f"; {g['already_revoked']} revokes found nothing to revoke (PUBLIC defaults already gone, or a "
                "fresh install)" if g["already_revoked"] else ""))

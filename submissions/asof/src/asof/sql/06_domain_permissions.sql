@@ -1,0 +1,145 @@
+-- Row permissions per policy domain (row access control, the "R" in RCAC). See docs/row-permissions.md.
+--
+-- Every row that records a decision belongs to one policy domain: the ledger row's DOC_ID, and for the tables
+-- that hang off it, the DOC_ID of the ledger row (or help-centre answer) they point at. Db2 shows a row only to:
+--   1. users holding role ASOF_ALL_DOMAINS: the runtime user (APPEND_LEDGER and VERIFY_CHAIN run over every row),
+--      the policy editor, the specialist and analyst who cover every domain, and dbt's user;
+--   2. holders of SECADM (the owner, db2inst1): setup, backup, reset and the tests' verification run as the owner,
+--      and SECADM could drop these permissions anyway, so hiding rows from it would hide nothing;
+--   3. holders of a role that DOMAIN_ACCESS maps to the row's DOC_ID: the domain-scoped analysts and specialists.
+-- Anyone else sees nothing. ENFORCED FOR ALL ACCESS: the same rule decides which rows an UPDATE or DELETE can reach,
+-- and Db2 refuses an INSERT or UPDATE whose resulting row the caller could not see (SQL20471N), including the ones
+-- the procedures make on a caller's behalf. Views inherit it: Db2 applies a base table's permissions to every query
+-- through a view. The materialized query tables get their own (below).
+--
+-- The rule is written out in each permission instead of in one view, because Db2 will not drop or replace a view
+-- (or table) a permission depends on (SQL0478N), and setup replaces every view on each run. Every copy is the same
+-- terms in the same order; tests/test_row_permissions.py fails the build if one drifts. Domains map to roles in data
+-- (DOMAIN_ACCESS, written by setup from asof/domains.py), not in this file: a new domain needs a row, not new SQL.
+
+-- table: DOMAIN_ACCESS
+-- Which role sees which policy document's decisions. Setup writes one row per domain (asof/rowaccess.py).
+CREATE TABLE ASOF.DOMAIN_ACCESS (
+  DOC_ID    VARCHAR(32)  NOT NULL,
+  ROLE_NAME VARCHAR(128) NOT NULL,
+  CONSTRAINT PK_DOMAIN_ACCESS PRIMARY KEY (DOC_ID, ROLE_NAME),
+  CONSTRAINT FK_DOMAIN_ACCESS_DOC FOREIGN KEY (DOC_ID) REFERENCES ASOF.POLICY_DOC (DOC_ID),
+  CONSTRAINT CK_DOMAIN_ACCESS_ROLE CHECK (ROLE_NAME LIKE 'ASOF^_DOMAIN^_%' ESCAPE '^')
+) IN ASOF_TS32K
+@
+
+-- view: V_DOMAIN_SCOPE
+-- The policy documents whose decisions the current user may see: the same three terms as every permission below,
+-- over POLICY_DOC. "Ask the ledger" reads it on the connection that ran a query, to show the scope Db2 applied.
+CREATE OR REPLACE VIEW ASOF.V_DOMAIN_SCOPE AS
+  SELECT D.DOC_ID
+  FROM ASOF.POLICY_DOC D
+  WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, 'ASOF_ALL_DOMAINS') = 1
+     OR EXISTS (SELECT 1 FROM SYSCAT.DBAUTH A WHERE A.GRANTEE = SESSION_USER AND A.GRANTEETYPE = 'U' AND A.SECURITYADMAUTH = 'Y')
+     OR D.DOC_ID IN (SELECT X.DOC_ID FROM ASOF.DOMAIN_ACCESS X WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, X.ROLE_NAME) = 1)
+@
+
+-- permission: P_LEDGER_DOMAIN
+CREATE OR REPLACE PERMISSION ASOF.P_LEDGER_DOMAIN ON ASOF.ANSWER_LEDGER AS L
+  FOR ROWS WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, 'ASOF_ALL_DOMAINS') = 1
+     OR EXISTS (SELECT 1 FROM SYSCAT.DBAUTH A WHERE A.GRANTEE = SESSION_USER AND A.GRANTEETYPE = 'U' AND A.SECURITYADMAUTH = 'Y')
+     OR L.DOC_ID IN (SELECT X.DOC_ID FROM ASOF.DOMAIN_ACCESS X WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, X.ROLE_NAME) = 1)
+  ENFORCED FOR ALL ACCESS ENABLE
+@
+
+-- permission: P_CITATION_DOMAIN
+-- A citation belongs to the domain of its decision.
+CREATE OR REPLACE PERMISSION ASOF.P_CITATION_DOMAIN ON ASOF.CLAIM_CITATION AS C
+  FOR ROWS WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, 'ASOF_ALL_DOMAINS') = 1
+     OR EXISTS (SELECT 1 FROM SYSCAT.DBAUTH A WHERE A.GRANTEE = SESSION_USER AND A.GRANTEETYPE = 'U' AND A.SECURITYADMAUTH = 'Y')
+     OR EXISTS (SELECT 1 FROM ASOF.ANSWER_LEDGER L WHERE L.LEDGER_ID = C.LEDGER_ID AND
+                L.DOC_ID IN (SELECT X.DOC_ID FROM ASOF.DOMAIN_ACCESS X WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, X.ROLE_NAME) = 1))
+  ENFORCED FOR ALL ACCESS ENABLE
+@
+
+-- permission: P_REVIEW_DOMAIN
+-- A specialist's answer belongs to the domain of the held decision it answers.
+CREATE OR REPLACE PERMISSION ASOF.P_REVIEW_DOMAIN ON ASOF.ESCALATION_REVIEW AS R
+  FOR ROWS WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, 'ASOF_ALL_DOMAINS') = 1
+     OR EXISTS (SELECT 1 FROM SYSCAT.DBAUTH A WHERE A.GRANTEE = SESSION_USER AND A.GRANTEETYPE = 'U' AND A.SECURITYADMAUTH = 'Y')
+     OR EXISTS (SELECT 1 FROM ASOF.ANSWER_LEDGER L WHERE L.LEDGER_ID = R.ESCALATED_LEDGER_ID AND
+                L.DOC_ID IN (SELECT X.DOC_ID FROM ASOF.DOMAIN_ACCESS X WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, X.ROLE_NAME) = 1))
+  ENFORCED FOR ALL ACCESS ENABLE
+@
+
+-- permission: P_NOTICE_DOMAIN
+-- A correction notice belongs to the domain of the answer it corrects.
+CREATE OR REPLACE PERMISSION ASOF.P_NOTICE_DOMAIN ON ASOF.CORRECTION_NOTICE AS N
+  FOR ROWS WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, 'ASOF_ALL_DOMAINS') = 1
+     OR EXISTS (SELECT 1 FROM SYSCAT.DBAUTH A WHERE A.GRANTEE = SESSION_USER AND A.GRANTEETYPE = 'U' AND A.SECURITYADMAUTH = 'Y')
+     OR EXISTS (SELECT 1 FROM ASOF.ANSWER_LEDGER L WHERE L.LEDGER_ID = N.LEDGER_ID AND
+                L.DOC_ID IN (SELECT X.DOC_ID FROM ASOF.DOMAIN_ACCESS X WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, X.ROLE_NAME) = 1))
+  ENFORCED FOR ALL ACCESS ENABLE
+@
+
+-- permission: P_SUGGESTION_DOMAIN
+-- A drafted help-centre correction belongs to the domain of the help-centre answer it would replace.
+CREATE OR REPLACE PERMISSION ASOF.P_SUGGESTION_DOMAIN ON ASOF.ANSWER_SUGGESTION AS S
+  FOR ROWS WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, 'ASOF_ALL_DOMAINS') = 1
+     OR EXISTS (SELECT 1 FROM SYSCAT.DBAUTH A WHERE A.GRANTEE = SESSION_USER AND A.GRANTEETYPE = 'U' AND A.SECURITYADMAUTH = 'Y')
+     OR EXISTS (SELECT 1 FROM ASOF.PUBLISHED_ANSWER P WHERE P.ANSWER_ID = S.ANSWER_ID AND
+                P.DOC_ID IN (SELECT X.DOC_ID FROM ASOF.DOMAIN_ACCESS X WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, X.ROLE_NAME) = 1))
+  ENFORCED FOR ALL ACCESS ENABLE
+@
+
+-- Row access control on a base table makes Db2 activate it on every MQT built over it, with no permission: every
+-- row hidden, from everyone. The two original MQTs have no DOC_ID, so their rows (counts over every domain) go only
+-- to the users that see every domain; the per-document pair (04_views.sql) carries the domain rule, so a domain
+-- analyst's analytics count only that domain.
+
+-- permission: P_MQT_DECISION_STATS_ALL_DOMAINS
+CREATE OR REPLACE PERMISSION ASOF.P_MQT_DECISION_STATS_ALL_DOMAINS ON ASOF.MQT_DECISION_STATS
+  FOR ROWS WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, 'ASOF_ALL_DOMAINS') = 1
+     OR EXISTS (SELECT 1 FROM SYSCAT.DBAUTH A WHERE A.GRANTEE = SESSION_USER AND A.GRANTEETYPE = 'U' AND A.SECURITYADMAUTH = 'Y')
+  ENFORCED FOR ALL ACCESS ENABLE
+@
+
+-- permission: P_MQT_CLAIM_OUTCOMES_ALL_DOMAINS
+CREATE OR REPLACE PERMISSION ASOF.P_MQT_CLAIM_OUTCOMES_ALL_DOMAINS ON ASOF.MQT_CLAIM_OUTCOMES
+  FOR ROWS WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, 'ASOF_ALL_DOMAINS') = 1
+     OR EXISTS (SELECT 1 FROM SYSCAT.DBAUTH A WHERE A.GRANTEE = SESSION_USER AND A.GRANTEETYPE = 'U' AND A.SECURITYADMAUTH = 'Y')
+  ENFORCED FOR ALL ACCESS ENABLE
+@
+
+-- permission: P_MQT_DOMAIN_DECISION_STATS
+CREATE OR REPLACE PERMISSION ASOF.P_MQT_DOMAIN_DECISION_STATS ON ASOF.MQT_DOMAIN_DECISION_STATS AS M
+  FOR ROWS WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, 'ASOF_ALL_DOMAINS') = 1
+     OR EXISTS (SELECT 1 FROM SYSCAT.DBAUTH A WHERE A.GRANTEE = SESSION_USER AND A.GRANTEETYPE = 'U' AND A.SECURITYADMAUTH = 'Y')
+     OR M.DOC_ID IN (SELECT X.DOC_ID FROM ASOF.DOMAIN_ACCESS X WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, X.ROLE_NAME) = 1)
+  ENFORCED FOR ALL ACCESS ENABLE
+@
+
+-- permission: P_MQT_DOMAIN_CLAIM_OUTCOMES
+CREATE OR REPLACE PERMISSION ASOF.P_MQT_DOMAIN_CLAIM_OUTCOMES ON ASOF.MQT_DOMAIN_CLAIM_OUTCOMES AS M
+  FOR ROWS WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, 'ASOF_ALL_DOMAINS') = 1
+     OR EXISTS (SELECT 1 FROM SYSCAT.DBAUTH A WHERE A.GRANTEE = SESSION_USER AND A.GRANTEETYPE = 'U' AND A.SECURITYADMAUTH = 'Y')
+     OR M.DOC_ID IN (SELECT X.DOC_ID FROM ASOF.DOMAIN_ACCESS X WHERE VERIFY_ROLE_FOR_USER(SESSION_USER, X.ROLE_NAME) = 1)
+  ENFORCED FOR ALL ACCESS ENABLE
+@
+
+-- other: ACTIVATE_LEDGER_ROW_ACCESS
+ALTER TABLE ASOF.ANSWER_LEDGER ACTIVATE ROW ACCESS CONTROL
+@
+
+-- other: ACTIVATE_CITATION_ROW_ACCESS
+ALTER TABLE ASOF.CLAIM_CITATION ACTIVATE ROW ACCESS CONTROL
+@
+
+-- other: ACTIVATE_REVIEW_ROW_ACCESS
+-- Db2 activates row access control only on a table whose triggers are SECURED (SQL20469N reason 37): see
+-- 02_ledger_rules.sql.
+ALTER TABLE ASOF.ESCALATION_REVIEW ACTIVATE ROW ACCESS CONTROL
+@
+
+-- other: ACTIVATE_NOTICE_ROW_ACCESS
+ALTER TABLE ASOF.CORRECTION_NOTICE ACTIVATE ROW ACCESS CONTROL
+@
+
+-- other: ACTIVATE_SUGGESTION_ROW_ACCESS
+ALTER TABLE ASOF.ANSWER_SUGGESTION ACTIVATE ROW ACCESS CONTROL
+@

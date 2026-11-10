@@ -247,7 +247,7 @@ class FakeAsker:
     def __init__(self):
         self.questions: list[str] = []
 
-    def ask(self, question):
+    def ask(self, question, scope="all"):
         from asof.askledger import AskResult
 
         self.questions.append(question)

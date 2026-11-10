@@ -843,13 +843,21 @@ function sentView(s) {
 
 // ---------- Ask the ledger ----------
 let ASK_EXAMPLES = [];  // from scenarios.json
-const ask = { question: "", result: null, busy: false };
+const ask = { question: "", result: null, busy: false, scope: "all", scopes: null };
 async function Ask() {
+  if (!ask.scopes) {
+    try { ask.scopes = (await api("/api/ledger/ask/scopes")).body; } catch { ask.scopes = [{ key: "all", label: "All domains", user: "asofread", doc_ids: [] }]; }
+  }
+  const scope = ask.scopes.find((s) => s.key === ask.scope) || ask.scopes[0];
   mount(view, html`
     <div class="page-head"><div><h1>Ask the ledger</h1>
-      <p>Plain-English questions for auditors, answered by a LangChain SQL chain over SQLAlchemy (<code>ibm_db_sa</code>). It runs as the read-only Db2 user <code>asofread</code>, which can only SELECT six audit views. SQLGlot checks every generated query before it runs, and Db2's column masks hide the customer's question and our reply from this user.</p></div></div>
+      <p>Plain-English questions for auditors, answered by a LangChain SQL chain over SQLAlchemy (<code>ibm_db_sa</code>). It runs as a read-only Db2 analyst, which can only SELECT six audit views: <code>asofread</code> for every domain, or one domain's own analyst. SQLGlot checks every generated query before it runs, Db2's column masks hide the customer's question and our reply, and Db2's row permissions return a domain analyst only that domain's decisions.</p></div></div>
     <div class="grid-2">
       <form class="card" id="ask-form" autocomplete="off">
+        <div class="field"><label>Scope</label>
+          <div class="seg" role="group" aria-label="Scope">${ask.scopes.map((s) => html`<button type="button" data-scope="${s.key}" class="${s.key === scope.key ? "on" : ""}">${s.label}</button>`)}</div>
+          <div class="hint">Runs as <code>${scope.user}</code>${scope.key === "all" ? "" : html`, which Db2 lets see ${scope.doc_ids.join(", ")} only, whatever the SQL asks for`}.</div></div>
+        <div class="sep"></div>
         <div class="field"><label>Examples</label>
           <div class="chips">${ASK_EXAMPLES.map((x, i) => html`<button type="button" class="chip ${x === ask.question ? "on" : ""}" data-ex="${i}">${x}</button>`)}</div></div>
         <div class="sep"></div>
@@ -864,15 +872,17 @@ async function Ask() {
   form.addEventListener("click", (e) => {
     const b = e.target.closest("[data-ex]");
     if (b) { ask.question = ASK_EXAMPLES[Number(b.dataset.ex)]; Ask(); }
+    const s = e.target.closest("[data-scope]");
+    if (s) { ask.question = $("#aq").value; ask.scope = s.dataset.scope; Ask(); }
   });
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     ask.question = $("#aq").value.trim();
     ask.busy = true;
-    mount($("#ask-result"), html`<div class="loading"><div class="spinner"></div>Writing SQL, checking it, running it in Db2 as asofread...</div>`);
+    mount($("#ask-result"), html`<div class="loading"><div class="spinner"></div>Writing SQL, checking it, running it in Db2 as ${scope.user}...</div>`);
     $("#ask-run").disabled = true;
     try {
-      ask.result = (await post("/api/ledger/ask", { question: ask.question })).body;
+      ask.result = (await post("/api/ledger/ask", { question: ask.question, scope: scope.key })).body;
     } catch (err) {
       ask.result = { status: "ERROR", reason: err.message, attempts: [], rows: [], columns: [] };
     }
@@ -882,7 +892,7 @@ async function Ask() {
 }
 function askView(r) {
   const head = {
-    ANSWERED: html`<div class="banner ok"><strong>Answered.</strong><span>${r.rows.length} row${r.rows.length === 1 ? "" : "s"}${r.truncated ? " (capped)" : ""} in ${(r.latency_ms / 1000).toFixed(1)} s, as ${r.runs_as}.</span></div>`,
+    ANSWERED: html`<div class="banner ok"><strong>Answered.</strong><span>${r.rows.length} row${r.rows.length === 1 ? "" : "s"}${r.truncated ? " (capped)" : ""} in ${(r.latency_ms / 1000).toFixed(1)} s, as ${r.runs_as}.${r.scope_applied ? html` Scope Db2 applied: ${r.scope_applied.length ? r.scope_applied.join(", ") : "no policy document"}.` : ""}</span></div>`,
     REFUSED: html`<div class="banner bad"><strong>Refused.</strong><span>No query ran. ${r.reason}</span></div>`,
     FAILED: html`<div class="banner bad"><strong>Db2 rejected the query.</strong><span>${r.reason}</span></div>`,
     ERROR: html`<div class="banner bad"><strong>Not available.</strong><span>${r.reason}</span></div>`,

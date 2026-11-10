@@ -12,7 +12,9 @@ layer assumes the one before it failed:
    text columns only as plain output columns. What runs is SQLGlot's regeneration of the
    checked tree, never the model's text, so the checker and Db2 cannot read it differently.
 3. It runs as the analyst user (asofread, role ASOF_ANALYST), whose only privileges are
-   CONNECT and SELECT on those views. No tables, no procedures, no writes.
+   CONNECT and SELECT on those views. No tables, no procedures, no writes. With a domain scope it
+   runs as that domain's analyst instead (airread, bankread), and Db2's row permissions
+   (06_domain_permissions.sql) return only that domain's decisions, whatever the SQL says.
 4. Db2's column masks return '[masked]' for the customer's question and the released answer
    to that user, whatever the SQL says (05_masks.sql). Db2 does not mask predicates, which is
    why rule 2 keeps those columns out of WHERE, ORDER BY, GROUP BY, joins and functions.
@@ -39,8 +41,9 @@ from langchain_core.runnables import RunnableLambda
 from sqlglot import exp
 from sqlglot.errors import SqlglotError
 
-from . import db
+from . import db, rowaccess
 from .config import Settings
+from .domains import DOMAINS
 from .llm import LLMError, ModelClient
 from .prompts import ASK_PROMPT_VERSION, ask_answer_messages, ask_sql_messages
 from .replay import ReplayMiss
@@ -89,6 +92,8 @@ ROW_CAP = 200
 ANSWER_ROWS = 50  # rows the model sees when it writes the answer
 QUERY_TIMEOUT_S = 10
 MAX_ATTEMPTS = 2  # the first try plus one repair
+# The policy documents Db2 lets the connected user see: the rule of the row permissions, read back after a query.
+SQL_SCOPE_APPLIED = "SELECT DOC_ID FROM V_DOMAIN_SCOPE ORDER BY DOC_ID"
 
 
 class Refused(ValueError):
@@ -228,6 +233,9 @@ class AskResult:
     prompt_version: str = ASK_PROMPT_VERSION
     latency_ms: int = 0
     runs_as: str = ""
+    scope: str = "all"  # "all" or a domain key (asof/rowaccess.py)
+    scope_label: str = "All domains"
+    scope_applied: list[str] | None = None  # the policy documents Db2's row permissions let this user see
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -244,20 +252,31 @@ class LedgerAsker:
         self.row_cap = row_cap
         self.timeout_s = timeout_s
         self._lock = threading.Lock()
-        self._engine: Engine | None = None
-        self._database: SQLDatabase | None = None
+        self._engines: dict[str, Engine] = {}
+        self._databases: dict[str, SQLDatabase] = {}
 
     # --- Db2, as the analyst -------------------------------------------------------------
 
-    def engine(self):
-        """SQLAlchemy engine (ibm_db_sa) whose every connection is the analyst, pointed at the schema."""
+    def scopes(self) -> dict[str, rowaccess.Scope]:
+        """Every domain (the all-domain analyst), then one per domain with its own analyst user."""
+        return {s.key: s for s in rowaccess.scopes(self.settings)}
+
+    def scope(self, key: str) -> rowaccess.Scope:
+        try:
+            return self.scopes()[key]
+        except KeyError:
+            raise ValueError(f"unknown scope {key!r}") from None
+
+    def engine(self, scope: str = "all"):
+        """SQLAlchemy engine (ibm_db_sa) whose every connection is the scope's analyst, pointed at the schema."""
+        role = self.scope(scope).connection
         with self._lock:
-            if self._engine is None:
+            if scope not in self._engines:
                 from sqlalchemy import create_engine
                 from sqlalchemy.pool import NullPool
 
                 def creator():
-                    conn = db.connect(self.settings, "analyst")
+                    conn = db.connect(self.settings, role)  # type: ignore[arg-type]
                     db.use_schema(conn, self.schema)
                     return conn
 
@@ -265,29 +284,39 @@ class LedgerAsker:
                 # ibm_db_sa 0.4.4 does not implement this, and LangChain's SQLDatabase calls it for
                 # view support. None of the allowed views is a materialized query table.
                 eng.dialect.get_materialized_view_names = _no_materialized_views  # type: ignore[method-assign]
-                self._engine = eng
-            return self._engine
+                self._engines[scope] = eng
+            return self._engines[scope]
 
-    def database(self):
-        """LangChain's SQLDatabase over the allowed views only, reflected as the analyst."""
-        engine = self.engine()
+    def database(self, scope: str = "all"):
+        """LangChain's SQLDatabase over the allowed views only, reflected as the scope's analyst."""
+        engine = self.engine(scope)
         with self._lock:
-            if self._database is None:
+            if scope not in self._databases:
                 from langchain_community.utilities import SQLDatabase
 
-                self._database = SQLDatabase(engine, schema=self.schema, view_support=True,
-                                             include_tables=[v.lower() for v in ALLOWED_VIEWS],
-                                             sample_rows_in_table_info=2)
-            return self._database
+                self._databases[scope] = SQLDatabase(engine, schema=self.schema, view_support=True,
+                                                     include_tables=[v.lower() for v in ALLOWED_VIEWS],
+                                                     sample_rows_in_table_info=2)
+            return self._databases[scope]
 
-    def views(self) -> str:
-        """The views as the model sees them: columns plus two sample rows each, read as the analyst."""
-        info = self.database().get_table_info()
+    def views(self, scope: str = "all") -> str:
+        """The views as the model sees them: columns plus two sample rows each, read as the scope's analyst (so a
+        domain analyst's model sees only that domain's rows too)."""
+        info = self.database(scope).get_table_info()
         return info.replace(f'"{self.schema}".', "")  # the queries use unqualified names
 
-    def run_sql(self, sql: str) -> tuple[list[str], list[list[Any]], bool]:
-        """Run checked SQL as the analyst, with Db2's statement timeout and the row cap."""
-        with self.engine().connect() as c:
+    def scope_applied(self, scope: str = "all") -> list[str]:
+        """The policy documents whose decisions Db2 shows the scope's analyst: V_DOMAIN_SCOPE, the row permissions'
+        own rule, read as that user."""
+        with self.engine(scope).connect() as c:
+            try:
+                return [str(r[0]).strip() for r in db.query(c.connection.dbapi_connection, SQL_SCOPE_APPLIED)]
+            finally:
+                c.rollback()
+
+    def run_sql(self, sql: str, scope: str = "all") -> tuple[list[str], list[list[Any]], bool]:
+        """Run checked SQL as the scope's analyst, with Db2's statement timeout and the row cap."""
+        with self.engine(scope).connect() as c:
             handle = c.connection.dbapi_connection.conn_handler
             stmt = None
             try:
@@ -317,21 +346,30 @@ class LedgerAsker:
                 | RunnableLambda(self._query)
                 | RunnableLambda(self._answer))
 
-    def ask(self, question: str) -> AskResult:
+    def ask(self, question: str, scope: str = "all") -> AskResult:
+        self.scope(scope)  # unknown scope: ValueError before any model call
         started = time.monotonic()
-        result: AskResult = self.chain().invoke(question)
+        result: AskResult = self.chain().invoke({"question": question, "scope": scope})
         result.latency_ms = int((time.monotonic() - started) * 1000)
         log.info("ask-the-ledger %s in %d ms, %d attempt(s), %d row(s)", result.status, result.latency_ms,
                  len(result.attempts), len(result.rows))
         return result
 
-    def _with_views(self, question: str) -> dict[str, Any]:
-        return {"question": question, "views": self.views()}
+    def _with_views(self, state: dict[str, Any]) -> dict[str, Any]:
+        return {**state, "views": self.views(state["scope"])}
+
+    def _runs_as(self, scope: rowaccess.Scope) -> str:
+        if scope.key == "all":
+            return f"{scope.user} (role ASOF_ANALYST: SELECT on the audit views only)"
+        role = rowaccess.role_for(DOMAINS[scope.doc_ids[0]])
+        return (f"{scope.user} (roles ASOF_ANALYST and {role}: SELECT on the audit views; Db2's row permissions return "
+                f"{scope.label}'s decisions only)")
 
     def _query(self, state: dict[str, Any]) -> AskResult:
         question = state["question"]
+        scope = self.scope(state["scope"])
         out = AskResult(question=question, status="REFUSED", model=self.llm.info, row_cap=self.row_cap,
-                        runs_as=f"{self.settings.asof_analyst_user} (role ASOF_ANALYST: SELECT on the audit views only)")
+                        runs_as=self._runs_as(scope), scope=scope.key, scope_label=scope.label)
         previous: tuple[str, str] | None = None
         for _ in range(MAX_ATTEMPTS):
             draft = self.llm.structured(LedgerSql, ask_sql_messages(question, state["views"], previous)).value
@@ -346,7 +384,7 @@ class LedgerAsker:
                 continue
             attempt["checked_sql"] = sql
             try:
-                out.columns, out.rows, out.truncated = self.run_sql(sql)
+                out.columns, out.rows, out.truncated = self.run_sql(sql, scope.key)
             except db.DatabaseError as err:
                 attempt["db2_error"] = str(err)[:300]
                 out.status, out.reason = "FAILED", f"Db2 rejected the checked SQL: {str(err)[:300]}"
@@ -354,6 +392,10 @@ class LedgerAsker:
                 continue
             out.status, out.reason, out.sql, out.explanation = "ANSWERED", None, sql, draft.explanation[:300]
             out.limit_added = limit_added
+            try:
+                out.scope_applied = self.scope_applied(scope.key)
+            except db.DatabaseError as err:  # the rows stand; only the label of what Db2 applied is missing
+                log.warning("ask-the-ledger: could not read the applied scope: %s", err)
             return out
         return out
 

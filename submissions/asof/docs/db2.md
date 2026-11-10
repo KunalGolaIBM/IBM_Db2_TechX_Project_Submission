@@ -267,7 +267,7 @@ PASS  Trigger blocks UPDATE: UPDATE rejected with SQLSTATE 75001
 PASS  Column mask (RCAC) with SECURED triggers: owner reads '[masked]'; predicates still see the real value (why Ask the ledger refuses them)
 PASS  Monthly range partitions: 12 monthly partitions plus two open-ended ones; March rows share a partition, 2025 and 2031 have their own
 PASS  REFRESH IMMEDIATE materialized query table: inserts refused until REFRESH TABLE (SQL0668N); then Db2 updates the MQT in the insert's own transaction
-PASS  MQT over a masked table needs a row permission: 0 rows visible until a row permission is created, then 2 (why AsOf defines P_MQT_DECISION_STATS_ALL_ROWS)
+PASS  MQT over a masked table needs a row permission: 0 rows visible until a row permission is created, then 2 (why AsOf gives each MQT one)
 PASS  One open row per key (generated column, EXCLUDE NULL KEYS): a second open row rejected with SQLSTATE 23505; two rejected rows and one open row coexist (CORRECTION_NOTICE's rule)
 PASS  Nearest row per group with a window function over the as-of + vector query: nearest clause per group, as of 2026-03-10, in one statement (2 groups)
 

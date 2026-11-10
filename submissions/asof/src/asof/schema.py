@@ -9,12 +9,13 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from importlib import resources
 
 import ibm_db_dbi
 
-from . import db
+from . import db, rowaccess
 
 log = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ USER_RE = re.compile(r"^[a-z][a-z0-9]{0,7}$")
 GRANTS_PREFIX = "90_"
 NOT_HELD = "42504"  # REVOKE of a privilege that is not held
 _MARKER = re.compile(r"^--\s*(bufferpool|tablespace|table|mqt|index|versioning|trigger|procedure|function|type|view|mask|role"
-                     r"|grant|other):"
+                     r"|grant|other|permission):"
                      r"\s*([A-Z0-9_]+)\s*$", re.M)
 _SCHEMA_TOKEN = re.compile(r"\bASOF\.")
 
@@ -89,6 +90,7 @@ def install(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA,
     the shipped object files (the ledger benchmark installs the design before partitioning that way)."""
     validate_schema(schema)
     counts = {"created": 0, "skipped": 0}
+    drop_retired_permissions(conn, schema)
     for st in load_statements(schema) if statements is None else statements:
         if _exists(conn, schema, st):
             counts["skipped"] += 1
@@ -105,6 +107,21 @@ def install(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA,
 
 
 SQL_PENDING_MQTS = "SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'S' AND STATUS = 'C'"
+# Row permissions an older install created that the current SQL replaces. Db2 ORs a table's permissions together, so
+# one left behind would widen what the current ones allow (this one showed MQT_DECISION_STATS to everyone).
+RETIRED_PERMISSIONS = ("P_MQT_DECISION_STATS_ALL_ROWS",)
+SQL_PERMISSION_EXISTS = "SELECT 1 FROM SYSCAT.CONTROLS WHERE CONTROLSCHEMA = ? AND CONTROLNAME = ? AND CONTROLTYPE = 'R'"
+
+
+def drop_retired_permissions(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> list[str]:
+    """Drop the row permissions in RETIRED_PERMISSIONS that `schema` still has. Returns their names."""
+    dropped = []
+    for name in RETIRED_PERMISSIONS:
+        if db.query(conn, SQL_PERMISSION_EXISTS, (validate_schema(schema), name)):
+            db.execute(conn, f"DROP PERMISSION {db.ident(schema)}.{db.ident(name)}")
+            conn.commit()
+            dropped.append(name)
+    return dropped
 
 
 def refresh_pending_mqts(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> list[str]:
@@ -130,12 +147,16 @@ def mart_schema(schema: str = db.SCHEMA) -> str:
 
 def apply_grants(conn: ibm_db_dbi.Connection, app_user: str, editor_user: str, schema: str = db.SCHEMA,
                  analyst_user: str = DEFAULT_ANALYST_USER, mart_user: str = DEFAULT_MART_USER,
-                 review_user: str = DEFAULT_REVIEW_USER) -> dict[str, int]:
-    """Revoke PUBLIC defaults, create the two roles and the mart schema if missing, and grant each user exactly what
-    it needs."""
-    for user in (app_user, editor_user, analyst_user, mart_user, review_user):
+                 review_user: str = DEFAULT_REVIEW_USER,
+                 domain_users: Mapping[str, tuple[str, str]] | None = None) -> dict[str, int]:
+    """Revoke PUBLIC defaults, create the roles and the mart schema if missing, and grant each user exactly what
+    it needs. `domain_users` (domain key -> analyst, specialist) are the domain-scoped users of asof/rowaccess.py."""
+    domain_users = rowaccess.DEFAULT_DOMAIN_USERS if domain_users is None else domain_users
+    for user in (app_user, editor_user, analyst_user, mart_user, review_user,
+                 *(u for pair in domain_users.values() for u in pair)):
         if not USER_RE.match(user):
             raise ValueError(f"invalid Db2 user name {user!r}")
+    rowaccess.check_users(domain_users, (app_user, editor_user, analyst_user, mart_user, review_user))
     names = {"ASOF_APP_USER": db.ident(app_user), "ASOF_EDITOR_USER": db.ident(editor_user),
              "ASOF_ANALYST_USER": db.ident(analyst_user), "ASOF_MART_USER": db.ident(mart_user),
              "ASOF_REVIEW_USER": db.ident(review_user)}
@@ -162,6 +183,7 @@ def apply_grants(conn: ibm_db_dbi.Connection, app_user: str, editor_user: str, s
             if sql.startswith("GRANT ROLE") and exc.sqlstate in ALREADY_GRANTED:
                 continue
             raise db.DatabaseError(f"{st.source} {st.name}: {exc}", exc.sqlstate, exc.sqlcode) from None
+    counts["domains"] = rowaccess.grant_domains(conn, schema, domain_users)
     return counts
 
 

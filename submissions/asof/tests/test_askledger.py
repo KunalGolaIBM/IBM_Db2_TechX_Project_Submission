@@ -122,17 +122,22 @@ class Recorder(LedgerAsker):
     def __init__(self, llm, results=None, **kw):
         super().__init__(llm, Settings(_env_file=None), "ASOF_TEST", **kw)
         self.ran: list[str] = []
+        self.scopes_used: list[str] = []
         self.results = list(results or [(["DECISION", "N"], [["PASS", 3], ["ESCALATED", 1]], False)])
 
-    def views(self):
+    def views(self, scope="all"):
         return "CREATE TABLE v_audit_decisions (decision VARCHAR(12), final_answer VARCHAR(4000))"
 
-    def run_sql(self, sql):
+    def run_sql(self, sql, scope="all"):
         self.ran.append(sql)
+        self.scopes_used.append(scope)
         r = self.results.pop(0)
         if isinstance(r, BaseException):
             raise r
         return r
+
+    def scope_applied(self, scope="all"):
+        return [d for s in self.scopes().values() if s.key == scope for d in s.doc_ids]
 
 
 COUNT_SQL = "SELECT DECISION, COUNT(*) AS N FROM V_AUDIT_DECISIONS GROUP BY DECISION"
@@ -201,3 +206,21 @@ def test_the_question_reaches_the_model_only_as_escaped_data():
 def test_results_serialize_for_the_api():
     r = AskResult(question="q", status="ANSWERED", rows=[[1, "a"]], columns=["A", "B"])
     assert r.as_dict()["rows"] == [[1, "a"]]
+
+
+def test_a_domain_scope_runs_as_that_domains_analyst_and_reports_what_db2_applied():
+    rec = Recorder(ScriptedLLM(sql=[sql(COUNT_SQL)], answer=[LedgerAnswer(answer="ok")]))
+    assert list(rec.scopes()) == ["all", "airline", "bank"]
+    r = rec.ask("How many decisions of each kind?", scope="airline")
+    assert (r.status, r.scope, r.scope_label, rec.scopes_used) == ("ANSWERED", "airline", "Aurelia Air", ["airline"])
+    assert r.scope_applied == ["AURELIA-CSP"] and r.runs_as.startswith("airread (roles ASOF_ANALYST and ASOF_DOMAIN_AIRLINE")
+    everything = Recorder(ScriptedLLM(sql=[sql(COUNT_SQL)], answer=[LedgerAnswer(answer="ok")])).ask("How many?")
+    assert (everything.scope, everything.scope_applied) == ("all", ["AURELIA-CSP", "FERNHOLLOW-FEES"])
+    assert everything.runs_as.startswith("asofread (role ASOF_ANALYST")
+
+
+def test_an_unknown_scope_is_refused_before_the_model_is_called():
+    llm = ScriptedLLM(sql=[sql(COUNT_SQL)])
+    with pytest.raises(ValueError, match="unknown scope"):
+        Recorder(llm).ask("How many?", scope="railway")
+    assert llm.calls == []
