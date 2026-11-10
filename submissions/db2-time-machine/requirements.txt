@@ -1,0 +1,13 @@
+# Core
+langgraph>=0.2.50
+fastapi>=0.110
+uvicorn[standard]>=0.29
+httpx>=0.27
+# IBM Db2 connectors: ibm_db (native driver + DB-API wrapper) and ibm_db_sa (SQLAlchemy dialect, optional path)
+ibm_db>=3.2
+ibm_db_sa>=0.4
+sqlalchemy>=1.4,<2.1
+# Tests
+pytest>=8
+# This project (editable install, makes `python -m time_machine` work)
+-e .

@@ -1,0 +1,25 @@
+# Local IBM Db2 Community Edition for development. Usage:
+#   cp .env.example .env   (set DB2_PASSWORD)
+#   docker compose up -d
+#   docker compose logs -f db2     # wait for "(*) Setup has completed."
+services:
+  db2:
+    image: icr.io/db2_community/db2:latest
+    container_name: tm-db2
+    privileged: true
+    restart: unless-stopped
+    ports:
+      - "${DB2_PORT:-50000}:50000"
+    environment:
+      LICENSE: accept
+      DB2INSTANCE: ${DB2_USER:-db2inst1}
+      DB2INST1_PASSWORD: ${DB2_PASSWORD:?set DB2_PASSWORD in .env}
+      DBNAME: ${DB2_DATABASE:-TMDB}
+      BLU: "false"
+      ENABLE_ORACLE_COMPATIBILITY: "false"
+      TO_CREATE_SAMPLEDB: "false"
+      REPODB: "false"
+    volumes:
+      - tm_db2_data:/database
+volumes:
+  tm_db2_data:
