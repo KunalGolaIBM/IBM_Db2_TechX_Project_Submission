@@ -1,9 +1,9 @@
 """
 Db2 Copilot Engine:
-Coordinates Text-to-SQL generation (Groq llama-3.3-70b-versatile),
+Coordinates Text-to-SQL generation via LangChain LCEL (ChatGroq llama-3.3-70b-versatile),
 SQL Security Validation, Db2 Relational Query Execution,
 Python Deterministic Policy Window Computation,
-Db2 Vector Policy Retrieval, Verdict Synthesis via Groq, and Audit Logging.
+Db2 Vector Policy Retrieval, Verdict Synthesis via LangChain LCEL (ChatGroq), and Audit Logging.
 """
 import os
 import sys
@@ -12,6 +12,10 @@ import json
 from datetime import datetime, date
 from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
+
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_groq import ChatGroq
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.db import get_connection, execute_query, execute_non_query
@@ -41,23 +45,38 @@ Guidelines:
 - Do NOT use comments.
 """
 
+VERDICT_SYSTEM_PROMPT = """You are the IBM Db2 Copilot refund-dispute assistant for an e-commerce platform.
+Evaluate the customer dispute or query using the computed facts, database records, and store refund policies.
 
-def get_groq_client():
-    """Initialize Groq client. Raises RuntimeError if GROQ_API_KEY is missing."""
-    api_key = os.getenv("GROQ_API_KEY", "").strip()
-    if not api_key:
-        raise RuntimeError("GROQ_API_KEY is missing from environment. Please set your GROQ_API_KEY in .env.")
-    try:
-        from groq import Groq
-        return Groq(api_key=api_key)
-    except Exception as e:
-        raise RuntimeError(f"Failed to initialize Groq client: {e}")
+User Query:
+{question}
+
+Python Pre-Computed Dispute & Policy Facts (Authoritative calculations):
+{facts_context}
+
+Retrieved Db2 Relational Records:
+{data_context}
+
+Db2 Vector-Retrieved Store Policies:
+{policy_context}
+
+Instructions:
+1. If the query asks an analytical or aggregated question (e.g., 'Which customers have more than one refund?'), answer directly, clearly listing the customers, order IDs, and reasons from the database records.
+2. If the query is an individual refund dispute decision:
+   - State the **VERDICT** (APPROVED or DENIED). You MUST respect the decision computed in the Python facts.
+   - Detail the **REASONING**: Explicitly quote the computed elapsed days (e.g. '4 days elapsed') versus the policy allowance ('7-day window'), customer tier, item category, and the specific policy title cited.
+   - State the **ACTION / NEXT STEPS** for customer support."""
 
 
-def resolve_groq_model(client) -> str:
+def resolve_groq_model() -> str:
     """Resolve desired model or choose top available LLM on user's Groq account."""
     configured = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+    api_key = os.getenv("GROQ_API_KEY", "").strip()
+    if not api_key:
+        return configured
     try:
+        from groq import Groq
+        client = Groq(api_key=api_key)
         avail = [m.id for m in client.models.list().data]
         if configured in avail:
             return configured
@@ -73,9 +92,28 @@ def resolve_groq_model(client) -> str:
     return configured
 
 
+def get_chat_groq(temperature: float = 0.1, max_tokens: int = 2048) -> ChatGroq:
+    """Initialize LangChain ChatGroq instance. Raises RuntimeError if GROQ_API_KEY is missing."""
+    api_key = os.getenv("GROQ_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("GROQ_API_KEY is missing from environment. Please set your GROQ_API_KEY in .env.")
+
+    model = resolve_groq_model()
+    try:
+        return ChatGroq(
+            model=model,
+            groq_api_key=api_key,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+    except Exception as e:
+        raise RuntimeError(f"Failed to initialize LangChain ChatGroq: {e}")
+
+
 def generate_sql_from_question(question: str) -> str:
     """
-    Translate natural language dispute question to SQL query strictly using Groq.
+    Translate natural language dispute question to SQL query using LangChain LCEL chain.
+    Chain: prompt | llm | parser.
     Raises RuntimeError if GROQ_API_KEY is missing or the call fails.
     """
     cleaned_input = clean_sql(question)
@@ -85,24 +123,20 @@ def generate_sql_from_question(question: str) -> str:
     if first_token in ("SELECT", "WITH", "DELETE", "DROP", "UPDATE", "INSERT", "ALTER", "TRUNCATE", "CREATE"):
         return cleaned_input
 
-    # Must invoke Groq API (no canned fallback)
-    client = get_groq_client()
-    model = resolve_groq_model(client)
+    # Must invoke LangChain LCEL chain (no canned fallback)
+    llm = get_chat_groq(temperature=0.1, max_tokens=2048)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", DB_SCHEMA_PROMPT),
+        ("human", "Generate SQL query for question: {question}"),
+    ])
+    chain = prompt | llm | StrOutputParser()
 
     try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": DB_SCHEMA_PROMPT},
-                {"role": "user", "content": f"Generate SQL query for question: {question}"},
-            ],
-            temperature=0.1,
-            max_tokens=2048,
-        )
-        raw_sql = response.choices[0].message.content.strip()
+        raw_sql = chain.invoke({"question": question}).strip()
         return raw_sql
     except Exception as e:
-        raise RuntimeError(f"Groq Text-to-SQL API call failed: {e}")
+        raise RuntimeError(f"LangChain Text-to-SQL API call failed: {e}")
 
 
 def parse_date(val: Any) -> Optional[date]:
@@ -264,12 +298,11 @@ def synthesize_verdict(
     computed_facts: List[Dict[str, Any]],
 ) -> str:
     """
-    Synthesize final verdict strictly using Groq llama-3.3-70b-versatile.
+    Synthesize final verdict strictly using LangChain LCEL chain (prompt | llm | parser) with ChatGroq.
     Passes computed policy facts, Db2 relational records, and vector-matched policies.
     Raises RuntimeError if GROQ_API_KEY is missing or the call fails.
     """
-    client = get_groq_client()
-    model = resolve_groq_model(client)
+    llm = get_chat_groq(temperature=0.2, max_tokens=2048)
 
     policy_context = "\n".join(
         [f"- Policy #{p['policy_id']} '{p['policy_title']}' ({p['category']}): {p['content']}" for p in policies]
@@ -277,40 +310,21 @@ def synthesize_verdict(
     data_context = json.dumps(data, indent=2, default=str)
     facts_context = json.dumps(computed_facts, indent=2, default=str)
 
-    prompt = f"""
-You are the IBM Db2 Copilot refund-dispute assistant for an e-commerce platform.
-Evaluate the customer dispute or query using the computed facts, database records, and store refund policies.
-
-User Query:
-{question}
-
-Python Pre-Computed Dispute & Policy Facts (Authoritative calculations):
-{facts_context}
-
-Retrieved Db2 Relational Records:
-{data_context}
-
-Db2 Vector-Retrieved Store Policies:
-{policy_context}
-
-Instructions:
-1. If the query asks an analytical or aggregated question (e.g., 'Which customers have more than one refund?'), answer directly, clearly listing the customers, order IDs, and reasons from the database records.
-2. If the query is an individual refund dispute decision:
-   - State the **VERDICT** (APPROVED or DENIED). You MUST respect the decision computed in the Python facts.
-   - Detail the **REASONING**: Explicitly quote the computed elapsed days (e.g. '4 days elapsed') versus the policy allowance ('7-day window'), customer tier, item category, and the specific policy title cited.
-   - State the **ACTION / NEXT STEPS** for customer support.
-"""
+    prompt = ChatPromptTemplate.from_messages([
+        ("human", VERDICT_SYSTEM_PROMPT),
+    ])
+    chain = prompt | llm | StrOutputParser()
 
     try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
-            max_tokens=2048,
-        )
-        return response.choices[0].message.content.strip()
+        verdict = chain.invoke({
+            "question": question,
+            "facts_context": facts_context,
+            "data_context": data_context,
+            "policy_context": policy_context,
+        }).strip()
+        return verdict
     except Exception as e:
-        raise RuntimeError(f"Groq Verdict Generation API call failed: {e}")
+        raise RuntimeError(f"LangChain Verdict Generation API call failed: {e}")
 
 
 def log_audit(question: str, sql: str, status: str, verdict: str):
@@ -338,12 +352,12 @@ def log_audit(question: str, sql: str, status: str, verdict: str):
 def process_dispute_query(question: str) -> Dict[str, Any]:
     """
     Full End-to-End Copilot Execution Pipeline:
-    1. Text-to-SQL (Groq llama-3.3-70b-versatile; fails clearly if API key missing)
+    1. Text-to-SQL via LangChain LCEL (ChatGroq llama-3.3-70b-versatile)
     2. SQL Security Validation (AST check, single SELECT, allow-list)
     3. Db2 Relational Query Execution
     4. Python Deterministic Date & Policy Window Computation
     5. Db2 Vector Distance Policy Retrieval (fastembed)
-    6. Verdict Synthesis via Groq (fails clearly if API key missing)
+    6. Verdict Synthesis via LangChain LCEL (ChatGroq)
     7. Db2 Audit Logging
     """
     result = {
@@ -358,13 +372,13 @@ def process_dispute_query(question: str) -> Dict[str, Any]:
         "status": "ERROR",
     }
 
-    # Step 1: Generate SQL via Groq (or detect direct SQL injection for testing)
+    # Step 1: Generate SQL via LangChain LCEL (or detect direct SQL injection for testing)
     try:
         raw_sql = generate_sql_from_question(question)
         result["sql"] = raw_sql
     except Exception as e:
         result["status"] = "GROQ_ERROR"
-        result["verdict"] = f"Groq LLM Error: {e}"
+        result["verdict"] = f"LangChain/Groq LLM Error: {e}"
         log_audit(question, "", "GROQ_ERROR", result["verdict"])
         return result
 
@@ -405,13 +419,13 @@ def process_dispute_query(question: str) -> Dict[str, Any]:
     policies = retrieve_policies(question, top_k=2)
     result["policies"] = policies
 
-    # Step 6: Synthesize Combined Verdict via Groq
+    # Step 6: Synthesize Combined Verdict via LangChain LCEL
     try:
         verdict = synthesize_verdict(question, result["data"], policies, computed_facts)
         result["verdict"] = verdict
     except Exception as e:
         result["status"] = "GROQ_ERROR"
-        result["verdict"] = f"Groq Verdict Generation Error: {e}"
+        result["verdict"] = f"LangChain Verdict Generation Error: {e}"
         log_audit(question, cleaned_sql, "GROQ_ERROR", result["verdict"])
         return result
 
@@ -423,7 +437,7 @@ def process_dispute_query(question: str) -> Dict[str, Any]:
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("Testing Db2 Copilot Engine")
+    print("Testing Db2 Copilot Engine with LangChain LCEL")
     print("=" * 60)
     test_q = "Order 101 has a refund request. Check customer tier and dispute details, then decide."
     res = process_dispute_query(test_q)

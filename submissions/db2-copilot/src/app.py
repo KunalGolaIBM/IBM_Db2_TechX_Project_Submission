@@ -146,9 +146,10 @@ with st.sidebar:
     st.divider()
     st.subheader("Architecture")
     st.markdown("- **Engine**: Native `ibm_db` (Pure C Driver)")
+    st.markdown("- **Framework**: LangChain (`langchain-core`, `langchain-groq`)")
     st.markdown("- **Vectors**: Db2 `VECTOR(384, FLOAT32)`")
     st.markdown("- **Embeddings**: FastEmbed (`bge-small-en-v1.5`)")
-    st.markdown("- **LLM**: Groq `openai/gpt-oss-120b`")
+    st.markdown("- **LLM**: ChatGroq via LangChain LCEL")
     st.markdown("- **Deterministic Engine**: Python Date & Policy Math")
     st.markdown("- **Security**: AST SQL Allow-List Guardrail")
 

@@ -5,7 +5,7 @@
 1. **Relational querying**: High-performance querying of operational e-commerce data (`CUSTOMERS`, `ORDERS`, `PAYMENTS`, `REFUNDS`). All operational data is synthetic test data.
 2. **Native Vector Search**: Semantic similarity matching across company refund policy documents stored in native Db2 `VECTOR(384, FLOAT32)` columns using `VECTOR_DISTANCE` with `COSINE` distance metric.
 
-A deterministic Python engine calculates authoritative dispute facts (exact days elapsed, policy window bounds, and tier privileges) before passing them to the Groq LLM (`openai/gpt-oss-120b` / `llama-3.3-70b-versatile`). A strict SQL Security Validator ensures that text-to-SQL generation is limited strictly to single, read-only `SELECT` statements on allow-listed tables, preventing prompt injection or database tampering. All decisions, SQL queries, and verdicts are persistently logged into Db2's `QUERY_AUDIT` table for governance.
+A deterministic Python engine calculates authoritative dispute facts (exact days elapsed, policy window bounds, and tier privileges) before passing them to the LangChain LCEL chains powered by ChatGroq (`openai/gpt-oss-120b` / `llama-3.3-70b-versatile`). A strict SQL Security Validator ensures that text-to-SQL generation is limited strictly to single, read-only `SELECT` statements on allow-listed tables, preventing prompt injection or database tampering. All decisions, SQL queries, and verdicts are persistently logged into Db2's `QUERY_AUDIT` table for governance.
 
 ---
 
@@ -19,8 +19,8 @@ flowchart TD
         UI --> Engine["Copilot Controller (src/copilot.py)"]
         
         %% Text to SQL branch
-        Engine -->|Natural Language| GroqSQL["Groq LLM (openai/gpt-oss-120b)<br/>Text-to-SQL Generator"]
-        GroqSQL -->|Raw SQL| Validator["SQL Security Validator<br/>(Single SELECT & Allow-List Check)"]
+        Engine -->|User Question| LangChainSQL["LangChain LCEL SQL Chain<br/>(Prompt | ChatGroq | StrOutputParser)"]
+        LangChainSQL -->|Raw SQL| Validator["SQL Security Validator<br/>(Single SELECT & Allow-List Check)"]
         
         Validator -->|Valid Query| Db2Driver["Native ibm_db Driver"]
         Validator -.->|Rejected Mutation e.g. DELETE| AuditLog
@@ -33,11 +33,11 @@ flowchart TD
         Db2Driver -->|Relational Data Rows| PythonMath["Python Deterministic Math<br/>(days_elapsed, 7d/14d/30d/60d VIP logic)"]
         
         %% Decision Synthesis
-        PythonMath -->|Pre-Computed Dispute Facts| Synthesizer["Verdict Synthesizer<br/>(Groq openai/gpt-oss-120b)"]
-        Db2VectorSearch -->|Policy Context Clauses| Synthesizer
+        PythonMath -->|Pre-Computed Dispute Facts| LangChainVerdict["LangChain LCEL Verdict Chain<br/>(Prompt | ChatGroq | StrOutputParser)"]
+        Db2VectorSearch -->|Policy Context Clauses| LangChainVerdict
         
-        Synthesizer -->|Conclusive Decision & Justification| UI
-        Synthesizer -->|Log Entry| AuditLog["Audit Logger"]
+        LangChainVerdict -->|Conclusive Decision & Justification| UI
+        LangChainVerdict -->|Log Entry| AuditLog["Audit Logger"]
     end
     
     subgraph Db2Database ["IBM Db2 12.1 Database (db2server)"]
@@ -77,8 +77,12 @@ flowchart TD
    - Uses `FastEmbed` with `BAAI/bge-small-en-v1.5` to generate 384-dimensional dense vectors on CPU in milliseconds.
    - Executes native IBM Db2 12.1 vector similarity search using `VECTOR_DISTANCE(embedding, VECTOR('...', 384, FLOAT32), COSINE)`.
 
-5. **Text-to-SQL & Synthesis Layer (`src/copilot.py`)**:
-   - Connects to Groq's high-speed API utilizing `openai/gpt-oss-120b` (with auto-resolution for `llama-3.3-70b-versatile`).
+5. **Text-to-SQL & Synthesis Layer via LangChain LCEL (`src/copilot.py`)**:
+   - Integrates LangChain (`langchain-core`, `langchain-groq`) using LCEL (LangChain Expression Language) pipelines (`ChatPromptTemplate | ChatGroq | StrOutputParser`).
+   - Two specialized LCEL chains:
+     - **Text-to-SQL Chain**: Converts natural language dispute questions into single-statement read-only Db2 SQL queries using the DB schema prompt.
+     - **Verdict Synthesis Chain**: Takes pre-computed Python facts, retrieved relational rows, and Db2 vector policy chunks to authoritatively render verdicts with explicit reasoning.
+   - Connects to Groq's high-speed API utilizing `openai/gpt-oss-120b` (with automatic fallback resolution for `llama-3.3-70b-versatile`).
    - Translates questions into optimized Db2 `SELECT` statements and synthesizes operational facts with official policy rules to output unambiguous dispute verdicts.
 
 6. **Persistence & Audit Layer (`src/db.py`)**:

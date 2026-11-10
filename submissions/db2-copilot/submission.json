@@ -3,7 +3,7 @@
   "project": {
     "title": "Db2 Copilot: AI Refund-Dispute Assistant with Native Vector Search & Guardrailed Text-to-SQL",
     "slug": "db2-copilot",
-    "short_description": "Enterprise refund-dispute resolution copilot powered by IBM Db2 12.1 relational tables, native Db2 VECTOR similarity search on store refund policies, Groq Llama-3.3-70B / GPT-OSS-120B Text-to-SQL, AST security validation, and persistent query auditing.",
+    "short_description": "Enterprise refund-dispute resolution copilot powered by IBM Db2 12.1 relational tables, native Db2 VECTOR similarity search on store refund policies, LangChain LCEL chains with ChatGroq (Llama-3.3-70B / GPT-OSS-120B) for Text-to-SQL and verdict synthesis, AST security validation, and persistent query auditing.",
     "category": "AI / RAG / Data Engineering / Analytics",
     "demo_url": "https://youtu.be/GtTyib14P7Y",
     "video_url": "https://youtu.be/GtTyib14P7Y",
@@ -37,6 +37,7 @@
       "SQL"
     ],
     "frameworks": [
+      "LangChain (langchain-core, langchain-groq)",
       "Streamlit",
       "FastEmbed",
       "Docker",

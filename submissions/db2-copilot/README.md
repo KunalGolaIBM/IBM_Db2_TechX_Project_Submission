@@ -1,6 +1,6 @@
 # Db2 Copilot: AI Refund-Dispute Assistant with Native Vector Search & Guardrailed Text-to-SQL
 
-> **One-Line Pitch:** An enterprise e-commerce refund-dispute assistant combining IBM Db2 12.1 relational querying, native Db2 `VECTOR(384, FLOAT32)` similarity search on policy documents, Groq `openai/gpt-oss-120b` Text-to-SQL with an AST security guardrail, deterministic Python policy window math, and persistent query auditing.
+> **One-Line Pitch:** An enterprise e-commerce refund-dispute assistant combining IBM Db2 12.1 relational querying, native Db2 `VECTOR(384, FLOAT32)` similarity search on policy documents, LangChain LCEL chains with ChatGroq (`openai/gpt-oss-120b` / `llama-3.3-70b-versatile`) for Text-to-SQL and verdict synthesis, AST security guardrails, deterministic Python policy window math, and persistent query auditing.
 
 ---
 
@@ -48,11 +48,11 @@ Existing solutions either:
 
 ## Solution Overview
 **Db2 Copilot** introduces a hybrid RAG + Text-to-SQL architecture with deterministic calculation and enterprise guardrails:
-- **Text-to-SQL (Groq)**: Translates natural language dispute questions into accurate IBM Db2 queries.
+- **Text-to-SQL via LangChain LCEL**: Translates natural language dispute questions into accurate IBM Db2 queries using an LCEL chain (`ChatPromptTemplate | ChatGroq | StrOutputParser`).
 - **SQL Security Guardrail (`sql_validator.py`)**: Strictly enforces a single-statement `SELECT` policy against an allow-list (`CUSTOMERS`, `ORDERS`, `PAYMENTS`, `REFUNDS`, `POLICIES`). Instantly blocks and logs any mutation attempts (such as `DELETE`, `DROP`, or stacked queries).
 - **Native Db2 Vector Search**: Stores policy documents in a native `VECTOR(384, FLOAT32)` column and retrieves relevant clauses using Db2's `VECTOR_DISTANCE(..., COSINE)` scalar function.
 - **Deterministic Python Policy Engine**: Calculates authoritative date differences (`days_elapsed = (requested_at - delivery_date).days`) and evaluates policy window boundaries (7d, 14d, 30d, 60d VIP exception, <$100 VIP courtesy) in pure Python before feeding verified facts to the LLM.
-- **Synthesized Verdict**: Groq produces conclusive, explainable verdicts (Approved, Denied, or Partially Approved) citing exact dates and policy rules.
+- **Synthesized Verdict via LangChain LCEL**: A second LCEL chain (`ChatPromptTemplate | ChatGroq | StrOutputParser`) produces conclusive, explainable verdicts (Approved, Denied, or Partially Approved) citing exact dates and policy rules.
 - **Persistent Governance**: Every enquiry, generated SQL, execution status, and verdict is automatically logged to the `QUERY_AUDIT` table in Db2.
 - **Interactive Streamlit UI**: Provides support representatives with an intuitive console with 1-click test scenarios and live audit inspection.
 
@@ -117,8 +117,12 @@ Existing solutions either:
 ---
 
 ## AI / LLM Architecture
+- **Framework**: **LangChain** (`langchain-core`, `langchain-groq`) using modern LCEL (LangChain Expression Language) pipelines (`prompt | llm | parser`) for all LLM interactions.
+- **LCEL Chains**:
+  1. **Text-to-SQL Chain**: `ChatPromptTemplate.from_messages([("system", DB_SCHEMA_PROMPT), ("human", "...")]) | ChatGroq | StrOutputParser()`
+  2. **Verdict Synthesis Chain**: `ChatPromptTemplate.from_messages([("human", VERDICT_SYSTEM_PROMPT)]) | ChatGroq | StrOutputParser()`
 - **Embedding Model**: `BAAI/bge-small-en-v1.5` (384-dimensional dense vectors) running locally via **FastEmbed** ONNX runtime inside Docker (zero network latency, pre-cached into the image).
-- **LLM Provider**: **Groq API** utilizing the `openai/gpt-oss-120b` model (with dynamic fallback to `llama-3.3-70b-versatile` / active chat models) for high-speed Text-to-SQL generation and final verdict synthesis.
+- **LLM Provider**: **Groq API** utilizing the `openai/gpt-oss-120b` model (with dynamic fallback to `llama-3.3-70b-versatile` / active chat models) via LangChain `ChatGroq` for high-speed Text-to-SQL generation and final verdict synthesis.
 - **Error Handling**: If `GROQ_API_KEY` is missing or the API call fails, visible errors are surfaced immediately without silent fallbacks or canned text.
 
 ---
@@ -126,8 +130,9 @@ Existing solutions either:
 ## Tech Stack
 - **Database**: IBM Db2 12.1.5 Community Edition
 - **Database Driver**: `ibm_db` (Native Python driver)
+- **AI Framework**: LangChain (`langchain-core`, `langchain-groq`)
 - **Embedding Engine**: FastEmbed (`BAAI/bge-small-en-v1.5`)
-- **LLM Engine**: Groq SDK (`openai/gpt-oss-120b` / `llama-3.3-70b-versatile`)
+- **LLM Engine**: ChatGroq via LangChain (`openai/gpt-oss-120b` / `llama-3.3-70b-versatile`)
 - **Web UI**: Streamlit 1.35+
 - **Containerization**: Docker & Docker Compose
 
@@ -172,12 +177,13 @@ docker logs -f db2server
 ## Project Setup & Installation
 
 All application Python dependencies are isolated inside Docker, avoiding Windows native binary issues with `ibm_db`.
+The build process installs base requirements from `requirements.txt`, pre-caches FastEmbed embeddings, and installs LangChain dependencies from `requirements-langchain.txt` (`langchain-core`, `langchain-groq`):
 
 ```powershell
 # 1. Navigate to the project directory
 cd submissions/db2-copilot
 
-# 2. Build the Docker container image (includes pre-cached FastEmbed model)
+# 2. Build the Docker container image (includes pre-cached FastEmbed model and LangChain)
 docker build -t db2copilot .
 ```
 

@@ -13,6 +13,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Pre-cache the fastembed model into the Docker image
 RUN python -c "from fastembed import TextEmbedding; list(TextEmbedding().embed(['init']))"
 
+COPY requirements-langchain.txt .
+RUN pip install --no-cache-dir -r requirements-langchain.txt
+
 COPY . .
 
 EXPOSE 8501
