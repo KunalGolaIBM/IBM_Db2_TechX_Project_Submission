@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    image: db2copilot:latest
+    container_name: db2copilot-app
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
