@@ -2,19 +2,19 @@
   "project": {
     "title": "Governed RAG: Clearance-Aware Vector Search Inside Db2",
     "slug": "db2-governed-rag",
-    "short_description": "RAG where access control and semantic search run in one Db2 SQL query: the same question returns different, permitted-only answers for public, internal and restricted users.",
+    "short_description": "RAG where access control and semantic search run in one Db2 SQL query.",
     "category": "AI / RAG / Data Governance",
     "demo_url": "",
     "video_url": "",
-    "repo_url": ""
+    "repo_url": "https://github.com/Pavan3030-pr/IBM_Db2_TechX_Project_Submission"
   },
   "team": {
     "name": "Db2 Governed RAG",
     "members": [
       {
-        "name": "Keshav Maheshwari",
-        "github": "keshav-23",
-        "email": "62067377+keshav-23@users.noreply.github.com",
+        "name": "Pavan",
+        "github": "Pavan3030-pr",
+        "email": "pavan20053010@gmail.com",
         "role": "Developer"
       }
     ]
@@ -28,10 +28,5 @@
       "SQL metadata filtering (JSON_VALUE on BLOB metadata) in the same query as vector search",
       "FETCH FIRST n ROWS ONLY top-k"
     ]
-  },
-  "tech_stack": {
-    "languages": ["Python"],
-    "frameworks": ["Haystack", "sentence-transformers"],
-    "ai_models": ["sentence-transformers/all-MiniLM-L6-v2 (384-dim embeddings)", "Ollama qwen2.5:7b (local LLM)"]
   }
 }
