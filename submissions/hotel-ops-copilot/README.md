@@ -10,7 +10,7 @@
 
 | 30/30 | 24/24 | 10,000/10,000 | 28/28 | 157 · 87% | 1 command |
 |:---:|:---:|:---:|:---:|:---:|:---:|
-| evaluation questions correct (KPIs, time travel, bitemporal, vector search, policies, Hindi, 9 safety attacks), against ground truth computed in Db2 ([results](docs/eval_results.md)) | red-team attacks blocked, 22 by Db2 itself ([scoreboard](docs/redteam_results.md)) | random proposals fuzzed into the Db2 guardrails, every decision matching an independent oracle ([results](docs/guardrail_fuzz.md)) | live Db2 checks of every claim (`python src/verify.py`, no key) | automated tests, 86% line coverage of the core package, none needing an LLM key | `docker compose up -d` starts Db2 and the app |
+| evaluation questions correct (KPIs, time travel, bitemporal, vector search, policies, Hindi, 9 safety attacks), against ground truth computed in Db2 ([results](docs/eval_results.md)) | red-team attacks blocked, 22 by Db2 itself ([scoreboard](docs/redteam_results.md)) | random proposals fuzzed into the Db2 guardrails, every decision matching an independent oracle ([results](docs/guardrail_fuzz.md)) | live Db2 checks of every claim (`python src/verify.py`, no key) | automated tests, 87% line coverage of the core package, none needing an LLM key | `docker compose up -d` starts Db2 and the app |
 
 **How Db2 governs the AI.** The agents can only read (as a least-privileged Db2 user) and *propose*. Every decision that changes the hotel is made, checked and recorded by Db2:
 
@@ -40,7 +40,7 @@ flowchart TB
 ![Red-team attack console: 24/24 blocked](docs/screenshots/red-team-live.gif)
 
 ### 30-second proof: `python src/verify.py`
-![Proofs tab: 26/26 live Db2 checks](docs/screenshots/proofs-live.gif)
+![Proofs tab: every claim checked live against Db2](docs/screenshots/proofs-live.gif)
 
 One command checks every headline claim against the live Db2, with no LLM key, and rolls back anything it writes: Db2 12.1 and native `VECTOR` columns, vector search, IBM `langchain-db2`, temporal tables, the least-privilege agent, RCAC mask and row permission, the `EXPLAIN` cost guard, the **SQLGlot syntax-tree guard**, **bitemporal** `BUSINESS_TIME` + `SYSTEM_TIME` promotions, a **materialized query table**, the change feed, the SQL PL and JSON guardrails, guarded apply + rollback, **concurrent approvals serialised by Db2 row locks**, earned autonomy decided inside Db2, CHECK constraints, the hash-chain trigger, the tamper-evident audit chain, an **external anchor that catches a fully rebuilt ledger**, the red team and the evaluation. It also fuzzes the guardrails with 1,000 random proposals. Expected output ends with **`28/28 checks passed`** in about 10 seconds. The same checks run live, one by one, in the app's **Proofs** tab. With Docker: `docker compose exec app python src/verify.py`.
 
@@ -371,7 +371,7 @@ python src/cli.py rollback 1
 python src/verify.py                # 28 live-Db2 checks of every claim (no LLM)
 python src/fuzz_guardrails.py      # 10,000 random proposals vs an independent oracle -> docs/guardrail_fuzz.md
 pytest -q tests/
-pytest -q --cov=src/hotelops --cov=src/verify.py   # 86% line coverage of the core package
+pytest -q --cov=src/hotelops --cov=src/verify.py   # 87% line coverage of the core package
 python src/redteam.py              # red-team scoreboard -> docs/redteam_results.md (no LLM)
 ```
 - `tests/test_agents_offline.py` drives the whole LangGraph team (router, three specialists, composer) with a scripted chat model against the real Db2 tools, so routing, tool loops, error feedback and the Db2 refusal of a bad proposal are tested without an API key.
@@ -379,7 +379,7 @@ python src/redteam.py              # red-team scoreboard -> docs/redteam_results
 - `tests/test_db2_integration.py` races 6 managers approving the same action and 4 rolling it back at the same instant from separate Db2 connections: exactly one wins each time.
 - `tests/test_seed.py` checks that the data is deterministic, that no room is double-booked, and that the planted scenarios exist.
 - `tests/test_app_imports.py` parses every source file, including the Streamlit UI that the other tests don't import, so a syntax error can't slip through. `ruff check src tests` lints everything (config in `ruff.toml`).
-- `tests/test_units.py` (46 tests, about 2 s, no Db2 or LLM) covers more SQL-injection variants (including `ADMIN_CMD` exports and statements hidden after comments), the dry-run impact maths (oversell, break-even, sold-out nights), quota and retry classification, config checks, the policy handbook parser, and the radar query.
+- `tests/test_units.py` (50 tests, about 2 s, no Db2 or LLM) covers more SQL-injection variants (including `ADMIN_CMD` exports and statements hidden after comments), the dry-run impact maths (oversell, break-even, sold-out nights), quota and retry classification, config checks, the policy handbook parser, and the radar query.
 - `tests/test_db2_integration.py` runs against the live Db2 and needs no LLM. It checks that:
   - the VECTOR column exists and semantic search finds paraphrased AC complaints;
   - hotspots point to rooms 307 and 312;
@@ -408,7 +408,7 @@ All screenshots are from real Gemini runs against the live Db2 database.
 
 | | |
 |---|---|
-| **Proofs tab.** One click runs all 28 `verify.py` checks against the live Db2, each turning green, ending in *26/26 checks passed · nothing changed in the database* ![Proofs](docs/screenshots/15-proofs.png) | **Bitemporal promotions.** `BUSINESS_TIME` (which nights) + `SYSTEM_TIME` (when recorded): rm.priya's correction split the offer for Sat–Sun, and Db2 still answers *"18% off today, but 10% as originally recorded"* ![Bitemporal](docs/screenshots/16-bitemporal-promotions.png) |
+| **Proofs tab.** One click runs all 28 `verify.py` checks against the live Db2, each turning green, ending in *all checks passed · nothing changed in the database* (the screenshot was taken when there were 26 checks; there are now 28) ![Proofs](docs/screenshots/15-proofs.png) | **Bitemporal promotions.** `BUSINESS_TIME` (which nights) + `SYSTEM_TIME` (when recorded): rm.priya's correction split the offer for Sat–Sun, and Db2 still answers *"18% off today, but 10% as originally recorded"* ![Bitemporal](docs/screenshots/16-bitemporal-promotions.png) |
 | **Earned autonomy.** The manager grants the AI price nudges up to ±5% for nights 7+ days out. Db2 applied a +3% change on its own and kept a +15% change for human approval ![Earned autonomy](docs/screenshots/13-earned-autonomy.png) | **Stale evidence.** A revenue manager repriced a night after the AI proposed its cut. Db2 time travel (`AS OF` the proposal vs now) flags that the AI reasoned from rates that no longer apply ![Stale evidence](docs/screenshots/14-stale-evidence.png) |
 | **Db2 catches the agent's mistake.** The agent claimed Deluxe was under 90% sold, cited POL-ENG-01, and proposed blocking room 307. The dry run shows **Deluxe OVERSOLD on 17–18 Nov** and five bookings to move, all before anyone approves ![Dry run catches oversell](docs/screenshots/12-dry-run-catches-oversell.png) | **Red-team scoreboard: 24/24 blocked.** One click runs every attack against the live Db2, and 22 of them are stopped by Db2 itself ![Red team](docs/screenshots/11-red-team-scoreboard.png) |
 | **Morning brief.** One click runs Analyst → Guest experience → Operations → Composer. The result covers KPIs, complaint themes and six actions queued for approval. This run took 16 LLM calls and 33 Db2 tool calls, all logged in `AGENT_RUNS` ![Morning brief](docs/screenshots/01-morning-brief.png) | **Live agent trace.** Routing to the briefing team, then the analyst's Db2 tool calls (SQL, change feed, occupancy outlook) with their timings, as they happen ![Live trace](docs/screenshots/03-live-agent-trace.png) |
