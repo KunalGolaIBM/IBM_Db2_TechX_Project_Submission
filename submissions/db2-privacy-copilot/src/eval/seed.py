@@ -1,0 +1,398 @@
+"""
+Generate synthetic clinic data with ground-truth PII labels.
+
+This creates realistic test data with deliberately challenging cases:
+- PII hidden in free-text fields
+- Ugly column names
+- Phone numbers stored as BIGINT
+- Non-PII columns that look like PII
+- Invalid Aadhaar numbers (fail Verhoeff checksum)
+"""
+import csv
+import random
+from datetime import datetime, timedelta
+
+from faker import Faker
+
+from app.db import conn
+
+# Initialize Faker with Indian locale and fixed seed for reproducibility
+fake = Faker("en_IN")
+Faker.seed(42)
+random.seed(42)
+
+
+def verhoeff_checksum(num: str) -> str:
+    """
+    Calculate Verhoeff checksum digit for a number.
+    
+    Args:
+        num: String of digits (without checksum)
+        
+    Returns:
+        The checksum digit as a string
+    """
+    d = [
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        [1, 2, 3, 4, 0, 6, 7, 8, 9, 5],
+        [2, 3, 4, 0, 1, 7, 8, 9, 5, 6],
+        [3, 4, 0, 1, 2, 8, 9, 5, 6, 7],
+        [4, 0, 1, 2, 3, 9, 5, 6, 7, 8],
+        [5, 9, 8, 7, 6, 0, 4, 3, 2, 1],
+        [6, 5, 9, 8, 7, 1, 0, 4, 3, 2],
+        [7, 6, 5, 9, 8, 2, 1, 0, 4, 3],
+        [8, 7, 6, 5, 9, 3, 2, 1, 0, 4],
+        [9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
+    ]
+    p = [
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        [1, 5, 7, 6, 2, 8, 3, 0, 9, 4],
+        [5, 8, 0, 3, 7, 9, 6, 1, 4, 2],
+        [8, 9, 1, 6, 0, 4, 3, 5, 2, 7],
+        [9, 4, 5, 3, 1, 2, 6, 8, 7, 0],
+        [4, 2, 8, 6, 5, 7, 3, 9, 0, 1],
+        [2, 7, 9, 3, 8, 0, 6, 4, 1, 5],
+        [7, 0, 4, 6, 9, 1, 3, 2, 5, 8],
+    ]
+    
+    c = 0
+    for i, digit in enumerate(reversed(num)):
+        c = d[c][p[(i + 1) % 8][int(digit)]]
+    
+    # Return the digit that makes checksum zero
+    for i in range(10):
+        if d[c][p[0][i]] == 0:
+            return str(i)
+    return "0"
+
+
+def generate_valid_aadhaar() -> str:
+    """Generate a valid Aadhaar number (passes Verhoeff check)."""
+    base = "".join([str(random.randint(0, 9)) for _ in range(11)])
+    checksum = verhoeff_checksum(base)
+    aadhaar = base + checksum
+    return f"{aadhaar[:4]} {aadhaar[4:8]} {aadhaar[8:]}"
+
+
+def generate_invalid_aadhaar() -> str:
+    """Generate an invalid Aadhaar number (fails Verhoeff check)."""
+    # Generate 12 random digits without proper checksum
+    aadhaar = "".join([str(random.randint(0, 9)) for _ in range(12)])
+    return f"{aadhaar[:4]} {aadhaar[4:8]} {aadhaar[8:]}"
+
+
+def generate_pan() -> str:
+    """Generate a realistic PAN number."""
+    letters1 = "".join(random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ", k=3))
+    letter2 = random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    letter3 = random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    digits = "".join([str(random.randint(0, 9)) for _ in range(4)])
+    last = random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    return f"{letters1}P{letter2}{digits}{last}"
+
+
+def generate_notes_with_hidden_pan() -> str:
+    """Generate notes text with a PAN number hidden inside."""
+    templates = [
+        f"Patient mentioned PAN {generate_pan()} for insurance claim.",
+        f"Tax document references {generate_pan()} in section 2.",
+        f"Follow up on case {generate_pan()} from last visit.",
+    ]
+    return random.choice(templates)
+
+
+def seed_database():
+    """Generate and insert synthetic clinic data."""
+    c = conn()
+    cur = c.cursor()
+    
+    # Labels for evaluation
+    labels = [("table", "column", "is_pii", "type")]
+    
+    print("Seeding PATIENT table...")
+    patient_ids = []
+    for i in range(100):
+        full_name = fake.name()
+        email = fake.email()
+        # Phone as BIGINT (no formatting)
+        phone = int("".join([str(random.randint(6, 9))] + [str(random.randint(0, 9)) for _ in range(9)]))
+        dob = fake.date_of_birth(minimum_age=18, maximum_age=90)
+        
+        # Mix of PAN and Aadhaar for GOVT_ID
+        # Include some invalid Aadhaar numbers as decoys
+        if i % 3 == 0:
+            govt_id = generate_pan()
+        elif i % 3 == 1:
+            govt_id = generate_valid_aadhaar()
+        else:
+            govt_id = generate_invalid_aadhaar()  # Decoy!
+        
+        addr1 = fake.street_address()
+        addr2 = (
+            f"Flat {random.randint(1, 999)}, "
+            f"{random.choice(['Wing A', 'Wing B', 'Tower 1', 'Tower 2'])}"
+            if random.random() > 0.5
+            else None
+        )
+        city = fake.city()
+        pincode = fake.postcode()
+        
+        # Some notes contain hidden PAN numbers
+        if i % 5 == 0:
+            notes = generate_notes_with_hidden_pan()
+        else:
+            notes = fake.text(max_nb_chars=200) if random.random() > 0.3 else None
+        
+        cur.execute("""
+            INSERT INTO PATIENT (FULL_NM, CUST_MAIL_ID, PH_NO, DOB_DT, GOVT_ID, 
+                                ADDR1, ADDR2, CITY_NM, PINCODE, NOTES)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (full_name, email, phone, dob, govt_id, addr1, addr2, city, pincode, notes))
+        
+        # Read the identity generated by this insert; never provide ID explicitly.
+        cur.execute("SELECT IDENTITY_VAL_LOCAL() FROM SYSIBM.SYSDUMMY1")
+        patient_id = int(cur.fetchone()[0])
+        patient_ids.append(patient_id)
+    
+    c.commit()
+    print(f"Inserted {len(patient_ids)} patients")
+    
+    # Ground truth labels for PATIENT table
+    labels.extend([
+        ("PATIENT", "ID", "N", "NOT_PII"),
+        ("PATIENT", "FULL_NM", "Y", "NAME"),
+        ("PATIENT", "CUST_MAIL_ID", "Y", "EMAIL"),
+        ("PATIENT", "PH_NO", "Y", "PHONE"),
+        ("PATIENT", "DOB_DT", "Y", "DOB"),
+        ("PATIENT", "GOVT_ID", "Y", "GOVT_ID"),  # Mix of PAN/Aadhaar
+        ("PATIENT", "ADDR1", "Y", "ADDRESS"),
+        ("PATIENT", "ADDR2", "Y", "ADDRESS"),
+        ("PATIENT", "CITY_NM", "Y", "ADDRESS"),
+        ("PATIENT", "PINCODE", "Y", "ADDRESS"),
+        ("PATIENT", "REGISTRATION_DT", "N", "NOT_PII"),
+        ("PATIENT", "NOTES", "Y", "FREE_TEXT"),  # Contains hidden PAN
+    ])
+    
+    print("Seeding APPOINTMENT table...")
+    appt_ids = []
+    for patient_id in patient_ids[:50]:  # 50 patients with appointments
+        for _ in range(random.randint(1, 3)):
+            appt_date = fake.date_between(start_date="-1y", end_date="today")
+            appt_time = fake.time()
+            doctor = fake.name()
+            reason = random.choice([
+                "Routine checkup",
+                "Follow-up consultation",
+                "Blood pressure monitoring",
+                "Diabetes management",
+                "Fever and cough",
+            ])
+            status = random.choice(["SCHEDULED", "COMPLETED", "CANCELLED"])
+            notes = fake.sentence() if random.random() > 0.5 else None
+            
+            cur.execute("""
+                INSERT INTO APPOINTMENT (
+                    PATIENT_ID, APPT_DT, APPT_TIME, DOCTOR_NM, REASON, "STATUS", NOTES
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (patient_id, appt_date, appt_time, doctor, reason, status, notes))
+            
+            cur.execute("SELECT IDENTITY_VAL_LOCAL() FROM SYSIBM.SYSDUMMY1")
+            appt_id = int(cur.fetchone()[0])
+            appt_ids.append((appt_id, patient_id))
+    
+    c.commit()
+    print(f"Inserted {len(appt_ids)} appointments")
+    
+    labels.extend([
+        ("APPOINTMENT", "ID", "N", "NOT_PII"),
+        ("APPOINTMENT", "PATIENT_ID", "N", "NOT_PII"),
+        ("APPOINTMENT", "APPT_DT", "N", "NOT_PII"),
+        ("APPOINTMENT", "APPT_TIME", "N", "NOT_PII"),
+        ("APPOINTMENT", "DOCTOR_NM", "Y", "NAME"),
+        ("APPOINTMENT", "REASON", "Y", "HEALTH"),
+        ("APPOINTMENT", "STATUS", "N", "NOT_PII"),
+        ("APPOINTMENT", "NOTES", "Y", "HEALTH"),
+    ])
+    
+    print("Seeding BILLING table...")
+    for appt_id, patient_id in appt_ids:
+        if random.random() > 0.3:  # Not all appointments have bills yet
+            bill_date = fake.date_between(start_date="-1y", end_date="today")
+            amount = round(random.uniform(500, 5000), 2)
+            tax = round(amount * 0.18, 2)
+            payment_mode = random.choice(["CASH", "CARD", "UPI", "INSURANCE"])
+            invoice_no = f"INV{fake.year()}{random.randint(10000, 99999)}"
+            fiscal_year = "2025-26"
+            
+            cur.execute("""
+                INSERT INTO BILLING (PATIENT_ID, APPT_ID, BILL_DT, AMOUNT, TAX_AMT, PAYMENT_MODE, INVOICE_NO, FISCAL_YEAR)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (patient_id, appt_id, bill_date, amount, tax, payment_mode, invoice_no, fiscal_year))
+    
+    c.commit()
+    print("Inserted billing records")
+    
+    labels.extend([
+        ("BILLING", "ID", "N", "NOT_PII"),
+        ("BILLING", "PATIENT_ID", "N", "NOT_PII"),
+        ("BILLING", "APPT_ID", "N", "NOT_PII"),
+        ("BILLING", "BILL_DT", "N", "NOT_PII"),
+        ("BILLING", "AMOUNT", "N", "NOT_PII"),
+        ("BILLING", "TAX_AMT", "N", "NOT_PII"),
+        ("BILLING", "PAYMENT_MODE", "N", "NOT_PII"),
+        ("BILLING", "INVOICE_NO", "N", "NOT_PII"),
+        ("BILLING", "FISCAL_YEAR", "N", "NOT_PII"),
+    ])
+    
+    print("Seeding PRESCRIPTION table...")
+    for appt_id, patient_id in random.sample(appt_ids, min(30, len(appt_ids))):
+        prescribed_date = fake.date_between(start_date="-1y", end_date="today")
+        medication = random.choice([
+            "Metformin 500mg",
+            "Amlodipine 5mg",
+            "Paracetamol 500mg",
+            "Amoxicillin 250mg",
+            "Omeprazole 20mg",
+        ])
+        dosage = random.choice(["Once daily", "Twice daily", "Three times daily"])
+        duration = random.randint(3, 30)
+        instructions = random.choice([
+            "Take after meals",
+            "Take before bedtime",
+            "Take on empty stomach",
+            "Complete the full course",
+        ])
+        
+        cur.execute("""
+            INSERT INTO PRESCRIPTION (PATIENT_ID, APPT_ID, PRESCRIBED_DT, MEDICATION, DOSAGE, DURATION_DAYS, INSTRUCTIONS)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (patient_id, appt_id, prescribed_date, medication, dosage, duration, instructions))
+    
+    c.commit()
+    print("Inserted prescriptions")
+    
+    labels.extend([
+        ("PRESCRIPTION", "ID", "N", "NOT_PII"),
+        ("PRESCRIPTION", "PATIENT_ID", "N", "NOT_PII"),
+        ("PRESCRIPTION", "APPT_ID", "N", "NOT_PII"),
+        ("PRESCRIPTION", "PRESCRIBED_DT", "N", "NOT_PII"),
+        ("PRESCRIPTION", "MEDICATION", "Y", "HEALTH"),
+        ("PRESCRIPTION", "DOSAGE", "Y", "HEALTH"),
+        ("PRESCRIPTION", "DURATION_DAYS", "N", "NOT_PII"),
+        ("PRESCRIPTION", "INSTRUCTIONS", "Y", "HEALTH"),
+    ])
+    
+    print("Seeding LAB_REPORT table...")
+    for appt_id, patient_id in random.sample(appt_ids, min(25, len(appt_ids))):
+        test_date = fake.date_between(start_date="-1y", end_date="today")
+        test_name = random.choice([
+            "Complete Blood Count",
+            "Lipid Profile",
+            "Blood Glucose Fasting",
+            "HbA1c",
+            "Thyroid Function Test",
+        ])
+        result_value = f"{random.uniform(50, 200):.2f}"
+        normal_range = "60-120"
+        unit = random.choice(["mg/dL", "mmol/L", "%"])
+        remarks = random.choice(["Normal", "Borderline", "Requires follow-up", ""])
+        
+        cur.execute("""
+            INSERT INTO LAB_REPORT (PATIENT_ID, APPT_ID, TEST_NM, TEST_DT, RESULT_VALUE, NORMAL_RANGE, UNIT, REMARKS)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (patient_id, appt_id, test_name, test_date, result_value, normal_range, unit, remarks))
+    
+    c.commit()
+    print("Inserted lab reports")
+    
+    labels.extend([
+        ("LAB_REPORT", "ID", "N", "NOT_PII"),
+        ("LAB_REPORT", "PATIENT_ID", "N", "NOT_PII"),
+        ("LAB_REPORT", "APPT_ID", "N", "NOT_PII"),
+        ("LAB_REPORT", "TEST_NM", "Y", "HEALTH"),
+        ("LAB_REPORT", "TEST_DT", "N", "NOT_PII"),
+        ("LAB_REPORT", "RESULT_VALUE", "Y", "HEALTH"),
+        ("LAB_REPORT", "NORMAL_RANGE", "N", "NOT_PII"),
+        ("LAB_REPORT", "UNIT", "N", "NOT_PII"),
+        ("LAB_REPORT", "REMARKS", "Y", "HEALTH"),
+    ])
+    
+    print("Seeding SUPPORT_TICKET table...")
+    for patient_id in random.sample(patient_ids, 20):
+        # TICKET_REF_NO is 10 digits - looks like PII but ISN'T (decoy!)
+        ticket_ref = f"{random.randint(1000000000, 9999999999)}"
+        subject = random.choice([
+            "Appointment rescheduling request",
+            "Report download issue",
+            "Billing query",
+            "Prescription clarification",
+        ])
+        description = fake.text(max_nb_chars=300)
+        status = random.choice(["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"])
+        created = datetime.now() - timedelta(days=random.randint(1, 90))
+        resolved = created + timedelta(days=random.randint(1, 7)) if status in ["RESOLVED", "CLOSED"] else None
+        
+        cur.execute("""
+            INSERT INTO SUPPORT_TICKET (PATIENT_ID, TICKET_REF_NO, SUBJECT, DESCRIPTION, STATUS, CREATED_DT, RESOLVED_DT)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (patient_id, ticket_ref, subject, description, status, created, resolved))
+    
+    c.commit()
+    print("Inserted support tickets")
+    
+    labels.extend([
+        ("SUPPORT_TICKET", "ID", "N", "NOT_PII"),
+        ("SUPPORT_TICKET", "PATIENT_ID", "N", "NOT_PII"),
+        ("SUPPORT_TICKET", "TICKET_REF_NO", "N", "NOT_PII"),  # Decoy! Looks like PII but isn't
+        ("SUPPORT_TICKET", "SUBJECT", "N", "NOT_PII"),
+        ("SUPPORT_TICKET", "DESCRIPTION", "Y", "FREE_TEXT"),
+        ("SUPPORT_TICKET", "STATUS", "N", "NOT_PII"),
+        ("SUPPORT_TICKET", "CREATED_DT", "N", "NOT_PII"),
+        ("SUPPORT_TICKET", "RESOLVED_DT", "N", "NOT_PII"),
+    ])
+    
+    print("Seeding MARKETING_LIST table...")
+    for patient_id in random.sample(patient_ids, 40):
+        campaign = random.choice(["Health Checkup Campaign 2026", "Diabetes Awareness", "Vaccination Drive"])
+        added_date = fake.date_between(start_date="-6m", end_date="today")
+        
+        # Get patient email and phone
+        cur.execute("SELECT CUST_MAIL_ID, PH_NO FROM PATIENT WHERE ID = ?", (patient_id,))
+        row = cur.fetchone()
+        email = row[0]
+        phone = f"+91{row[1]}"
+        
+        consent_status = random.choice(["GRANTED", "GRANTED", "GRANTED", "WITHDRAWN"])  # Mostly granted
+        
+        cur.execute("""
+            INSERT INTO MARKETING_LIST (PATIENT_ID, CAMPAIGN_NM, ADDED_DT, EMAIL_ADDR, PHONE_NUM, CONSENT_STATUS)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (patient_id, campaign, added_date, email, phone, consent_status))
+    
+    c.commit()
+    print("Inserted marketing list entries")
+    
+    labels.extend([
+        ("MARKETING_LIST", "ID", "N", "NOT_PII"),
+        ("MARKETING_LIST", "PATIENT_ID", "N", "NOT_PII"),
+        ("MARKETING_LIST", "CAMPAIGN_NM", "N", "NOT_PII"),
+        ("MARKETING_LIST", "ADDED_DT", "N", "NOT_PII"),
+        ("MARKETING_LIST", "EMAIL_ADDR", "Y", "EMAIL"),
+        ("MARKETING_LIST", "PHONE_NUM", "Y", "PHONE"),
+        ("MARKETING_LIST", "CONSENT_STATUS", "N", "NOT_PII"),
+    ])
+    
+    c.close()
+    
+    # Write labels to CSV
+    with open("eval/labels.csv", "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerows(labels)
+    
+    print(f"\nSeeding complete! Generated {len(labels) - 1} labeled columns")
+    print("Ground truth labels written to eval/labels.csv")
+
+
+if __name__ == "__main__":
+    seed_database()

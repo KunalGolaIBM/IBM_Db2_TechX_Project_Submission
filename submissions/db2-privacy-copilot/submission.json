@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Db2 Privacy Copilot",
+    "slug": "db2-privacy-copilot",
+    "short_description": "A Db2-connected privacy operations demo for finding personal-data candidates, managing consent history, and preparing reviewable data-rights plans with human approval and deterministic SQL guardrails.",
+    "category": "AI / Data Engineering / Privacy",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/dreameterftw/db2-privacy-copilot"
+  },
+  "team": {
+    "name": "Aryan Rane (Solo)",
+    "members": [
+      {
+        "name": "Aryan Rane",
+        "github": "dreameterftw",
+        "email": "",
+        "role": "Project developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker), verified with Db2 12.1.5.0",
+    "connector": "ibm_db / ibm_db_dbi; LangChain langchain-db2 DB2VS integration",
+    "features_used": [
+      "Relational tables and transactions",
+      "SYSCAT catalog metadata for schema discovery",
+      "Bitemporal consent table and history table",
+      "Db2 vector search for privacy taxonomy embeddings",
+      "Db2-backed request and SHA-256 audit records"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python 3.11+", "SQL"],
+    "frameworks": ["FastAPI", "Streamlit", "CrewAI", "LangChain"],
+    "ai_models": ["Local Sentence Transformers embeddings; no hosted LLM provider is configured by default"]
+  }
+}
+
