@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Db2 Copilot: AI Refund-Dispute Assistant with Native Vector Search & Guardrailed Text-to-SQL",
+    "slug": "db2-copilot",
+    "short_description": "Enterprise refund-dispute resolution copilot powered by IBM Db2 12.1 relational tables, native Db2 VECTOR similarity search on store refund policies, Groq Llama-3.3-70B Text-to-SQL, AST security validation, and persistent query auditing.",
+    "category": "AI / RAG / Data Engineering / Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": ""
+  },
+  "team": {
+    "name": "Db2 Copilot Builders",
+    "members": [
+      {
+        "name": "M.Karthik Reddy",
+        "github": "karthikreddy",
+        "email": "karthikreddy4185.sse@saveetha.com",
+        "role": "AI & Database Engineer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 12.1.5 Community Edition (Docker)",
+    "connector": "ibm_db (Native Driver)",
+    "features_used": [
+      "Relational Tables (CUSTOMERS, ORDERS, PAYMENTS, REFUNDS)",
+      "Native VECTOR Data Type (VECTOR(384, FLOAT32))",
+      "VECTOR_DISTANCE Scalar Function (COSINE)",
+      "Audit Logging Table (GENERATED IDENTITY, CURRENT TIMESTAMP)",
+      "Referential Integrity & Foreign Key Constraints"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "SQL"
+    ],
+    "frameworks": [
+      "Streamlit",
+      "FastEmbed",
+      "Docker",
+      "Docker Compose"
+    ],
+    "ai_models": [
+      "Groq openai/gpt-oss-120b",
+      "Groq llama-3.3-70b-versatile",
+      "BAAI/bge-small-en-v1.5 (ONNX FastEmbed)"
+    ]
+  }
+}
