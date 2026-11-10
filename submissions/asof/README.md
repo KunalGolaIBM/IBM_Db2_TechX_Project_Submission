@@ -274,7 +274,7 @@ Db2 tests run in throwaway schemas as the real least-privilege users ([what they
 | ![The specialist inbox: a held decision, its claims and the policy in force, and a reply that contradicts BRV-002 v1 refused](docs/screenshots/20-specialist-inbox.png) | ![The customer chat: a reply corrected before sending, with its source clause version](docs/screenshots/18-customer-chat-corrected.png) |
 
 - **Live Demo Link:** none, on purpose. Db2 on Cloud's free plan has no `VECTOR`, no new schemas and no row and column access control, and hosting AsOf's write paths publicly would expose a writable database or a funded API key ([Known Limitations](#known-limitations--future-roadmap)). The video, the screenshots and replay mode (one command, no key) cover it.
-- **Demo Video Link:** to be added with the video on Mon 9 Nov.
+- **Demo Video Link:** https://www.youtube.com/watch?v=mntehVWQn8E (2:58, with captions)
 
 **Demo walkthrough:** the chat corrects the March bereavement answer from `BRV-002` v1; a policy PDF becomes checked versions; the pet-fee change finds the customer told the old fee and drafts a notice; the inbox answers a held decision; the ledger replays a decision. Every screen: [docs/screenshots.md](docs/screenshots.md).
 
