@@ -71,7 +71,7 @@ def append(conn: ibm_db_dbi.Connection, entry: LedgerEntry, schema: str = db.SCH
         entry.request_id, entry.channel, entry.doc_id, entry.as_of, entry.question_redacted,
         entry.draft_redacted, entry.final_answer, entry.decision, entry.reason_code, entry.model_info,
         entry.prompt_version, int(entry.latency_ms), verdicts_json(entry.verdicts),
-        # OUT placeholders: ibm_db sizes output buffers from these, so strings get full width.
+        # OUT placeholders at full width. ibm_db 3.3.0 returns the whole value even from a shorter placeholder.
         0, " " * 64, datetime(1970, 1, 1),
     )
     cur = conn.cursor()
