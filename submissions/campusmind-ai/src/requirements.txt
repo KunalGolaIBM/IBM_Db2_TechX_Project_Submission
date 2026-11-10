@@ -1,0 +1,5 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pypdf
+haystack-ai==3.4.1
