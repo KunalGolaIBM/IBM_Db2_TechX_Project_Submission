@@ -77,3 +77,20 @@ Thumbs.db
 *.bak
 *.swp
 *~
+
+.db2.env
+
+# ColdChain Guardian - generated files and secrets
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+.db2.env
+.vscode/
+
+# Local credentials backup
+.local-secrets/

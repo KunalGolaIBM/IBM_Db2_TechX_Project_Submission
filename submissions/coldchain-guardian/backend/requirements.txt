@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+ibm_db
+python-dotenv
+langgraph
+pydantic
+# CrewAI collaborative analysis. The google-genai extra supplies the native
+# Gemini provider used when GEMINI_API_KEY / GOOGLE_API_KEY is configured.
+crewai[google-genai]==1.15.39
