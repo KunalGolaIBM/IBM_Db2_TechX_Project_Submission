@@ -73,13 +73,19 @@ export default function MemoCard({ result, mode, memo, setMemo }: {
   );
 }
 
+/** Renders **bold** spans from the model's Markdown as <strong>; everything else stays plain text (no HTML injection). */
+function Inline({ text }: { text: string }) {
+  const parts = text.split(/\*\*([^*]+)\*\*/g);
+  return <>{parts.map((p, i) => (i % 2 ? <strong key={i} className="font-semibold">{p}</strong> : p))}</>;
+}
+
 function MemoText({ text }: { text: string }) {
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
   const bullets = lines.filter((l) => /^[-*•]\s+/.test(l));
   if (bullets.length === lines.length) {
-    return <ul className="grid list-disc gap-1.5 pl-5">{lines.map((l, i) => <li key={i}>{l.replace(/^[-*•]\s+/, "")}</li>)}</ul>;
+    return <ul className="grid list-disc gap-1.5 pl-5">{lines.map((l, i) => <li key={i}><Inline text={l.replace(/^[-*•]\s+/, "")} /></li>)}</ul>;
   }
-  return <div className="grid gap-2">{lines.map((l, i) => <p key={i}>{l.replace(/^[-*•]\s+/, "• ")}</p>)}</div>;
+  return <div className="grid gap-2">{lines.map((l, i) => <p key={i}><Inline text={l.replace(/^[-*•]\s+/, "• ")} /></p>)}</div>;
 }
 
 function MemoLoading() {
