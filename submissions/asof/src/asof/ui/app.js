@@ -129,7 +129,7 @@ async function route() {
 }
 window.addEventListener("hashchange", route);
 
-const health = { replay: false, live: null, clock: null };
+const health = { replay: false, live: null, clock: null, headline: [] };
 // The public demo's live checks: "on", "paused" (the banner says why) or "unavailable".
 const liveTag = (b) => (b.live_checks === "on" ? `replay + live: ${String(b.live_model).split("/").pop()}`
   : `replay only: live checks ${b.live_checks}`);
@@ -143,6 +143,7 @@ async function status() {
     // The public demo with live checks: a check's new input goes live (or is refused while live checks are paused),
     // never held as a replay miss. Policy intake and the inbox's reply check stay replay-only.
     health.live = body.live_checks || null;
+    health.headline = Array.isArray(body.headline) ? body.headline : [];  // measured results, from the result files
     health.clock = body.db2_clock || null;
     if (body.replay && $("#replay-mode") && body.public_demo_notice) $("#replay-mode").textContent = body.public_demo_notice;
     if (body.replay && !$("#replay-mode")) {
@@ -201,6 +202,13 @@ function explain(r, asOf) {
   }
 }
 
+// The headline: the two strongest measured results, each linking to its evaluation (served by /healthz, read from the
+// published result files). A number the server could not compute is simply not there.
+function headlineView() {
+  if (!health.headline.length) return "";
+  return html`<div class="headline" aria-label="Measured results">${health.headline.map((h, i) => html`${i ? html`<span class="hl-sep" aria-hidden="true">·</span>` : ""}<a href="${h.href}" target="_blank" rel="noopener"><span class="hl-long">${h.text}</span><span class="hl-short">${h.short}</span></a>`)}</div>`;
+}
+
 async function Playground() {
   renderPlayground();
 }
@@ -211,6 +219,7 @@ function renderPlayground() {
       <div>
         <h1>Check an answer against the policy in force on a date</h1>
         <p>The naive demo assistant answers from a stale FAQ with no idea which policy applied when. AsOf checks every claim in its draft against the clause version in force on the customer's date, in Db2. Two fictional policy documents: Aurelia Air's customer service plan and Fernhollow Bank's fee schedule.</p>
+        ${headlineView()}
       </div>
     </div>
     <div class="grid-2">

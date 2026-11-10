@@ -120,6 +120,17 @@ main { max-width: 1440px; margin: 0 auto; padding: 32px 32px 48px; outline: none
 /* ---- building blocks ---- */
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
 .page-head p { color: var(--muted); margin-top: 8px; max-width: 800px; font-size: 14px; line-height: 1.43; }
+/* The headline of measured results: one line, two at most; the short form on narrow screens, one line each. */
+.headline { margin-top: 10px; font-size: 13px; line-height: 1.5; display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.headline a { color: var(--brand); text-decoration: none; }
+.headline a:hover, .headline a:focus-visible { text-decoration: underline; }
+.headline .hl-sep { color: var(--muted); }
+.headline .hl-short { display: none; }
+@media (max-width: 720px) {
+  .headline { flex-direction: column; font-size: 12px; }
+  .headline .hl-long, .headline .hl-sep { display: none; }
+  .headline .hl-short { display: inline; }
+}
 .card {
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
   box-shadow: var(--shadow); padding: 16px;

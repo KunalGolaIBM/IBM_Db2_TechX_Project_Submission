@@ -36,6 +36,18 @@ a { color: var(--sea-2); }
 .ribbon { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: center; align-items: center; padding: 8px 16px;
   background: var(--sea); color: #fff; font-size: 13px; text-align: center; }
 .ribbon a { color: #fff; font-weight: 600; }
+/* AsOf's measured results, under the ribbon: one line, two at most; the short form on narrow screens. */
+.headline { display: flex; flex-wrap: wrap; gap: 2px 18px; justify-content: center; padding: 6px 16px; font-size: 13px;
+  background: var(--surface); border-bottom: 1px solid var(--line); }
+.headline[hidden] { display: none; }
+.headline a { color: var(--ink-2); text-decoration: none; }
+.headline a:hover, .headline a:focus-visible { text-decoration: underline; }
+.headline .hl-short { display: none; }
+@media (max-width: 720px) {
+  .headline { flex-direction: column; align-items: center; font-size: 12px; }
+  .headline .hl-long { display: none; }
+  .headline .hl-short { display: inline; }
+}
 .token-bar { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; padding: 10px 16px;
   background: var(--bad-bg); color: var(--bad); }
 .token-bar input { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line-2); }

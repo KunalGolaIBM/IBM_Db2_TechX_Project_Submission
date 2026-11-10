@@ -190,6 +190,15 @@ async function ask(question) {
   }
 }
 
+// The headline under the demo ribbon: AsOf's measured results, each linking to its evaluation (from /healthz).
+function headline(items) {
+  const bar = $("#headline");
+  if (!bar || !Array.isArray(items) || !items.length) return;
+  bar.replaceChildren(...items.map((it) => h("a", { href: it.href, target: "_blank", rel: "noopener" },
+    h("span", { class: "hl-long", text: it.text }), h("span", { class: "hl-short", text: it.short }))));
+  bar.hidden = false;
+}
+
 // ---------- start ----------
 async function start() {
   $("#ask").addEventListener("submit", (e) => { e.preventDefault(); ask($("#q").value); });
@@ -200,6 +209,7 @@ async function start() {
     const health = await call("/healthz");
     state.replay = Boolean(health.replay);
     state.notice = health.public_demo_notice || null;
+    headline(health.headline);
   } catch { /* the first question will report the problem */ }
   try {
     const res = await fetch("scenarios.json");

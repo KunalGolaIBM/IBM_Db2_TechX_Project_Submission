@@ -31,7 +31,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationErr
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from . import __version__, db, demolive, impactagent, intake, ledger, notices, policy, review, router
+from . import __version__, db, demolive, headline, impactagent, intake, ledger, notices, policy, review, router
 from .anchor import AnchorLog
 from .anchor import verify as verify_anchors
 from .askledger import LedgerAsker
@@ -541,6 +541,7 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
                 "public_demo": demo,
                 "public_demo_notice": live_now["notice"] if live_now else (PUBLIC_DEMO_NOTICE if demo else None),
                 "live_checks": live_now["state"] if live_now else None, "live_model": live.model if live else None,
+                "headline": headline.banner(),  # the measured results banner, from the published result files
                 "version": __version__}
 
     def respond(result: GateResult) -> JSONResponse:
