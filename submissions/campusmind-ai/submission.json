@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "CampusMind AI",
+    "slug": "campusmind-ai",
+    "short_description": "A student knowledge assistant that processes study PDFs and retrieves relevant passages with source-page references using Haystack BM25.",
+    "category": "AI / RAG",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/kabitadebnath05/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "Individual Participant",
+    "members": [
+      {
+        "name": "Kabita Debnath",
+        "github": "kabitadebnath05",
+        "role": "Backend and AI Retrieval Developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Planned - not connected in current prototype",
+    "connector": "Not implemented",
+    "features_used": []
+  },
+  "tech_stack": {
+    "languages": ["Python"],
+    "frameworks": ["FastAPI", "Haystack"],
+    "ai_models": []
+  }
+}
