@@ -48,6 +48,7 @@ PayGuard is built so the buyer does almost nothing:
 | Object | Purpose | Db2 features |
 |---|---|---|
 | `PG_SCAM_PATTERNS` | 25 scam playbooks (global + Nigeria-specific) | `VECTOR(768, FLOAT32)` column, `CHECK` constraint, composite index on `(REGION, CATEGORY)` |
+| `SCAM_EXAMPLES` | 105 supplied Nigerian message examples, including safe controls | SHA-256 primary key, label/text/source, BSON metadata, `VECTOR(768, FLOAT32)`; queried through LangChain `DB2VS` |
 | `PG_ENTITIES` | bank account numbers, e-mails, phones, domains, wallets with `BLOCKED`/`SUSPECT`/`TRUSTED` status | `UNIQUE (ENTITY_TYPE, ENTITY_VALUE)`, `MERGE` upsert with auto-escalation |
 | `PG_REPORTS` | community scam reports | `VECTOR` column, FK with `ON DELETE CASCADE` |
 | `PG_SCREENINGS` | every payment screened, its verdict, reasons and PayPal order state | `CLOB` JSON evidence, indexes on `(PAYEE_EMAIL, CREATED_AT)` and `(VERDICT, CREATED_AT)` |
@@ -63,11 +64,11 @@ PayGuard is built so the buyer does almost nothing:
   - **Read-only analytics:** model-written SQL passes a guard (single `SELECT`/`WITH` statement, PayGuard tables only, no `EMBEDDING`, forced `FETCH FIRST`), then runs and is rolled back.
 
 ## AI / LLM Architecture
-- **Framework:** a custom tool-calling agent loop (`src/llm.py`, `src/agent.py`) on the Gemini REST API. Every tool is a Db2 query.
+- **Framework:** LangChain runs the existing Gemini investigator through a `RunnableLambda` chain and validates/executes its Db2 functions as `StructuredTool` instances (`src/langchain_db2_tools.py`, `src/agent.py`). IBM `langchain-db2` supplies `DB2VS` for live cosine vector retrieval over `SCAM_EXAMPLES` (`src/db.py`); a LangChain `Embeddings` adapter reuses the existing local/Gemini embedder. Gemini REST remains the model transport. Every production tool calls the real `Db2Repository`.
 - **Model provider and model:** Google Gemini `gemini-2.5-flash` for reasoning. Embeddings come from `local-hash-v1` by default (offline feature hashing, 768-d). `gemini-embedding-001` is optional via `EMBED_PROVIDER=gemini`.
 - **RAG / tool-calling workflow:**
   1. The risk engine gathers evidence: rules, then a Db2 entity lookup, then Db2 vector search over playbooks and reports, then Db2 velocity.
-  2. The investigator agent receives the evidence and may call `lookup_entity`, `search_scam_patterns`, `search_community_reports` or `payee_history` to dig further.
+  2. The investigator agent receives the evidence and may call `lookup_entity`, `search_scam_patterns`, `search_community_reports`, `search_scam_examples` or `payee_history` to dig further.
   3. It returns JSON `{summary, advice, escalate, extra_risk}`. `extra_risk` is clamped to 0-20 and can only increase the score.
   4. **Fallback:** without a Gemini key, the app still works fully with rule-based explanations and quick analytics.
 
@@ -80,7 +81,7 @@ PayGuard is built so the buyer does almost nothing:
 - **Backend / core:** Python 3.10+, FastAPI, Uvicorn
 - **Database:** IBM Db2 12.1.2+ (VECTOR, MERGE, views, FINAL TABLE, SYSCAT)
 - **Frontend / UI:** a single-page HTML/CSS/JS app served by FastAPI (no build step)
-- **Libraries and tools:** `ibm_db`, `httpx`, `pydantic`, Docker, PayPal JS SDK, Gemini API, pytest
+- **Libraries and tools:** LangChain (`langchain`, `langchain-core`, `langchain-community`, `langchain-db2==1.0.0`), `ibm_db`, `httpx`, `pydantic`, Docker, PayPal JS SDK, Gemini API, pytest
 
 ## Prerequisites
 - Docker (for local Db2) **or** a Db2 12.1.2+ instance
@@ -142,9 +143,9 @@ uvicorn main:app --app-dir src --reload
 
 ## Testing & Verification
 ```bash
-pytest -q        # 31 tests: signals, risk fusion, AI agent loop, screenshot flow, platform API, PayPal gating, SQL guard
+pytest -q        # Original 31 tests plus CSV, LangChain, and safety regression tests: signals, risk fusion, AI agent loop, screenshot flow, platform API, PayPal gating, SQL guard
 ```
-The tests run against an in-memory stand-in for the repository, so CI needs no database. The application itself always uses Db2. To verify against Db2:
+The default tests use an in-memory repository, so CI needs no database; four opt-in integration tests require real Db2. The application itself always uses Db2. To verify against Db2:
 ```bash
 python src/seed.py --reset
 curl -s localhost:8000/api/health                       # {"db2": true, ...}
@@ -154,8 +155,6 @@ curl -s -X POST localhost:8000/api/screen -H "Content-Type: application/json" \
 
 ## Screenshots & Demo
 - **Demo video:** [Watch PayGuard](https://youtu.be/Xl68sUC8XLY)
-- **Source repository:** [Josebert2001/payguard](https://github.com/Josebert2001/payguard)
-- **Live demo:** run locally with the setup instructions above.
 - Screenshots of a blocked payment, an allowed payment and the agent:
 
 | Check a seller | Scam verdict | Safe verdict |
@@ -176,6 +175,29 @@ curl -s -X POST localhost:8000/api/screen -H "Content-Type: application/json" \
 | Sunday Robert (Josebert) | [@Josebert2001](https://github.com/Josebert2001) | Design, Db2 integration, AI agent, PayPal checkout |
 
 All scam patterns are written from public consumer-protection advice. All names, e-mails, phones, domains and wallets in the seed data are fictional.
+
+## Nigerian examples and LangChain on Db2
+
+The supplied CSVs are stored in `data/`. `src/seed.py` now also loads `data/handmade_all.csv`, including when the 25 playbooks already exist. To add examples to an existing database without reseeding:
+
+```bash
+python src/load_scam_examples.py
+```
+
+The loader creates `SCAM_EXAMPLES` and inserts all 105 supplied rows with the same configured embeddings and `VECTOR(dim, FLOAT32)` storage as the playbooks. A deterministic SHA-256 ID and duplicate check make reruns safe. Label, text and source are preserved; BSON metadata lets IBM's `DB2VS` read the labels. The investigator's new `search_scam_examples` tool and the risk engine both retrieve from this real Db2 table. Responses include `matched_examples`; the verdict's technical evidence names the matched label. Safe examples never subtract risk, and AI additions remain clamped to 0?20.
+
+`data/heldout_v1.csv` is read only by evaluation tests, never by the loader or playbook seeder. **Data overlap:** all 15 evaluation texts also occur in the supplied 105-row CSV (90 `hand_reviewed`, 15 `external_heldout`). To preserve the requested 105-row import without inflating evaluation, tests exclude **all 15 texts** from retrieved candidates before top-k selection. This is an overlap-filtered check, not an independent benchmark. With the default local embedder it flags **5/10 scam messages** and allows **5/5 safe messages**; recall remains limited for vague grant/job offers. No rules or thresholds were added to fit those missed messages. A general credential-warning regression prevents ?never share your PIN? from being treated as a credential request, while a separate actual request still triggers.
+
+Run the full suite, including the four live database checks, in PowerShell after configuring `.env` and starting Db2:
+
+```powershell
+$env:PAYGUARD_DB2_TEST = "1"
+python -m pytest -q -s
+```
+
+The integration tests verify idempotent loading, actual `DB2VS` search, LangChain tools querying Db2, verdict evidence, and overlap-filtered evaluation. They use no mocked database and fail if the configured Db2 connection is unavailable. Optional external AI calls remain disabled in tests. Verified locally against the running Db2 **12.1.5** container; the project requires vector support from Db2 12.1.2+.
+
+Integration references: [IBM LangChain Db2 connector](https://github.com/langchain-ai/langchain-ibm/tree/main/libs/langchain-db2), [LangChain StructuredTool](https://reference.langchain.com/python/langchain-core/tools/structured/StructuredTool).
 
 ## License
 

@@ -3,7 +3,7 @@
   "project": {
     "title": "PayGuard - AI Payment Firewall on IBM Db2",
     "slug": "payguard",
-    "short_description": "Screens payments before they are sent: rule signals, a Db2 scam knowledge base with VECTOR search, and a Gemini investigator agent whose tools are Db2 queries. Only safe payments reach PayPal checkout.",
+    "short_description": "Screens payments before they are sent: rule signals, a Db2 scam knowledge base with VECTOR search, and a LangChain-integrated Gemini investigator agent whose tools are Db2 queries. Only safe payments reach PayPal checkout.",
     "category": "AI / RAG / Agents / Fraud Analytics",
     "demo_url": "",
     "video_url": "https://youtu.be/Xl68sUC8XLY",
@@ -22,7 +22,7 @@
   },
   "ibm_db2": {
     "edition": "Db2 Community Edition 12.1.2+ (Docker)",
-    "connector": "ibm_db / ibm_db_dbi",
+    "connector": "ibm_db / ibm_db_dbi / LangChain DB2VS (langchain-db2)",
     "features_used": [
       "VECTOR(768, FLOAT32) columns",
       "VECTOR_DISTANCE cosine similarity search",
@@ -31,7 +31,8 @@
       "FINAL TABLE generated keys",
       "Views for analytics",
       "Indexes, CHECK and UNIQUE constraints, foreign keys",
-      "SYSCAT catalog introspection for text-to-SQL"
+      "SYSCAT catalog introspection for text-to-SQL",
+      "SCAM_EXAMPLES: idempotent CSV ingestion and LangChain DB2VS cosine retrieval"
     ]
   },
   "tech_stack": {
@@ -43,7 +44,9 @@
     "frameworks": [
       "FastAPI",
       "Custom Gemini tool-calling agent",
-      "PayPal JS SDK"
+      "PayPal JS SDK",
+      "LangChain StructuredTool and RunnableLambda",
+      "IBM langchain-db2 DB2VS"
     ],
     "ai_models": [
       "Google Gemini 2.5 Flash",

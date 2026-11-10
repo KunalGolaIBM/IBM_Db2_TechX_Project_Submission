@@ -13,6 +13,7 @@ import sys
 from config import settings
 from db import Db2Repository
 from embeddings import get_embedder
+from load_scam_examples import load_examples
 from risk import RiskEngine, ScreenRequest
 from seed_data import ENTITIES, HISTORY, PATTERNS, REPORTS
 
@@ -42,6 +43,7 @@ def main() -> int:
 
     repo.init_schema(settings.embed_dim, reset=reset)
     repo.set_meta("embedder", embedder.name)
+    print("Nigerian examples:", load_examples(repo, embedder))
 
     if repo.count_patterns() > 0:
         print("Knowledge base already loaded. Use --reset to rebuild.")

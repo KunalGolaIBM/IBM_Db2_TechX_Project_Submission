@@ -12,6 +12,7 @@ class Repo(Protocol):  # what the engine needs from Db2 (see db.Db2Repository)
     def lookup_entities(self, entities: list[tuple[str, str]]) -> list[dict]: ...
     def search_patterns(self, vec: list[float], region: str = "GLOBAL", k: int = 5) -> list[dict]: ...
     def search_reports(self, vec: list[float], k: int = 3) -> list[dict]: ...
+    def search_examples(self, vec: list[float], k: int = 3) -> list[dict]: ...
     def payee_velocity(self, payee_email: str, hours: int = 24) -> dict: ...
     def insert_screening(self, s: dict) -> int: ...
 
@@ -30,6 +31,7 @@ CATEGORY_LABELS = {
     "too_good": "Too good to be true", "tech_support": "Remote-access scam", "amount": "High value",
     "known_scammer": "Reported scammer", "community": "Community reports", "velocity": "Unusual activity",
     "trusted": "Trusted payee", "account_switch": "Third-party account", "new_seller": "New seller",
+    "examples": "Hand-reviewed scam example",
 }
 
 
@@ -59,6 +61,7 @@ class ScreenResult:
     extracted: dict
     screening_id: int | None = None
     ai: dict[str, Any] = field(default_factory=dict)
+    matched_examples: list[dict] = field(default_factory=list)
 
     def as_dict(self) -> dict:
         return self.__dict__.copy()
@@ -105,11 +108,21 @@ class RiskEngine:
                                 "label": "Verified trusted merchant", "weight": -20, "evidence": ev})
 
         # 2) Db2 vector search: known scam playbooks + community reports --------------------
-        matched, similar = [], []
+        matched, similar, examples = [], [], []
         if text.strip():
             vec = self.embedder.embed([text], task="query")[0]
             matched = self.repo.search_patterns(vec, region=req.region or "GLOBAL", k=3)
             similar = self.repo.search_reports(vec, k=3)
+            examples = self.repo.search_examples(vec, k=3)
+            # Safe matches are context only: they never subtract risk or override rules.
+            for example in examples[:1]:
+                sim = example["similarity"]
+                if example["label"] != "safe" and sim >= self.th["weak"]:
+                    reasons.append({"source": "db2_vector", "code": "EXAMPLE_MATCH", "category": "examples",
+                                    "label": f'Matches Nigerian scam example: {example["label"]}',
+                                    "weight": 35 if sim >= self.th["strong"] else 21,
+                                    "evidence": f'label={example["label"]}; cosine similarity {sim:.2f}; '
+                                                f'{example["text"][:180]}'})
             for p in matched[:2]:
                 sim = p["similarity"]
                 if sim >= self.th["weak"]:
@@ -151,6 +164,7 @@ class RiskEngine:
         advice = self._advice(verdict, reasons, matched)
         result = ScreenResult(score, verdict, top, sorted(reasons, key=lambda r: -r["weight"]), matched, similar,
                               entities, advice, extracted.__dict__)
+        result.matched_examples = examples
         if persist:
             result.screening_id = self.repo.insert_screening({
                 "merchant": req.merchant, "payee_email": req.payee_email, "amount": req.amount,

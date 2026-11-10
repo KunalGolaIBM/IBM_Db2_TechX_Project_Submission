@@ -25,6 +25,7 @@ def _cos(a, b):
 class FakeRepo:
     def __init__(self, embedder):
         self.patterns, self.entities, self.reports, self.screenings = [], {}, [], []
+        self.examples = {}
         for p in PATTERNS:
             v = embedder.embed([f'{p["title"]}. {p["description"]} Red flags: {p.get("red_flags", "")}'])[0]
             self.patterns.append({**p, "id": len(self.patterns) + 1, "vec": v})
@@ -81,6 +82,28 @@ class FakeRepo:
             rows.append({**{x: r[x] for x in r if x != "vec"}, "entity_type": e["entity_type"],
                          "entity_value": e["entity_value"], "status": e["status"], "similarity": round(_cos(vec, r["vec"]), 4)})
         return sorted(rows, key=lambda r: -r["similarity"])[:k]
+
+    def init_examples(self, dim):
+        pass
+
+    def get_meta(self, key):
+        return getattr(self, "_meta", {}).get(key)
+
+    def set_meta(self, key, value):
+        if not hasattr(self, "_meta"):
+            self._meta = {}
+        self._meta[key] = value
+
+    def example_ids(self):
+        return set(self.examples)
+
+    def insert_example(self, row_id, row, vec):
+        self.examples.setdefault(row_id, {**row, "id": row_id, "vec": vec})
+
+    def search_examples(self, vec, k=3):
+        rows = [{**{key: value for key, value in row.items() if key != "vec"},
+                 "similarity": round(_cos(vec, row["vec"]), 4)} for row in self.examples.values()]
+        return sorted(rows, key=lambda row: -row["similarity"])[:k]
 
     def payee_velocity(self, payee_email, hours=24):
         rows = [s for s in self.screenings if s["payee_email"] == payee_email.lower()]

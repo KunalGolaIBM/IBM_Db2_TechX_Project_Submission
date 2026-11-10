@@ -1,6 +1,9 @@
 """Agent loop tests with a scripted fake Gemini (no network)."""
 import json
 
+import pytest
+from langchain_core.tools import StructuredTool
+
 import llm
 from agent import Investigator
 from risk import RiskEngine, ScreenRequest
@@ -46,3 +49,43 @@ def test_investigator_falls_back_on_llm_error(monkeypatch, repo, embedder):
     res = engine.screen(req)
     out = Investigator(repo, embedder, engine).explain(req, res)
     assert out["mode"] == "rules" and out["summary"].startswith("Stop")
+
+
+@pytest.mark.parametrize("model_extra, expected", [(-50, 0), (0, 0), (99, 20)])
+def test_langchain_chain_never_returns_negative_risk(monkeypatch, repo, embedder, model_extra, expected):
+    final = {"summary": "Evidence checked.", "extra_risk": model_extra, "escalate": True}
+    fake, _ = scripted([{"candidates": [{"content": {"parts": [{"text": json.dumps(final)}]}}]}])
+    monkeypatch.setattr(llm, "_post", fake)
+    engine = RiskEngine(repo, embedder)
+    req = ScreenRequest(message="Send your OTP now")
+    result = engine.screen(req)
+    out = Investigator(repo, embedder, engine).explain(req, result)
+    assert out["mode"] == "gemini" and out["extra_risk"] == expected
+    assert result.risk_score >= 70 and result.verdict == "BLOCK"
+
+
+def test_investigator_dispatches_example_search_through_langchain(monkeypatch, repo, embedder):
+    from load_scam_examples import load_examples, read_examples
+
+    load_examples(repo, embedder)
+    query = read_examples()[0]["text"]
+    fake, _ = scripted([
+        {"candidates": [{"content": {"role": "model", "parts": [
+            {"functionCall": {"name": "search_scam_examples", "args": {"query": query}}}]}}]},
+        {"candidates": [{"content": {"parts": [{"text": json.dumps({"summary": "Bank phishing example found."})}]}}]},
+    ])
+    monkeypatch.setattr(llm, "_post", fake)
+    invoked = []
+    original = StructuredTool.invoke
+
+    def track(self, *args, **kwargs):
+        invoked.append(self.name)
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(StructuredTool, "invoke", track)
+    engine = RiskEngine(repo, embedder)
+    req = ScreenRequest(message=query)
+    result = Investigator(repo, embedder, engine).explain(req, engine.screen(req))
+    assert invoked == ["search_scam_examples"]
+    assert result["mode"] == "gemini"
+    assert "bank_phishing" in result["trace"][0]["result_preview"]

@@ -192,8 +192,16 @@ def run_rules(text: str) -> list[Signal]:
     low = text.lower()
     out: list[Signal] = []
     for rule in RULES:
+        candidate = low
+        if rule.code == "CREDENTIALS":
+            # A warning not to share credentials is not a request for credentials.
+            # Mask a complete warning ending in "with anyone", without exceptions
+            # or additional instructions; any actual request still triggers.
+            candidate = re.sub(r"(?:^|(?<=[.!?;\n]))\s*(?:never|do not|don't)\s+"
+                               r"(?:share|send|give|disclose|reveal|provide)\b[^.!?;\n]*?"
+                               r"\b(?:with|to)\s+(?:anyone|anybody)\s*(?=[.!?;\n]|$)", "", low)
         for pat in rule.patterns:
-            m = re.search(pat, low)
+            m = re.search(pat, candidate)
             if m:
                 out.append(Signal(rule.code, rule.label, rule.weight, rule.category, m.group(0)))
                 break

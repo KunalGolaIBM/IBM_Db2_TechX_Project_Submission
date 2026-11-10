@@ -23,7 +23,7 @@ from embeddings import to_db2_vector
 
 log = logging.getLogger("payguard.db")
 
-TABLES = ["PG_SCREENINGS", "PG_REPORTS", "PG_ENTITIES", "PG_SCAM_PATTERNS", "PG_META"]
+TABLES = ["PG_SCREENINGS", "PG_REPORTS", "PG_ENTITIES", "PG_SCAM_PATTERNS", "SCAM_EXAMPLES", "PG_META"]
 VIEWS = ["PG_V_ENTITY_RISK", "PG_V_DAILY_VERDICTS"]
 
 
@@ -122,6 +122,7 @@ class Db2Repository:
         self._conn_str = conn_str or settings.db2_conn_str
         self._conn = ibm_db_dbi.connect(self._conn_str, "", "")
         self._lock = threading.RLock()
+        self._example_store = None
 
     # ------------------------------------------------------------------ helpers
     @contextmanager
@@ -161,6 +162,44 @@ class Db2Repository:
                 self._try(f"DROP TABLE {t}")
         for stmt in schema_ddl(dim):
             self._try(stmt, ignore=("42710", "42704", "01550"))  # already exists (01550 = matching index warning)
+        self.init_examples(dim)
+
+    def init_examples(self, dim: int) -> None:
+        self._try(f"""CREATE TABLE SCAM_EXAMPLES (
+            ID CHAR(64) NOT NULL PRIMARY KEY,
+            LABEL VARCHAR(64) NOT NULL,
+            TEXT VARCHAR(4000) NOT NULL,
+            SOURCE VARCHAR(512) NOT NULL,
+            METADATA BLOB,
+            EMBEDDING VECTOR({int(dim)}, FLOAT32)
+        )""", ignore=("42710",))
+
+    def example_ids(self) -> set[str]:
+        return {r["id"].strip() for r in self.query("SELECT ID FROM SCAM_EXAMPLES")}
+
+    def insert_example(self, row_id: str, row: dict, vec: list[float]) -> None:
+        metadata = json.dumps({"id": row_id, "label": row["label"], "source": row["source"]})
+        self.execute(
+            f"""INSERT INTO SCAM_EXAMPLES (ID, LABEL, TEXT, SOURCE, METADATA, EMBEDDING)
+                SELECT ?, ?, ?, ?, SYSTOOLS.JSON2BSON(?),
+                       VECTOR(CAST(? AS CLOB(100000)), {len(vec)}, FLOAT32)
+                FROM SYSIBM.SYSDUMMY1 WHERE NOT EXISTS
+                    (SELECT 1 FROM SCAM_EXAMPLES WHERE ID = ?)""",
+            (row_id, row["label"], row["text"], row["source"], metadata, to_db2_vector(vec), row_id),
+        )
+
+    def search_examples(self, vec: list[float], k: int = 3) -> list[dict]:
+        """IBM's LangChain DB2VS runs cosine VECTOR_DISTANCE on SCAM_EXAMPLES."""
+        from embeddings import get_embedder
+        from langchain_db2_tools import example_vector_store
+
+        with self._lock:
+            if self._example_store is None:
+                self.init_examples(len(vec))
+                self._example_store = example_vector_store(self._conn, get_embedder())
+            pairs = self._example_store.similarity_search_by_vector_with_relevance_scores(vec, k=max(1, int(k)))
+            return [{**doc.metadata, "text": doc.page_content,
+                     "similarity": round(1.0 - float(distance), 4)} for doc, distance in pairs]
 
     def _try(self, sql: str, ignore: tuple[str, ...] = ("42704",)) -> None:
         try:

@@ -148,3 +148,39 @@ FROM PG_SCREENINGS WHERE PAYEE_EMAIL = ? AND CREATED_AT > CURRENT TIMESTAMP - 24
 - PayPal secrets stay on the server. The browser only sees the client ID.
 - The server enforces the verdict before ordering, and the amount comes from Db2, not the client.
 - All user values go through parameter markers. The only inlined SQL values are vectors made of floats the server itself generated.
+
+## LangChain and Nigerian message examples
+
+`src/langchain_db2_tools.py` implements a LangChain `Embeddings` adapter over PayGuard's existing embedder. IBM's `langchain_db2.DB2VS` shares the repository's real `ibm_db_dbi` connection and performs cosine `VECTOR_DISTANCE` queries against `SCAM_EXAMPLES`. The repository lock serializes access. Returned distances are converted to similarity as `1 - distance`, matching the existing playbook scoring convention.
+
+```mermaid
+flowchart LR
+    CSV[data/handmade_all.csv] --> Loader[src/load_scam_examples.py]
+    Loader -->|same embeddings and parameterized inserts| EX[(Db2 SCAM_EXAMPLES)]
+    Input[Payment message] --> Engine[Risk engine]
+    Engine -->|LangChain DB2VS cosine search| EX
+    Engine --> PB[(Db2 25 playbooks and reports)]
+    EX -->|label, text, source, similarity| Evidence[Verdict evidence]
+    Evidence --> Chain[LangChain RunnableLambda investigator]
+    Chain --> Tools[LangChain StructuredTool validation and invocation]
+    Tools --> EX
+    Tools --> PB
+    Chain --> Gemini[Existing Gemini function-calling transport]
+```
+
+```sql
+CREATE TABLE SCAM_EXAMPLES (
+  ID CHAR(64) NOT NULL PRIMARY KEY,
+  LABEL VARCHAR(64) NOT NULL,
+  TEXT VARCHAR(4000) NOT NULL,
+  SOURCE VARCHAR(512) NOT NULL,
+  METADATA BLOB,
+  EMBEDDING VECTOR(768, FLOAT32)
+);
+```
+
+The SHA-256 ID covers label, text and source; the loader checks existing IDs and uses a parameterized insert guarded by `NOT EXISTS`. Metadata stores the ID, label and source as BSON for `DB2VS`. `src/seed.py` invokes the loader even if playbooks were previously seeded. Existing embedding-provider changes rebuild vectors through the seeder so vector spaces are not mixed.
+
+The investigator uses a `RunnableLambda` chain and `StructuredTool` instances for entity lookup, playbook search, example search, community report retrieval and payee history. The existing Gemini loop invokes these tools and returns its existing trace and JSON response. Malformed/unavailable AI still falls back to deterministic explanations. Only positive AI additions, capped at 20, can affect risk; a safe example cannot cancel a hard rule. API paths and existing response fields are preserved, with `matched_examples` added.
+
+Evaluation never loads `heldout_v1.csv` into either knowledge table. The supplied training CSV itself contains all 15 evaluation texts, so the test-only `EvaluationRepo` removes all evaluation texts from candidates returned by the real Db2 vector store (or the unit-test repository) before choosing top-k. It does not change production data or thresholds. Results with local hashing: 5/10 scam messages flagged, 5/5 safe messages allowed; this small overlap-filtered corpus is not an independent benchmark. Four opt-in tests exercise actual Db2 loading, LangChain retrieval/tools, and screening; default unit tests remain database-independent.

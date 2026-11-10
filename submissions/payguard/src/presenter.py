@@ -37,6 +37,8 @@ PLAIN = {
     "too_good": ("The price is too good to be true.", "The price too cheap - e get as e be."),
     "tech_support": ("They want remote access to your phone or computer.", "Dem want control your phone or computer."),
     "community": ("Other people reported a message just like this.", "Other people don report message wey be like dis."),
+    "examples": ("This message matches a hand-reviewed Nigerian scam example.",
+                 "Dis message resemble Nigerian scam example wey person don check."),
     "velocity": ("This seller is getting flagged a lot today.", "Dem don flag dis seller well-well today."),
     "account_switch": ("They want the money sent to someone else's account.",
                        "Dem say make you send am to another person account."),

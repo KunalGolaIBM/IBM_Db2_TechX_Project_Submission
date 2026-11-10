@@ -11,6 +11,7 @@ import re
 from typing import Any
 
 import llm
+from langchain_db2_tools import run_investigation
 from risk import CATEGORY_LABELS, RiskEngine, ScreenRequest, ScreenResult
 
 INVESTIGATOR_SYSTEM = """You are PayGuard, a payment-fraud investigator protecting buyers in Nigeria and worldwide.
@@ -36,6 +37,8 @@ TOOLS = [
      "parameters": {"type": "object", "properties": {"query": {"type": "string"},
                                                      "region": {"type": "string"}}, "required": ["query"]}},
     {"name": "search_community_reports", "description": "Vector-search scam reports submitted by other users.",
+     "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}},
+    {"name": "search_scam_examples", "description": "Search hand-reviewed Nigerian messages and labels in Db2 SCAM_EXAMPLES using LangChain DB2VS.",
      "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}},
     {"name": "payee_history", "description": "Screening attempts and blocks for a payee e-mail in the last N hours.",
      "parameters": {"type": "object", "properties": {"payee_email": {"type": "string"},
@@ -65,8 +68,13 @@ class Investigator:
         def payee_history(payee_email: str, hours: int = 72):
             return self.repo.payee_velocity(payee_email, hours=int(hours))
 
+        def search_scam_examples(query: str):
+            vec = self.embedder.embed([query], task="query")[0]
+            return self.repo.search_examples(vec, k=3)
+
         return {"lookup_entity": lookup_entity, "search_scam_patterns": search_scam_patterns,
-                "search_community_reports": search_community_reports, "payee_history": payee_history}
+                "search_community_reports": search_community_reports, "payee_history": payee_history,
+                "search_scam_examples": search_scam_examples}
 
     def explain(self, req: ScreenRequest, result: ScreenResult, language: str = "en") -> dict:
         evidence = {
@@ -75,10 +83,11 @@ class Investigator:
             "risk_score": result.risk_score, "verdict": result.verdict,
             "signals": [{k: r[k] for k in ("label", "weight", "evidence", "source")} for r in result.reasons[:10]],
             "top_pattern_matches": [{k: p[k] for k in ("title", "similarity", "category")} for p in result.matched_patterns],
+            "top_example_matches": result.matched_examples,
         }
         system = INVESTIGATOR_SYSTEM + ("\n" + PIDGIN_NOTE if language == "pcm" else "")
         try:
-            text, trace = llm.run_tool_agent(
+            text, trace = run_investigation(
                 "Investigate this payment and return the JSON verdict.\n" + json.dumps(evidence, default=str),
                 system, TOOLS, self._handlers(),
             )
@@ -132,7 +141,7 @@ class Investigator:
                           "parameters": {"type": "object", "properties": {"question": {"type": "string"}},
                                          "required": ["question"]}}]
         try:
-            text, trace = llm.run_tool_agent(
+            text, trace = run_investigation(
                 question,
                 "You are PayGuard's assistant. Answer questions about scams, payment safety and the fraud data in "
                 "IBM Db2. Use tools for any factual or numeric claim. Be concise.",
