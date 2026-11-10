@@ -1,0 +1,31 @@
+# MediTwin AI Dependencies
+# Core
+streamlit>=1.30.0
+plotly>=5.18.0
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Database
+ibm_db>=3.2.0
+
+# AI / LLM
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-google-genai>=2.0.0
+langgraph>=0.2.0
+google-genai>=1.0.0
+
+# Document Processing
+pymupdf>=1.24.0
+
+# Data
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Testing
+pytest>=7.4.0
+
+# Utilities
+python-dateutil>=2.8.0
+
