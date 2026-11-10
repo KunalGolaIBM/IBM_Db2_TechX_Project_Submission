@@ -83,6 +83,18 @@ def connect(cfg: Db2Config | None = None, *, role: str = "app"):
     return conn
 
 
+def close(conn) -> None:
+    """Close a connection, releasing its unit of work and its locks.
+
+    Never raises. Callers close short lived connections in a ``finally``, where
+    a failure to close must not replace the error that sent them there.
+    """
+    try:
+        ibm_db.close(conn)
+    except Exception:  # pragma: no cover - already closed, or never opened
+        pass
+
+
 def client_applname(conn) -> str:
     """What Db2 thinks this connection's application name is."""
     row = fetch_one(conn, "VALUES CURRENT CLIENT_APPLNAME")

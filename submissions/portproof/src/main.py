@@ -11,7 +11,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from . import db
+from . import db, federation
 from .config import llm_config, runtime_config, setup_config
 from .embeddings import LocalEmbeddings
 from .fixmemory import FixMemory
@@ -164,6 +164,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--physical", action="store_true", help="measured physical-design advice")
     parser.add_argument("--ledger", action="store_true", help="print the Db2 ledger and exit")
+    parser.add_argument(
+        "--federation",
+        action="store_true",
+        help="ask Db2 to compare the source rows against its own, and exit",
+    )
     args = parser.parse_args(argv)
 
     cfg = llm_config()
@@ -178,6 +183,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.ledger:
         _print_ledger(app_conn)
+        return 0
+
+    if args.federation:
+        # The owner connection, not the application one: the fixture tables the
+        # comparison reads belong to the schema owner, and the least-privilege
+        # runtime identity is deliberately not allowed to read them.
+        print(federation.report(owner_conn))
         return 0
 
     print(f"PortProof on Db2 {db.server_version(owner_conn)}")
