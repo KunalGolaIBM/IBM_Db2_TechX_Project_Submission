@@ -53,6 +53,14 @@ def _ids(rows) -> set[int]:
     return {int(r[0]) for r in rows}
 
 
+# A bank release Db2's release rules accept on 2026-03-10: the claim cites the bank's own clause in force that day
+# (OVD-001 v1) and quotes it. The shared entry() helper's release cites an airline clause, which a bank row may not.
+BANK_RELEASE = {"version": 1, "claims": [
+    {"pass": 1, "claim_no": 1, "text": "the overdraft fee is $35 an item", "area": "overdraft", "verdict": "SUPPORTED",
+     "llm_verdict": "SUPPORTED", "rule_check": "NOT_APPLICABLE", "clause_id": "OVD-001", "clause_version": "v1",
+     "clause_bus_start": "2026-01-01", "clause_sys_start": None, "distance": 0.2,
+     "quoted_span": "An overdraft fee of $35 is charged for each item we pay"}]}
+
 @pytest.fixture(scope="module")
 def domains(admin_conn, embeddings, settings):
     """A scratch schema with two decisions per domain (written by the runtime user), and one specialist answer,
@@ -70,7 +78,8 @@ def domains(admin_conn, embeddings, settings):
         app = db.connect(settings, "app")
         try:
             ids = {doc: [ledger.append(app, entry(doc_id=doc), name).ledger_id,
-                         ledger.append(app, entry(doc_id=doc, decision="PASS", reason_code="ALL_SUPPORTED"), name).ledger_id]
+                         ledger.append(app, entry(doc_id=doc, decision="PASS", reason_code="ALL_SUPPORTED",
+                                                  **({"verdicts": BANK_RELEASE} if doc == BANK else {})), name).ledger_id]
                    for doc in (AIR, BANK)}
         finally:
             app.close()
@@ -110,13 +119,17 @@ def _by_doc(admin_conn, name, table) -> dict[str, set[int]]:
 def test_a_domain_analyst_sees_only_its_domain_through_every_audit_view(settings, admin_conn, domains, role, doc):
     truth = _by_doc(admin_conn, domains, "ANSWER_LEDGER")
     cites = _by_doc(admin_conn, domains, "CLAIM_CITATION")
+    # entry()'s held rows carry a rule override; its releases (valid under Db2's release rules) carry none
+    overrides = {int(r[0]) for r in db.query(admin_conn, "SELECT o.LEDGER_ID FROM V_RULE_OVERRIDES o JOIN ANSWER_LEDGER l "
+                                                       "ON l.LEDGER_ID = o.LEDGER_ID WHERE l.DOC_ID = ?", (doc,))}
+    assert overrides and overrides < truth[doc]
     conn = _connect(settings, role, domains)
     try:
         decisions = db.query(conn, "SELECT LEDGER_ID, DOC_ID, FINAL_ANSWER FROM V_AUDIT_DECISIONS")
         assert _ids(decisions) == truth[doc] and {r[1].strip() for r in decisions} == {doc}
         assert {r[2] for r in decisions} == {"[masked]"}  # the column masks still apply on top
         assert _ids(db.query(conn, "SELECT LEDGER_ID * 100 + PASS_NO * 10 + CLAIM_NO FROM V_AUDIT_CLAIMS")) == cites[doc]
-        assert _ids(db.query(conn, "SELECT LEDGER_ID FROM V_RULE_OVERRIDES")) == truth[doc]  # entry(): a rule override
+        assert _ids(db.query(conn, "SELECT LEDGER_ID FROM V_RULE_OVERRIDES")) == overrides  # the held rows: a rule override
         assert db.query(conn, "SELECT SUM(DECISIONS) FROM V_DECISION_STATS")[0][0] == len(truth[doc])
         assert db.query(conn, "SELECT SUM(CLAIMS) FROM V_CLAIM_OUTCOMES_BY_AREA")[0][0] == len(cites[doc])
         assert db.query(conn, "SELECT DOC_ID FROM V_DOMAIN_SCOPE") == [(doc,)]
