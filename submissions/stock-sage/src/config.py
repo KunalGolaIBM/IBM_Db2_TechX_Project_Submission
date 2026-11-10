@@ -13,10 +13,14 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-# Load .env file from project root if it exists
+# Load .env file from project root or repo root
 ENV_PATH = PROJECT_ROOT / ".env"
+REPO_ROOT_ENV = PROJECT_ROOT.parent.parent / ".env"
+
 if ENV_PATH.is_file():
     load_dotenv(dotenv_path=ENV_PATH)
+elif REPO_ROOT_ENV.is_file():
+    load_dotenv(dotenv_path=REPO_ROOT_ENV)
 else:
     load_dotenv()
 
