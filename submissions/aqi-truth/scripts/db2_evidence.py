@@ -158,6 +158,41 @@ SELECT VALUE FROM AQV.READING FOR SYSTEM_TIME AS OF <time before the update> WHE
     check("Partition elimination", "AQ.READING is range-partitioned by month; the optimizer reads only the partition a query needs.",
           "EXPLAIN PLAN FOR SELECT AVG(VALUE) FROM AQ.READING WHERE TS >= '2025-10-21' AND TS < '2025-10-22'",
           plan, lambda o: o.startswith("partitions accessed: 1 of"))
+    # 8. Materialized query table: the optimizer rewrites a query on AQ.READING to the summary table.
+    mq = "SELECT STATION_ID, DATE(TS) AS DAY, COUNT(*) FROM AQ.READING GROUP BY STATION_ID, DATE(TS)"
+    def mqt():
+        cur = own.cursor(); seen = {}
+        for age in ("ANY", "0"):    # ANY lets the optimizer use the deferred MQT; 0 forbids it (the baseline)
+            cur.execute(f"SET CURRENT REFRESH AGE {age}"); cur.execute("DELETE FROM EXPLAIN_INSTANCE"); own.commit()
+            cur.execute("EXPLAIN PLAN FOR " + mq); own.commit()
+            tabs = sorted({r[0].strip() for r in rows(own, "SELECT OBJECT_NAME FROM EXPLAIN_STREAM WHERE OBJECT_SCHEMA = 'AQ' AND OBJECT_NAME IS NOT NULL")})
+            cost = rows(own, "SELECT TOTAL_COST FROM EXPLAIN_OPERATOR WHERE OPERATOR_TYPE = 'RETURN'")[0][0]
+            seen[age] = (", ".join(tabs), round(cost))
+        cur.execute("SET CURRENT REFRESH AGE 0"); own.commit()
+        refreshed = rows(own, "SELECT REFRESH_TIME FROM SYSCAT.TABLES WHERE TABSCHEMA = 'AQ' AND TABNAME = 'MQT_READING_DAY'")[0][0]
+        return (f"with REFRESH AGE ANY the plan reads {seen['ANY'][0]} (cost {seen['ANY'][1]:,} timerons); "
+                f"with REFRESH AGE 0 it reads {seen['0'][0]} (cost {seen['0'][1]:,}). MQT refreshed {refreshed}")
+    check("MQT query rewrite", "A REFRESH DEFERRED materialized query table of readings per station-pollutant-day. A query written against "
+          "AQ.READING is rewritten by the optimizer to read the small MQT instead, when CURRENT REFRESH AGE ANY allows it.",
+          "EXPLAIN PLAN FOR " + mq + "   -- once with CURRENT REFRESH AGE ANY, once with 0", mqt,
+          lambda o: o.startswith("with REFRESH AGE ANY the plan reads MQT_READING_DAY (") and "with REFRESH AGE 0 it reads READING (" in o)
+
+    # 9. Column mask: the same SELECT shows a visitor's e-mail and phone number only to the auditor.
+    probe = "Email me at someone" + chr(64) + "example.com or call 9876543210: is ITO severe?"
+    def masked(conn):
+        cur = conn.cursor()
+        try:
+            cur.execute("INSERT INTO AQ.ASK_LOG (QUESTION, QNORM, OUTCOME, SOURCE) VALUES (?, 'evidence-probe', 'REFUSED', 'GUARD')", (probe,))
+            cur.execute("SELECT QUESTION FROM AQ.ASK_LOG WHERE QNORM = 'evidence-probe' ORDER BY ID DESC FETCH FIRST 1 ROW ONLY")
+            return cur.fetchone()[0]
+        finally:
+            conn.rollback()
+    check("Column mask", "Db2 redacts e-mail addresses and phone numbers that visitors type into the question box, in AQ.ASK_LOG.QUESTION, "
+          "for every ID without the AQAUDITOR role. The stored text is unchanged.",
+          "SELECT QUESTION FROM AQ.ASK_LOG ...   -- the same row read as AQAPP and as the owner (inserted, then rolled back)",
+          lambda: f"AQAPP sees: {masked(app)} | owner sees: {masked(own)}",
+          lambda o: "AQAPP sees: Email me at [e-mail removed] or call [number removed]" in o and ("owner sees: " + probe) in o)
+
     check("Optimizer statistics", "The loader runs RUNSTATS through SYSPROC.ADMIN_CMD after each load.",
           "SELECT TABNAME, STATS_TIME, CARD FROM SYSCAT.TABLES WHERE TABSCHEMA = 'AQ' AND TABNAME IN ('READING', 'VERDICT')",
           lambda: "; ".join(f"{t.strip()}: {c} rows, stats {s}" for t, s, c in rows(own, "SELECT TABNAME, STATS_TIME, CARD FROM SYSCAT.TABLES WHERE TABSCHEMA = 'AQ' AND TABNAME IN ('READING', 'VERDICT') ORDER BY 1")),

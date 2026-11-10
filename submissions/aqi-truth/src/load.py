@@ -45,6 +45,7 @@ def main():
         for f in SCRIPTS[1:]:
             run_script(conn, os.path.join(ROOT, "sql", f), schema=sch)
         run_tolerant(conn, "07_access.sql", sch)    # the role is database-wide, so it may already exist
+        run_tolerant(conn, "09_mqt_mask.sql", sch)
     cur.execute(f"DELETE FROM {s}.STAGE_READING"); conn.commit()
     cur.execute("VALUES CURRENT TIMESTAMP"); load_start = cur.fetchone()[0]
     t = time.time()
@@ -104,8 +105,12 @@ def main():
             last = min(end, (d.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1))
             cur.callproc(f"{s}.AUDIT_RANGE", (d.isoformat(), last.isoformat())); conn.commit()
             print(f"audited {d} to {last}"); d = last + timedelta(days=1)
+    try:    # the summary MQT is REFRESH DEFERRED: bring it up to this load
+        cur.execute(f"REFRESH TABLE {s}.MQT_READING_DAY"); conn.commit()
+    except Exception as e:
+        conn.rollback(); print("refresh MQT:", str(e)[:120])
     # Fresh optimizer statistics after a bulk change, so plans (partition elimination, index choice) use real cardinalities.
-    for tb in ("READING", "READING_HIST", "HOURLY", "VERDICT", "EVIDENCE", "STATION"):
+    for tb in ("READING", "READING_HIST", "HOURLY", "VERDICT", "EVIDENCE", "STATION", "MQT_READING_DAY"):
         try:
             cur.callproc("SYSPROC.ADMIN_CMD", (f"RUNSTATS ON TABLE {s}.{tb} WITH DISTRIBUTION AND SAMPLED DETAILED INDEXES ALL",)); conn.commit()
         except Exception as e:
@@ -153,7 +158,7 @@ def migrate(conn, schema):
                     "that hour are plausible: 3 of 4 at 15-minute cadence; 1 of 1 when the station published hourly that day (one row an hour, "
                     "or 15-minute rows repeating one hourly value).')")
         conn.commit()
-    n = sum(run_tolerant(conn, f, schema) for f in ("01_schema.sql", "04_audit.sql", "05_views.sql", "06_asklog.sql", "07_access.sql", "08_receipt.sql"))
+    n = sum(run_tolerant(conn, f, schema) for f in ("01_schema.sql", "04_audit.sql", "05_views.sql", "06_asklog.sql", "07_access.sql", "08_receipt.sql", "09_mqt_mask.sql"))
     print(f"schema {s}: migrations applied ({n} statements)")
 
 if __name__ == "__main__":

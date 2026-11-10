@@ -41,10 +41,22 @@ docker compose up -d db2 ollama
 until docker compose exec -T db2 bash -c 'su - db2inst1 -c "db2 connect to ${DBNAME:-AQIDB}" >/dev/null 2>&1'; do sleep 10; done
 docker compose exec -T db2 bash /var/custom/01_reader.sh
 echo "db2 ready, users in place"
+# Safety rule (10 Nov 2026): back the live database up once before the add-only 10 Nov changes (sql/09, the 2026
+# re-fetch) touch it. Offline image, ~10 s; restore with: db2 restore db AQIDB from /database/backup taken at <timestamp>
+if [ -f data/.full_loaded ] && [ ! -f data/.backup_1110 ]; then
+  docker compose stop app >/dev/null 2>&1 || true
+  docker compose exec -T db2 bash -c 'mkdir -p /database/backup && chown db2inst1 /database/backup && su - db2inst1 -c "db2 force applications all >/dev/null; db2 deactivate db ${DBNAME:-AQIDB} >/dev/null; db2 backup db ${DBNAME:-AQIDB} to /database/backup compress without prompting"' \
+    | tee -a data/backup.log | grep -q "Backup successful" && touch data/.backup_1110
+  [ -f data/.backup_1110 ] || { echo "BACKUP FAILED: not applying the 10 Nov changes"; touch data/.no_changes; }
+fi
 until docker compose up -d --build; do echo "compose up failed; retrying in 30 s"; sleep 30; done
 until [ "$(docker compose ps -a setup --format '{{.State}}')" = "exited" ]; do sleep 15; done
 # Schema migrations (new triggers, indexes, views, grants) without touching loaded data.
-docker compose run --rm setup python src/load.py data/sample 2025-10-01 2025-10-31 --if-empty --no-embed || true
+# 10 Nov rule: sql/09 is applied only after the backup above and only before 05:30 UTC; once applied, re-runs are no-ops.
+CUTOFF_OK=$([ "$(date -u +%FT%H%M)" \< "2026-11-10T0530" ] && echo 1 || echo 0)
+if [ ! -f data/.full_loaded ] || { [ -f data/.backup_1110 ] && { [ -f data/.m09 ] || [ "$CUTOFF_OK" = 1 ]; }; }; then
+  docker compose run --rm setup python src/load.py data/sample 2025-10-01 2025-10-31 --if-empty --no-embed && touch data/.m09 || true
+fi
 # One-off after the 9 Nov 2026 method fixes: re-audit the loaded range with the new rules (appends new verdicts with
 # receipts; the readings and their history are untouched), then refresh the Db2 evidence file.
 if [ -f data/.full_loaded ] && [ ! -f data/.audit_v2 ]; then
@@ -61,7 +73,7 @@ if [ ! -f data/.full_loaded ]; then
 fi
 # Second period, Oct 2026 onward (as far as the archive reaches). Each fetch goes to a new folder, so a later
 # fetch of the same days MERGEs in any values CPCB revised since; the old ones stay in READING_HIST.
-if [ -f data/.full_loaded ] && [ ! -f data/.y2026a ]; then
+if [ -f data/.full_loaded ] && [ ! -f data/.y2026a ] && [ ! -f data/.no_changes ] && [ "$(date -u +%FT%H%M)" \< "2026-11-10T0530" ]; then
   docker compose run --rm -v "$PWD/data/raw:/app/data/raw" setup sh -c \
     "python scripts/fetch_openaq.py data/raw/2026a 2026 10,11 && python src/load.py data/raw/2026a 2026-10-01 2026-11-05 --append --no-embed" \
     && touch data/.y2026a
@@ -69,7 +81,8 @@ if [ -f data/.full_loaded ] && [ ! -f data/.y2026a ]; then
 fi
 # Re-fetch of the same 2026 days on 10 Nov (approved 9 Nov): CPCB revises recent values, so this MERGE records real
 # revisions in READING_HIST and the affected receipts report DATA_CHANGED. Loads up to the last well-covered day.
-if [ -f data/.y2026a ] && [ ! -f data/.y2026b ] && [ "$(date -u +%F)" \> "2026-11-09" ]; then
+# Safety rule: no live-database changes after 11:00 IST (05:30 UTC) on 10 Nov; a later start skips this block.
+if [ -f data/.y2026a ] && [ ! -f data/.y2026b ] && [ ! -f data/.no_changes ] && [ "$(date -u +%FT%H%M)" \> "2026-11-09" ] && [ "$(date -u +%FT%H%M)" \< "2026-11-10T0530" ]; then
   docker compose run --rm -v "$PWD/data/raw:/app/data/raw" setup python scripts/fetch_openaq.py data/raw/2026b 2026 10,11 || true
   END=$(cat data/raw/2026b/*-2026-11.csv 2>/dev/null | grep -oE '"2026-11-[0-9]{2}T' | sort | uniq -c | awk '$1>5000{d=$2} END{print substr(d,2,10)}')
   if [ -n "$END" ]; then
