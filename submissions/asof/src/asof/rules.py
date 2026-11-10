@@ -48,8 +48,10 @@ _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("usd", re.compile(r"\$\s?(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)", re.I)),
     ("usd", re.compile(rf"\b{_NUM_STRICT}\s?(?:dollars|usd)\b", re.I)),
     ("pct", re.compile(r"\b(\d+(?:\.\d+)?)\s?(?:%|percent\b)", re.I)),
-    ("duration", re.compile(rf"\b{_NUM}[\s-]*(business[\s-]days?|working[\s-]days?|days?|hours?|hrs?|weeks?|months?"
-                            r"|years?)\b", re.I)),
+    ("duration", re.compile(rf"\b{_NUM}[\s-]*(business[\s-]days?|working[\s-]days?|calendar[\s-]days?|days?|hours?|hrs?"
+                            r"|weeks?|months?|years?)\b", re.I)),
+    # "48 h", as a fare table writes hours (found onboarding SPR's policy text): digits only, never "a h".
+    ("duration", re.compile(r"\b(\d+(?:\.\d+)?)\s?(h)\b", re.I)),
     ("kg", re.compile(rf"\b{_NUM_STRICT}\s?(?:kg|kgs|kilograms?|kilos?)\b", re.I)),
     ("count", re.compile(rf"\b{_NUM_STRICT}\s+((?:[a-z-]+\s+){{0,2}}?)"
                          r"(passengers?|people|persons?|travell?ers?|credits?|pets?|animals?|items?|characters?|letters?"
@@ -132,9 +134,9 @@ def _number(token: str) -> float:
 
 def _forms(value: float, unit_word: str) -> tuple[tuple[str, float], ...]:
     u = unit_word.lower().replace("-", " ")
-    if u.startswith(("business", "working")) or u.startswith("day"):
+    if u.startswith(("business", "working", "calendar")) or u.startswith("day"):
         return (("days", value), ("hours", value * 24))
-    if u.startswith(("hour", "hr")):
+    if u.startswith(("hour", "hr")) or u == "h":
         return (("hours", value),)
     if u.startswith("week"):
         return (("days", value * 7),)
