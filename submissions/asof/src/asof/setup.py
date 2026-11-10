@@ -147,7 +147,7 @@ def _docker(args: list[str], stdin: str | None = None) -> subprocess.CompletedPr
 
 
 def ensure_os_users(settings: Settings) -> bool:
-    """Create the four users inside the Db2 container and set their passwords from .env.
+    """Create the five users inside the Db2 container and set their passwords from .env.
 
     Passwords go to chpasswd on stdin, so they never show up in a process list.
     Returns False (with instructions) when the container cannot be reached.
