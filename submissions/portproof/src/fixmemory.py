@@ -184,6 +184,89 @@ class FixMemory:
             if r[1]
         ]
 
+    def recall_approx(
+        self, *, bad_sql: str, sqlcode: int | None, error_text: str, dialect: str, k: int = 3
+    ) -> tuple[list[RecalledFix], bool]:
+        """The same hybrid recall, served by Db2's approximate vector index.
+
+        ``FETCH APPROX FIRST n ROWS ONLY`` tells Db2 it may answer from the
+        vector index instead of distancing every row. The fix memory is small
+        enough that this is not about speed today; it is about the shape of the
+        thing being right when it is not small, because the usual alternative --
+        a bolt-on vector store with the relational filter applied *after* the
+        top-k -- loses recall exactly when the filter is selective, which is
+        every time it matters here.
+
+        Measured on CE 12.1.5: with a 1%-selective filter, Db2's approximate
+        index returned the same top-10 as the exact scan, because the filter is
+        evaluated inside the index search rather than after it.
+
+        Returns the hits and whether the approximate path was actually
+        available. That second value is checked against the catalog, not against
+        whether the clause parsed: Db2 accepts ``FETCH APPROX FIRST`` with no
+        vector index present and quietly answers exactly, so "the statement ran"
+        is not evidence that an index served it.
+        """
+        vector = self.embeddings.embed_query(_doc_text(bad_sql, sqlcode, error_text))
+        literal = "[" + ",".join(f"{v:.6f}" for v in vector) + "]"
+        sql = f"""
+            SELECT JSON_VALUE(METADATA, '$.bad_sql'    RETURNING VARCHAR(4000)),
+                   JSON_VALUE(METADATA, '$.fixed_sql'  RETURNING VARCHAR(4000)),
+                   JSON_VALUE(METADATA, '$.sqlcode'    RETURNING INTEGER),
+                   JSON_VALUE(METADATA, '$.error_text' RETURNING VARCHAR(400)),
+                   JSON_VALUE(METADATA, '$.dialect'    RETURNING VARCHAR(16)),
+                   VECTOR_DISTANCE(EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE) AS DIST
+              FROM {self.table_name}
+             WHERE JSON_VALUE(METADATA, '$.dialect' RETURNING VARCHAR(16)) = ?
+             ORDER BY DIST
+             FETCH APPROX FIRST {int(k)} ROWS ONLY
+        """
+        try:
+            rows = db.fetch_all(self.conn, sql, (literal, dialect))
+            approximate = self.has_vector_index()
+        except db.Db2Error:
+            # No vector index, or this build does not accept APPROX. Fall back
+            # to the exact scan and say so, rather than reporting an index-served
+            # answer that was not.
+            return (
+                self.recall_sql(
+                    bad_sql=bad_sql,
+                    sqlcode=sqlcode,
+                    error_text=error_text,
+                    dialect=dialect,
+                    k=k,
+                ),
+                False,
+            )
+        return (
+            [
+                RecalledFix(
+                    bad_sql=r[0] or "",
+                    fixed_sql=r[1] or "",
+                    sqlcode=_as_int(r[2]),
+                    error_text=r[3] or "",
+                    dialect=(r[4] or "").strip(),
+                    distance=float(r[5]) if r[5] is not None else None,
+                )
+                for r in rows
+                if r[1]
+            ],
+            approximate,
+        )
+
+    def has_vector_index(self) -> bool:
+        # Db2 12.1 records an approximate vector index as INDEXTYPE 'VANN'
+        # (vector approximate nearest neighbour); 'VECT' is accepted here too so
+        # the check does not depend on one build's spelling.
+        row = db.fetch_one(
+            self.conn,
+            "SELECT COUNT(*) FROM SYSCAT.INDEXES "
+            " WHERE TABSCHEMA = CURRENT SCHEMA AND TABNAME = ? "
+            "   AND INDEXTYPE IN ('VANN', 'VECT')",
+            (self.table_name.split(".")[-1],),
+        )
+        return bool(row and int(row[0]))
+
     def count(self) -> int:
         row = db.fetch_one(self.conn, f"SELECT COUNT(*) FROM {self.table_name}")
         return int(row[0]) if row else 0
@@ -196,10 +279,111 @@ def _as_int(value: Any) -> int | None:
         return None
 
 
+#: Name of the approximate vector index on the fix memory's embeddings.
+VECTOR_INDEX = "IX_FIX_MEMORY_VEC"
+
+#: A 32K-page tablespace, created by ``scripts/create_db2_users.sh``. Required
+#: for the vector index -- see :func:`ensure_vector_index`.
+VECTOR_TABLESPACE = "PPVEC"
+
+#: Embedding width of all-MiniLM-L6-v2, and the width DB2VS declares.
+EMBEDDING_DIMENSIONS = 384
+
+
+def _tablespace_available(conn, name: str) -> bool:
+    row = db.fetch_one(
+        conn,
+        "SELECT COUNT(*) FROM SYSCAT.TABLESPACES WHERE TBSPACE = ?",
+        (name,),
+    )
+    return bool(row and int(row[0]))
+
+
+def ensure_vector_index(conn, table_name: str = TABLE) -> str:
+    """Build Db2's approximate vector index over the fix memory, if it can.
+
+    This one needs a word about page size, because the obvious attempt fails and
+    the failure is not about vectors at all.
+
+    Measured on CE 12.1.5: ``CREATE VECTOR INDEX ... WITH DISTANCE COSINE`` over
+    a ``VECTOR(384, FLOAT32)`` column in ``USERSPACE1`` fails with **SQL0614N**,
+    "the combined length of the specified columns is too long". USERSPACE1 has
+    4K pages, which caps an index key at 1024 bytes; 384 FLOAT32 values are
+    1536. The same statement succeeds in a 32K-page tablespace, where the cap is
+    8192 (``SYSCAT.INDEXES.INDEXTYPE`` then reads ``VANN``).
+
+    So the index is a property of where the table lives, and the table has to be
+    placed before it is created -- see :func:`ensure_table`. ``CREATE BUFFERPOOL``
+    needs an authority PortProof's owner identity deliberately does not hold, so
+    the 32K tablespace is created by ``scripts/create_db2_users.sh`` as the
+    instance owner.
+
+    And even in that tablespace, this statement fails for ``PPOWN`` with
+    **SQL0551N**: *Authorization ID "PPOWN". Operation: "CREATE TABLE". Object:
+    "SYSIBM.AGT..."*. Building the index implicitly creates a helper table in
+    the ``SYSIBM`` schema, which an owner that is deliberately not ``DBADM``
+    cannot write to. Granting that for the sake of one index would undo the
+    privilege split, so the index is built by
+    ``scripts/create_vector_index.sh`` as the instance owner instead, and
+    everything here degrades to exact vector search with a stated reason.
+
+    The distance metric must match the one the queries use (COSINE, the same as
+    ``DistanceStrategy.COSINE`` in :attr:`FixMemory.store`); an index built for
+    another metric is simply never chosen.
+    """
+    table = table_name.split(".")[-1]
+    try:
+        db.execute(
+            conn,
+            f"CREATE VECTOR INDEX {VECTOR_INDEX} ON {table} (EMBEDDING) "
+            "WITH DISTANCE COSINE",
+        )
+        return f"{VECTOR_INDEX}: created (approximate nearest neighbour, COSINE)"
+    except db.Db2Error as exc:
+        if exc.sqlcode == -601:
+            return f"{VECTOR_INDEX}: already present"
+        if exc.sqlcode == -614:
+            return (
+                f"{VECTOR_INDEX}: not created (SQLCODE=-614): a "
+                f"{EMBEDDING_DIMENSIONS}-dimension FLOAT32 key is "
+                f"{EMBEDDING_DIMENSIONS * 4} bytes and the table's tablespace "
+                f"has 4K pages (1024-byte index key limit). Run "
+                f"scripts/create_db2_users.sh to create the 32K "
+                f"{VECTOR_TABLESPACE} tablespace, then re-run setup. Exact "
+                "vector search is used meanwhile and is correct, just unindexed"
+            )
+        return f"{VECTOR_INDEX}: not available (SQLCODE={exc.sqlcode}); exact search is used"
+
+
 def ensure_table(conn, embeddings: Any | None = None, table_name: str = TABLE) -> str:
-    """Create the DB2VS table if it does not exist, and report its DDL shape."""
+    """Create the DB2VS table if it does not exist, and report its DDL shape.
+
+    The table is pre-created in the 32K-page tablespace when that exists, with
+    exactly the columns DB2VS expects, so that DB2VS adopts it instead of
+    building its own in the 4K default -- which is the only reason the vector
+    index can exist at all (see :func:`ensure_vector_index`). Where the
+    tablespace is absent, DB2VS creates the table as it always did.
+    """
+    table = table_name.split(".")[-1]
+    if _tablespace_available(conn, VECTOR_TABLESPACE):
+        try:
+            db.execute(
+                conn,
+                f"""
+                CREATE TABLE {table} (
+                  ID        CHAR(16) NOT NULL PRIMARY KEY,
+                  TEXT      CLOB(1048576),
+                  METADATA  BLOB(1048576),
+                  EMBEDDING VECTOR({EMBEDDING_DIMENSIONS}, FLOAT32)
+                ) IN {VECTOR_TABLESPACE}
+                """,
+            )
+        except db.Db2Error as exc:
+            if exc.sqlcode != -601:  # already exists is the normal case
+                raise
+
     memory = FixMemory(conn, embeddings=embeddings, table_name=table_name)
-    _ = memory.store  # DB2VS creates the table on construction
+    _ = memory.store  # DB2VS creates the table if it is still absent
     cols = db.fetch_all(
         conn,
         "SELECT COLNAME, TYPENAME, LENGTH FROM SYSCAT.COLUMNS "

@@ -50,6 +50,49 @@ def _print_report(report: MigrationReport) -> None:
             if result.semantic_cert:
                 print(f"    certificate: {result.semantic_cert}")
 
+    unstable = [r for r in report.results if r.status == "UNSTABLE"]
+    if unstable:
+        print(
+            f"\n{BAR}\nOrder not determined by the SQL -- not a Db2 bug\n{BAR}"
+        )
+        print(
+            "  The engines differ, and the SOURCE engine differs from itself on\n"
+            "  the same rows inserted in the opposite order. The ORDER BY has\n"
+            "  ties, so neither engine owes you this order. Add a tiebreaker.\n"
+        )
+        for result in unstable:
+            print(f"  {result.case_name}")
+            print(f"    source : {result.statement.sql[:150]}")
+            if result.semantic and result.semantic.witness:
+                w = result.semantic.witness
+                print(f"    dataset: {w.variant}")
+                print(f"    source rows: {w.source_rows[:3]}")
+                print(f"    db2 rows   : {w.db2_rows[:3]}")
+
+    semfixed = [r for r in report.results if r.semantically_repaired]
+    if semfixed:
+        print(
+            f"\n{BAR}\nMeaning repaired, then re-proved against the source engine\n{BAR}"
+        )
+        print(
+            "  These compiled on Db2 and returned the WRONG ROWS. Each rewrite\n"
+            "  below was re-run through the same differential proof that caught\n"
+            "  the divergence, and is reported only because that proof now agrees.\n"
+        )
+        for result in semfixed:
+            fix = result.semantic_repair
+            before = result.original_semantic
+            print(f"  {result.case_name}")
+            print(f"    rule   : {fix.rule}")
+            print(f"    why    : {fix.because}")
+            if before and before.witness:
+                print(
+                    f"    was    : {before.witness.source_rows[:2]} on "
+                    f"{before.source_engine} vs {before.witness.db2_rows[:2]} on Db2"
+                )
+            print(f"    now    : {result.semantic.headline if result.semantic else ''}")
+            print(f"    db2 sql: {(result.db2_sql or '')[:150]}")
+
     repaired = [r for r in report.results if r.repaired]
     if repaired:
         print(f"\n{BAR}\nRepaired, then re-verified by Db2\n{BAR}")
@@ -114,6 +157,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--no-prove", action="store_true", help="skip the semantic proof")
     parser.add_argument("--no-learn", action="store_true", help="do not write the fix memory")
+    parser.add_argument(
+        "--no-escalate",
+        action="store_true",
+        help="do not hand stalled statements to human review",
+    )
     parser.add_argument("--physical", action="store_true", help="measured physical-design advice")
     parser.add_argument("--ledger", action="store_true", help="print the Db2 ledger and exit")
     args = parser.parse_args(argv)
@@ -162,6 +210,12 @@ def main(argv: list[str] | None = None) -> int:
             limit=args.limit,
         )
         _print_report(report)
+        if not args.no_escalate:
+            escalated = pipeline.escalate_stalled()
+            print(
+                f"\n  escalated to human review by the engine: {escalated} "
+                f"statement(s) that burned the repair budget without a proof"
+            )
         if args.physical:
             _print_physical(pipeline.physical_advice())
         if memory is not None:

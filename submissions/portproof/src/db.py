@@ -12,9 +12,8 @@ Two rules hold everywhere in PortProof:
 from __future__ import annotations
 
 import re
-from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Iterable, Iterator, Sequence
+from typing import Any, Iterable, Sequence
 
 import ibm_db
 
@@ -68,24 +67,26 @@ def connect(cfg: Db2Config | None = None, *, role: str = "app"):
         raise Db2Error(f"Could not connect as {cfg.redacted()}: {message}", code, state) from exc
 
     ibm_db.autocommit(conn, ibm_db.SQL_AUTOCOMMIT_ON)
-    # Best effort: lets `CREATE WORKLOAD ... CURRENT CLIENT_APPLNAME` match us.
-    try:
-        ibm_db.set_option(conn, {ibm_db.SQL_ATTR_INFO_PROGRAMNAME: APPL_NAME}, 1)
-    except Exception:  # pragma: no cover - option unsupported on some drivers
-        pass
+    # Tag the connection so `CREATE WORKLOAD ... CURRENT CLIENT_APPLNAME` matches.
+    #
+    # It must be SQL_ATTR_INFO_APPLNAME. SQL_ATTR_INFO_PROGRAMNAME is a
+    # different client-info field: it populates the monitor element APPLNAME,
+    # not the CURRENT CLIENT_APPLNAME special register the workload predicate
+    # reads. Setting the wrong one leaves the register empty, every connection
+    # lands in SYSDEFAULTUSERWORKLOAD, and the WLM leash silently never fires --
+    # which is exactly what it did until this was measured.
+    #
+    # Deliberately not swallowed any more: if the leash cannot be armed, the
+    # caller is entitled to know rather than believe in a control that is not
+    # there. assert_wlm_tagged() checks the register round-trips.
+    ibm_db.set_option(conn, {ibm_db.SQL_ATTR_INFO_APPLNAME: APPL_NAME}, 1)
     return conn
 
 
-@contextmanager
-def connection(cfg: Db2Config | None = None, *, role: str = "app") -> Iterator[Any]:
-    conn = connect(cfg, role=role)
-    try:
-        yield conn
-    finally:
-        try:
-            ibm_db.close(conn)
-        except Exception:  # pragma: no cover
-            pass
+def client_applname(conn) -> str:
+    """What Db2 thinks this connection's application name is."""
+    row = fetch_one(conn, "VALUES CURRENT CLIENT_APPLNAME")
+    return (row[0] or "").strip() if row else ""
 
 
 def execute(conn, sql: str, params: Sequence[Any] = ()) -> None:
@@ -100,6 +101,18 @@ def execute(conn, sql: str, params: Sequence[Any] = ()) -> None:
 
 def fetch_all(conn, sql: str, params: Sequence[Any] = ()) -> list[tuple]:
     """Run a query with bound parameters and return every row."""
+    return fetch_described(conn, sql, params)[0]
+
+
+def fetch_described(
+    conn, sql: str, params: Sequence[Any] = ()
+) -> tuple[list[tuple], tuple[str, ...]]:
+    """Like :func:`fetch_all`, but also return the result's column names.
+
+    The names matter to the semantic prover: comparing only values makes an
+    aliasing mistake (``AS total`` becoming ``AS amount``) invisible, and makes
+    two *empty* results of different width compare equal.
+    """
     try:
         stmt = ibm_db.prepare(conn, sql)
         ibm_db.execute(stmt, tuple(params))
@@ -107,12 +120,27 @@ def fetch_all(conn, sql: str, params: Sequence[Any] = ()) -> list[tuple]:
         message, code, state = _diagnostics(exc)
         raise Db2Error(message or str(exc), code, state) from exc
 
+    columns: list[str] = []
+    try:
+        for i in range(ibm_db.num_fields(stmt) or 0):
+            columns.append(str(ibm_db.field_name(stmt, i)))
+    except Exception:  # pragma: no cover - driver without introspection
+        columns = []
+
     rows: list[tuple] = []
-    row = ibm_db.fetch_tuple(stmt)
-    while row is not False and row is not None:
-        rows.append(tuple(row))
+    try:
         row = ibm_db.fetch_tuple(stmt)
-    return rows
+        while row is not False and row is not None:
+            rows.append(tuple(row))
+            row = ibm_db.fetch_tuple(stmt)
+    except Exception as exc:
+        # Errors can arrive *during* the fetch, not only at prepare/execute --
+        # a WLM threshold that stops the activity (SQL4712N) is the normal
+        # case. Leaving those unwrapped meant callers could not handle the
+        # engine's own safety controls by SQLCODE.
+        message, code, state = _diagnostics(exc)
+        raise Db2Error(message or str(exc), code, state) from exc
+    return rows, tuple(columns)
 
 
 def fetch_one(conn, sql: str, params: Sequence[Any] = ()) -> tuple | None:
@@ -167,29 +195,6 @@ def compile_check(conn, candidate_sql: str) -> CompileResult:
     except Exception as exc:
         message, code, state = _diagnostics(exc)
         return CompileResult(ok=False, sqlcode=code, sqlstate=state, message=message or str(exc))
-
-
-def explain_cost(conn, candidate_sql: str) -> float | None:
-    """Estimated total cost in timerons, from Db2's own optimiser.
-
-    Returns ``None`` when the statement is not explainable (DDL, or no EXPLAIN
-    tables in this database).
-    """
-    try:
-        ibm_db.exec_immediate(conn, f"EXPLAIN PLAN FOR {candidate_sql}")
-    except Exception:
-        return None
-    row = None
-    try:
-        row = fetch_one(
-            conn,
-            "SELECT TOTAL_COST FROM EXPLAIN_OPERATOR "
-            "WHERE OPERATOR_TYPE = 'RETURN' ORDER BY EXPLAIN_TIME DESC "
-            "FETCH FIRST 1 ROWS ONLY",
-        )
-    except Db2Error:
-        return None
-    return float(row[0]) if row and row[0] is not None else None
 
 
 def server_version(conn) -> str:

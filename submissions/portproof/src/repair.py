@@ -22,6 +22,7 @@ from . import db
 from .config import llm_config
 from .fixmemory import FixMemory, RecalledFix
 from .llm import RuleRepairLLM, build_llm
+from .safety import UnsafeSql, check_read_only
 
 REPAIR_PROMPT = PromptTemplate.from_template(
     """A SQL statement was translated from {dialect} to IBM Db2 and Db2 rejected it.
@@ -175,6 +176,24 @@ class RepairLoop:
         except Exception as exc:
             proposal = ""
             state["message"] = f"repair model failed: {exc}"
+
+        # The model's output is untrusted input, and `PREPARE` alone is not a
+        # sufficient guard: `DROP TABLE orders` prepares perfectly well, and a
+        # repair prompt carries attacker-influenced text (the source SQL and
+        # Db2's own error message) straight into a generative model. So a
+        # proposal must also be a single read-only query before it is allowed
+        # anywhere near the connection.
+        #
+        # With LLM_PROVIDER=mock the rewrite rules cannot produce DDL, which is
+        # exactly why this has to be checked rather than assumed: the default is
+        # safe and the configurable path is not.
+        if proposal:
+            try:
+                check_read_only(proposal)
+            except UnsafeSql as exc:
+                state["message"] = f"repair rejected before execution: {exc}"
+                proposal = ""
+
         state["attempt"] = state.get("attempt", 0) + 1
         if proposal and proposal != state["candidate"]:
             state["candidate"] = proposal

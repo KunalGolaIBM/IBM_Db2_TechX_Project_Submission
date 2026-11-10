@@ -31,7 +31,8 @@ CREATE TABLE PORTPROOF.STATEMENT (
   CONSTRAINT CK_ST_ATTEMPTS CHECK (ATTEMPTS BETWEEN 0 AND 10),
   CONSTRAINT CK_ST_STATUS CHECK (STATUS IN (
     'TRANSLATE_FAIL', 'COMPILE_FAIL', 'COMPILES', 'REPAIRED',
-    'PROVEN_EQUIVALENT', 'PROVEN_DIFFERENT', 'ESCALATED'))
+    'PROVEN_EQUIVALENT', 'PROVEN_DIFFERENT', 'UNSTABLE', 'VACUOUS',
+    'ESCALATED'))
 )
 --@
 CREATE TABLE PORTPROOF.STATEMENT_HIST LIKE PORTPROOF.STATEMENT
@@ -52,8 +53,16 @@ CREATE TABLE PORTPROOF.VERDICT (
   CONSTRAINT FK_VERDICT_STMT FOREIGN KEY (STMT_ID)
     REFERENCES PORTPROOF.STATEMENT (STMT_ID) ON DELETE CASCADE,
   CONSTRAINT CK_VD_KIND CHECK (KIND IN ('COMPILE', 'SEMANTIC', 'PHYSICAL')),
+  -- VACUOUS and UNSTABLE are verdicts in their own right, and both exist to
+  -- stop a stronger one being claimed. VACUOUS: the engines agreed, and the
+  -- agreement is worthless because neither returned any rows. UNSTABLE: the
+  -- engines differ, and the source engine differs from *itself* when the same
+  -- rows are inserted in another order, so the statement's ORDER BY never
+  -- determined an answer and Db2 is not at fault. Folding either into
+  -- EQUIVALENT or DIFFERENT is the mistake this column makes impossible.
   CONSTRAINT CK_VD_OUTCOME CHECK (OUTCOME IN (
-    'PASS', 'FAIL', 'EQUIVALENT', 'DIFFERENT', 'INCONCLUSIVE', 'ADVICE')),
+    'PASS', 'FAIL', 'EQUIVALENT', 'DIFFERENT', 'UNSTABLE', 'VACUOUS',
+    'INCONCLUSIVE', 'ADVICE')),
   CONSTRAINT CK_VD_INSTANCES CHECK (INSTANCES >= 0)
 )
 --@
