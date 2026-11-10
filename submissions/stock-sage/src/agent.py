@@ -43,7 +43,7 @@ def get_llm():
     try:
         from langchain_google_genai import ChatGoogleGenerativeAI
         return ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
+            model="gemini-3.5-flash-lite",
             google_api_key=GEMINI_API_KEY,
             temperature=0.2,
         )
@@ -151,7 +151,10 @@ def synthesize_explanation_node(state: AgentState) -> Dict[str, Any]:
                 SystemMessage(content=system_msg),
                 HumanMessage(content=user_prompt),
             ])
-            return {"response": resp.content}
+            text = resp.content
+            if isinstance(text, list):
+                text = "".join(part.get("text", str(part)) if isinstance(part, dict) else str(part) for part in text)
+            return {"response": text}
         except Exception as e:
             logger.warning("LLM generation failed (%s). Falling back to deterministic template.", e)
 
