@@ -6,7 +6,7 @@
     "short_description": "A LangGraph multi-agent copilot for hotel duty managers. Agents analyse occupancy and revenue with text-to-SQL, mine guest reviews with Db2 vector search, and propose pricing, upgrade and maintenance actions. A human approves each action, Db2 stored procedures enforce the guardrails, and system-period temporal tables make every change auditable and reversible.",
     "category": "Agentic AI / Text-to-SQL / Vector Search / Governance",
     "demo_url": "",
-    "video_url": "https://www.youtube.com/watch?v=Y4Pjs3ybs2k",
+    "video_url": "https://youtu.be/umzemf4P65s",
     "repo_url": "https://github.com/KunalGolaIBM/IBM_Db2_TechX_Project_Submission/tree/main/submissions/hotel-ops-copilot"
   },
   "team": {

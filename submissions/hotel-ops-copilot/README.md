@@ -2,7 +2,7 @@
 
 > **One-line pitch:** A LangGraph team of AI agents that reads a hotel's IBM Db2 database, mines guest reviews with Db2 vector search, and proposes pricing, upgrade and maintenance actions. **Db2 itself** governs the agents: it decides what they may read, re-checks every action in stored procedures before applying it, and can undo any change with temporal time travel.
 
-**🎥 [Watch the demo video](https://www.youtube.com/watch?v=Y4Pjs3ybs2k)**
+**🎥 [Watch the demo video](https://youtu.be/umzemf4P65s)**
 
 **"The database governs the AI, not the prompt."** Below, in a real recorded run, the AI is wrong. It cites a policy and claims Deluxe isn't full, then proposes blocking room 307. A manager presses **Dry run**: Db2 executes the real stored procedure inside a transaction, finds **Deluxe would be OVERSOLD on the conference nights**, and rolls back, before anyone approves.
 
@@ -95,6 +95,7 @@ After `docker compose up -d` (or `bash scripts/quickstart.sh`), open http://loca
 - [Solution Overview](#solution-overview)
 - [IBM Db2 Integration](#ibm-db2-integration)
 - [AI / LLM Architecture](#ai--llm-architecture)
+- [Security (mapped to the judging rubric)](#security-mapped-to-the-judging-rubric)
 - [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
 - [Setup & Installation](#setup--installation)
@@ -242,6 +243,24 @@ The demo data is a **deterministic synthetic 72-room Goa resort**. It has 901 gu
 
 See [architecture.md](architecture.md) for diagrams and the data flow.
 
+## Security (mapped to the judging rubric)
+
+| Rubric point | How this project meets it | Where to check |
+|---|---|---|
+| No secrets in code | Credentials come only from `.env`, which is git-ignored; `.env.example` holds placeholders. CI's validator scans for secrets. | [`.env.example`](.env.example), [`config.py`](src/hotelops/config.py) |
+| Parameterised SQL | Every value goes to Db2 as a `?` parameter marker. The only f-strings in SQL insert fixed column or table names, never user or LLM input. | [`db.py`](src/hotelops/db.py), [`tools.py`](src/hotelops/tools.py) |
+| SQL written by the LLM | Three layers: an allow-list guard (a single read-only query, no DDL/DML, comments and strings stripped, row limit added), an `EXPLAIN` cost guard that refuses runaway queries before they run, and the agent's Db2 user, which cannot write anything anyway. | [`sqlguard.py`](src/hotelops/sqlguard.py), [`costguard.py`](src/hotelops/costguard.py), [`test_sqlguard.py`](tests/test_sqlguard.py) |
+| Input validation | `SP_PROPOSE_ACTION` validates every JSON field, rate band, date window, room, consent and duplicate inside Db2. **10,000/10,000** fuzzed proposals match an independent oracle. | [`02_procedures.sql`](src/sql/02_procedures.sql), [`guardrail_fuzz.md`](docs/guardrail_fuzz.md) |
+| Least-privilege Db2 users | Two identities. The agent role has `SELECT` plus `EXECUTE` on `SP_PROPOSE_ACTION` only; it cannot update, delete, approve or grant. | [`03_security.sql`](src/sql/03_security.sql) |
+| Safe handling of user data | RCAC column masks hide guest email and phone from the agent; a row permission hides guests who withdrew AI consent (the agent sees 879 of 901). | [`03_security.sql`](src/sql/03_security.sql) |
+| Prompt injection | Tool output and review text are treated as untrusted data. A planted review tells the AI to set a suite to ₹500: the agent flags it, and Db2 would refuse the action anyway. | [`agents.py`](src/hotelops/agents.py), [`redteam.py`](src/hotelops/redteam.py) |
+| LLM output | The AI can only *propose*. Every action is dry-run in a rolled-back transaction, re-checked by `SP_APPLY_ACTION`, approved by a human, and can be undone. | [`02_procedures.sql`](src/sql/02_procedures.sql) |
+| Audit | Every agent step is SHA-256 hash-chained by a Db2 trigger and anchored outside Db2, so tampering, even a fully rebuilt ledger, is detected. | [`audit.py`](src/hotelops/audit.py) |
+
+**Proof:** `python src/redteam.py` blocks **24/24 attacks** (22 by Db2 itself), and `python src/verify.py` passes **26/26** live checks, with no LLM key needed for either.
+
+---
+
 ## Tech Stack
 - **Backend / core:** Python 3.11; SQL and SQL PL
 - **Database:** IBM Db2 12.1 Community Edition
@@ -379,7 +398,7 @@ python src/redteam.py              # red-team scoreboard -> docs/redteam_results
   - the 35% guardrail fires at apply time.
 
 ## Screenshots & Demo
-- **Demo video:** [https://www.youtube.com/watch?v=Y4Pjs3ybs2k](https://www.youtube.com/watch?v=Y4Pjs3ybs2k)
+- **Demo video:** [https://youtu.be/umzemf4P65s](https://youtu.be/umzemf4P65s)
 - Round 1 proposal: the [13-slide deck](docs/Round1_Proposal_Hotel_Ops_Copilot_Deck.pdf).
 
 All screenshots are from real Gemini runs against the live Db2 database.
