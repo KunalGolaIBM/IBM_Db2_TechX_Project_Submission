@@ -189,8 +189,8 @@ def _pick_statement(key: str) -> Statement | None:
 with tab_prove:
     st.subheader("IBM's translator is silent. Db2 is not.")
     st.markdown(
-        "`db2-sqlglot-dialect` raises an error for **0** of the 32 corpus "
-        "statements. Db2 then rejects **13** of them. That gap is the bug class "
+        f"`db2-sqlglot-dialect` raises an error for **0** of the {len(CORPUS)} "
+        "corpus statements. Db2 then rejects **14** of them. That gap is the bug class "
         "PortProof exists to close: a *silent* failure, which no linter catches "
         "because nothing complained."
     )
@@ -235,7 +235,7 @@ with tab_prove:
                 st.markdown("#### The repair loop")
                 st.caption(
                     "LangGraph state machine, bounded attempts. Every proposal is "
-                    "re-submitted to Db2 -- the loop can only exit through the engine."
+                    "re-submitted to Db2. The loop can only exit through the engine."
                 )
 
                 memory = None
@@ -309,8 +309,8 @@ with tab_semantic:
         "Both statements are executed on both engines over "
         f"**{len(VARIANTS)} adversarial datasets** chosen to break translation: "
         + ", ".join(f"`{v.name}`" for v in VARIANTS)
-        + ". A disagreement is reported as a **witness** -- the dataset and the "
-        "two result sets -- so you can check the verdict yourself instead of "
+        + ". A disagreement is reported as a **witness**, meaning the dataset and the "
+        "two result sets, so you can check the verdict yourself instead of "
         "trusting it."
     )
 
@@ -456,7 +456,7 @@ with tab_ledger:
     st.caption(
         "Written only through SQL PL procedures by an identity that holds no "
         "INSERT. Each certificate is a SHA-256 computed **in the engine** by "
-        "`HASH(..., 2)` over the verdict's own fields -- the application never "
+        "`HASH(..., 2)` over the verdict's own fields. The application never "
         "gets to choose it."
     )
     rows = db.fetch_all(
@@ -492,7 +492,7 @@ with tab_ledger:
         st.markdown("#### Failure rollup, maintained by the engine")
         st.caption(
             "A materialised query table with `REFRESH IMMEDIATE`. No application "
-            "code keeps this current -- Db2 does, inside the same transaction."
+            "code keeps this current. Db2 does, inside the same transaction."
         )
         st.dataframe(
             [
@@ -531,7 +531,7 @@ with tab_ledger:
     st.caption(
         "`VECTOR(384, FLOAT32)` columns and `VECTOR_DISTANCE(..., COSINE)`. The "
         "recall below is **one statement** in which the semantic ranking and the "
-        "relational filter are evaluated together, in the engine -- the part that "
+        "relational filter are evaluated together, in the engine, which is the part that "
         "would not survive a bolt-on vector database."
     )
     try:
@@ -552,7 +552,7 @@ with tab_ledger:
         hits = st.session_state.get("recall_hits")
         if hits is not None:
             if not hits:
-                st.info("nothing stored for that dialect yet -- run `python -m src.main` first")
+                st.info("nothing stored for that dialect yet. Run `python -m src.main` first")
             for fix in hits:
                 dist = f"{fix.distance:.5f}" if fix.distance is not None else "n/a"
                 st.markdown(f"**cosine distance `{dist}`** · SQLCODE `{fix.sqlcode}`")
