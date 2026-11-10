@@ -1,0 +1,67 @@
+-- Read-only views for the app and the natural-language question box.
+CREATE OR REPLACE VIEW AQ.V_DAY AS
+SELECT V.RUN_ID, V.STATION_ID, S.NAME AS STATION, S.OPERATOR, V.DAY, V.STATUS, V.AQI, V.NAIVE_AQI,
+       V.PROMINENT, V.VALID_PARAMS, V.REASON
+  FROM AQ.VERDICT V JOIN AQ.STATION S ON S.STATION_ID = V.STATION_ID
+ WHERE V.RUN_ID = (SELECT MAX(X.RUN_ID) FROM AQ.VERDICT X WHERE X.STATION_ID = V.STATION_ID AND X.DAY = V.DAY)
+   -- The US Embassy monitor measures PM2.5 only, so CPCB's 3-pollutant AQI never applies to it; it is kept in
+   -- AQ.READING but left out of the audited views so every count matches the 34 CAAQMS stations.
+   AND S.STATION_ID <> 8118                       -- OpenAQ location 8118 = US Embassy, New Delhi@
+
+CREATE OR REPLACE VIEW AQ.V_CHECK AS
+SELECT D.STATION, D.DAY, E.PARAM, E.CHECK_CODE, E.OBSERVED, E.PASSED, E.RULE_REF
+  FROM AQ.V_DAY D JOIN AQ.EVIDENCE E ON E.RUN_ID = D.RUN_ID@
+
+-- Plain-language explanations written by the LLM, append-only like the evidence they explain.
+CREATE TABLE AQ.EXPLANATION (
+  RUN_ID     BIGINT NOT NULL REFERENCES AQ.VERDICT,
+  MODEL      VARCHAR(60) NOT NULL,
+  TEXT       VARCHAR(2000) NOT NULL,
+  GROUNDED   SMALLINT NOT NULL,           -- 1 = every number in TEXT appears in the evidence
+  RULE_REFS  VARCHAR(200) NOT NULL,
+  VECTOR_AGREES SMALLINT NOT NULL,        -- 1 = vector search found the same rule the procedure cited
+  CREATED_AT TIMESTAMP NOT NULL DEFAULT CURRENT TIMESTAMP,
+  PRIMARY KEY (RUN_ID, CREATED_AT)
+)@
+CREATE TRIGGER AQ.EXPLANATION_NO_UPDATE NO CASCADE BEFORE UPDATE ON AQ.EXPLANATION
+ FOR EACH ROW SIGNAL SQLSTATE '75001' SET MESSAGE_TEXT = 'Explanations are append-only'@
+CREATE TRIGGER AQ.EXPLANATION_NO_DELETE NO CASCADE BEFORE DELETE ON AQ.EXPLANATION
+ FOR EACH ROW SIGNAL SQLSTATE '75001' SET MESSAGE_TEXT = 'Explanations are append-only'@
+
+-- Every audit run of a station-day, with the verdict the previous run gave. A reload that brings revised
+-- readings re-audits the affected days, so a changed verdict shows up here with the data time it was based on.
+CREATE OR REPLACE VIEW AQ.V_VERDICT_HISTORY AS
+SELECT V.STATION_ID, V.DAY, V.RUN_ID, V.STATUS, V.AQI, V.DATA_AS_OF,
+       LAG(V.STATUS) OVER (PARTITION BY V.STATION_ID, V.DAY ORDER BY V.RUN_ID) AS PREV_STATUS,
+       LAG(V.AQI) OVER (PARTITION BY V.STATION_ID, V.DAY ORDER BY V.RUN_ID) AS PREV_AQI
+  FROM AQ.VERDICT V@
+
+-- Readings the publisher changed or withdrew after we first loaded them (from the system-period history).
+CREATE OR REPLACE VIEW AQ.V_REVISION AS
+SELECT H.STATION_ID, H.PARAM, H.TS, H.VALUE AS OLD_VALUE, R.VALUE AS NEW_VALUE,
+       H.SYS_START AS FIRST_SEEN, H.SYS_END AS REVISED_AT,
+       CASE WHEN R.STATION_ID IS NULL THEN 'WITHDRAWN' ELSE 'CHANGED' END AS KIND
+  FROM AQ.READING_HIST H
+  LEFT JOIN AQ.READING R ON R.STATION_ID = H.STATION_ID AND R.PARAM = H.PARAM AND R.TS = H.TS@
+
+-- The web app's ID: reads the audit, appends explanations (and question-log rows, 06_asklog.sql). It has no
+-- DELETE, UPDATE, ALTER or CONTROL privilege, so it cannot TRUNCATE the ledgers, which triggers would not stop.
+GRANT CONNECT ON DATABASE TO USER AQAPP@
+GRANT SELECT ON AQ.STATION TO USER AQAPP@
+GRANT SELECT ON AQ.READING TO USER AQAPP@
+GRANT SELECT ON AQ.HOURLY TO USER AQAPP@
+GRANT SELECT ON AQ.VERDICT TO USER AQAPP@
+GRANT SELECT ON AQ.EVIDENCE TO USER AQAPP@
+GRANT SELECT ON AQ.RULE_TEXT TO USER AQAPP@
+GRANT SELECT ON AQ.V_DAY TO USER AQAPP@
+GRANT SELECT ON AQ.V_CHECK TO USER AQAPP@
+GRANT SELECT ON AQ.V_VERDICT_HISTORY TO USER AQAPP@
+GRANT SELECT ON AQ.V_REVISION TO USER AQAPP@
+GRANT SELECT, INSERT ON AQ.EXPLANATION TO USER AQAPP@
+
+-- A separate Db2 authorization ID for the question box: SELECT on the two audited views and no table.
+-- (Like any connected user it can still read the SYSCAT catalog views through PUBLIC; the SQL checker only
+-- lets the question box name AQ.V_DAY and AQ.V_CHECK.)
+GRANT CONNECT ON DATABASE TO USER AQREADER@
+GRANT SELECT ON AQ.V_DAY TO USER AQREADER@
+GRANT SELECT ON AQ.V_CHECK TO USER AQREADER@
