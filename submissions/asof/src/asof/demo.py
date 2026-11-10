@@ -7,7 +7,8 @@ draft with the gate (real LLM, real Db2), and records the decision in the ASOF l
 two pet questions (November and December trips) are what the change-impact screen uses
 after the "pet fee to $125 from 1 Dec 2026" preset. The bank drafts below are checked as written
 (the demo assistant only knows the airline), against Fernhollow Bank's fee schedule. The held
-drafts are ones no clause fully covers, so they wait in the specialist inbox.
+drafts are ones no clause fully covers, so they wait in the specialist inbox. Last, the fictional backtest sample
+(asof/backtest.py) runs once, so the Backtest page has a report; the public demo shows it read-only.
 """
 
 from __future__ import annotations
@@ -15,7 +16,7 @@ from __future__ import annotations
 import sys
 from datetime import date
 
-from . import db
+from . import backtest, db
 from .anchor import AnchorLog
 from .assistant import DemoAssistant
 from .config import ConfigError, get_settings
@@ -71,6 +72,12 @@ def main() -> int:
         for doc_id, question, draft_text, as_of in HELD_DRAFTS:
             r = gate.check(GateRequest(question, draft_text, as_of, doc_id, "chat"))
             print(f"#{r.ledger_id}  {as_of}  {r.decision:<9} {r.reason_code:<24} {question} (for the specialist inbox)")
+        from .router import Router
+
+        sample = backtest.sample_upload()
+        run_id, status = backtest.run_upload(gate, connect, sample, "auto", settings.asof_backtest_deadline_s,
+                                             router=Router(emb, connect), sample=True)
+        print(f"backtest run {run_id}: {status}, the fictional sample's {len(sample.rows)} past answers (Backtest page)")
     except (ConfigError, LLMError, db.DatabaseError) as exc:
         print(f"Demo failed: {exc}")
         return 1

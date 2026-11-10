@@ -56,7 +56,7 @@ SQL_REVIEWED_FOR = ("SELECT ESCALATED_LEDGER_ID, OUTCOME, REVIEWER, NOTE, CREATE
 
 # Db2's refusals in RESOLVE_ESCALATION, as HTTP statuses for the API.
 REFUSALS = {"75050": 404, "75051": 409, "75052": 409, "75053": 422, "75054": 403, "75055": 409, "75056": 422,
-            "75057": 422, "75058": 409, "75030": 403, "23505": 409}
+            "75057": 422, "75058": 409, "75030": 403, "23505": 409, "75070": 409}
 
 
 class ReviewError(Exception):
@@ -125,6 +125,8 @@ def held_entry(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCH
         raise ReviewError(404, "no such ledger entry")
     if entry["decision"].strip() != "ESCALATED":
         raise ReviewError(409, "only a held (ESCALATED) decision goes to a specialist")
+    if entry["channel"].strip() == "backtest":  # RESOLVE_ESCALATION refuses it too (75070)
+        raise ReviewError(409, "a backtest decision is a finding about a past answer: no customer is waiting for a reply")
     return entry
 
 

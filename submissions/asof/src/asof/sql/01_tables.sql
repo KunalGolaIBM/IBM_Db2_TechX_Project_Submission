@@ -112,7 +112,8 @@ CREATE TABLE ASOF.ANSWER_LEDGER (
   -- REVIEWED: a specialist's reply to a held (ESCALATED) decision, appended by RESOLVE_ESCALATION.
   CONSTRAINT CK_LEDGER_DECISION CHECK (DECISION IN ('PASS', 'CORRECTED', 'ESCALATED', 'REVIEWED')),
   -- agent: a check an agent ran on its own draft (a help-centre fix or a correction notice), never a customer answer.
-  CONSTRAINT CK_LEDGER_CHANNEL CHECK (CHANNEL IN ('chat', 'email', 'faq', 'api', 'eval', 'demo', 'agent')),
+  -- backtest: a past answer checked in batch (11_backtest.sql), never an answer AsOf released.
+  CONSTRAINT CK_LEDGER_CHANNEL CHECK (CHANNEL IN ('chat', 'email', 'faq', 'api', 'eval', 'demo', 'agent', 'backtest')),
   CONSTRAINT CK_LEDGER_LATENCY CHECK (LATENCY_MS >= 0),
   CONSTRAINT CK_LEDGER_ID CHECK (LEDGER_ID >= 1),
   CONSTRAINT CK_LEDGER_VERDICTS CHECK (JSON_EXISTS(VERDICTS_JSON, '$'))

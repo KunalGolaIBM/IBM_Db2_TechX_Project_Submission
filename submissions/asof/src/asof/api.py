@@ -10,6 +10,7 @@ endpoints are rate-limited per client. Errors never expose stack traces or SQL.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import hmac
 import logging
 import re
@@ -31,7 +32,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationErr
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from . import __version__, db, demolive, headline, impactagent, intake, ledger, notices, policy, review, router, rowaccess
+from . import __version__, backtest, db, demolive, headline, impactagent, intake, ledger, notices, policy, review, router, rowaccess
 from .anchor import AnchorLog
 from .anchor import verify as verify_anchors
 from .askledger import LedgerAsker
@@ -55,16 +56,19 @@ _EDITOR_POSTS = re.compile(r"^/api/(?:policy/(?:change|preview|drafts|drafts/[^/
 # The one route that takes more than MAX_BODY_BYTES: a policy document upload (asof/intake.py).
 UPLOAD_PATH = "/api/policy/drafts"
 UPLOAD_LIMIT = intake.MAX_PDF_BYTES
+BACKTEST_PATH = "/api/backtests"  # the other large body: a CSV of past answers (asof/backtest.py)
 
 
 def body_limit(method: str, path: str) -> int:
+    if method == "POST" and path == BACKTEST_PATH:
+        return backtest.MAX_CSV_BYTES
     return UPLOAD_LIMIT if method == "POST" and path == UPLOAD_PATH else MAX_BODY_BYTES
 
 
 def required_role(method: str, path: str) -> str | None:
     """The role an /api/ request needs with ASOF_AUTH=users. None: any signed-in user. A route not named
     here needs the auditor role, so a new route is never open by accident."""
-    if method == "POST" and path in ("/api/gate", "/api/assistant/ask"):
+    if method == "POST" and path in ("/api/gate", "/api/assistant/ask", BACKTEST_PATH):
         return "checker"
     if method == "POST" and _EDITOR_POSTS.match(path):
         return "editor"
@@ -299,7 +303,9 @@ class ReplyIn(_In):
 
 def create_app(settings: Settings | None = None, *, gate: Gate | None = None, assistant: DemoAssistant | None = None,
                asker: LedgerAsker | None = None, schema: str = db.SCHEMA, rate_limit: int = 30,
-               intake_model: Any = None, read_limit: int = 240, live: demolive.LiveChecks | None = None) -> FastAPI:
+               intake_model: Any = None, read_limit: int = 240, live: demolive.LiveChecks | None = None,
+               backtest_guard: backtest.BeforeCheck | None = None,
+               backtest_launch: Callable[[Callable[[], None]], None] | None = None) -> FastAPI:
     settings = settings or get_settings()
     state: dict[str, Any] = {"gate": gate, "assistant": assistant, "asker": asker, "intake_llm": intake_model}
     users_mode = settings.asof_auth == "users"
@@ -1051,6 +1057,84 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
         finally:
             conn.close()
         return {"notice_id": notice_id, "status": "SENT" if body.approve else "REJECTED"}
+
+    # ---------- backtests: a CSV of past answers, checked in batch (asof/backtest.py) ----------
+    # One run at a time in this process. A run goes on in a background thread after the upload is answered (202); the
+    # page polls GET /api/backtests/{id}. backtest_guard is the hook a spend cap on live checks plugs into: called
+    # before each row, it raises backtest.Stop to end the run there. backtest_launch replaces the thread in tests.
+    backtest_lock = threading.Lock()
+    sample_sha256 = hashlib.sha256(backtest.SAMPLE_CSV.read_bytes()).hexdigest()
+
+    def in_a_thread(work: Callable[[], None]) -> None:
+        threading.Thread(target=work, name="asof-backtest", daemon=True).start()
+
+    launch = backtest_launch or in_a_thread
+
+    @app.get("/api/backtests/sample")
+    def backtest_sample():
+        """The built-in sample: 20 fictional past answers over both policies, which replay mode can check."""
+        return Response(backtest.SAMPLE_CSV.read_bytes(), media_type="text/csv; charset=utf-8",
+                        headers={"Content-Disposition": f'attachment; filename="{backtest.SAMPLE_NAME}"'})
+
+    @app.post("/api/backtests")
+    async def start_backtest(request: Request, doc_id: DocId | Literal["auto"] = "auto",
+                             name: Annotated[str | None, Query(max_length=200)] = None):
+        """Check every row of a CSV of past answers (question, draft, customer_date, channel, optional doc_id) through
+        the normal check, on channel backtest. The body is the CSV itself (Content-Type: text/csv), at most 2 MB and
+        ASOF_BACKTEST_MAX_ROWS rows. Answers 202 with the run's ID; the run goes on in the background."""
+        demo_off("uploading and running a backtest (the sample run shown here is read-only)")
+        if request.headers.get("content-type", "").split(";")[0].strip().lower() != "text/csv":
+            raise HTTPException(415, "send the CSV itself as the request body, with Content-Type: text/csv")
+        data = await request.body()
+        try:
+            upload = await run_in_threadpool(backtest.parse_csv, data, name, settings.asof_backtest_max_rows)
+        except backtest.CsvError as exc:
+            return JSONResponse({"error": f"The file cannot be run: {exc}", "errors": exc.errors,
+                                 "total_errors": exc.total}, status_code=422)
+        g, _ = components()
+        routed = any((r.doc_id or doc_id) == "auto" for r in upload.rows)
+        rtr = await run_in_threadpool(doc_router) if routed else None
+        if not backtest_lock.acquire(blocking=False):
+            raise HTTPException(409, "a backtest is already running on this server: wait for it to finish")
+        try:
+            bt = backtest.Backtest(g, app_conn, schema, router=rtr, before_check=backtest_guard)
+            who, deadline_s = requested_by(request), settings.asof_backtest_deadline_s
+            run_id = await run_in_threadpool(bt.start, upload, doc_id, deadline_s, who, upload.sha256 == sample_sha256)
+        except BaseException:
+            backtest_lock.release()
+            raise
+
+        def work() -> None:
+            try:
+                bt.run(run_id, upload, doc_id, deadline_s, who)
+            finally:
+                backtest_lock.release()
+
+        launch(work)
+        return JSONResponse({"run_id": run_id, "rows": len(upload.rows), "state": "RUNNING"}, status_code=202)
+
+    @app.get("/api/backtests")
+    def backtest_runs(limit: Annotated[int, Query(ge=1, le=100)] = 20):
+        """The latest runs with their outcome counts, and the latest finished run of the built-in sample."""
+        conn = app_conn()
+        try:
+            return jsonable_encoder({"runs": backtest.list_runs(conn, schema, limit),
+                                     "sample_run_id": backtest.latest_sample(conn, schema),
+                                     "running_here": backtest_lock.locked()})
+        finally:
+            conn.close()
+
+    @app.get("/api/backtests/{run_id}")
+    def backtest_report(run_id: Annotated[int, Path(ge=1, le=10**12)]):
+        """The exposure report of one run: wrong answers by clause version, the money at stake, the costliest examples."""
+        conn = app_conn()
+        try:
+            out = backtest.report(conn, run_id, schema)
+        finally:
+            conn.close()
+        if out is None:
+            raise HTTPException(404, "no such backtest run")
+        return jsonable_encoder(out)
 
     @app.get("/", include_in_schema=False)
     def root():

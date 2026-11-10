@@ -67,6 +67,7 @@ class GateRequest:
     channel: str = "api"
     requested_by: str | None = None  # the API user, when ASOF_AUTH=users; recorded in the hashed verdicts
     route: dict[str, Any] | None = None  # how the router chose doc_id (asof/router.py), when the caller asked it to
+    backtest: dict[str, Any] | None = None  # run, row and source channel of a backtest row (asof/backtest.py)
 
 
 @dataclass
@@ -563,6 +564,8 @@ class Gate:
             verdicts["requested_by"] = req.requested_by[:40]
         if req.route:
             verdicts["route"] = req.route
+        if req.backtest:  # hashed with the decision, so the link to the CSV row is covered by VERIFY_CHAIN
+            verdicts["backtest"] = req.backtest
         return verdicts
 
     def hold(self, req: GateRequest, reason_code: str, model_info: str) -> GateResult:

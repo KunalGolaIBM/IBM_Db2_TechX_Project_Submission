@@ -120,7 +120,7 @@ Db2 12.1.5 does the work, not just the storage ([everything, with the SQL and th
 - **A ledger Db2 guards.** Every decision is a row whose SHA-256 is computed in SQL PL (`APPEND_LEDGER`) and chained to the previous one under a lock; triggers stop `UPDATE` and `DELETE` even for the owner; `VERIFY_CHAIN` recomputes the chain; receipts and anchors kept outside Db2 catch a rebuilt ledger.
 - **Rules in JSON, checked in SQL too.** Each version's rule parameters are `RULE_JSON` (a `JSON_EXISTS` check constraint), read with `JSON_VALUE` and `JSON_TABLE` in the views and procedures; `CHANGE_IMPACT`, `RESOLVE_ESCALATION`, `ADD_NOTICE` and `DECIDE_NOTICE` enforce in SQL PL what the application may not decide alone.
 - **More of Db2:** column masks, in-database embeddings (`CREATE EXTERNAL MODEL`, `TO_EMBEDDING`), monthly partitions and `REFRESH IMMEDIATE` MQTs [measured at 1,000,000 decisions](docs/db2.md#monthly-partitions-and-materialized-query-tables-measured-at-1000000-decisions), an [online backup restored into a new database](docs/db2.md#backup-and-restore-proven-on-a-database-that-did-not-exist), TLS, dbt (`ibm-dbt-db2`) and Airflow (IBM Db2 provider).
-- **Five least-privilege users:** runtime `asofapp` (reads and five procedures, no writes or DDL), reviewer `asofrev` (two procedures, no table), editor `asofedit`, analyst `asofread` (audit views, text masked) and dbt's `asofmart`.
+- **Five least-privilege users:** runtime `asofapp` (reads and eleven procedures, no writes or DDL), reviewer `asofrev` (two procedures, no table), editor `asofedit`, analyst `asofread` (audit views, text masked) and dbt's `asofmart`.
 - **Drivers:** `ibm_db` with bound parameters only, `ibm_db_sa`, `langchain-db2`'s `DB2VS`, and SQLGlot's Db2 dialect gating the one model-written query ([Ask the ledger](docs/db2.md#ask-the-ledger-questions-for-auditors-as-a-read-only-db2-user)).
 
 ### What building AsOf taught us about Db2
@@ -247,7 +247,7 @@ The other settings, IBM watsonx.ai, per-user API access and TLS: [docs/setup.md]
 python -m asof.db2check      # verify the Db2 features AsOf needs (owner account)
 python -m asof.setup         # schema, users, seed data, grants, self-check
 python src/main.py           # web UI at http://127.0.0.1:8000, API docs at /docs
-python -m asof.demo          # optional: thirteen sample decisions, three of them drafts written to be held for the inbox (a live answer can be held too), so every screen has history
+python -m asof.demo          # optional: thirteen sample decisions, three of them drafts written to be held for the inbox (a live answer can be held too), then the backtest sample, so every screen has history
 ```
 
 - **The console** (http://127.0.0.1:8000) and **the customer chat** (http://127.0.0.1:8000/chat), whose every reply AsOf checks ([every screen](docs/screenshots.md)).
@@ -259,6 +259,7 @@ python -m asof.demo          # optional: thirteen sample decisions, three of the
   ```
 
 - **Agents:** [mcp_server/](mcp_server/) runs AsOf as an MCP tool for any agent.
+- **Backtest:** upload a CSV of past conversations (or run the 20-row fictional sample) on the Backtest page or with `python -m asof.backtest`. Every row is checked for its customer's date and recorded on ledger channel `backtest`, and Db2 reports how many answers were wrong, by clause version, and the dollar gap where the data has one ([docs/backtest.md](docs/backtest.md)).
 
 ---
 

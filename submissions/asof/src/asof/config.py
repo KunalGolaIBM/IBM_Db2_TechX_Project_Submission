@@ -146,6 +146,10 @@ class Settings(BaseSettings):
     # with a model in router.MEASURED, whose run on the pinned routing test split misrouted and guessed on nothing
     # (docs/routing_eval.md); the local 7B model guessed, so with it close calls go to a person. on: any model. off: never.
     asof_router_agent: Literal["auto", "on", "off"] = "auto"
+    # Backtests (asof/backtest.py): the most rows one uploaded CSV may hold (Db2 refuses more than 500 anyway), and a
+    # run's deadline: no row starts after it, and the rows left are recorded as skipped.
+    asof_backtest_max_rows: int = Field(500, ge=1, le=500)
+    asof_backtest_deadline_s: float = Field(1800.0, gt=0, le=86400)
 
     openrouter_api_key: SecretStr | None = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"

@@ -269,16 +269,31 @@ SQL_HISTORY = ("SELECT VERSION_LABEL, BUS_START, BUS_END, SYS_START, SYS_END, CH
                "FROM POLICY_CLAUSE FOR SYSTEM_TIME FROM ? TO ? WHERE CLAUSE_ID = ? ORDER BY SYS_START, BUS_START")
 # Weighted by the number of decisions in each group, not an average of averages. BIGINT: as INTEGER, the product
 # overflowed (SQL0802N) once one decision type passed about 450,000 rows, found by asof.ledgerbench at 1,000,000.
+# Analytics are about answers AsOf decided: a backtest's checks of past answers (channel 'backtest', asof/backtest.py)
+# are left out, and counted on their own (SQL_BACKTEST_DECISIONS) so the page can say so.
 SQL_DECISIONS = ("SELECT DECISION, SUM(DECISIONS), "
                  "INTEGER(SUM(BIGINT(AVG_LATENCY_MS) * DECISIONS) / NULLIF(SUM(DECISIONS), 0)) "
-                 "FROM V_DECISION_STATS GROUP BY DECISION")
+                 "FROM V_DECISION_STATS WHERE CHANNEL <> 'backtest' GROUP BY DECISION")
 # Decisions made in replay mode (no model time in their latency), so the screen can say so.
-SQL_REPLAYED = "SELECT COUNT(*) FROM ANSWER_LEDGER WHERE MODEL_INFO LIKE 'replay:%'"
-SQL_REASONS = "SELECT REASON_CODE, SUM(DECISIONS) FROM V_DECISION_STATS GROUP BY REASON_CODE ORDER BY 2 DESC"
+SQL_REPLAYED = "SELECT COUNT(*) FROM ANSWER_LEDGER WHERE MODEL_INFO LIKE 'replay:%' AND CHANNEL <> 'backtest'"
+SQL_REASONS = ("SELECT REASON_CODE, SUM(DECISIONS) FROM V_DECISION_STATS WHERE CHANNEL <> 'backtest' "
+               "GROUP BY REASON_CODE ORDER BY 2 DESC")
+SQL_BACKTEST_DECISIONS = "SELECT COALESCE(SUM(DECISIONS), 0) FROM V_DECISION_STATS WHERE CHANNEL = 'backtest'"
+# MQT_CLAIM_OUTCOMES and CLAIM_CITATION carry no channel: the backtest's share is read separately (through
+# IX_LEDGER_GROUP_CREATED, which leads with CHANNEL) and taken off the totals.
+SQL_BACKTEST_AREAS = ("SELECT C.AREA, SUM(CASE WHEN C.VERDICT = 'SUPPORTED' THEN 1 ELSE 0 END), "
+                      "SUM(CASE WHEN C.VERDICT = 'CONTRADICTED' THEN 1 ELSE 0 END), "
+                      "SUM(CASE WHEN C.VERDICT = 'NOT_COVERED' THEN 1 ELSE 0 END), COUNT(*) "
+                      "FROM CLAIM_CITATION C JOIN ANSWER_LEDGER L ON L.LEDGER_ID = C.LEDGER_ID "
+                      "WHERE C.PASS_NO = 1 AND L.CHANNEL = 'backtest' GROUP BY C.AREA")
+SQL_BACKTEST_RULE_CHECKS = ("SELECT C.RULE_CHECK, COALESCE(C.LLM_VERDICT, 'NONE'), COUNT(*) FROM CLAIM_CITATION C "
+                            "JOIN ANSWER_LEDGER L ON L.LEDGER_ID = C.LEDGER_ID WHERE C.PASS_NO = 1 "
+                            "AND L.CHANNEL = 'backtest' GROUP BY C.RULE_CHECK, COALESCE(C.LLM_VERDICT, 'NONE')")
 SQL_AREAS = ("SELECT AREA, SUPPORTED, CONTRADICTED, NOT_COVERED, CLAIMS FROM V_CLAIM_OUTCOMES_BY_AREA "
              "ORDER BY CLAIMS DESC")
-SQL_OVERRIDES = ("SELECT LEDGER_ID, AS_OF_DATE, CLAIM_TEXT, CLAUSE_ID, CLAUSE_VERSION FROM V_RULE_OVERRIDES "
-                 "ORDER BY LEDGER_ID DESC FETCH FIRST 20 ROWS ONLY")
+SQL_OVERRIDES = ("SELECT O.LEDGER_ID, O.AS_OF_DATE, O.CLAIM_TEXT, O.CLAUSE_ID, O.CLAUSE_VERSION FROM V_RULE_OVERRIDES O "
+                 "WHERE NOT EXISTS (SELECT 1 FROM ANSWER_LEDGER L WHERE L.LEDGER_ID = O.LEDGER_ID "
+                 "AND L.CHANNEL = 'backtest') ORDER BY O.LEDGER_ID DESC FETCH FIRST 20 ROWS ONLY")
 # What the deterministic rule check said about every claim in a draft (pass 1), next to the judge's verdict.
 SQL_RULE_CHECKS = ("SELECT RULE_CHECK, COALESCE(LLM_VERDICT, 'NONE'), COUNT(*) FROM CLAIM_CITATION "
                    "WHERE PASS_NO = 1 GROUP BY RULE_CHECK, COALESCE(LLM_VERDICT, 'NONE')")
@@ -421,18 +436,24 @@ def analytics(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> dict[str,
     db.use_schema(conn, schema)
     decisions = db.query(conn, SQL_DECISIONS)
     reasons = db.query(conn, SQL_REASONS)
-    areas = db.query(conn, SQL_AREAS)
+    backtest = {r[0].strip(): [int(x) for x in r[1:]] for r in db.query(conn, SQL_BACKTEST_AREAS)}
+    areas = [(a, *(int(x) - y for x, y in zip(rest, backtest.get(a.strip(), [0, 0, 0, 0]), strict=True)))
+             for a, *rest in db.query(conn, SQL_AREAS)]
+    areas = sorted((a for a in areas if a[4] > 0), key=lambda a: -a[4])
     overrides = db.query(conn, SQL_OVERRIDES)
     replayed = int(db.query(conn, SQL_REPLAYED)[0][0])
     rule_checks = {"match": 0, "mismatch": 0, "mismatch_judge_agreed": 0, "not_applicable": 0}
-    for status, judged, n in db.query(conn, SQL_RULE_CHECKS):
-        key = status.strip().lower()
-        if key in rule_checks:
-            rule_checks[key] += int(n)
-        if key == "mismatch" and judged.strip() == "CONTRADICTED":
-            rule_checks["mismatch_judge_agreed"] += int(n)
+    counted = [(1, db.query(conn, SQL_RULE_CHECKS)), (-1, db.query(conn, SQL_BACKTEST_RULE_CHECKS))]
+    for sign, rows in counted:
+        for status, judged, n in rows:
+            key = status.strip().lower()
+            if key in rule_checks:
+                rule_checks[key] += sign * int(n)
+            if key == "mismatch" and judged.strip() == "CONTRADICTED":
+                rule_checks["mismatch_judge_agreed"] += sign * int(n)
     return {
         "replayed_decisions": replayed,
+        "backtest_decisions": int(db.query(conn, SQL_BACKTEST_DECISIONS)[0][0]),  # left out of every number here
         "decisions": [{"decision": d.strip(), "count": int(n), "avg_latency_ms": int(lat or 0)} for d, n, lat in decisions],
         "reasons": [{"reason": r.strip(), "count": int(n)} for r, n in reasons],
         "areas": [{"area": a.strip(), "supported": int(s), "contradicted": int(c), "not_covered": int(nc), "claims": int(t)}

@@ -662,7 +662,8 @@ END
 -- Everything that relied on a clause, judged against the policy as it stands now.
 --   ANSWER rows: released decisions (PASS, the re-checked rewrite of a CORRECTED one, or a
 --     specialist's checked reply, REVIEWED) that cited the clause. An agent's check of its own draft
---     (channel 'agent') told no customer anything, so it is not one. HISTORICALLY_VALID if the version in force for the customer's
+--     (channel 'agent') told no customer anything, so it is not one, and neither is a backtest's check of a past answer
+--     (channel 'backtest': the customer got the original answer, not AsOf's decision). HISTORICALLY_VALID if the version in force for the customer's
 --     date is still the one cited; STALE if that date now falls under a different version.
 --   PUBLISHED rows: help-centre answers citing the clause. NEEDS_REVIEW if any other version
 --     now applies within the dates they cover, from STALE_FROM; otherwise STILL_VALID.
@@ -676,7 +677,7 @@ BEGIN
       SELECT DISTINCT L.LEDGER_ID, L.AS_OF_DATE, L.DECISION, L.CREATED_AT, C.CLAUSE_VERSION, C.CLAUSE_BUS_START
       FROM ASOF.ANSWER_LEDGER L
       JOIN ASOF.CLAIM_CITATION C ON C.LEDGER_ID = L.LEDGER_ID
-      WHERE C.CLAUSE_ID = P_CLAUSE_ID AND C.VERDICT = 'SUPPORTED' AND L.CHANNEL <> 'agent'
+      WHERE C.CLAUSE_ID = P_CLAUSE_ID AND C.VERDICT = 'SUPPORTED' AND L.CHANNEL NOT IN ('agent', 'backtest')
         AND ((L.DECISION IN ('PASS', 'REVIEWED') AND C.PASS_NO = 1)
              OR (L.DECISION = 'CORRECTED' AND C.PASS_NO = 2))
     )
@@ -1035,7 +1036,7 @@ END
 --   75056 a reply the policy does not cover without the specialist's note (their judgment, on record),
 --   75057 verdicts that do not match what is being recorded (the reason given, the customer's date, the held
 --   decision), 75058 a supported claim citing a version no longer in force for that date, 75030 a caller who
---   cannot read ledger text.
+--   cannot read ledger text, 75070 a backtest's decision (11_backtest.sql: nobody is waiting for that answer).
 -- The caller commits.
 CREATE OR REPLACE PROCEDURE ASOF.RESOLVE_ESCALATION (
     IN  P_ESCALATED_ID   BIGINT,
@@ -1087,6 +1088,9 @@ BEGIN
   END IF;
   IF V_DECISION <> 'ESCALATED' THEN
     SIGNAL SQLSTATE '75051' SET MESSAGE_TEXT = 'Only a held (ESCALATED) decision goes to a specialist';
+  END IF;
+  IF V_CHANNEL = 'backtest' THEN
+    SIGNAL SQLSTATE '75070' SET MESSAGE_TEXT = 'A backtest decision is a finding about a past answer: no customer is waiting for a reply';
   END IF;
   IF EXISTS (SELECT 1 FROM ASOF.ESCALATION_REVIEW WHERE ESCALATED_LEDGER_ID = P_ESCALATED_ID) THEN
     SIGNAL SQLSTATE '75052' SET MESSAGE_TEXT = 'A specialist has already answered this decision';

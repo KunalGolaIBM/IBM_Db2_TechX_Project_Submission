@@ -284,7 +284,9 @@ def _drop_marts(conn: ibm_db_dbi.Connection, schema: str) -> None:
 
 # Children first. The drafted corrections go too: each cites the ledger row of its check (FK_SUGGESTION_CHECK), the
 # specialist inbox's links point at ledger rows on both ends, and correction notices at the answer and its check.
-LEDGER_TABLES = ("CORRECTION_NOTICE", "ESCALATION_REVIEW", "ANSWER_SUGGESTION", "CLAIM_CITATION", "ANSWER_LEDGER",
+# Backtest runs go with the ledger rows their items point at (11_backtest.sql).
+LEDGER_TABLES = ("BACKTEST_COST", "BACKTEST_ITEM", "BACKTEST_RUN",
+                 "CORRECTION_NOTICE", "ESCALATION_REVIEW", "ANSWER_SUGGESTION", "CLAIM_CITATION", "ANSWER_LEDGER",
                  "CHAIN_HEAD")
 
 
@@ -305,7 +307,8 @@ def reset_ledger(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> int:
     _drop_code_objects(conn, schema)  # views, triggers and routines are rebuilt by install()
     _drop_mqts(conn, schema)  # built over the ledger; install() recreates and refreshes them
     for table in LEDGER_TABLES:
-        db.execute(conn, f"DROP TABLE {db.ident(schema)}.{db.ident(table)}")
+        if table_exists(conn, schema, table):  # a ledger from before backtests has no BACKTEST_* tables
+            db.execute(conn, f"DROP TABLE {db.ident(schema)}.{db.ident(table)}")
     conn.commit()
     install(conn, schema)  # recreates the tables, indexes, triggers and routines that are now missing
     return before
