@@ -1,0 +1,27 @@
+{
+  "built_at": "2026-11-10T01:23:37+00:00",
+  "seed": 20261109,
+  "per_slice_target": 150,
+  "docs_path": "docs.jsonl",
+  "docs_sha256": "b66b2af561c75e0432b9c5dcb36f7f430f5ee51201ae0961cf8610d7786ea127",
+  "docs_records": 26842,
+  "candidate_groups": 7060,
+  "query_kinds": [
+    "GHSA",
+    "PYSEC"
+  ],
+  "ground_truth": "all non-withdrawn adv_ids sharing the query's canon_id",
+  "mask_token": "a popular library",
+  "details_max_chars": 500,
+  "stats": {
+    "groups_scanned": 150,
+    "no_packages": 0,
+    "too_short": 0,
+    "residual_name": 0
+  },
+  "synthetic": false,
+  "slice": "masked",
+  "count": 150,
+  "sha256": "412cf5e0630e37bd155d7156a218be054a06d51a15dfa7e589280a61623e610b",
+  "replaced_sha256": null
+}

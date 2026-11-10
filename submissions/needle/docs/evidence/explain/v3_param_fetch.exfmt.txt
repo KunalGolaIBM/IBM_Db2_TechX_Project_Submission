@@ -1,0 +1,564 @@
+DB2 Universal Database Version 12.1, 5622-044 (c) Copyright IBM Corp. 1991, 2024
+Licensed Material - Program Property of IBM
+IBM Db2 Explain Table Format Tool
+
+
+
+******************** EXPLAIN INSTANCE ********************
+
+DB2_VERSION:       12.01.5
+FORMATTED ON DB:   VECDB
+SOURCE_NAME:       SQLC2Q32
+SOURCE_SCHEMA:     NULLID  
+SOURCE_VERSION:      
+EXPLAIN_TIME:      2026-11-10-01.34.23.289797
+EXPLAIN_REQUESTER: DB2INST1
+
+Database Context:
+----------------
+	Parallelism:          None
+	CPU Speed:            4.723443e-08
+	Comm Speed:           100
+	Buffer Pool size:     49851
+	Sort Heap size:       2133
+	Database Heap size:   4842
+	Lock List size:       15360
+	Maximum Lock List:    98
+	Average Applications: 1
+	Locks Available:      481689
+
+Package Context:
+---------------
+	SQL Type:           Dynamic
+	Optimization Level: 5
+	Blocking:           Block All Cursors
+	Isolation Level:    Cursor Stability
+
+
+
+---------------- STATEMENT 1  SECTION 203 ----------------
+	QUERYNO:       1
+	QUERYTAG:                          
+	Statement Type:   Select
+	Updatable:        No
+	Deletable:        No
+	Query Degree:     1
+
+Original Statement:
+------------------
+SELECT 
+  ADV_ID 
+FROM 
+  NEEDLE.ADV_DOC 
+ORDER BY 
+  VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) 
+FETCH APPROX FIRST ? ROWS ONLY
+
+
+Optimized Statement:
+-------------------
+SELECT 
+  Q4.ADV_ID AS "ADV_ID",
+  Q4.$C1 
+FROM 
+  (SELECT 
+     Q3.ADV_ID,
+     VECTOR_DISTANCE(Q3.EMB, VECTOR(?, 768, FLOAT32), COSINE) 
+   FROM 
+     (SELECT 
+        Q2.ADV_ID,
+        Q2.EMB,
+        ROWNUMBER() OVER (ORDER BY 
+                            Q2.$C2) 
+      FROM 
+        (SELECT 
+           Q1.ADV_ID,
+           Q1.EMB,
+           VECTOR_DISTANCE(Q1.EMB, VECTOR(?, 768, FLOAT32), COSINE) 
+         FROM 
+           NEEDLE.ADV_DOC AS Q1
+        ) AS Q2
+     ) AS Q3 
+   WHERE 
+     (Q3.$C2 <= $INTERNAL_FUNC$())
+  ) AS Q4 
+ORDER BY 
+  Q4.$C1
+
+Access Plan:
+-----------
+	Total Cost: 		3401.55
+	Query Degree:		1
+
+
+      Rows 
+     RETURN
+     (   1)
+      Cost 
+       I/O 
+       |
+     8736.67 
+     TBSCAN
+     (   2)
+     3401.55 
+      2913 
+       |
+     8736.67 
+     SORT  
+     (   3)
+     3401.45 
+      2913 
+       |
+     8736.67 
+     FILTER
+     (   4)
+     3400.35 
+      2913 
+       |
+      26210 
+     TBSCAN
+     (   5)
+     3394.19 
+      2913 
+       |
+      26210 
+     SORT  
+     (   6)
+     3393.88 
+      2913 
+       |
+      26210 
+     TBSCAN
+     (   7)
+     3389.77 
+      2913 
+       |
+      26210 
+ TABLE: NEEDLE  
+     ADV_DOC
+       Q1
+
+
+
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+
+
+Plan Details:
+-------------
+
+
+	1) RETURN: (Return Result)
+		Cumulative Total Cost: 		3401.55
+		Cumulative CPU Cost: 		3.126e+08
+		Cumulative I/O Cost: 		2913
+		Cumulative Re-Total Cost: 	6.75704
+		Cumulative Re-CPU Cost: 	1.43053e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	3401.45
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		BLDLEVEL: (Build level)
+			DB2 v12.1.5.0 : special_85816
+		CPUCACHE: (Per-thread CPU cache size)
+			8388608
+		HEAPUSE : (Maximum Statement Heap Usage)
+			112 Pages
+		PLANID  : (Access plan identifier)
+			45b5a9ce12dfc6e8
+		PREPTIME: (Statement prepare time)
+			         3 milliseconds
+		SEMEVID : (Semantic environment identifier)
+			0000000000000001
+		STMTHEAP: (Statement heap size)
+			8192
+		STMTID  : (Normalized statement identifier)
+			a712bb2d9c624658
+		TENANTID: (Compiled In Tenant ID)
+			0
+		TENANTNM: (Compiled In Tenant Name)
+			SYSTEM
+
+		Input Streams:
+		-------------
+			7) From Operator #2
+
+				Estimated number of rows: 	8736.67
+				Number of columns: 		1
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q5.ADV_ID
+
+
+	2) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		3401.55
+		Cumulative CPU Cost: 		3.126e+08
+		Cumulative I/O Cost: 		2913
+		Cumulative Re-Total Cost: 	6.75704
+		Cumulative Re-CPU Cost: 	1.43053e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	3401.45
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			6) From Operator #3
+
+				Estimated number of rows: 	8736.67
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q4.$C1(A)+Q4.ADV_ID
+
+
+		Output Streams:
+		--------------
+			7) To Operator #1
+
+				Estimated number of rows: 	8736.67
+				Number of columns: 		1
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q5.ADV_ID
+
+
+	3) SORT  : (Sort)
+		Cumulative Total Cost: 		3401.45
+		Cumulative CPU Cost: 		3.10414e+08
+		Cumulative I/O Cost: 		2913
+		Cumulative Re-Total Cost: 	6.6538
+		Cumulative Re-CPU Cost: 	1.40867e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	3401.45
+		Estimated Bufferpool Buffers: 	2621
+
+		Arguments:
+		---------
+		DUPLWARN: (Duplicates Warning flag)
+			FALSE
+		KEYS    : (Key cardinality)
+			874
+		NUMROWS : (Estimated number of rows)
+			8737
+		ROWWIDTH: (Estimated width of rows)
+			32.000000
+		SORTKEY : (Sort Key column)
+			1: Q4.$C1(A)
+		TEMPSIZE: (Temporary Table Page Size)
+			32768
+		UNIQUE  : (Uniqueness required flag)
+			FALSE
+
+		Input Streams:
+		-------------
+			5) From Operator #4
+
+				Estimated number of rows: 	8736.67
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q4.$C1+Q4.ADV_ID
+
+
+		Output Streams:
+		--------------
+			6) To Operator #2
+
+				Estimated number of rows: 	8736.67
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q4.$C1(A)+Q4.ADV_ID
+
+
+	4) FILTER: (Filter)
+		Cumulative Total Cost: 		3400.35
+		Cumulative CPU Cost: 		2.87285e+08
+		Cumulative I/O Cost: 		2913
+		Cumulative Re-Total Cost: 	6.47014
+		Cumulative Re-CPU Cost: 	1.36979e+08
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	3393.99
+		Estimated Bufferpool Buffers: 	2621
+
+		Predicates:
+		----------
+		2) Residual Predicate, 
+			Comparison Operator: 		Less Than or Equal (<=)
+			Subquery Input Required: 	No
+			Filter Factor: 			0.333333
+
+			Predicate Text:
+			--------------
+			(Q3.$C2 <= $INTERNAL_FUNC$())
+
+
+
+		Input Streams:
+		-------------
+			4) From Operator #5
+
+				Estimated number of rows: 	26210
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q3.$C2+Q3.EMB+Q3.ADV_ID
+
+
+		Output Streams:
+		--------------
+			5) To Operator #3
+
+				Estimated number of rows: 	8736.67
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q4.$C1+Q4.ADV_ID
+
+
+	5) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		3394.19
+		Cumulative CPU Cost: 		1.5686e+08
+		Cumulative I/O Cost: 		2913
+		Cumulative Re-Total Cost: 	0.309576
+		Cumulative Re-CPU Cost: 	6.55404e+06
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	3393.88
+		Estimated Bufferpool Buffers: 	2621
+
+		Arguments:
+		---------
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			3) From Operator #6
+
+				Estimated number of rows: 	26210
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.$C2(A)+Q2.EMB+Q2.ADV_ID
+
+
+		Output Streams:
+		--------------
+			4) To Operator #4
+
+				Estimated number of rows: 	26210
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q3.$C2+Q3.EMB+Q3.ADV_ID
+
+
+	6) SORT  : (Sort)
+		Cumulative Total Cost: 		3393.88
+		Cumulative CPU Cost: 		1.50306e+08
+		Cumulative I/O Cost: 		2913
+		Cumulative Re-Total Cost: 	0
+		Cumulative Re-CPU Cost: 	0
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	3393.88
+		Estimated Bufferpool Buffers: 	5534
+
+		Arguments:
+		---------
+		DUPLWARN: (Duplicates Warning flag)
+			FALSE
+		KEYS    : (Key cardinality)
+			2621
+		NUMROWS : (Estimated number of rows)
+			26210
+		ROWWIDTH: (Estimated width of rows)
+			3108.000000
+		SORTKEY : (Sort Key column)
+			1: Q2.$C2(A)
+		SPILLED : (Pages spilled to bufferpool or disk)
+			2621
+		TEMPSIZE: (Temporary Table Page Size)
+			32768
+		UNIQUE  : (Uniqueness required flag)
+			FALSE
+
+		Input Streams:
+		-------------
+			2) From Operator #7
+
+				Estimated number of rows: 	26210
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.$C2+Q2.EMB+Q2.ADV_ID
+
+
+		Output Streams:
+		--------------
+			3) To Operator #5
+
+				Estimated number of rows: 	26210
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.$C2(A)+Q2.EMB+Q2.ADV_ID
+
+
+	7) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		3389.77
+		Cumulative CPU Cost: 		6.31718e+07
+		Cumulative I/O Cost: 		2913
+		Cumulative Re-Total Cost: 	2.13194
+		Cumulative Re-CPU Cost: 	4.51353e+07
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	7.04747
+		Estimated Bufferpool Buffers: 	2913
+
+		Arguments:
+		---------
+		CUR_COMM: (Currently Committed)
+			TRUE
+		LCKAVOID: (Lock Avoidance)
+			TRUE
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			SEQUENTIAL          
+		ROWLOCK : (Row Lock intent)
+			SHARE (CS/RS)
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SKIP_INS: (Skip Inserted Rows)
+			TRUE
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			FAST
+		TABLOCK : (Table Lock intent)
+			INTENT SHARE
+		TBISOLVL: (Table access Isolation Level)
+			CURSOR STABILITY
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			TRUE
+		VISIBLE : (May be included in scan sharing structures)
+			TRUE
+		WRAPPING: (Scan may start anywhere and wrap)
+			TRUE
+
+		Input Streams:
+		-------------
+			1) From Object NEEDLE.ADV_DOC
+
+				Estimated number of rows: 	26210
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.$RID$+Q1.EMB+Q1.ADV_ID
+
+
+		Output Streams:
+		--------------
+			2) To Operator #6
+
+				Estimated number of rows: 	26210
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.$C2+Q2.EMB+Q2.ADV_ID
+
+
+Objects Used in Access Plan:
+---------------------------
+
+	Schema:   SYSIBM  
+	Name:     ACV261110012537972461_P2_O15_I3
+	Type:     Table (reference only)
+
+	Schema:   SYSIBM  
+	Name:     AGT261110012537972461_P2_O15_I3
+	Type:     Table (reference only)
+
+	Schema:   SYSIBM  
+	Name:     AIJ261110012537972461_P2_O15_I3
+	Type:     Table (reference only)
+
+	Schema:   NEEDLE  
+	Name:     ADV_DOC
+	Type:     Table
+			Time of creation: 		2026-11-10-01.22.27.094217
+			Last statistics update: 	2026-11-10-01.31.23.968119
+			Number of columns: 		14
+			Number of rows: 		26210
+			Width of rows: 			3125
+			Number of buffer pool pages: 	2913
+			Number of data partitions: 	1
+			Distinct row values: 		No
+			Tablespace name: 		USERSPACE1
+			Tablespace overhead: 		6.725000
+			Tablespace transfer rate: 	0.320000
+			Source for statistics: 		Single Node
+			Prefetch page count: 		32
+			Container extent page count: 	32
+			Table overflow record count: 	0
+			Table Active Blocks: 		-1
+			Average Row Compression Ratio: 	0
+			Percentage Rows Compressed: 	0
+			Average Compressed Row Size: 	0
+

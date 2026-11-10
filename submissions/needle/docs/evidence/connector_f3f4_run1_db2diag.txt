@@ -1,0 +1,67 @@
+# db2diag.log excerpt (lines 55696-55760), Db2 v12.1.5.0, 2026-11-10 02:04:29 UTC
+# APPID ::1.53400.261110020100 = the ibm_db_dbi connection used by DB2VS in connector_findings.py f3f4 run 1 (opened 02:01:00 UTC).
+```
+2026-11-10-02.04.29.375212+000 E2634217E1526         LEVEL: Error (OS)
+PID     : 4473                 TID : 123765337876032 PROC : db2sysc 0
+INSTANCE: db2inst1             NODE : 000            DB   : VECDB
+APPHDL  : 0-1358               APPID: ::1.53400.261110020100
+UOWID   : 1                    ACTID: 301            
+AUTHID  : DB2INST1             HOSTNAME: 685f62846709
+EDUID   : 893                  EDUNAME: db2agent (VECDB) 0
+FUNCTION: DB2 UDB, oper system services, sqloseekwrite64, probe:60
+MESSAGE : ZRC=0x850F000C=-2062614516=SQLO_DISK "Disk full."
+          DIA8312C Disk was full.
+CALLED  : OS, -, pwrite                           OSERR: ENOSPC (28)
+DATA #1 : File handle, PD_TYPE_SQO_FILE_HDL, 8 bytes
+  File Handle              = 138
+  File System Block Size   = 4096 bytes
+  File System Type         = ext4
+  Storage Sector Size      = UNKNOWN
+  File Handle Flags :
+    Require Sector Align   = No
+    DIO/CIO Mode           = No
+    Raw Block Device       = No
+    Reserved Handle        = No
+    Flush On Close         = No
+    Thread-Level Lock      = No
+    Write-through Mode     = No
+    File Not Tracked       = Yes
+    Remote Storage Read    = No
+    Remote Storage Write   = No
+    Extended File Handle   = No
+    Use Local, No Delete   = No
+DATA #2 : signed integer, 8 bytes
+8036626432
+DATA #3 : unsigned integer, 8 bytes
+1024
+DATA #4 : signed integer, 8 bytes
+-1
+DATA #5 : String, 105 bytes
+Search for ossError*Analysis probe point after this log entry for further
+self-diagnosis of this problem.
+2026-11-10-02.04.30.160988+000 I2635744E755          LEVEL: Warning
+PID     : 4473                 TID : 123765337876032 PROC : db2sysc 0
+INSTANCE: db2inst1             NODE : 000            DB   : VECDB
+APPHDL  : 0-1358               APPID: ::1.53400.261110020100
+UOWID   : 1                    ACTID: 301            
+AUTHID  : DB2INST1             HOSTNAME: 685f62846709
+EDUID   : 893                  EDUNAME: db2agent (VECDB) 0
+FUNCTION: DB2 Common, OSSe, ossGetKernelMountOptions, probe:8701
+MESSAGE : ECF=0x9000001A=-1879048166=ECF_FILE_DOESNT_EXIST
+          File doesn't exist
+DATA #1 : String, 37 bytes
+Failed to open the fstab for reading.
+DATA #2 : String, 9 bytes
+/database
+DATA #3 : signed integer, 4 bytes
+2
+DATA #4 : Boolean, 1 bytes
+false
+2026-11-10-02.04.30.161133+000 I2636500E4859         LEVEL: Error (OS)
+PID     : 4473                 TID : 123765337876032 PROC : db2sysc 0
+INSTANCE: db2inst1             NODE : 000            DB   : VECDB
+APPHDL  : 0-1358               APPID: ::1.53400.261110020100
+UOWID   : 1                    ACTID: 301            
+AUTHID  : DB2INST1             HOSTNAME: 685f62846709
+EDUID   : 893                  EDUNAME: db2agent (VECDB) 0
+```

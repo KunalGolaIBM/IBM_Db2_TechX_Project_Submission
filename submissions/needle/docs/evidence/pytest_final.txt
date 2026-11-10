@@ -1,0 +1,58 @@
+$env:PYTHONPATH="src"; .\.venv\Scripts\python.exe -m pytest -q tests
+# run from needle/ at 2026-11-10 07:13:39 UTC, Db2 via localhost:50000; exit code 0
+........................................................................ [ 34%]
+........................................................................ [ 69%]
+..............................................................           [100%]
+206 passed in 77.06s (0:01:17)
+
+# Collection only (no execution), same tree, to show which of the 206 tests are DB-marked (-m db, run against live Db2):
+$env:PYTHONPATH="src"; .\.venv\Scripts\python.exe -m pytest --co -q -m db tests
+tests/test_app_db.py::test_deployed_now_matches_generator
+tests/test_app_db.py::test_without_overlaps_rejects_overlapping_period
+tests/test_app_db.py::test_sql_exposure_equals_python_mirror
+tests/test_app_db.py::test_junior_never_sees_embargoed_advisories_in_exposure
+tests/test_app_db.py::test_range_only_advisory_gives_unknown_coverage
+tests/test_app_db.py::test_sign_in_binds_to_the_typed_identity[NDL_JUNIOR-NDL_JUNIOR_PASSWORD-ok]
+tests/test_app_db.py::test_sign_in_binds_to_the_typed_identity[NDL_JUNIOR-None-Sign-in failed]
+tests/test_app_db.py::test_sign_in_binds_to_the_typed_identity[NDL_JUNIOR;HOSTNAME=evil-None-Sign-in failed]
+tests/test_bm25_parity.py::test_sql_bm25_matches_rank_bm25
+tests/test_rcac.py::test_each_connection_is_a_distinct_db2_identity
+tests/test_rcac.py::test_junior_never_sees_embargoed_rows
+tests/test_rcac.py::test_crafted_queries_do_not_bypass_the_permission[SELECT ADV_ID FROM NEEDLE.ADV_DOC WHERE ADV_ID IN ({marks}) OR 1 = 1]
+tests/test_rcac.py::test_crafted_queries_do_not_bypass_the_permission[SELECT ADV_ID FROM NEEDLE.ADV_DOC WHERE EMBARGO_UNTIL IS NOT NULL AND ADV_ID IN ({marks})]
+tests/test_rcac.py::test_crafted_queries_do_not_bypass_the_permission[WITH X AS (SELECT * FROM NEEDLE.ADV_DOC) SELECT ADV_ID FROM X WHERE ADV_ID IN ({marks})]
+tests/test_rcac.py::test_crafted_queries_do_not_bypass_the_permission[sql3]
+tests/test_rcac.py::test_crafted_queries_do_not_bypass_the_permission[sql4]
+tests/test_rcac.py::test_crafted_queries_do_not_bypass_the_permission[SELECT DISTINCT ADV_ID FROM NEEDLE.POSTING WHERE ADV_ID IN ({marks})]
+tests/test_rcac.py::test_crafted_queries_do_not_bypass_the_permission[SELECT ADV_ID FROM NEEDLE.ADV_ALIAS WHERE ADV_ID IN ({marks})]
+tests/test_rcac.py::test_crafted_queries_do_not_bypass_the_permission[SELECT ADV_ID FROM NEEDLE.ADV_AFFECTED WHERE ADV_ID IN ({marks})]
+tests/test_rcac.py::test_junior_cannot_change_or_read_the_policy[SELECT * FROM NEEDLE.USER_ACCESS]
+tests/test_rcac.py::test_junior_cannot_change_or_read_the_policy[UPDATE NEEDLE.USER_ACCESS SET SEES_EMBARGO = 1 WHERE AUTHID = SESSION_USER]
+tests/test_rcac.py::test_junior_cannot_change_or_read_the_policy[INSERT INTO NEEDLE.USER_ACCESS VALUES ('NDL_JUNIOR2', 100, 1)]
+tests/test_rcac.py::test_junior_cannot_change_or_read_the_policy[ALTER TABLE NEEDLE.ADV_DOC DEACTIVATE ROW ACCESS CONTROL]
+tests/test_rcac.py::test_junior_cannot_change_or_read_the_policy[ALTER PERMISSION NEEDLE.ADV_DOC_ROWS DISABLE]
+tests/test_rcac.py::test_junior_cannot_change_or_read_the_policy[DROP MASK NEEDLE.ADV_DOC_SUMMARY_MASK]
+tests/test_rcac.py::test_junior_cannot_change_or_read_the_policy[SET SESSION AUTHORIZATION = 'NDL_SENIOR']
+tests/test_rcac.py::test_junior_cannot_change_or_read_the_policy[UPDATE NEEDLE.ADV_DOC SET EMBARGO_UNTIL = NULL]
+tests/test_rcac.py::test_junior_cannot_change_or_read_the_policy[SELECT COUNT(*) FROM NEEDLE.ADV_RAW]
+tests/test_rcac.py::test_vector_leg_never_returns_embargoed
+tests/test_rcac.py::test_triage_never_returns_embargoed
+tests/test_rcac.py::test_details_mask_is_defined_enabled_and_active
+tests/test_rcac.py::test_p10_sees_only_its_buckets
+tests/test_triage_rcac.py::test_junior_cannot_select_bm25_statistics[NEEDLE.TERM_DF]
+tests/test_triage_rcac.py::test_junior_cannot_select_bm25_statistics[NEEDLE.CORPUS_STATS]
+tests/test_triage_rcac.py::test_junior_triage_still_returns_results_with_execute_only
+tests/test_triage_rcac.py::test_difference_attack_yields_empty_set
+tests/test_triage_rcac.py::test_junior_never_sees_forbidden_ids_through_triage
+tests/test_triage_router.py::test_router_depth_per_user[SENIOR-50-approx-index]
+tests/test_triage_router.py::test_router_depth_per_user[JUNIOR-50-approx-index]
+tests/test_triage_router.py::test_router_depth_per_user[P10-128-deep-exact]
+
+40/206 tests collected (166 deselected) in 1.09s
+
+# Per-file test counts (collection only):
+$env:PYTHONPATH="src"; .\.venv\Scripts\python.exe -m pytest --co -q tests/test_rcac.py tests/test_triage_rcac.py tests/test_verify.py
+#   tests/test_rcac.py: 34 tests
+#   tests/test_triage_rcac.py: 5 tests
+#   tests/test_verify.py: 59 tests
+98 tests collected in 0.18s

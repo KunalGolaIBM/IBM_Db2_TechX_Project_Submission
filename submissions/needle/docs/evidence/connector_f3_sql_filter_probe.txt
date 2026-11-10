@@ -1,0 +1,8 @@
+Db2 v12.1.5.0; probe run from the PC through the tunnel (latency includes the tunnel)
+count via JSON_VALUE(metadata FORMAT BSON, '$.row_bucket' RETURNING INTEGER) < 10: 2621
+statement: SELECT id, JSON_VALUE(metadata FORMAT BSON, '$.adv_id' RETURNING VARCHAR(64)), VECTOR_DISTANCE(embedding, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) AS distance FROM NDL_CONN.DB2VS_ADV WHERE JSON_VALUE(metadata FORMAT BSON, '$.row_bucket' RETURNING INTEGER) < 10 ORDER BY distance FETCH EXACT FIRST 10 ROWS ONLY
+paraphrase:GHSA-22xm-w7r2-834q: rows=10 recall@10 vs exact filtered=1.0 (237 ms incl. tunnel)
+paraphrase:GHSA-23j4-mw76-5v7h: rows=10 recall@10 vs exact filtered=1.0 (277 ms incl. tunnel)
+paraphrase:GHSA-2cv4-cqwr-gwf7: rows=10 recall@10 vs exact filtered=1.0 (238 ms incl. tunnel)
+paraphrase:GHSA-2jq4-q6vv-4cp3: rows=10 recall@10 vs exact filtered=1.0 (250 ms incl. tunnel)
+paraphrase:GHSA-2jrp-274c-jhv3: rows=10 recall@10 vs exact filtered=1.0 (290 ms incl. tunnel)

@@ -1,0 +1,5 @@
+tests/test_app_db.py::test_deployed_now_matches_generator PASSED         [ 25%]
+tests/test_app_db.py::test_without_overlaps_rejects_overlapping_period PASSED [ 50%]
+tests/test_app_db.py::test_sql_exposure_equals_python_mirror PASSED      [ 75%]
+tests/test_app_db.py::test_junior_never_sees_embargoed_advisories_in_exposure PASSED [100%]
+============================== 4 passed in 5.43s ==============================

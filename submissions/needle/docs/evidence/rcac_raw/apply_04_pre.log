@@ -1,0 +1,18 @@
+CREATE TABLE NEEDLE.USER_ACCESS ( AUTHID        VARCHAR(128) NOT NULL PRIMARY KEY, MAX_BUCKET    SMALLINT     NOT NULL CHECK (MAX_BUCKET BETWEEN 0 AND 100), SEES_EMBARGO  SMALLINT     NOT NULL DEFAULT 0 CHECK (SEES_EMBARGO IN (0, 1)) )
+DB20000I  The SQL command completed successfully.
+
+DELETE FROM NEEDLE.USER_ACCESS
+SQL0100W  No row was found for FETCH, UPDATE or DELETE; or the result of a 
+query is an empty table.  SQLSTATE=02000
+
+INSERT INTO NEEDLE.USER_ACCESS (AUTHID, MAX_BUCKET, SEES_EMBARGO) VALUES ('DB2INST1',   100, 1),   -- loader / admin / eval harness
+ ('NDL_SENIOR', 100, 1),   -- demo: sees everything including embargoed advisories
+ ('NDL_JUNIOR', 100, 0),   -- demo: sees everything except embargoed advisories
+ ('NDL_P10',     10, 0),   -- selectivity sweep users
+ ('NDL_P25',     25, 0), ('NDL_P50',     50, 0), ('NDL_P75',     75, 0)
+DB20000I  The SQL command completed successfully.
+
+CALL SYSPROC.ADMIN_CMD('RUNSTATS ON TABLE NEEDLE.USER_ACCESS WITH DISTRIBUTION AND INDEXES ALL')
+
+  Return Status = 0
+

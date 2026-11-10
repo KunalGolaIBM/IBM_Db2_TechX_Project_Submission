@@ -1,0 +1,42 @@
+== 2026-11-10 00:21:48 CST against http://127.0.0.1:8600
+  [PASS] wrong password -> HTTP 401 login
+
+== 1. Pillow FlashPix prompt as NDL_SENIOR
+login NDL_SENIOR: ok, 26,210 advisories visible
+  triage 3.9 s; router: Search depth 50 chosen for your visibility (26,210 of 26,210 advisories visible): approx via vector index
+  rows per leg: keyword 10, vector 10, hybrid 10
+  hybrid top 10: GHSA-5x8w-8jj5-q52h, PYSEC-2026-4330, PYSEC-2026-565, GHSA-4r2x-xpjr-7cvv, PYSEC-2026-2804, GHSA-g7cr-3p24-7wf7, PYSEC-2026-2825, PYSEC-2026-697, PYSEC-2026-712, GHSA-m43c-649m-pm48
+  [PASS] GHSA-5x8w-8jj5-q52h returned to NDL_SENIOR (hybrid rank 1)
+  [PASS] GHSA-5x8w-8jj5-q52h flagged embargoed in the senior view
+  AFFECTED services (hybrid top 10): ['admin-portal', 'geo-tiles', 'image-thumbnailer']
+
+== 2. Same prompt as NDL_JUNIOR
+login NDL_JUNIOR: ok, 26,183 advisories visible
+  triage 3.5 s; router: Search depth 50 chosen for your visibility (26,183 of 26,210 advisories visible): approx via vector index
+  rows per leg: keyword 10, vector 10, hybrid 10
+  hybrid top 10: PYSEC-2026-565, GHSA-4r2x-xpjr-7cvv, PYSEC-2026-2804, PYSEC-2026-2825, GHSA-g7cr-3p24-7wf7, PYSEC-2026-697, PYSEC-2026-712, GHSA-m43c-649m-pm48, GHSA-267x-w5hx-8hjr, PYSEC-2025-61
+  [PASS] GHSA-5x8w-8jj5-q52h absent from the whole junior response (rankings, docs, exposure, SQL params)
+  [PASS] no embargoed advisory in the junior view
+  [PASS] junior memo HTTP 200 in 6.0 s (qwen3:4b-instruct-2507-q4_K_M)
+  [PASS] GHSA-5x8w-8jj5-q52h absent from the junior memo (verified and raw)
+  memo: kept 3 sentences, removed 0
+
+== 3. PyYAML chat message as NDL_JUNIOR
+  triage 3.3 s; router: Search depth 50 chosen for your visibility (26,183 of 26,210 advisories visible): approx via vector index
+  rows per leg: keyword 10, vector 10, hybrid 10
+  AFFECTED legacy-reporting pyyaml==5.1 since 2020-02-27 (2,448 days) GHSA-6757-jp84-gxfx
+  AFFECTED legacy-reporting pyyaml==5.1 since 2020-02-27 (2,448 days) GHSA-8q59-q68h-6hv4
+  AFFECTED legacy-reporting pyyaml==5.1 since 2020-02-27 (2,448 days) PYSEC-2020-96
+  AFFECTED legacy-reporting pyyaml==5.1 since 2020-02-27 (2,448 days) PYSEC-2021-142
+  [PASS] legacy-reporting is AFFECTED
+  [PASS] no 'safe' status in the exposure rows
+
+== 4. PyYAML chat message as NDL_P10 (10% visibility)
+login NDL_P10: ok, 2,616 advisories visible
+  triage 2.8 s; router: Search depth 128 chosen for your visibility (2,616 of 26,210 advisories visible): exact scan
+  rows per leg: keyword 10, vector 10, hybrid 10
+  [PASS] router chose: exact scan
+  [PASS] 10 of 10 rows in every leg
+  exposure: no_grant
+
+== RESULT: ALL PASS

@@ -1,0 +1,179 @@
+{
+ "n": 26183,
+ "excluded_embargoed": 27,
+ "p10_max_bucket": 10,
+ "p10_visible": 2616,
+ "batch": 21,
+ "pca_explained": [
+  0.1602,
+  0.0518,
+  0.035
+ ],
+ "format": "cloud.bin = n x 3 int16 little-endian (x,y,z scaled by 1.6/32767), then n uint8 ROW_BUCKET",
+ "generated": "2026-11-10T04:54:24Z",
+ "source": "scripts/build_hero_cloud.py over data/load/emb.jsonl.gz (release needle-data-2026-11-09) and NEEDLE.ADV_DOC",
+ "queries": [
+  {
+   "key": "pyyaml",
+   "text": "heads up from #platform-sec: someone says the yaml loader we use in a few python services can run arbitrary code when it parses an untrusted config file. no CVE number in the thread. are we exposed?",
+   "pos": [
+    0.5816,
+    0.0894,
+    -0.1207
+   ],
+   "top10": [
+    19674,
+    1957,
+    19625,
+    2215,
+    3935,
+    20652,
+    5511,
+    19001,
+    4288,
+    3516
+   ],
+   "top10_ids": [
+    "PYSEC-2021-142",
+    "GHSA-8278-88vv-x98r",
+    "PYSEC-2020-96",
+    "GHSA-8q59-q68h-6hv4",
+    "GHSA-hrf3-622q-8366",
+    "PYSEC-2022-232",
+    "GHSA-rprw-h62v-c2w7",
+    "PYSEC-2017-78",
+    "GHSA-jv2h-4p9v-wf5w",
+    "GHSA-ggmr-44cv-24pm"
+   ],
+   "batch": [
+    19674,
+    1957,
+    19625,
+    2215,
+    3935,
+    20652,
+    5511,
+    19001,
+    4288,
+    3516,
+    19559,
+    1379,
+    4441,
+    5650,
+    19266,
+    18940,
+    18936,
+    18941,
+    19093,
+    1520,
+    5342
+   ],
+   "batch_visible_p10": 2,
+   "p10_top10": [
+    3935,
+    20652,
+    22180,
+    5875,
+    5508,
+    25178,
+    5447,
+    6403,
+    23965,
+    21543
+   ],
+   "p10_top10_ids": [
+    "GHSA-hrf3-622q-8366",
+    "PYSEC-2022-232",
+    "PYSEC-2026-1313",
+    "GHSA-vqxf-v2gg-x3hc",
+    "GHSA-rpj2-4hq8-938g",
+    "PYSEC-2026-4019",
+    "GHSA-rghg-q7wp-9767",
+    "GHSA-xcmw-grxf-wjhj",
+    "PYSEC-2026-2926",
+    "PYSEC-2024-77"
+   ]
+  },
+  {
+   "key": "flashpix",
+   "text": "heap overflow in the image library's FlashPix JPEG decoder can lead to code execution, no CVE yet",
+   "pos": [
+    0.6382,
+    -0.3453,
+    0.3733
+   ],
+   "top10": [
+    2475,
+    25857,
+    23841,
+    2123,
+    18874,
+    416,
+    25701,
+    870,
+    5727,
+    19017
+   ],
+   "top10_ids": [
+    "GHSA-9g8h-pjm4-q92p",
+    "PYSEC-2026-705",
+    "PYSEC-2026-2814",
+    "GHSA-8g5g-8vmr-9782",
+    "PYSEC-2016-19",
+    "GHSA-3c5c-7235-994j",
+    "PYSEC-2026-565",
+    "GHSA-4r2x-xpjr-7cvv",
+    "GHSA-v9pc-9mvp-x87g",
+    "PYSEC-2017-92"
+   ],
+   "batch": [
+    2475,
+    25857,
+    23841,
+    2123,
+    18874,
+    416,
+    25701,
+    870,
+    5727,
+    19017,
+    19902,
+    18900,
+    2296,
+    3432,
+    20560,
+    20939,
+    24241,
+    3263,
+    23860,
+    25869,
+    6061
+   ],
+   "batch_visible_p10": 0,
+   "p10_top10": [
+    4958,
+    21459,
+    18901,
+    21704,
+    19700,
+    20019,
+    20239,
+    4146,
+    6536,
+    3960
+   ],
+   "p10_top10_ids": [
+    "GHSA-pwv6-vv43-88gr",
+    "PYSEC-2024-295",
+    "PYSEC-2016-7",
+    "PYSEC-2025-225",
+    "PYSEC-2021-166",
+    "PYSEC-2021-457",
+    "PYSEC-2021-655",
+    "GHSA-jfp7-4j67-8r3q",
+    "GHSA-xwhf-g6j5-j5gc",
+    "GHSA-hvr8-466p-75rh"
+   ]
+  }
+ ]
+}

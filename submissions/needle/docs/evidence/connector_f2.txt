@@ -1,0 +1,596 @@
+## F2 k as a parameter marker  (2026-11-10T01:59:58+00:00)
+
+
+### a) APPROX, k literal 10
+
+```sql
+SELECT ADV_ID FROM NDL_CONN.F1_NOTNULL ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 10 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 01:59:58.858686  QUERYTAG CF5AD6001  total cost 501.7857666015625  **vector index used: ['NDL_CONN.F1_NOTNULL_VIX']**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        501.7857666015625
+          2 TBSCAN        501.7857666015625
+          3 SORT          501.78558349609375
+          4 FETCH         501.7760009765625
+          5 IXSCAN        431.440185546875
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 4 O  NDL_CONN.F1_NOTNULL  26210.0
+  -1 D -> 5 O  NDL_CONN.F1_NOTNULL_VIX  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015715404425_P2_O31_I2 TA
+  SYSIBM.AGT261110015715404425_P2_O31_I2 TA
+  SYSIBM.AIJ261110015715404425_P2_O31_I2 TA
+  NDL_CONN.F1_NOTNULL TA
+  NDL_CONN.F1_NOTNULL_VIX VI
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		501.786
+	Query Degree:		1
+
+
+             Rows 
+            RETURN
+            (   1)
+             Cost 
+              I/O 
+              |
+              10 
+            TBSCAN
+            (   2)
+            501.786 
+            70.4365 
+              |
+              10 
+            SORT  
+            (   3)
+            501.786 
+            70.4365 
+              |
+              10 
+            FETCH 
+            (   4)
+            501.776 
+            70.4365 
+          /---+----\
+        10          26210 
+      IXSCAN   TABLE: NDL_CONN
+      (   5)     F1_NOTNULL
+      431.44         Q1
+      60.4536 
+        |
+       26210 
+ VECIDX: NDL_CONN
+  F1_NOTNULL_VIX
+        Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+### b) APPROX, k parameter marker ?
+
+```sql
+SELECT ADV_ID FROM NDL_CONN.F1_NOTNULL ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST ? ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 01:59:59.175944  QUERYTAG CF5AD6002  total cost 3059.200439453125  **vector index used: NO**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        3059.200439453125
+          2 TBSCAN        3059.200439453125
+          3 SORT          3059.09716796875
+          4 FILTER        3058.004638671875
+          5 TBSCAN        3051.843994140625
+          6 SORT          3051.534423828125
+          7 TBSCAN        3047.418701171875
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 7 O  NDL_CONN.F1_NOTNULL  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015715404425_P2_O31_I2 +T
+  SYSIBM.AGT261110015715404425_P2_O31_I2 +T
+  SYSIBM.AIJ261110015715404425_P2_O31_I2 +T
+  NDL_CONN.F1_NOTNULL TA
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		3059.2
+	Query Degree:		1
+
+
+      Rows 
+     RETURN
+     (   1)
+      Cost 
+       I/O 
+       |
+     8736.67 
+     TBSCAN
+     (   2)
+     3059.2 
+      2621 
+       |
+     8736.67 
+     SORT  
+     (   3)
+     3059.1 
+      2621 
+       |
+     8736.67 
+     FILTER
+     (   4)
+      3058 
+      2621 
+       |
+      26210 
+     TBSCAN
+     (   5)
+     3051.84 
+      2621 
+       |
+      26210 
+     SORT  
+     (   6)
+     3051.53 
+      2621 
+       |
+      26210 
+     TBSCAN
+     (   7)
+     3047.42 
+      2621 
+       |
+      26210 
+ TABLE: NDL_CONN
+   F1_NOTNULL
+       Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+### c1) ibm-db-haystack 1.0.0 default: nullable column, WHERE EMB IS NOT NULL, FETCH FIRST ?
+
+```sql
+SELECT ADV_ID, EMB, VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) AS score FROM NDL_CONN.F1_NULLABLE WHERE EMB IS NOT NULL ORDER BY score ASC FETCH FIRST ? ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 01:59:59.485661  QUERYTAG CF5AD6003  total cost 3058.1220703125  **vector index used: NO**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        3058.1220703125
+          2 FILTER        3058.1220703125
+          3 TBSCAN        3052.2080078125
+          4 SORT          3051.910888671875
+          5 TBSCAN        3047.9697265625
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 5 O  NDL_CONN.F1_NULLABLE  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015556777728_P2_O30_I2 +T
+  SYSIBM.AGT261110015556777728_P2_O30_I2 +T
+  SYSIBM.AIJ261110015556777728_P2_O30_I2 +T
+  NDL_CONN.F1_NULLABLE TA
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		3058.12
+	Query Degree:		1
+
+
+      Rows 
+     RETURN
+     (   1)
+      Cost 
+       I/O 
+       |
+     8387.2 
+     FILTER
+     (   2)
+     3058.12 
+      2621 
+       |
+     25161.6 
+     TBSCAN
+     (   3)
+     3052.21 
+      2621 
+       |
+     25161.6 
+     SORT  
+     (   4)
+     3051.91 
+      2621 
+       |
+     25161.6 
+     TBSCAN
+     (   5)
+     3047.97 
+      2621 
+       |
+      26210 
+ TABLE: NDL_CONN
+   F1_NULLABLE
+       Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+### c2) PR #4086 create_vector_index=True: NOT NULL column, no predicate, FETCH FIRST ?
+
+```sql
+SELECT ADV_ID, EMB, VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) AS score FROM NDL_CONN.F1_NOTNULL ORDER BY score ASC FETCH FIRST ? ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 01:59:59.813691  QUERYTAG CF5AD6004  total cost 3059.388671875  **vector index used: NO**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        3059.388671875
+          2 TBSCAN        3059.388671875
+          3 SORT          3059.285400390625
+          4 FILTER        3058.004638671875
+          5 TBSCAN        3051.843994140625
+          6 SORT          3051.534423828125
+          7 TBSCAN        3047.418701171875
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 7 O  NDL_CONN.F1_NOTNULL  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015715404425_P2_O31_I2 +T
+  SYSIBM.AGT261110015715404425_P2_O31_I2 +T
+  SYSIBM.AIJ261110015715404425_P2_O31_I2 +T
+  NDL_CONN.F1_NOTNULL TA
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		3059.39
+	Query Degree:		1
+
+
+      Rows 
+     RETURN
+     (   1)
+      Cost 
+       I/O 
+       |
+     8736.67 
+     TBSCAN
+     (   2)
+     3059.39 
+      2621 
+       |
+     8736.67 
+     SORT  
+     (   3)
+     3059.29 
+      2621 
+       |
+     8736.67 
+     FILTER
+     (   4)
+      3058 
+      2621 
+       |
+      26210 
+     TBSCAN
+     (   5)
+     3051.84 
+      2621 
+       |
+      26210 
+     SORT  
+     (   6)
+     3051.53 
+      2621 
+       |
+      26210 
+     TBSCAN
+     (   7)
+     3047.42 
+      2621 
+       |
+      26210 
+ TABLE: NDL_CONN
+   F1_NOTNULL
+       Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+### d) c2 with FETCH APPROX FIRST ? (k still a marker)
+
+```sql
+SELECT ADV_ID, EMB, VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) AS score FROM NDL_CONN.F1_NOTNULL ORDER BY score ASC FETCH APPROX FIRST ? ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 02:00:00.144322  QUERYTAG CF5AD6005  total cost 3059.388671875  **vector index used: NO**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        3059.388671875
+          2 TBSCAN        3059.388671875
+          3 SORT          3059.285400390625
+          4 FILTER        3058.004638671875
+          5 TBSCAN        3051.843994140625
+          6 SORT          3051.534423828125
+          7 TBSCAN        3047.418701171875
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 7 O  NDL_CONN.F1_NOTNULL  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015715404425_P2_O31_I2 +T
+  SYSIBM.AGT261110015715404425_P2_O31_I2 +T
+  SYSIBM.AIJ261110015715404425_P2_O31_I2 +T
+  NDL_CONN.F1_NOTNULL TA
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		3059.39
+	Query Degree:		1
+
+
+      Rows 
+     RETURN
+     (   1)
+      Cost 
+       I/O 
+       |
+     8736.67 
+     TBSCAN
+     (   2)
+     3059.39 
+      2621 
+       |
+     8736.67 
+     SORT  
+     (   3)
+     3059.29 
+      2621 
+       |
+     8736.67 
+     FILTER
+     (   4)
+      3058 
+      2621 
+       |
+      26210 
+     TBSCAN
+     (   5)
+     3051.84 
+      2621 
+       |
+      26210 
+     SORT  
+     (   6)
+     3051.53 
+      2621 
+       |
+      26210 
+     TBSCAN
+     (   7)
+     3047.42 
+      2621 
+       |
+      26210 
+ TABLE: NDL_CONN
+   F1_NOTNULL
+       Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+### e) c2 with FETCH APPROX FIRST 10 (k literal), ORDER BY alias
+
+```sql
+SELECT ADV_ID, EMB, VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) AS score FROM NDL_CONN.F1_NOTNULL ORDER BY score ASC FETCH APPROX FIRST 10 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 02:00:00.463465  QUERYTAG CF5AD6006  total cost 501.7857971191406  **vector index used: ['NDL_CONN.F1_NOTNULL_VIX']**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        501.7857971191406
+          2 TBSCAN        501.7857971191406
+          3 SORT          501.7856140136719
+          4 FETCH         501.7760009765625
+          5 IXSCAN        431.440185546875
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 4 O  NDL_CONN.F1_NOTNULL  26210.0
+  -1 D -> 5 O  NDL_CONN.F1_NOTNULL_VIX  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015715404425_P2_O31_I2 TA
+  SYSIBM.AGT261110015715404425_P2_O31_I2 TA
+  SYSIBM.AIJ261110015715404425_P2_O31_I2 TA
+  NDL_CONN.F1_NOTNULL TA
+  NDL_CONN.F1_NOTNULL_VIX VI
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		501.786
+	Query Degree:		1
+
+
+             Rows 
+            RETURN
+            (   1)
+             Cost 
+              I/O 
+              |
+              10 
+            TBSCAN
+            (   2)
+            501.786 
+            70.4365 
+              |
+              10 
+            SORT  
+            (   3)
+            501.786 
+            70.4365 
+              |
+              10 
+            FETCH 
+            (   4)
+            501.776 
+            70.4365 
+          /---+----\
+        10          26210 
+      IXSCAN   TABLE: NDL_CONN
+      (   5)     F1_NOTNULL
+      431.44         Q1
+      60.4536 
+        |
+       26210 
+ VECIDX: NDL_CONN
+  F1_NOTNULL_VIX
+        Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+### f) c1 with FETCH APPROX FIRST 10 (nullable + IS NOT NULL, k literal)
+
+```sql
+SELECT ADV_ID, EMB, VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) AS score FROM NDL_CONN.F1_NULLABLE WHERE EMB IS NOT NULL ORDER BY score ASC FETCH APPROX FIRST 10 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 02:00:00.775746  QUERYTAG CF5AD6007  total cost 515.7234497070312  **vector index used: ['NDL_CONN.F1_NULLABLE_VIX']**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        515.7234497070312
+          2 TBSCAN        515.7234497070312
+          3 SORT          515.7232666015625
+          4 FETCH         515.713134765625
+          5 IXSCAN        438.3578796386719
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 4 O  NDL_CONN.F1_NULLABLE  26210.0
+  -1 D -> 5 O  NDL_CONN.F1_NULLABLE_VIX  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015556777728_P2_O30_I2 TA
+  SYSIBM.AGT261110015556777728_P2_O30_I2 TA
+  SYSIBM.AIJ261110015556777728_P2_O30_I2 TA
+  NDL_CONN.F1_NULLABLE TA
+  NDL_CONN.F1_NULLABLE_VIX VI
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		515.723
+	Query Degree:		1
+
+
+             Rows 
+            RETURN
+            (   1)
+             Cost 
+              I/O 
+              |
+              10 
+            TBSCAN
+            (   2)
+            515.723 
+            72.4144 
+              |
+              10 
+            SORT  
+            (   3)
+            515.723 
+            72.4144 
+              |
+             10.56 
+            FETCH 
+            (   4)
+            515.713 
+            72.4144 
+          /---+----\
+        11          26210 
+      IXSCAN   TABLE: NDL_CONN
+      (   5)     F1_NULLABLE
+      438.358        Q1
+      61.4353 
+        |
+       26210 
+ VECIDX: NDL_CONN
+  F1_NULLABLE_VIX
+        Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+### F2 summary
+
+```
+a) APPROX, k literal 10                                                                         index=NDL_CONN.F1_NOTNULL_VIX cost=501.8
+b) APPROX, k parameter marker ?                                                                 index=NO                     cost=3059.2
+c1) ibm-db-haystack 1.0.0 default: nullable column, WHERE EMB IS NOT NULL, FETCH FIRST ?        index=NO                     cost=3058.1
+c2) PR #4086 create_vector_index=True: NOT NULL column, no predicate, FETCH FIRST ?             index=NO                     cost=3059.4
+d) c2 with FETCH APPROX FIRST ? (k still a marker)                                              index=NO                     cost=3059.4
+e) c2 with FETCH APPROX FIRST 10 (k literal), ORDER BY alias                                    index=NDL_CONN.F1_NOTNULL_VIX cost=501.8
+f) c1 with FETCH APPROX FIRST 10 (nullable + IS NOT NULL, k literal)                            index=NDL_CONN.F1_NULLABLE_VIX cost=515.7
+timing a) literal k: n=20 median=2.4 ms p95=2.6 ms min=2.2 max=5.6
+timing b) k=? bound to 10: n=20 median=93.2 ms p95=101.0 ms min=91.2 max=102.4   rows returned min=10  overlap@10 with a) mean=0.960
+```

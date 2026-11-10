@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "NEEDLE: permission-aware hybrid retrieval in Db2",
+    "slug": "needle",
+    "short_description": "NEEDLE maps a vague security report to the services it affects: one Db2 SQL PL call fuses BM25 keyword rank (plain SQL) and DiskANN vector rank (FETCH APPROX on a vector index) with reciprocal rank fusion under row and column access control, and an exact SBOM join with BUSINESS_TIME history says which services are affected and since when. NEEDLE measures what row permissions do to approximate vector search: every user shares one plan with a constant observed optimizer estimate (filter factor 0.495), the index over-fetches by 1/FF, and a user who sees 10% of the rows gets 2.05 of 10 rows (recall 0.205). On 89 held-out queries, the vector leg of a per-user router restores recall to 0.987-1.000 and returns 10 of 10 rows, with 0 leaks.",
+    "category": "AI / RAG / Security",
+    "demo_url": "",
+    "video_url": "https://youtu.be/OFGFV6zC5QE",
+    "repo_url": "https://github.com/wiiqz/IBM2026"
+  },
+  "team": {
+    "name": "Needlepoint",
+    "members": [
+      {
+        "name": "Kartikeya Lathi",
+        "github": "KnigguKniggu-droid",
+        "email": "",
+        "role": "Db2 retrieval, row and column access control, evaluation"
+      },
+      {
+        "name": "William Lu",
+        "github": "wiiqz",
+        "email": "",
+        "role": "User interface, demo and presentation"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1.5.0 (Docker)",
+    "connector": "ibm_db 3.3.0 (+ langchain-core retriever, Haystack component)",
+    "features_used": [
+      "VECTOR(768, FLOAT32) NOT NULL and VECTOR_DISTANCE (COSINE)",
+      "CREATE VECTOR INDEX (DiskANN) with FETCH APPROX / FETCH EXACT and literal k",
+      "Optimization guideline IXSCAN SEARCH_LIST_SIZE",
+      "BM25 keyword ranking in plain SQL (inline SQL table function over postings tables)",
+      "SQL PL stored procedure: both legs and reciprocal rank fusion in one statement",
+      "JSON_VALUE with a recursive common table expression for bound query terms",
+      "Row and column access control: CREATE PERMISSION on 4 tables, CREATE MASK",
+      "Application-period temporal table (PERIOD BUSINESS_TIME, WITHOUT OVERLAPS)",
+      "Least-privilege users (CONNECT, SELECT, EXECUTE only)",
+      "EXPLAIN, db2exfmt, EXPLAIN_FROM_SECTION, EXPLAIN_FROM_ACTIVITY, MON_GET_PKG_CACHE_STMT",
+      "Raw JSON in CLOB with SHA-256 provenance"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "SQL", "SQL PL", "TypeScript"],
+    "frameworks": ["LangChain", "Haystack", "FastAPI", "React", "Vite", "Tailwind CSS", "Streamlit", "pytest"],
+    "ai_models": ["Ollama nomic-embed-text (768-dim embeddings)", "Ollama qwen3:14b (memo model, selected by LLM_MODEL)"]
+  }
+}

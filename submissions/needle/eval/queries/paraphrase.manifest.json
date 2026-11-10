@@ -1,0 +1,39 @@
+{
+  "built_at": "2026-11-10T01:23:37+00:00",
+  "seed": 20261109,
+  "per_slice_target": 150,
+  "docs_path": "docs.jsonl",
+  "docs_sha256": "b66b2af561c75e0432b9c5dcb36f7f430f5ee51201ae0961cf8610d7786ea127",
+  "docs_records": 26842,
+  "candidate_groups": 7060,
+  "query_kinds": [
+    "GHSA",
+    "PYSEC"
+  ],
+  "ground_truth": "all non-withdrawn adv_ids sharing the query's canon_id",
+  "mask_token": "a popular library",
+  "details_max_chars": 500,
+  "stats": {
+    "groups_scanned": 151,
+    "attempts": 151,
+    "accepted": 150,
+    "dropped": {
+      "shares_6_word_run": 1
+    }
+  },
+  "synthetic": true,
+  "model": "qwen3:4b-instruct-2507-q4_K_M",
+  "model_digest": "0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0",
+  "options": {
+    "temperature": 0,
+    "seed": 20261109,
+    "num_predict": 160
+  },
+  "system_prompt": "You rewrite software security advisories into short, vague chat messages, the way a developer would type them to a teammate when they are not sure what is going on.",
+  "user_prompt": "Rewrite the advisory below as a chat message of 1 to 3 sentences (at most 50 words) from a developer who noticed something worrying and asks whether it is a known vulnerability.\nRules: do not name any library, package, product, project, vendor, file or function. No version numbers, no CVE or GHSA ids, no URLs, no code. Describe the behaviour or the attack in everyday words. Do not copy phrases from the advisory. Output only the message.\n\nAdvisory:\n{text}",
+  "leak_filter": "drop if names a package variant, contains an advisory id or URL, or shares >= 6 consecutive words with summary+details or with the masked input",
+  "slice": "paraphrase",
+  "count": 150,
+  "sha256": "f6e25b109378809f0203d52e8824d4d6c7bae7a3d81443ee2e5478f4f811e3dc",
+  "replaced_sha256": null
+}

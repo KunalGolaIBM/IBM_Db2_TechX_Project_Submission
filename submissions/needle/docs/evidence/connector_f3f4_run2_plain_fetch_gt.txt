@@ -1,0 +1,411 @@
+## F3/F4 filtered search  (2026-11-10T02:09:13+00:00)
+
+```
+NDL_CONN.F1_NOTNULL rows=26210  ROW_BUCKET<10 rows=2621  selectivity=0.1000
+NDL_CONN.DB2VS_ADV rows=26210  metadata row_bucket<10 rows=2621
+queries: 150 paraphrase query vectors from data/eval_qvecs.json.gz, embedding={'model': 'nomic-embed-text', 'prefix': 'search_query: ', 'name': 'nomic-embed-text:latest', 'digest': '0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f', 'quantization': 'F16'}
+```
+
+### EXPLAIN of the F4 statements
+
+
+### F4a SQL WHERE + FETCH APPROX FIRST 10
+
+```sql
+SELECT ADV_ID FROM NDL_CONN.F1_NOTNULL WHERE ROW_BUCKET < 10 ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 10 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 02:09:13.920268  QUERYTAG CFC284001  total cost 1805.970458984375  **vector index used: ['NDL_CONN.F1_NOTNULL_VIX']**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        1805.970458984375
+          2 TBSCAN        1805.970458984375
+          3 SORT          1805.97021484375
+          4 FETCH         1805.960693359375
+          5 IXSCAN        1216.573974609375
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 4 O  NDL_CONN.F1_NOTNULL  26210.0
+  -1 D -> 5 O  NDL_CONN.F1_NOTNULL_VIX  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015715404425_P2_O31_I2 TA
+  SYSIBM.AGT261110015715404425_P2_O31_I2 TA
+  SYSIBM.AIJ261110015715404425_P2_O31_I2 TA
+  NDL_CONN.F1_NOTNULL TA
+  NDL_CONN.F1_NOTNULL_VIX VI
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		1805.97
+	Query Degree:		1
+
+
+             Rows 
+            RETURN
+            (   1)
+             Cost 
+              I/O 
+              |
+              10 
+            TBSCAN
+            (   2)
+            1805.97 
+            255.052 
+              |
+              10 
+            SORT  
+            (   3)
+            1805.97 
+            255.052 
+              |
+            10.018 
+            FETCH 
+            (   4)
+            1805.96 
+            255.052 
+          /---+----\
+        85          26210 
+      IXSCAN   TABLE: NDL_CONN
+      (   5)     F1_NOTNULL
+      1216.57        Q1
+       171.4 
+        |
+       26210 
+ VECIDX: NDL_CONN
+  F1_NOTNULL_VIX
+        Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+### F4b SQL WHERE + FETCH APPROX FIRST 100, take 10
+
+```sql
+SELECT ADV_ID FROM NDL_CONN.F1_NOTNULL WHERE ROW_BUCKET < 10 ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 100 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 02:09:14.251248  QUERYTAG CFC284002  total cost 3050.955810546875  **vector index used: NO**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        3050.955810546875
+          2 TBSCAN        3050.955810546875
+          3 SORT          3050.95458984375
+          4 TBSCAN        3047.9697265625
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 4 O  NDL_CONN.F1_NOTNULL  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015715404425_P2_O31_I2 +T
+  SYSIBM.AGT261110015715404425_P2_O31_I2 +T
+  SYSIBM.AIJ261110015715404425_P2_O31_I2 +T
+  NDL_CONN.F1_NOTNULL TA
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		3050.96
+	Query Degree:		1
+
+
+      Rows 
+     RETURN
+     (   1)
+      Cost 
+       I/O 
+       |
+       100 
+     TBSCAN
+     (   2)
+     3050.96 
+      2621 
+       |
+       100 
+     SORT  
+     (   3)
+     3050.95 
+      2621 
+       |
+     3089.07 
+     TBSCAN
+     (   4)
+     3047.97 
+      2621 
+       |
+      26210 
+ TABLE: NDL_CONN
+   F1_NOTNULL
+       Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+### F4c over-fetch FETCH APPROX FIRST 100, then WHERE, take 10
+
+```sql
+SELECT ADV_ID FROM (SELECT ADV_ID, ROW_BUCKET, VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) AS CF_D FROM NDL_CONN.F1_NOTNULL ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 100 ROWS ONLY) X WHERE ROW_BUCKET < 10 ORDER BY CF_D FETCH FIRST 10 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 02:09:14.565511  QUERYTAG CFC284003  total cost 2075.269287109375  **vector index used: ['NDL_CONN.F1_NOTNULL_VIX']**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        2075.269287109375
+          2 TBSCAN        2075.269287109375
+          3 SORT          2075.26904296875
+          4 FILTER        2075.2685546875
+          5 TBSCAN        2075.266357421875
+          6 SORT          2075.26513671875
+          7 FETCH         2075.16796875
+          8 IXSCAN        1383.7440185546875
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 7 O  NDL_CONN.F1_NOTNULL  26210.0
+  -1 D -> 8 O  NDL_CONN.F1_NOTNULL_VIX  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015715404425_P2_O31_I2 TA
+  SYSIBM.AGT261110015715404425_P2_O31_I2 TA
+  SYSIBM.AIJ261110015715404425_P2_O31_I2 TA
+  NDL_CONN.F1_NOTNULL TA
+  NDL_CONN.F1_NOTNULL_VIX VI
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		2075.27
+	Query Degree:		1
+
+
+             Rows 
+            RETURN
+            (   1)
+             Cost 
+              I/O 
+              |
+              10 
+            TBSCAN
+            (   2)
+            2075.27 
+            293.139 
+              |
+              10 
+            SORT  
+            (   3)
+            2075.27 
+            293.139 
+              |
+            11.7858 
+            FILTER
+            (   4)
+            2075.27 
+            293.139 
+              |
+              100 
+            TBSCAN
+            (   5)
+            2075.27 
+            293.139 
+              |
+              100 
+            SORT  
+            (   6)
+            2075.27 
+            293.139 
+              |
+              100 
+            FETCH 
+            (   7)
+            2075.17 
+            293.139 
+          /---+----\
+        100         26210 
+      IXSCAN   TABLE: NDL_CONN
+      (   8)     F1_NOTNULL
+      1383.74        Q1
+      195.005 
+        |
+       26210 
+ VECIDX: NDL_CONN
+  F1_NOTNULL_VIX
+        Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+### F4b SQL WHERE + FETCH APPROX FIRST 200, take 10
+
+```sql
+SELECT ADV_ID FROM NDL_CONN.F1_NOTNULL WHERE ROW_BUCKET < 10 ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 200 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 02:09:14.946346  QUERYTAG CFC284004  total cost 3050.9775390625  **vector index used: NO**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        3050.9775390625
+          2 TBSCAN        3050.9775390625
+          3 SORT          3050.97509765625
+          4 TBSCAN        3047.9697265625
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 4 O  NDL_CONN.F1_NOTNULL  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015715404425_P2_O31_I2 +T
+  SYSIBM.AGT261110015715404425_P2_O31_I2 +T
+  SYSIBM.AIJ261110015715404425_P2_O31_I2 +T
+  NDL_CONN.F1_NOTNULL TA
+```
+
+### F4c over-fetch FETCH APPROX FIRST 200, then WHERE, take 10
+
+```sql
+SELECT ADV_ID FROM (SELECT ADV_ID, ROW_BUCKET, VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) AS CF_D FROM NDL_CONN.F1_NOTNULL ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 200 ROWS ONLY) X WHERE ROW_BUCKET < 10 ORDER BY CF_D FETCH FIRST 10 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 02:09:14.964086  QUERYTAG CFC284005  total cost 3073.03125  **vector index used: NO**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        3073.03125
+          2 TBSCAN        3073.03125
+          3 SORT          3073.031005859375
+          4 FILTER        3073.030029296875
+          5 TBSCAN        3073.02587890625
+          6 SORT          3073.0234375
+          7 TBSCAN        3047.418701171875
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 7 O  NDL_CONN.F1_NOTNULL  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015715404425_P2_O31_I2 +T
+  SYSIBM.AGT261110015715404425_P2_O31_I2 +T
+  SYSIBM.AIJ261110015715404425_P2_O31_I2 +T
+  NDL_CONN.F1_NOTNULL TA
+```
+
+Ground truth statement (exact, bound vector):
+```sql
+SELECT ADV_ID, VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) AS CF_D FROM NDL_CONN.F1_NOTNULL WHERE ROW_BUCKET < 10 ORDER BY CF_D FETCH FIRST 20 ROWS ONLY
+```
+  ... 25/150 queries
+  ... 50/150 queries
+  ... 75/150 queries
+  ... 100/150 queries
+  ... 125/150 queries
+  ... 150/150 queries
+
+DB2VS executed 450 search statements; distinct statement texts: 300 (the query vector is inlined, db2vs.py:605).
+embedding-model calls per DB2VS search (stub counter): min=1 max=1 (get_embedding_dimension() at db2vs.py:599 embeds the probe text on every search)
+
+### DB2VS 1.0.0 search statement as executed (captured from the cursor)
+
+```sql
+SELECT id, text, SYSTOOLS.BSON2JSON(metadata), vector_distance(embedding, VECTOR('<768 floats inlined>', 768, FLOAT32), COSINE) as distance FROM NDL_CONN.DB2VS_ADV ORDER BY distance FETCH FIRST 10 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 02:11:57.605765  QUERYTAG CFC284006  total cost 3066.357421875  **vector index used: NO**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        3066.357421875
+          2 TBSCAN        3066.357421875
+          3 SORT          3066.357177734375
+          4 TBSCAN        3064.82861328125
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 4 O  NDL_CONN.DB2VS_ADV  23706.0
+EXPLAIN_OBJECT:
+  NDL_CONN.DB2VS_ADV TA
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		3066.36
+	Query Degree:		1
+
+
+      Rows 
+     RETURN
+     (   1)
+      Cost 
+       I/O 
+       |
+       10 
+     TBSCAN
+     (   2)
+     3066.36 
+      2634 
+       |
+       10 
+     SORT  
+     (   3)
+     3066.36 
+      2634 
+       |
+      23706 
+     TBSCAN
+     (   4)
+     3064.83 
+      2634 
+       |
+      23706 
+ TABLE: NDL_CONN
+    DB2VS_ADV
+       Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+Diagnostic Identifier: 	1
+Diagnostic Details: 	EXP0020W  Statistics have not been collected for
+			table "NDL_CONN"."DB2VS_ADV".  This may result in a
+			sub-optimal access plan and poor performance. 
+			Statistics should be collected for this table.
+```
+package cache (MON_GET_PKG_CACHE_STMT, dynamic): DB2VS statements entries=134 executions=197 prep_time_ms_sum=370 | bound ground-truth statement entries=2 executions=250 prep_time_ms_sum=3
+
+### F3/F4 results
+
+150 queries, k=10, filter ROW_BUCKET < 10 (selectivity 0.1000); recall@10 vs exact filtered top-10 on NDL_CONN.F1_NOTNULL; tie-aware counts any row at distance <= the 10th exact distance + 1e-6.
+
+```
+method                              mean_n min_n   q<k  q=0  recall  rmin  r_tie  err  latency (in codespace)
+db2vs_k10_filter                      1.07     0   150   66   0.107  0.00  0.107    0  median=273.63 ms p95=400.76 ms
+db2vs_k100_filter_top10               8.33     1    69    0   0.833  0.10  0.833    0  median=277.08 ms p95=413.87 ms
+db2vs_k10_nofilter                   10.00    10     0    0   0.951  0.50  0.953    0  median=267.3 ms p95=377.09 ms
+F4a_where_approx10                    7.60     0    89    1   0.663  0.00  0.671    0  median=5.18 ms p95=9.0 ms
+F4b_where_approx100_top10            10.00    10     0    0   1.000  1.00  1.000    0  median=13.14 ms p95=17.17 ms
+F4c_postfilter_approx100_top10        8.40     0    67    1   0.706  0.00  0.714    0  median=5.28 ms p95=8.67 ms
+F4b_where_approx200_top10            10.00    10     0    0   1.000  1.00  1.000    0  median=12.76 ms p95=18.5 ms
+F4c_postfilter_approx200_top10        9.95     7     4    0   0.995  0.70  0.995    0  median=131.56 ms p95=149.69 ms
+db2vs_k10_filter histogram of rows returned: {0: 66, 1: 35, 2: 32, 3: 11, 4: 3, 5: 2, 6: 1}
+(db2vs_k10_nofilter recall is against the exact UNFILTERED top-10: a correctness check of the copied table.)
+(a statement that raised an error counts as 0 rows returned and recall 0 for that query; see 'err'.)
+```
+
+wrote /tmp/needle/conn_out/db2vs_baseline.json

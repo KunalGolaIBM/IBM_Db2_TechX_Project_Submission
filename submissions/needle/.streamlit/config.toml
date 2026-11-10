@@ -1,0 +1,43 @@
+# NEEDLE Streamlit theme (owner: app agent). Run the app from the needle/ folder so Streamlit finds this file:
+#   .venv\Scripts\streamlit run src/needle/app.py
+# Light, IBM Carbon-like: Plex Sans, gray-10 layers, one blue accent (#0f62fe), square corners.
+
+[theme]
+base = "light"
+primaryColor = "#0f62fe"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f4f4f4"
+textColor = "#161616"
+linkColor = "#0f62fe"
+borderColor = "#e0e0e0"
+dataframeBorderColor = "#e0e0e0"
+dataframeHeaderBackgroundColor = "#f4f4f4"
+dataframeHeaderTextColor = "#161616"
+codeBackgroundColor = "#f4f4f4"
+redColor = "#da1e28"
+blueColor = "#0f62fe"
+greenColor = "#24a148"
+yellowColor = "#f1c21b"
+font = "'IBM Plex Sans':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap, sans-serif"
+codeFont = "'IBM Plex Mono':https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap, monospace"
+baseFontSize = 14
+headingFontWeights = 600
+baseRadius = "none"
+buttonRadius = "none"
+showWidgetBorder = true
+showSidebarBorder = true
+
+[theme.sidebar]
+backgroundColor = "#f4f4f4"
+secondaryBackgroundColor = "#ffffff"
+
+[server]
+# Bind to loopback only. The user switch is a demo of separate Db2 identities, not authentication:
+# anyone who could reach this port could pick NDL_SENIOR, so the app must never listen on the LAN (review M3).
+address = "127.0.0.1"
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "viewer"

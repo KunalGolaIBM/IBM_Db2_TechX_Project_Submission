@@ -1,0 +1,4 @@
+[ffsource] before (P10/P25/P50/P75 = 10/25/50/75): MAX_BUCKET=[['DB2INST1', 100], ['NDL_JUNIOR', 100], ['NDL_P10', 10], ['NDL_P25', 25], ['NDL_P50', 50], ['NDL_P75', 75], ['NDL_SENIOR', 100]] colstats=[['MAX_BUCKET', '5', '25', '75']] FF=[0.4950000047683716] IXSCAN est=21.0 L=50
+[ffsource] changed (P10/P25/P50/P75 = 10/10/10/10) + RUNSTATS: MAX_BUCKET=[['DB2INST1', 100], ['NDL_JUNIOR', 100], ['NDL_P10', 10], ['NDL_P25', 10], ['NDL_P50', 10], ['NDL_P75', 10], ['NDL_SENIOR', 100]] colstats=[['MAX_BUCKET', '2', '10', '100']] FF=[0.4950000047683716] IXSCAN est=21.0 L=50
+[ffsource] restored (10/25/50/75) + RUNSTATS: MAX_BUCKET=[['DB2INST1', 100], ['NDL_JUNIOR', 100], ['NDL_P10', 10], ['NDL_P25', 25], ['NDL_P50', 50], ['NDL_P75', 75], ['NDL_SENIOR', 100]] colstats=[['MAX_BUCKET', '5', '25', '75']] FF=[0.4950000047683716] IXSCAN est=21.0 L=50
+wrote /home/codespace/ndl_rcac/rcac_ffsource.json

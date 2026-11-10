@@ -1,0 +1,96 @@
+## connector_findings setup  (2026-11-10T01:55:49+00:00)
+
+```
+Db2: DB2 v12.1.5.0
+autocommit: True
+ADM13500E count in notify log before: 10
+SKIP     0.0s  CREATE SCHEMA NDL_CONN  ([IBM][CLI Driver][DB2/LINUXX8664] SQL0601N  The name of the object to be created is identical to the existing name "NDL_)
+OK       0.3s  DROP TABLE NDL_CONN.F1_NULLABLE
+SKIP     0.0s  DROP TABLE NDL_CONN.F1_NOTNULL  ([IBM][CLI Driver][DB2/LINUXX8664] SQL0204N  "NDL_CONN.F1_NOTNULL" is an undefined name.  SQLSTATE=42704 SQLCODE=-204)
+SKIP     0.0s  DROP TABLE NDL_CONN.DB2VS_ADV  ([IBM][CLI Driver][DB2/LINUXX8664] SQL0204N  "NDL_CONN.DB2VS_ADV" is an undefined name.  SQLSTATE=42704 SQLCODE=-204)
+OK       0.2s  CREATE TABLE NDL_CONN.F1_NULLABLE (ADV_ID VARCHAR(64) NOT NULL PRIMARY KEY, EMB VECTOR(768, FLOAT32))
+OK       0.2s  CREATE TABLE NDL_CONN.F1_NOTNULL (ADV_ID VARCHAR(64) NOT NULL PRIMARY KEY, ROW_BUCKET SMALLINT NOT NULL, EMB VECTOR(768, FLOAT32) NOT NULL)
+OK       3.3s  INSERT INTO NDL_CONN.F1_NULLABLE (ADV_ID, EMB) SELECT ADV_ID, EMB FROM NEEDLE.ADV_DOC
+OK       2.8s  INSERT INTO NDL_CONN.F1_NOTNULL (ADV_ID, ROW_BUCKET, EMB) SELECT ADV_ID, ROW_BUCKET, EMB FROM NEEDLE.ADV_DOC
+OK      78.5s  CREATE VECTOR INDEX NDL_CONN."F1_NULLABLE_VIX" ON NDL_CONN.F1_NULLABLE ("EMB") WITH DISTANCE COSINE
+     ADM13500E count after CREATE VECTOR INDEX NDL_CONN.F1_NULLABLE_VIX: 10 (before 10)
+OK      67.8s  CREATE VECTOR INDEX NDL_CONN."F1_NOTNULL_VIX" ON NDL_CONN.F1_NOTNULL ("EMB") WITH DISTANCE COSINE
+     ADM13500E count after CREATE VECTOR INDEX NDL_CONN.F1_NOTNULL_VIX: 10 (before 10)
+OK       0.2s  CALL SYSPROC.ADMIN_CMD('RUNSTATS ON TABLE NDL_CONN.F1_NULLABLE FOR INDEXES ALL')
+OK       0.2s  CALL SYSPROC.ADMIN_CMD('RUNSTATS ON TABLE NDL_CONN.F1_NOTNULL WITH DISTRIBUTION AND INDEXES ALL')
+```
+
+DB2VS.__init__ executed (captured SQL):
+```
+  SELECT COUNT(*) FROM NDL_CONN.DB2VS_ADV
+  CREATE TABLE NDL_CONN.DB2VS_ADV (id CHAR(16) PRIMARY KEY NOT NULL, text CLOB, metadata BLOB, embedding vector(768, FLOAT32))
+  COMMIT
+```
+
+```
+batch INSERT: INSERT INTO NDL_CONN.DB2VS_ADV (id, text, metadata, embedding) SELECT SUBSTR(HEX(HASH(ADV_ID, 2)), 1, 16), COALESCE(SUMMARY, ''), SYSTOOLS.JSON2BSON('{"adv_id":"' || ADV_ID || '","kind":"' || TRIM(KIND) || '","row_bucket":' || VARCHAR(ROW_BUCKET) || '}'), EMB FROM NEEDLE.ADV_DOC WHERE ADV_ID >= ? AND ADV_ID < ?
+  batch 1/14 from GHSA-226f-f24g-524w: 2000 rows committed (0.3s)
+  batch 2/14 from GHSA-84hp-mqvj-3p8h: 2000 rows committed (0.5s)
+  batch 3/14 from GHSA-hwvq-6gjx-j797: 2000 rows committed (0.8s)
+  batch 4/14 from GHSA-w3h3-4rj7-4ph4: 2000 rows committed (1.1s)
+  batch 5/14 from MAL-2023-2904: 2000 rows committed (1.4s)
+  batch 6/14 from MAL-2023-4904: 2000 rows committed (1.7s)
+  batch 7/14 from MAL-2023-6904: 2000 rows committed (2.0s)
+  batch 8/14 from MAL-2024-4828: 2000 rows committed (2.3s)
+  batch 9/14 from MAL-2025-1991: 2000 rows committed (2.6s)
+  batch 10/14 from MAL-2026-3377: 2000 rows committed (2.9s)
+  batch 11/14 from PYSEC-2021-416: 2000 rows committed (3.2s)
+  batch 12/14 from PYSEC-2026-1128: 2000 rows committed (3.5s)
+  batch 13/14 from PYSEC-2026-2934: 2000 rows committed (3.8s)
+  batch 14/14 from PYSEC-2026-81: 210 rows committed (3.9s)
+  id check 00025396B8AAED00 == sha256(MAL-2023-3512)[:16].upper(): True  metadata={"adv_id":"MAL-2023-3512","kind":"MAL","row_bucket":10}
+  id check 00055A15C62F10B0 == sha256(MAL-2023-1582)[:16].upper(): True  metadata={"adv_id":"MAL-2023-1582","kind":"MAL","row_bucket":6}
+  id check 000D25D8B999F1EC == sha256(PYSEC-2026-152)[:16].upper(): True  metadata={"adv_id":"PYSEC-2026-152","kind":"PYSEC","row_bucket":74}
+```
+
+Catalog:
+```
+  vector column ('NDL_CONN', 'F1_NULLABLE', 'EMB', 'VECTOR', 768, 'Y')
+  table         ('NDL_CONN', 'F1_NULLABLE', 26210, 2621, datetime.datetime(2026, 11, 10, 1, 58, 23, 282187))
+  index         ('NDL_CONN', 'F1_NULLABLE_VIX', 'VANN', '+EMB', -1, None)
+  index         ('SYSIBM', 'SQL261110015550300', 'REG', '+ADV_ID', 28, datetime.datetime(2026, 11, 10, 1, 58, 23, 282187))
+  NDL_CONN.F1_NULLABLE: rows=26210 null_vectors=0
+  vector column ('NDL_CONN', 'F1_NOTNULL', 'EMB', 'VECTOR', 768, 'N')
+  table         ('NDL_CONN', 'F1_NOTNULL', 26210, 2621, datetime.datetime(2026, 11, 10, 1, 58, 23, 458217))
+  index         ('NDL_CONN', 'F1_NOTNULL_VIX', 'VANN', '+EMB', -1, None)
+  index         ('SYSIBM', 'SQL261110015550500', 'REG', '+ADV_ID', 28, datetime.datetime(2026, 11, 10, 1, 58, 23, 458217))
+  NDL_CONN.F1_NOTNULL: rows=26210 null_vectors=0
+  vector column ('NDL_CONN', 'DB2VS_ADV', 'EMBEDDING', 'VECTOR', 768, 'Y')
+  table         ('NDL_CONN', 'DB2VS_ADV', -1, -1, None)
+  index         ('SYSIBM', 'SQL261110015824830', 'REG', '+ID', -1, None)
+  NDL_CONN.DB2VS_ADV: rows=26210 null_vectors=0
+```
+
+notify log tail (last 25 lines):
+```
+PID:4473(db2agent (VECDB) 0)   TID:123765233018432   Appid:::1.55696.261110015549
+data management  sqldEndNoLogList Probe:1   Database:VECDB
+
+ADM5530W  The COMMIT processing of table "SYSIBM  
+.AIJ261110015715404425_P2_O31_I2" that used NOT LOGGED INITIALLY has been 
+initiated.  It is recommended that you take a backup of this table's table 
+space(s).
+
+2026-11-10-01.58.22.717015   Instance:db2inst1   Node:000
+PID:4473(db2agent (VECDB) 0)   TID:123765233018432   Appid:::1.55696.261110015549
+data management  sqldEndNoLogList Probe:1   Database:VECDB
+
+ADM5530W  The COMMIT processing of table "SYSIBM  
+.ACV261110015715404425_P2_O31_I2" that used NOT LOGGED INITIALLY has been 
+initiated.  It is recommended that you take a backup of this table's table 
+space(s).
+
+2026-11-10-01.58.23.128709   Instance:db2inst1   Node:000
+PID:4473(db2agent (VECDB) 0)   TID:123765233018432   Appid:::1.55696.261110015549
+data management  sqldEndNoLogList Probe:1   Database:VECDB
+
+ADM5530W  The COMMIT processing of table "SYSIBM  
+.AMD261110015715404425_P2_O31_I2" that used NOT LOGGED INITIALLY has been 
+initiated.  It is recommended that you take a backup of this table's table 
+space(s).
+```

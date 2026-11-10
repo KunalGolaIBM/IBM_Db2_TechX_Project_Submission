@@ -1,0 +1,11391 @@
+{
+ "build": {
+  "rows": 26210,
+  "k": 100,
+  "seed": 7,
+  "coverage_by_p": {
+   "10": 0.1022,
+   "25": 0.2667,
+   "50": 0.5006,
+   "100": 1.0
+  },
+  "cluster_size_min_median_max": [
+   34,
+   192,
+   1111
+  ],
+  "index_runstats_s": 58.7
+ },
+ "measure": {
+  "plans_as_db2inst1": {
+   "approx10": {
+    "operators": [
+     "1:RETURN",
+     "2:TBSCAN",
+     "3:SORT",
+     "4:NLJOIN",
+     "5:FETCH",
+     "6:IXSCAN",
+     "7:FETCH",
+     "8:IXSCAN"
+    ],
+    "total_cost": 167.1,
+    "uses_vector_index": true,
+    "srchlsiz": 50,
+    "beamwdth": 2,
+    "vector_ixscan_est_rows": 21.0,
+    "predicates": [
+     {
+      "op": 4,
+      "ff": 0.49295774102211,
+      "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+     },
+     {
+      "op": 6,
+      "ff": 0.0010000000474974513,
+      "text": "(Q1.AUTHID = USER)"
+     },
+     {
+      "op": 6,
+      "ff": 0.0010000000474974513,
+      "text": "(Q1.AUTHID = USER)"
+     },
+     {
+      "op": 7,
+      "ff": 0.49295774102211,
+      "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+     }
+    ]
+   },
+   "approx50_L150": {
+    "operators": [
+     "1:RETURN",
+     "2:TBSCAN",
+     "3:SORT",
+     "4:NLJOIN",
+     "5:FETCH",
+     "6:IXSCAN",
+     "7:FETCH",
+     "8:IXSCAN"
+    ],
+    "total_cost": 733.3,
+    "uses_vector_index": true,
+    "srchlsiz": 150,
+    "beamwdth": 2,
+    "vector_ixscan_est_rows": 102.0,
+    "predicates": [
+     {
+      "op": 4,
+      "ff": 0.49295774102211,
+      "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+     },
+     {
+      "op": 6,
+      "ff": 0.0010000000474974513,
+      "text": "(Q1.AUTHID = USER)"
+     },
+     {
+      "op": 6,
+      "ff": 0.0010000000474974513,
+      "text": "(Q1.AUTHID = USER)"
+     },
+     {
+      "op": 7,
+      "ff": 0.49295774102211,
+      "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+     }
+    ]
+   }
+  },
+  "NDL_P10": {
+   "visible_rows": 2679,
+   "visible_fraction": 0.1022,
+   "exact": {
+    "all": {
+     "n": 170,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 16.15,
+     "p95_ms": 19.34,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "dev": {
+     "n": 81,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 16.05,
+     "p95_ms": 19.6,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "heldout": {
+     "n": 89,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 16.3,
+     "p95_ms": 19.02,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "g1": {
+     "n": 20,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 15.75,
+     "p95_ms": 16.17,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "leaked_ids": [],
+    "per_query": [
+     {
+      "n_ret": 10,
+      "ms": 16.38,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.85,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.75,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.67,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.88,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 14.75,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.98,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 14.9,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 14.76,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 14.82,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 14.79,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.76,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.79,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.85,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.31,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 14.84,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 14.8,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.16,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.21,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.41,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.83,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.42,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.85,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.41,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.75,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.67,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.59,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.54,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.21,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.11,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.39,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.98,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.91,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.85,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.89,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 14.91,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.95,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.0,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.9,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.89,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.8,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.82,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.93,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.9,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.87,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.27,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.05,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.93,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.43,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.03,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.67,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.82,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 14.93,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.38,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.21,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.17,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.03,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.99,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.46,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.19,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.23,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.89,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.51,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.36,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.24,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.48,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.49,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.71,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.41,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.66,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.18,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.3,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.38,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.76,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.47,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.5,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.0,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.88,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.6,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.81,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.28,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.35,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.26,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.81,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.5,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.43,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.27,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.48,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.2,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.7,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.83,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.47,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.8,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.5,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.03,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.9,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.19,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 19.54,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 20.39,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 19.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 19.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 19.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.68,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.53,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.52,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.53,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.64,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.78,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.93,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.66,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 19.31,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.24,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.82,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.94,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 19.5,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 19.73,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 19.91,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 20.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.79,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 19.6,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 19.62,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 19.36,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.34,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.85,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.34,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.89,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.59,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.2,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.42,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.44,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.32,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.78,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.74,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.83,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.31,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.82,
+      "error": null,
+      "recall": 1.0
+     }
+    ]
+   },
+   "approx10": {
+    "all": {
+     "n": 170,
+     "errors": 0,
+     "returned_mean": 1.04,
+     "underfill_rate": 0.9647,
+     "p50_ms": 1.85,
+     "p95_ms": 2.73,
+     "recall_mean": 0.1035,
+     "recall_min": 0.0
+    },
+    "dev": {
+     "n": 81,
+     "errors": 0,
+     "returned_mean": 1.32,
+     "underfill_rate": 0.9506,
+     "p50_ms": 1.88,
+     "p95_ms": 2.8,
+     "recall_mean": 0.1321,
+     "recall_min": 0.0
+    },
+    "heldout": {
+     "n": 89,
+     "errors": 0,
+     "returned_mean": 0.78,
+     "underfill_rate": 0.9775,
+     "p50_ms": 1.82,
+     "p95_ms": 2.62,
+     "recall_mean": 0.0775,
+     "recall_min": 0.0
+    },
+    "g1": {
+     "n": 20,
+     "errors": 0,
+     "returned_mean": 0.45,
+     "underfill_rate": 1.0,
+     "p50_ms": 1.95,
+     "p95_ms": 2.82,
+     "recall_mean": 0.045,
+     "recall_min": 0.0
+    },
+    "leaked_ids": [],
+    "per_query": [
+     {
+      "n_ret": 0,
+      "ms": 2.68,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.64,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.54,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.68,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.58,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 3,
+      "ms": 3.06,
+      "error": null,
+      "recall": 0.3
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.54,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.28,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.8,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.89,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.62,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.62,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.71,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.71,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.92,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.8,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.99,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.59,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.73,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 1.9,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.67,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 6,
+      "ms": 1.98,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.7,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.15,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.73,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.4,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.78,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.69,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.78,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 8,
+      "ms": 2.06,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.41,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.32,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.59,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.24,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.99,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.87,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.8,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.8,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 1,
+      "ms": 2.03,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.99,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.73,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.8,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.75,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.78,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.72,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 1,
+      "ms": 1.95,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.63,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.8,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.71,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.88,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.68,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.79,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.73,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.37,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 1,
+      "ms": 1.93,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.69,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.81,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.73,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 3.18,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 3.05,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 8,
+      "ms": 2.88,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.02,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 2.48,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 4,
+      "ms": 2.25,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.76,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.69,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.66,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.81,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 2.04,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.65,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.73,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.94,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.63,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.66,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.27,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.35,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.4,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.95,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.99,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.8,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.79,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.15,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.1,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.84,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.85,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 2.13,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 7,
+      "ms": 2.0,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.73,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.98,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 2.13,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.74,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 2.12,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.68,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.78,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.77,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 1.95,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.81,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.28,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.75,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.39,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.34,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.84,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.73,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.69,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.81,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.67,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.8,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 1.87,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.7,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 1,
+      "ms": 2.22,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.87,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.8,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.75,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.76,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.84,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.74,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.84,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.68,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.87,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 5,
+      "ms": 1.97,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.58,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.7,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.75,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.73,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 6,
+      "ms": 1.98,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.8,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 9,
+      "ms": 2.95,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 1,
+      "ms": 2.74,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 2,
+      "ms": 3.37,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.57,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.31,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 6,
+      "ms": 2.26,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.86,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.82,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.38,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 2.71,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.79,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.43,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.69,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.73,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.76,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.81,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.9,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.69,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 5,
+      "ms": 1.95,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.98,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.88,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.33,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.31,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.71,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.93,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.72,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 2.42,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.86,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.86,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.76,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.7,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.24,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.78,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.12,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.71,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.73,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.75,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.76,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.71,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.78,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 2.02,
+      "error": null,
+      "recall": 0.2
+     }
+    ]
+   },
+   "approx10_recall_histogram": {
+    "recall_0": 130,
+    "recall_0_to_0.5": 25,
+    "recall_0.5_to_1": 9,
+    "recall_1": 6
+   },
+   "approx10_rows_histogram": {
+    "0_rows": 130,
+    "1_to_9_rows": 34,
+    "10_rows": 6
+   },
+   "router_strategy": {
+    "mode": "EXACT",
+    "depth": 10,
+    "k": 10,
+    "visible_rows": 2679,
+    "total_rows": 26210,
+    "search_list_size": null,
+    "fraction": 0.1022
+   },
+   "router_fallbacks": 0,
+   "router_heldout": {
+    "all": {
+     "n": 89,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 16.28,
+     "p95_ms": 18.49,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "dev": {},
+    "heldout": {
+     "n": 89,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 16.28,
+     "p95_ms": 18.49,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "g1": {
+     "n": 9,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 15.72,
+     "p95_ms": 17.63,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "leaked_ids": [],
+    "per_query": [
+     {
+      "n_ret": 10,
+      "ms": 16.63,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.05,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.72,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.5,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.38,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.36,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.36,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.57,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.26,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.16,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.9,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.22,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.44,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.5,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.54,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.79,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.7,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.27,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.76,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.75,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.6,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.69,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.73,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.39,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 19.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 19.16,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.35,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.43,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.03,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.21,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 19.5,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 19.72,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.53,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.36,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.22,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.2,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.64,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.34,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.29,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.06,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.76,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.19,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.06,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.95,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.3,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.29,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.23,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.03,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.05,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.99,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.99,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.47,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.66,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.66,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.59,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.8,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.77,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.84,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.81,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 18.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.87,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.57,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.63,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.65,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.31,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.45,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.35,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.28,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 17.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 16.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.51,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 15.4,
+      "error": null,
+      "recall": 1.0
+     }
+    ]
+   }
+  },
+  "NDL_P25": {
+   "visible_rows": 6989,
+   "visible_fraction": 0.2667,
+   "exact": {
+    "all": {
+     "n": 170,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 35.95,
+     "p95_ms": 37.3,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "dev": {
+     "n": 81,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 36.03,
+     "p95_ms": 37.39,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "heldout": {
+     "n": 89,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 35.87,
+     "p95_ms": 37.22,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "g1": {
+     "n": 20,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 36.19,
+     "p95_ms": 37.58,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "leaked_ids": [],
+    "per_query": [
+     {
+      "n_ret": 10,
+      "ms": 35.66,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.19,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.36,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.7,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 38.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.06,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.55,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.72,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.17,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.34,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.9,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.34,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.21,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.37,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.68,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.21,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.52,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.9,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.3,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.44,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.19,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.72,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.83,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.36,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.48,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.44,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.27,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.67,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.22,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.71,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.75,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.98,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.75,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.25,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.47,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.43,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.36,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.96,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.11,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.71,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.85,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.67,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.49,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.38,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.37,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.55,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.0,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.34,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.03,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.35,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.18,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.52,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.3,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.17,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.41,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.18,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.99,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.66,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.46,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.45,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.31,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.27,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.21,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.17,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.11,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.86,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.43,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.58,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.94,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.41,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.88,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.06,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.74,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.62,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.18,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.69,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.36,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.29,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.28,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.39,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.84,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.37,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.98,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.11,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.05,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 34.95,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.62,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.58,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.88,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.28,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.96,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.23,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 38.54,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.47,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.43,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.42,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.23,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.6,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.16,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.03,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.21,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.17,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.81,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.98,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.93,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.85,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.96,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.63,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.37,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.81,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.59,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.37,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.39,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.53,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.11,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.28,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.32,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.18,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.33,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.05,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.98,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.84,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.87,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.73,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.34,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.37,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.32,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.4,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.19,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.5,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.81,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.33,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.03,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.19,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.32,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.89,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.26,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.47,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.68,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.79,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.17,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.46,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.85,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.25,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.28,
+      "error": null,
+      "recall": 1.0
+     }
+    ]
+   },
+   "approx10": {
+    "all": {
+     "n": 170,
+     "errors": 0,
+     "returned_mean": 2.31,
+     "underfill_rate": 0.9353,
+     "p50_ms": 1.88,
+     "p95_ms": 2.48,
+     "recall_mean": 0.2306,
+     "recall_min": 0.0
+    },
+    "dev": {
+     "n": 81,
+     "errors": 0,
+     "returned_mean": 2.41,
+     "underfill_rate": 0.9136,
+     "p50_ms": 1.87,
+     "p95_ms": 2.3,
+     "recall_mean": 0.2407,
+     "recall_min": 0.0
+    },
+    "heldout": {
+     "n": 89,
+     "errors": 0,
+     "returned_mean": 2.21,
+     "underfill_rate": 0.9551,
+     "p50_ms": 1.9,
+     "p95_ms": 2.67,
+     "recall_mean": 0.2213,
+     "recall_min": 0.0
+    },
+    "g1": {
+     "n": 20,
+     "errors": 0,
+     "returned_mean": 1.5,
+     "underfill_rate": 0.95,
+     "p50_ms": 1.76,
+     "p95_ms": 2.1,
+     "recall_mean": 0.15,
+     "recall_min": 0.0
+    },
+    "leaked_ids": [],
+    "per_query": [
+     {
+      "n_ret": 2,
+      "ms": 2.03,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.74,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 2.04,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.71,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 5,
+      "ms": 2.01,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.62,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.66,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.28,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.89,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.62,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.62,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.68,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.71,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.75,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 1,
+      "ms": 1.9,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.92,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.61,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.77,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 6,
+      "ms": 1.92,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.94,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 6,
+      "ms": 1.95,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.62,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.12,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.94,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 4,
+      "ms": 2.18,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.91,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.76,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.64,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.76,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 8,
+      "ms": 1.99,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.61,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 3,
+      "ms": 1.91,
+      "error": null,
+      "recall": 0.3
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.94,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.73,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.7,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 3,
+      "ms": 1.94,
+      "error": null,
+      "recall": 0.3
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.9,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.67,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 1,
+      "ms": 1.85,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 4,
+      "ms": 1.92,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.7,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.75,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.79,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.71,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.98,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.86,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 4,
+      "ms": 1.88,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.97,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.7,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.81,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.61,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.64,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.66,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.36,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 1,
+      "ms": 1.86,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.9,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 1,
+      "ms": 1.84,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.61,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.82,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.66,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.74,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.32,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 2.79,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 4,
+      "ms": 2.69,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.32,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 2.76,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.22,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.73,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.94,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 1,
+      "ms": 1.84,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.79,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 3,
+      "ms": 1.95,
+      "error": null,
+      "recall": 0.3
+     },
+     {
+      "n_ret": 3,
+      "ms": 1.92,
+      "error": null,
+      "recall": 0.3
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.58,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.64,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 5,
+      "ms": 1.92,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.7,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 1,
+      "ms": 1.94,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.88,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.66,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.72,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.65,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 2.04,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.57,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 6,
+      "ms": 2.03,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.79,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 7,
+      "ms": 1.91,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.9,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 2,
+      "ms": 2.09,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 4,
+      "ms": 2.03,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.68,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.97,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.57,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.94,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.71,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 1.82,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.9,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 7,
+      "ms": 1.87,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.94,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.65,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.91,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.97,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.9,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.68,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.95,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 6,
+      "ms": 1.94,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 2,
+      "ms": 2.0,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 4,
+      "ms": 1.81,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.66,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 2.08,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 2,
+      "ms": 2.03,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.72,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.64,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.69,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 3,
+      "ms": 2.79,
+      "error": null,
+      "recall": 0.3
+     },
+     {
+      "n_ret": 1,
+      "ms": 2.71,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 3,
+      "ms": 2.87,
+      "error": null,
+      "recall": 0.3
+     },
+     {
+      "n_ret": 4,
+      "ms": 2.76,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.6,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 5,
+      "ms": 1.92,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.58,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.87,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.69,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.72,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 6,
+      "ms": 1.87,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.89,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 9,
+      "ms": 2.01,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.93,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 8,
+      "ms": 2.29,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.74,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.88,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 6,
+      "ms": 1.87,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.63,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 5,
+      "ms": 2.02,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.9,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.88,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 1,
+      "ms": 1.81,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 0,
+      "ms": 2.3,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.88,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.84,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 6,
+      "ms": 1.89,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.99,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.82,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 4,
+      "ms": 2.0,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 5,
+      "ms": 1.9,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.8,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 1.95,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 4,
+      "ms": 1.83,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.65,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.6,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.74,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.63,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 2.27,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 2,
+      "ms": 2.02,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.88,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.65,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 1.86,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.28,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.9,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 8,
+      "ms": 1.94,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.88,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.97,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.73,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 1.98,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.87,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.76,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 2.04,
+      "error": null,
+      "recall": 0.2
+     }
+    ]
+   },
+   "approx10_recall_histogram": {
+    "recall_0": 72,
+    "recall_0_to_0.5": 69,
+    "recall_0.5_to_1": 18,
+    "recall_1": 11
+   },
+   "approx10_rows_histogram": {
+    "0_rows": 72,
+    "1_to_9_rows": 87,
+    "10_rows": 11
+   },
+   "router_strategy": {
+    "mode": "EXACT",
+    "depth": 10,
+    "k": 10,
+    "visible_rows": 6989,
+    "total_rows": 26210,
+    "search_list_size": null,
+    "fraction": 0.2667
+   },
+   "router_fallbacks": 0,
+   "router_heldout": {
+    "all": {
+     "n": 89,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 36.39,
+     "p95_ms": 39.09,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "dev": {},
+    "heldout": {
+     "n": 89,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 36.39,
+     "p95_ms": 39.09,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "g1": {
+     "n": 9,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 36.29,
+     "p95_ms": 39.02,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "leaked_ids": [],
+    "per_query": [
+     {
+      "n_ret": 10,
+      "ms": 35.53,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.29,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 39.47,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 38.36,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.32,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.65,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.37,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.64,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.44,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.5,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.8,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.39,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.47,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.28,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.5,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.33,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.39,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.31,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.81,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.52,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.28,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.26,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.22,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.31,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.9,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.37,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.99,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.48,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.71,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.18,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.73,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.91,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.78,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.63,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.93,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.53,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.93,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.84,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.31,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.45,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.39,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.2,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.45,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.53,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.2,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.3,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.05,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.44,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.05,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.88,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.38,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.87,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.64,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.49,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.69,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.17,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.05,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.63,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.87,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.53,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.52,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.93,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.58,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.88,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 40.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 40.63,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 40.66,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 43.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 38.53,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.8,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.74,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.53,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.65,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.53,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 35.52,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.06,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 36.06,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.85,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 37.18,
+      "error": null,
+      "recall": 1.0
+     }
+    ]
+   }
+  },
+  "NDL_P50": {
+   "visible_rows": 13121,
+   "visible_fraction": 0.5006,
+   "exact": {
+    "all": {
+     "n": 170,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 64.93,
+     "p95_ms": 71.43,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "dev": {
+     "n": 81,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 64.94,
+     "p95_ms": 70.76,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "heldout": {
+     "n": 89,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 64.89,
+     "p95_ms": 72.96,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "g1": {
+     "n": 20,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 64.73,
+     "p95_ms": 65.49,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "leaked_ids": [],
+    "per_query": [
+     {
+      "n_ret": 10,
+      "ms": 66.76,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.42,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.42,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.28,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.19,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.89,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.74,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.88,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.71,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.54,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.52,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.75,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.28,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.9,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.68,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.22,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.86,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.11,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.51,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 66.38,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.51,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.87,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.74,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.36,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.33,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.62,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 67.05,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 67.71,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 71.55,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 70.75,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 72.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 70.72,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 71.27,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 74.0,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 69.72,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 70.98,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 68.27,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 66.2,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.46,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 66.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.11,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.56,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.82,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.77,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.82,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.84,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.96,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.58,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.16,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.28,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.94,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.67,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.77,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.76,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.06,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.94,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.46,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.41,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.75,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.67,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.4,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 66.99,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 66.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.51,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.03,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 66.24,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 66.52,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 66.56,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 66.26,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 67.39,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.23,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.17,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.44,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.95,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.78,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.74,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.51,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.86,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.4,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.81,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 67.49,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.8,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.33,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.44,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.85,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.33,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.63,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.69,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.61,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 67.7,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.64,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 66.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 69.98,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.22,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.52,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.76,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.63,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.55,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.85,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.81,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.61,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.78,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.93,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.85,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 68.77,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 67.23,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.91,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.41,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 66.36,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.82,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.18,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.22,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.3,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 66.28,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.38,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.62,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.7,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 63.52,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.22,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.29,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.21,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.2,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.45,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.71,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.22,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 68.0,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 72.99,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 72.93,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 70.25,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 66.79,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 66.25,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.25,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 66.41,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.9,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.34,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 68.75,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 74.98,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 70.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 74.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 70.62,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 70.76,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 74.06,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 70.66,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 71.56,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.17,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.67,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 66.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 67.52,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 69.58,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 65.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 64.2,
+      "error": null,
+      "recall": 1.0
+     }
+    ]
+   },
+   "approx10": {
+    "all": {
+     "n": 170,
+     "errors": 0,
+     "returned_mean": 6.56,
+     "underfill_rate": 0.5588,
+     "p50_ms": 1.99,
+     "p95_ms": 2.19,
+     "recall_mean": 0.6382,
+     "recall_min": 0.0
+    },
+    "dev": {
+     "n": 81,
+     "errors": 0,
+     "returned_mean": 6.49,
+     "underfill_rate": 0.5556,
+     "p50_ms": 1.98,
+     "p95_ms": 2.15,
+     "recall_mean": 0.6333,
+     "recall_min": 0.0
+    },
+    "heldout": {
+     "n": 89,
+     "errors": 0,
+     "returned_mean": 6.62,
+     "underfill_rate": 0.5618,
+     "p50_ms": 2.0,
+     "p95_ms": 2.19,
+     "recall_mean": 0.6427,
+     "recall_min": 0.0
+    },
+    "g1": {
+     "n": 20,
+     "errors": 0,
+     "returned_mean": 5.2,
+     "underfill_rate": 0.6,
+     "p50_ms": 1.99,
+     "p95_ms": 2.09,
+     "recall_mean": 0.52,
+     "recall_min": 0.0
+    },
+    "leaked_ids": [],
+    "per_query": [
+     {
+      "n_ret": 2,
+      "ms": 1.99,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.76,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 2.05,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.05,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 5,
+      "ms": 2.03,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.55,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.62,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.78,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.56,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.6,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.62,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 8,
+      "ms": 2.0,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.96,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 1.84,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 1,
+      "ms": 1.92,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.99,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.93,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 7,
+      "ms": 1.98,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.98,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.47,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.93,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.17,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 1.98,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 6,
+      "ms": 1.93,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.05,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 9,
+      "ms": 1.98,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 4,
+      "ms": 1.89,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 6,
+      "ms": 1.91,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.69,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.93,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 5,
+      "ms": 2.0,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 5,
+      "ms": 1.92,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.89,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.66,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 1,
+      "ms": 1.85,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.03,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 1,
+      "ms": 1.9,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.97,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.96,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 2.01,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 9,
+      "ms": 2.01,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 9,
+      "ms": 1.98,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 5,
+      "ms": 1.94,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.96,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.87,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.72,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.76,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.4,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.95,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 7,
+      "ms": 2.01,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.88,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.9,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.0,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.95,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.97,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.62,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 9,
+      "ms": 1.94,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.63,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 1,
+      "ms": 1.95,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 9,
+      "ms": 2.04,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 3,
+      "ms": 1.89,
+      "error": null,
+      "recall": 0.3
+     },
+     {
+      "n_ret": 4,
+      "ms": 1.99,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 9,
+      "ms": 2.09,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 8,
+      "ms": 2.03,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.0,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 7,
+      "ms": 1.98,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 3,
+      "ms": 2.04,
+      "error": null,
+      "recall": 0.3
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.17,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 5,
+      "ms": 1.99,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.07,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 6,
+      "ms": 1.97,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.65,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.11,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.97,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.0,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.23,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 9,
+      "ms": 2.13,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 4,
+      "ms": 1.95,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 9,
+      "ms": 2.08,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 2.0,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 8,
+      "ms": 2.04,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.95,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 2.15,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 7,
+      "ms": 1.92,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.68,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 5,
+      "ms": 1.9,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.93,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.98,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 6,
+      "ms": 1.99,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 8,
+      "ms": 1.94,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 4,
+      "ms": 2.01,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 7,
+      "ms": 1.93,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 2.09,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.92,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 9,
+      "ms": 2.02,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.73,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.05,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 7,
+      "ms": 1.96,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 3,
+      "ms": 2.01,
+      "error": null,
+      "recall": 0.3
+     },
+     {
+      "n_ret": 5,
+      "ms": 1.94,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.2,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.97,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 9,
+      "ms": 1.89,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.04,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 2,
+      "ms": 1.99,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 3,
+      "ms": 1.98,
+      "error": null,
+      "recall": 0.3
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 3,
+      "ms": 1.96,
+      "error": null,
+      "recall": 0.3
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.0,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.38,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 5,
+      "ms": 1.98,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.99,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 7,
+      "ms": 1.99,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 7,
+      "ms": 2.13,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.06,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 1,
+      "ms": 1.95,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.91,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.03,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.0,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 8,
+      "ms": 2.09,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.88,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 4,
+      "ms": 1.98,
+      "error": null,
+      "recall": 0.4
+     },
+     {
+      "n_ret": 5,
+      "ms": 1.95,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.71,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 1,
+      "ms": 1.97,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.14,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.74,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.45,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.27,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 2,
+      "ms": 2.08,
+      "error": null,
+      "recall": 0.2
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.06,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 5,
+      "ms": 1.96,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.24,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 0,
+      "ms": 1.71,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.03,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.14,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 1,
+      "ms": 1.97,
+      "error": null,
+      "recall": 0.1
+     },
+     {
+      "n_ret": 6,
+      "ms": 2.01,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 7,
+      "ms": 1.97,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.08,
+      "error": null,
+      "recall": 0.9
+     }
+    ]
+   },
+   "approx10_recall_histogram": {
+    "recall_0": 20,
+    "recall_0_to_0.5": 36,
+    "recall_0.5_to_1": 56,
+    "recall_1": 58
+   },
+   "approx10_rows_histogram": {
+    "0_rows": 20,
+    "1_to_9_rows": 75,
+    "10_rows": 75
+   },
+   "router_strategy": {
+    "mode": "APPROX",
+    "depth": 100,
+    "k": 10,
+    "visible_rows": 13121,
+    "total_rows": 26210,
+    "search_list_size": 300,
+    "fraction": 0.5006
+   },
+   "router_fallbacks": 3,
+   "router_heldout": {
+    "all": {
+     "n": 89,
+     "errors": 1,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 6.16,
+     "p95_ms": 8.4,
+     "recall_mean": 0.9652,
+     "recall_min": 0.5
+    },
+    "dev": {},
+    "heldout": {
+     "n": 89,
+     "errors": 1,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 6.16,
+     "p95_ms": 8.4,
+     "recall_mean": 0.9652,
+     "recall_min": 0.5
+    },
+    "g1": {
+     "n": 9,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 6.0,
+     "p95_ms": 45.79,
+     "recall_mean": 0.9778,
+     "recall_min": 0.8
+    },
+    "leaked_ids": [],
+    "per_query": [
+     {
+      "n_ret": 10,
+      "ms": 8.82,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.93,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.0,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.66,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 70.44,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.87,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.18,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.51,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.05,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 7.0,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.44,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.31,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.33,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.45,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.81,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.61,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.49,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.91,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.02,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.68,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.72,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.43,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.66,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.94,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.31,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.29,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.52,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.38,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.77,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.94,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.34,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.35,
+      "error": null,
+      "recall": 0.5
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.87,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.34,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.2,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.16,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.84,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.54,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.38,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.37,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.17,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.91,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.98,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.37,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.32,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.26,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 102.77,
+      "error": "SQL0901N",
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 7.7,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.69,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.73,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.53,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.41,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.11,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.82,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.17,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.18,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 7.76,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 9.44,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 7.06,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.65,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.98,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.47,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.31,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.24,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.74,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.17,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.19,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.34,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 70.67,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 7.06,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.66,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.17,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.54,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.81,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.23,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.5,
+      "error": null,
+      "recall": 1.0
+     }
+    ]
+   }
+  },
+  "NDL_SENIOR": {
+   "visible_rows": 26210,
+   "visible_fraction": 1.0,
+   "exact": {
+    "all": {
+     "n": 170,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 125.99,
+     "p95_ms": 138.71,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "dev": {
+     "n": 81,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 126.29,
+     "p95_ms": 138.72,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "heldout": {
+     "n": 89,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 125.76,
+     "p95_ms": 138.68,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "g1": {
+     "n": 20,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 126.42,
+     "p95_ms": 129.84,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "leaked_ids": [],
+    "per_query": [
+     {
+      "n_ret": 10,
+      "ms": 124.77,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.63,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.75,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.28,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 127.31,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 127.39,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 127.05,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.67,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.29,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 129.58,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.42,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.99,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 128.37,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.41,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 130.27,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 129.82,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.69,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.7,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.93,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.87,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.25,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.57,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.66,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.24,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 123.94,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.29,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.24,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.33,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 127.58,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.37,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.61,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.39,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.46,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.49,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.93,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.96,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 127.39,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.03,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.69,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.76,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.85,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.94,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.45,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.59,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 128.37,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 132.84,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.95,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 129.26,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.22,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 135.65,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 142.35,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 159.26,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 138.69,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 139.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 128.26,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.7,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.4,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.84,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.74,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.38,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 127.54,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.24,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.2,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.18,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.95,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.79,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.24,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 128.69,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 128.28,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.54,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 128.0,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.5,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.44,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 127.96,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.39,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.55,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.55,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.48,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.4,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.43,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.53,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.45,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.77,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 123.64,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 123.81,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.57,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 131.53,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 127.61,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.72,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 128.9,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 135.79,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 139.53,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 136.93,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 138.66,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 130.19,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.73,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.78,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.76,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.76,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.76,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.9,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.68,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.44,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.06,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.38,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.46,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.65,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 127.47,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.34,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.9,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 127.71,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 132.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 134.69,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 129.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.5,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.67,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 127.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.87,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.62,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.9,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 131.91,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 153.18,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 143.18,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 127.81,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 127.52,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.0,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.67,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 126.45,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.56,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.83,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.79,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.89,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.06,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.23,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.85,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.95,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 127.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 130.56,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 128.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 127.96,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.41,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 133.56,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 138.72,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 139.03,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 140.94,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 134.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 128.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.42,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.79,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.32,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 125.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 124.62,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 123.86,
+      "error": null,
+      "recall": 1.0
+     }
+    ]
+   },
+   "approx10": {
+    "all": {
+     "n": 170,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 2.1,
+     "p95_ms": 2.29,
+     "recall_mean": 0.9488,
+     "recall_min": 0.0
+    },
+    "dev": {
+     "n": 81,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 2.09,
+     "p95_ms": 2.28,
+     "recall_mean": 0.9519,
+     "recall_min": 0.0
+    },
+    "heldout": {
+     "n": 89,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 2.11,
+     "p95_ms": 2.32,
+     "recall_mean": 0.9461,
+     "recall_min": 0.6
+    },
+    "g1": {
+     "n": 20,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 2.06,
+     "p95_ms": 2.25,
+     "recall_mean": 0.97,
+     "recall_min": 0.6
+    },
+    "leaked_ids": [],
+    "per_query": [
+     {
+      "n_ret": 10,
+      "ms": 2.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.18,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.67,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.23,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.96,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.98,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.05,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.03,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.9,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.05,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.11,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.03,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.53,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.14,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.99,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.05,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.0,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.1,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.05,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.0,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.11,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.06,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.29,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.28,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.08,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.13,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.0,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.06,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.04,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.98,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.74,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.74,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.21,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.28,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.23,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.84,
+      "error": null,
+      "recall": 0.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.12,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.0,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.01,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.06,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.06,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.2,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.16,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.11,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.11,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.22,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.05,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.18,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.98,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.34,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.21,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.18,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.2,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.14,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.19,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.01,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.11,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.06,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.14,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.12,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.2,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.18,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.29,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.21,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.04,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.09,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.16,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.17,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.26,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.0,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 1.96,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.12,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.1,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.16,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.47,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.18,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.08,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.16,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.08,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.08,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.02,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.76,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.13,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.01,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.13,
+      "error": null,
+      "recall": 0.7
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.23,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.11,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.06,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.1,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.19,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.47,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.22,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.25,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.07,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.06,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.2,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.16,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.09,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.05,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.12,
+      "error": null,
+      "recall": 0.6
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.11,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.04,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.11,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 2.14,
+      "error": null,
+      "recall": 0.8
+     }
+    ]
+   },
+   "approx10_recall_histogram": {
+    "recall_0": 1,
+    "recall_0_to_0.5": 0,
+    "recall_0.5_to_1": 43,
+    "recall_1": 126
+   },
+   "approx10_rows_histogram": {
+    "0_rows": 0,
+    "1_to_9_rows": 0,
+    "10_rows": 170
+   },
+   "router_strategy": {
+    "mode": "APPROX",
+    "depth": 50,
+    "k": 10,
+    "visible_rows": 26210,
+    "total_rows": 26210,
+    "search_list_size": 150,
+    "fraction": 1.0
+   },
+   "router_fallbacks": 1,
+   "router_heldout": {
+    "all": {
+     "n": 89,
+     "errors": 1,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 4.76,
+     "p95_ms": 6.18,
+     "recall_mean": 0.9843,
+     "recall_min": 0.8
+    },
+    "dev": {},
+    "heldout": {
+     "n": 89,
+     "errors": 1,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 4.76,
+     "p95_ms": 6.18,
+     "recall_mean": 0.9843,
+     "recall_min": 0.8
+    },
+    "g1": {
+     "n": 9,
+     "errors": 0,
+     "returned_mean": 10.0,
+     "underfill_rate": 0.0,
+     "p50_ms": 4.8,
+     "p95_ms": 6.79,
+     "recall_mean": 1.0,
+     "recall_min": 1.0
+    },
+    "leaked_ids": [],
+    "per_query": [
+     {
+      "n_ret": 10,
+      "ms": 6.87,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.8,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.69,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.8,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.55,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.63,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.97,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.68,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.2,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.39,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.27,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.88,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.59,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.83,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.77,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.92,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.75,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.72,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.77,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.84,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.74,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.58,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.74,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.69,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.72,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.64,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.06,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.51,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.87,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.78,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.77,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.71,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.62,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.87,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.75,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.77,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.7,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.7,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.48,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.69,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.84,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.75,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.92,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.41,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.7,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.8,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.61,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.66,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.75,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.79,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.73,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.74,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.78,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 160.31,
+      "error": "SQL0901N",
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 6.15,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.19,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.12,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.17,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.78,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.81,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.73,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.7,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.71,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.95,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.52,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.69,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.75,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.76,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.72,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.76,
+      "error": null,
+      "recall": 0.9
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.69,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.71,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.67,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.68,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.74,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.52,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.79,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.69,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.39,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.76,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.95,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.0,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 5.3,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.74,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.79,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.77,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.83,
+      "error": null,
+      "recall": 0.8
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.37,
+      "error": null,
+      "recall": 1.0
+     },
+     {
+      "n_ret": 10,
+      "ms": 4.74,
+      "error": null,
+      "recall": 1.0
+     }
+    ]
+   }
+  }
+ },
+ "plans_by_depth": {
+  "approx10": {
+   "operators": [
+    "1:RETURN",
+    "2:TBSCAN",
+    "3:SORT",
+    "4:NLJOIN",
+    "5:FETCH",
+    "6:IXSCAN",
+    "7:FETCH",
+    "8:IXSCAN"
+   ],
+   "total_cost": 167.1,
+   "uses_vector_index": true,
+   "srchlsiz": 50,
+   "beamwdth": 2,
+   "vector_ixscan_est_rows": 21.0,
+   "predicates": [
+    {
+     "op": 4,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 7,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    }
+   ]
+  },
+  "approx10_L50": {
+   "operators": [
+    "1:RETURN",
+    "2:TBSCAN",
+    "3:SORT",
+    "4:NLJOIN",
+    "5:FETCH",
+    "6:IXSCAN",
+    "7:FETCH",
+    "8:IXSCAN"
+   ],
+   "total_cost": 167.1,
+   "uses_vector_index": true,
+   "srchlsiz": 50,
+   "beamwdth": 2,
+   "vector_ixscan_est_rows": 21.0,
+   "predicates": [
+    {
+     "op": 4,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 7,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    }
+   ]
+  },
+  "approx25": {
+   "operators": [
+    "1:RETURN",
+    "2:TBSCAN",
+    "3:SORT",
+    "4:NLJOIN",
+    "5:FETCH",
+    "6:IXSCAN",
+    "7:FETCH",
+    "8:IXSCAN"
+   ],
+   "total_cost": 377.2,
+   "uses_vector_index": true,
+   "srchlsiz": 68,
+   "beamwdth": 2,
+   "vector_ixscan_est_rows": 51.0,
+   "predicates": [
+    {
+     "op": 4,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 7,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    }
+   ]
+  },
+  "approx25_L75": {
+   "operators": [
+    "1:RETURN",
+    "2:TBSCAN",
+    "3:SORT",
+    "4:NLJOIN",
+    "5:FETCH",
+    "6:IXSCAN",
+    "7:FETCH",
+    "8:IXSCAN"
+   ],
+   "total_cost": 377.8,
+   "uses_vector_index": true,
+   "srchlsiz": 75,
+   "beamwdth": 2,
+   "vector_ixscan_est_rows": 51.0,
+   "predicates": [
+    {
+     "op": 4,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 7,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    }
+   ]
+  },
+  "approx50": {
+   "operators": [
+    "1:RETURN",
+    "2:TBSCAN",
+    "3:SORT",
+    "4:NLJOIN",
+    "5:FETCH",
+    "6:IXSCAN",
+    "7:FETCH",
+    "8:IXSCAN"
+   ],
+   "total_cost": 729.2,
+   "uses_vector_index": true,
+   "srchlsiz": 102,
+   "beamwdth": 2,
+   "vector_ixscan_est_rows": 102.0,
+   "predicates": [
+    {
+     "op": 4,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 7,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    }
+   ]
+  },
+  "approx50_L150": {
+   "operators": [
+    "1:RETURN",
+    "2:TBSCAN",
+    "3:SORT",
+    "4:NLJOIN",
+    "5:FETCH",
+    "6:IXSCAN",
+    "7:FETCH",
+    "8:IXSCAN"
+   ],
+   "total_cost": 733.3,
+   "uses_vector_index": true,
+   "srchlsiz": 150,
+   "beamwdth": 2,
+   "vector_ixscan_est_rows": 102.0,
+   "predicates": [
+    {
+     "op": 4,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 7,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    }
+   ]
+  },
+  "approx100": {
+   "operators": [
+    "1:RETURN",
+    "2:TBSCAN",
+    "3:SORT",
+    "4:NLJOIN",
+    "5:FETCH",
+    "6:IXSCAN",
+    "7:TBSCAN"
+   ],
+   "total_cost": 3074.6,
+   "uses_vector_index": false,
+   "srchlsiz": null,
+   "beamwdth": null,
+   "vector_ixscan_est_rows": null,
+   "predicates": [
+    {
+     "op": 4,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 7,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    }
+   ]
+  },
+  "approx100_L300": {
+   "operators": [
+    "1:RETURN",
+    "2:TBSCAN",
+    "3:SORT",
+    "4:NLJOIN",
+    "5:FETCH",
+    "6:IXSCAN",
+    "7:FETCH",
+    "8:IXSCAN"
+   ],
+   "total_cost": 1409.5,
+   "uses_vector_index": true,
+   "srchlsiz": 203,
+   "beamwdth": 2,
+   "vector_ixscan_est_rows": 203.0,
+   "predicates": [
+    {
+     "op": 4,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 7,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    }
+   ]
+  },
+  "approx200": {
+   "operators": [
+    "1:RETURN",
+    "2:TBSCAN",
+    "3:SORT",
+    "4:NLJOIN",
+    "5:FETCH",
+    "6:IXSCAN",
+    "7:TBSCAN"
+   ],
+   "total_cost": 3074.7,
+   "uses_vector_index": false,
+   "srchlsiz": null,
+   "beamwdth": null,
+   "vector_ixscan_est_rows": null,
+   "predicates": [
+    {
+     "op": 4,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 7,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    }
+   ]
+  },
+  "approx200_L600": {
+   "operators": [
+    "1:RETURN",
+    "2:TBSCAN",
+    "3:SORT",
+    "4:NLJOIN",
+    "5:FETCH",
+    "6:IXSCAN",
+    "7:FETCH",
+    "8:IXSCAN"
+   ],
+   "total_cost": 2701.0,
+   "uses_vector_index": true,
+   "srchlsiz": 406,
+   "beamwdth": 2,
+   "vector_ixscan_est_rows": 406.0,
+   "predicates": [
+    {
+     "op": 4,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 6,
+     "ff": 0.0010000000474974513,
+     "text": "(Q1.AUTHID = USER)"
+    },
+    {
+     "op": 7,
+     "ff": 0.49295774102211,
+     "text": "(Q2.COR_BUCKET < Q1.MAX_BUCKET)"
+    }
+   ]
+  }
+ }
+}

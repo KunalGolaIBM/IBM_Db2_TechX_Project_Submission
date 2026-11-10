@@ -1,0 +1,5 @@
+$ python -m pytest -q -p no:warnings   (2026-11-10 00:02 CST, full suite incl. -m db against Db2 12.1.5 VECDB, 26,210 advisories; macOS arm64 app host, Db2 in a GitHub Codespace via SSH tunnel)
+.................................ss..................................... [ 36%]
+..........................................................s............. [ 73%]
+...................................................                      [100%]
+192 passed, 3 skipped in 102.25s (0:01:42)

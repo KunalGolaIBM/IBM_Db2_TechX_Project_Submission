@@ -1,0 +1,63 @@
+-- NEEDLE service fleet + SBOM deploy history (owner: app agent). Db2 12.1.5, database VECDB.
+--
+-- The fleet is SYNTHETIC: every service, team and deploy date is fictional (SERVICE.SYNTHETIC = 1).
+-- The package names and versions are REAL PyPI releases; src/needle/sbom.py picks versions that
+-- real OSV advisories list in affected[].versions (checked against data/docs.jsonl).
+--
+-- SBOM_COMPONENT is an application-period temporal table: BUSINESS_TIME = the period a
+-- package version was deployed in a service. Db2 periods are inclusive-exclusive [BUS_START, BUS_END).
+-- The version that is deployed now has BUS_END = '9999-12-31'.
+-- BUSINESS_TIME WITHOUT OVERLAPS in the primary key makes Db2 reject two versions of one package
+-- deployed in one service at the same time.
+--
+-- Statements end with ';'. Run with:  python -m needle.sbom --load   (re-runnable: SQL0601N ignored).
+
+CREATE TABLE NEEDLE.SERVICE (
+  SERVICE_ID  VARCHAR(64)  NOT NULL PRIMARY KEY,
+  NAME        VARCHAR(128) NOT NULL,
+  OWNER_TEAM  VARCHAR(128) NOT NULL,
+  SYNTHETIC   SMALLINT     NOT NULL DEFAULT 1,
+  CONSTRAINT SERVICE_NAME_UQ UNIQUE (NAME),
+  CONSTRAINT SERVICE_SYN_CK CHECK (SYNTHETIC IN (0, 1))
+);
+
+CREATE TABLE NEEDLE.SBOM_COMPONENT (
+  SERVICE_ID  VARCHAR(64)  NOT NULL,
+  PACKAGE     VARCHAR(256) NOT NULL,
+  VERSION     VARCHAR(128) NOT NULL,
+  BUS_START   DATE         NOT NULL,
+  BUS_END     DATE         NOT NULL,
+  PERIOD BUSINESS_TIME (BUS_START, BUS_END),
+  PRIMARY KEY (SERVICE_ID, PACKAGE, BUSINESS_TIME WITHOUT OVERLAPS),
+  CONSTRAINT SBOM_SVC_FK FOREIGN KEY (SERVICE_ID) REFERENCES NEEDLE.SERVICE (SERVICE_ID),
+  CONSTRAINT SBOM_PKG_LOWER_CK CHECK (PACKAGE = LOWER(PACKAGE))
+);
+
+-- Exposure join: SBOM (PACKAGE, VERSION) = ADV_AFFECTED (PACKAGE, VERSION).
+CREATE INDEX NEEDLE.SBOM_COMPONENT_PV ON NEEDLE.SBOM_COMPONENT (PACKAGE, VERSION);
+
+-- Least privilege: the triage users read the fleet; they never write it.
+GRANT SELECT ON NEEDLE.SERVICE TO USER NDL_SENIOR;
+GRANT SELECT ON NEEDLE.SERVICE TO USER NDL_JUNIOR;
+GRANT SELECT ON NEEDLE.SERVICE TO USER NDL_P10;
+GRANT SELECT ON NEEDLE.SERVICE TO USER NDL_P25;
+GRANT SELECT ON NEEDLE.SERVICE TO USER NDL_P50;
+GRANT SELECT ON NEEDLE.SERVICE TO USER NDL_P75;
+GRANT SELECT ON NEEDLE.SBOM_COMPONENT TO USER NDL_SENIOR;
+GRANT SELECT ON NEEDLE.SBOM_COMPONENT TO USER NDL_JUNIOR;
+GRANT SELECT ON NEEDLE.SBOM_COMPONENT TO USER NDL_P10;
+GRANT SELECT ON NEEDLE.SBOM_COMPONENT TO USER NDL_P25;
+GRANT SELECT ON NEEDLE.SBOM_COMPONENT TO USER NDL_P50;
+GRANT SELECT ON NEEDLE.SBOM_COMPONENT TO USER NDL_P75;
+
+-- @POST_LOAD
+CALL SYSPROC.ADMIN_CMD('RUNSTATS ON TABLE NEEDLE.SERVICE WITH DISTRIBUTION AND INDEXES ALL');
+CALL SYSPROC.ADMIN_CMD('RUNSTATS ON TABLE NEEDLE.SBOM_COMPONENT WITH DISTRIBUTION AND INDEXES ALL');
+
+-- Validation queries (read-only, for docs/evidence):
+--   Deployed now:      SELECT SERVICE_ID, PACKAGE, VERSION FROM NEEDLE.SBOM_COMPONENT
+--                        FOR BUSINESS_TIME AS OF CURRENT DATE ORDER BY 1, 2;
+--   Deployed on a day: ... FOR BUSINESS_TIME AS OF DATE('2023-01-01') ...
+--   Overlap rejected:  INSERT of a second PyYAML version for one service in an occupied period
+--                      fails with SQLSTATE 23505 (BUSINESS_TIME WITHOUT OVERLAPS).
+-- The exposure statement ("affected now" + "exposed since") is EXPOSURE_SQL in src/needle/sbom.py.

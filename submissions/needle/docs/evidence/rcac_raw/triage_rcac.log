@@ -1,0 +1,8 @@
+[triage plan] depth=10 vector_index=True L=50 vec_ixscan_est=21.0 ops=42
+[triage plan] depth=100 vector_index=False L=None vec_ixscan_est=None ops=41
+[triage VEC k=10] NDL_P10    depth10 rows=2.2 (<10: 20/20)  depth100 rows=10.0 (<10: 0/20)
+[triage VEC k=10] NDL_P25    depth10 rows=5.4 (<10: 19/20)  depth100 rows=10.0 (<10: 0/20)
+[triage VEC k=10] NDL_P50    depth10 rows=9.1 (<10: 8/20)  depth100 rows=10.0 (<10: 0/20)
+[triage VEC k=10] NDL_P75    depth10 rows=10.0 (<10: 0/20)  depth100 rows=10.0 (<10: 0/20)
+[triage VEC k=10] NDL_SENIOR depth10 rows=10.0 (<10: 0/20)  depth100 rows=10.0 (<10: 0/20)
+wrote /home/codespace/ndl_rcac/rcac_triage.json

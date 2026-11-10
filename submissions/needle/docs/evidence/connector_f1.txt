@@ -1,0 +1,523 @@
+## F1 nullable vector column  (2026-11-10T01:59:19+00:00)
+
+### Phase A: after RUNSTATS ON TABLE ... FOR INDEXES ALL (the statement PR #342 create_index() runs)
+
+Catalog:
+```
+  vector column ('NDL_CONN', 'F1_NULLABLE', 'EMB', 'VECTOR', 768, 'Y')
+  table         ('NDL_CONN', 'F1_NULLABLE', 26210, 2621, datetime.datetime(2026, 11, 10, 1, 58, 23, 282187))
+  index         ('NDL_CONN', 'F1_NULLABLE_VIX', 'VANN', '+EMB', -1, None)
+  index         ('SYSIBM', 'SQL261110015550300', 'REG', '+ADV_ID', 28, datetime.datetime(2026, 11, 10, 1, 58, 23, 282187))
+  NDL_CONN.F1_NULLABLE: rows=26210 null_vectors=0
+  vector column ('NDL_CONN', 'F1_NOTNULL', 'EMB', 'VECTOR', 768, 'N')
+  table         ('NDL_CONN', 'F1_NOTNULL', 26210, 2621, datetime.datetime(2026, 11, 10, 1, 58, 23, 458217))
+  index         ('NDL_CONN', 'F1_NOTNULL_VIX', 'VANN', '+EMB', -1, None)
+  index         ('SYSIBM', 'SQL261110015550500', 'REG', '+ADV_ID', 28, datetime.datetime(2026, 11, 10, 1, 58, 23, 458217))
+  NDL_CONN.F1_NOTNULL: rows=26210 null_vectors=0
+  vector column ('NDL_CONN', 'DB2VS_ADV', 'EMBEDDING', 'VECTOR', 768, 'Y')
+  table         ('NDL_CONN', 'DB2VS_ADV', -1, -1, None)
+  index         ('SYSIBM', 'SQL261110015824830', 'REG', '+ID', -1, None)
+  NDL_CONN.DB2VS_ADV: rows=26210 null_vectors=0
+```
+
+### A NDL_CONN.F1_NULLABLE APPROX k=10
+
+```sql
+SELECT ADV_ID FROM NDL_CONN.F1_NULLABLE ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 10 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 01:59:19.145380  QUERYTAG CF5A1E001  total cost 3049.002685546875  **vector index used: NO**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        3049.002685546875
+          2 TBSCAN        3049.002685546875
+          3 SORT          3049.00244140625
+          4 TBSCAN        3047.418701171875
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 4 O  NDL_CONN.F1_NULLABLE  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015556777728_P2_O30_I2 +T
+  SYSIBM.AGT261110015556777728_P2_O30_I2 +T
+  SYSIBM.AIJ261110015556777728_P2_O30_I2 +T
+  NDL_CONN.F1_NULLABLE TA
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		3049
+	Query Degree:		1
+
+
+      Rows 
+     RETURN
+     (   1)
+      Cost 
+       I/O 
+       |
+       10 
+     TBSCAN
+     (   2)
+      3049 
+      2621 
+       |
+       10 
+     SORT  
+     (   3)
+      3049 
+      2621 
+       |
+      26210 
+     TBSCAN
+     (   4)
+     3047.42 
+      2621 
+       |
+      26210 
+ TABLE: NDL_CONN
+   F1_NULLABLE
+       Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+### A NDL_CONN.F1_NULLABLE APPROX k=10 + EMB IS NOT NULL
+
+```sql
+SELECT ADV_ID FROM NDL_CONN.F1_NULLABLE WHERE EMB IS NOT NULL ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 10 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 01:59:19.485340  QUERYTAG CF5A1E002  total cost 515.7234497070312  **vector index used: ['NDL_CONN.F1_NULLABLE_VIX']**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        515.7234497070312
+          2 TBSCAN        515.7234497070312
+          3 SORT          515.7232666015625
+          4 FETCH         515.713134765625
+          5 IXSCAN        438.3578796386719
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 4 O  NDL_CONN.F1_NULLABLE  26210.0
+  -1 D -> 5 O  NDL_CONN.F1_NULLABLE_VIX  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015556777728_P2_O30_I2 TA
+  SYSIBM.AGT261110015556777728_P2_O30_I2 TA
+  SYSIBM.AIJ261110015556777728_P2_O30_I2 TA
+  NDL_CONN.F1_NULLABLE TA
+  NDL_CONN.F1_NULLABLE_VIX VI
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		515.723
+	Query Degree:		1
+
+
+             Rows 
+            RETURN
+            (   1)
+             Cost 
+              I/O 
+              |
+              10 
+            TBSCAN
+            (   2)
+            515.723 
+            72.4144 
+              |
+              10 
+            SORT  
+            (   3)
+            515.723 
+            72.4144 
+              |
+             10.56 
+            FETCH 
+            (   4)
+            515.713 
+            72.4144 
+          /---+----\
+        11          26210 
+      IXSCAN   TABLE: NDL_CONN
+      (   5)     F1_NULLABLE
+      438.358        Q1
+      61.4353 
+        |
+       26210 
+ VECIDX: NDL_CONN
+  F1_NULLABLE_VIX
+        Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+### Phase B: after RUNSTATS ON TABLE ... WITH DISTRIBUTION AND INDEXES ALL
+
+```
+OK       0.2s  CALL SYSPROC.ADMIN_CMD('RUNSTATS ON TABLE NDL_CONN.F1_NULLABLE WITH DISTRIBUTION AND INDEXES ALL')
+```
+Catalog:
+```
+  vector column ('NDL_CONN', 'F1_NULLABLE', 'EMB', 'VECTOR', 768, 'Y')
+  table         ('NDL_CONN', 'F1_NULLABLE', 26210, 2621, datetime.datetime(2026, 11, 10, 1, 59, 19, 815952))
+  index         ('NDL_CONN', 'F1_NULLABLE_VIX', 'VANN', '+EMB', -1, None)
+  index         ('SYSIBM', 'SQL261110015550300', 'REG', '+ADV_ID', 28, datetime.datetime(2026, 11, 10, 1, 59, 19, 815952))
+  NDL_CONN.F1_NULLABLE: rows=26210 null_vectors=0
+  vector column ('NDL_CONN', 'F1_NOTNULL', 'EMB', 'VECTOR', 768, 'N')
+  table         ('NDL_CONN', 'F1_NOTNULL', 26210, 2621, datetime.datetime(2026, 11, 10, 1, 58, 23, 458217))
+  index         ('NDL_CONN', 'F1_NOTNULL_VIX', 'VANN', '+EMB', -1, None)
+  index         ('SYSIBM', 'SQL261110015550500', 'REG', '+ADV_ID', 28, datetime.datetime(2026, 11, 10, 1, 58, 23, 458217))
+  NDL_CONN.F1_NOTNULL: rows=26210 null_vectors=0
+  vector column ('NDL_CONN', 'DB2VS_ADV', 'EMBEDDING', 'VECTOR', 768, 'Y')
+  table         ('NDL_CONN', 'DB2VS_ADV', -1, -1, None)
+  index         ('SYSIBM', 'SQL261110015824830', 'REG', '+ID', -1, None)
+  NDL_CONN.DB2VS_ADV: rows=26210 null_vectors=0
+```
+
+### B NDL_CONN.F1_NULLABLE APPROX k=10
+
+```sql
+SELECT ADV_ID FROM NDL_CONN.F1_NULLABLE ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 10 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 01:59:20.014156  QUERYTAG CF5A1E003  total cost 3049.002685546875  **vector index used: NO**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        3049.002685546875
+          2 TBSCAN        3049.002685546875
+          3 SORT          3049.00244140625
+          4 TBSCAN        3047.418701171875
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 4 O  NDL_CONN.F1_NULLABLE  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015556777728_P2_O30_I2 +T
+  SYSIBM.AGT261110015556777728_P2_O30_I2 +T
+  SYSIBM.AIJ261110015556777728_P2_O30_I2 +T
+  NDL_CONN.F1_NULLABLE TA
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		3049
+	Query Degree:		1
+
+
+      Rows 
+     RETURN
+     (   1)
+      Cost 
+       I/O 
+       |
+       10 
+     TBSCAN
+     (   2)
+      3049 
+      2621 
+       |
+       10 
+     SORT  
+     (   3)
+      3049 
+      2621 
+       |
+      26210 
+     TBSCAN
+     (   4)
+     3047.42 
+      2621 
+       |
+      26210 
+ TABLE: NDL_CONN
+   F1_NULLABLE
+       Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+```
+B NDL_CONN.F1_NULLABLE APPROX k=10                             index=NO                         cost=3049.0 | APPROX n=20 median=71.2 ms p95=74.1 ms min=69.6 max=74.2 | EXACT n=20 median=70.8 ms p95=76.9 ms min=69.4 max=80.0 | APPROX-vs-EXACT overlap@10 mean=1.000
+```
+
+### B NDL_CONN.F1_NULLABLE APPROX k=10 + EMB IS NOT NULL
+
+```sql
+SELECT ADV_ID FROM NDL_CONN.F1_NULLABLE WHERE EMB IS NOT NULL ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 10 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 01:59:23.192646  QUERYTAG CF5A1E004  total cost 515.7234497070312  **vector index used: ['NDL_CONN.F1_NULLABLE_VIX']**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        515.7234497070312
+          2 TBSCAN        515.7234497070312
+          3 SORT          515.7232666015625
+          4 FETCH         515.713134765625
+          5 IXSCAN        438.3578796386719
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 4 O  NDL_CONN.F1_NULLABLE  26210.0
+  -1 D -> 5 O  NDL_CONN.F1_NULLABLE_VIX  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015556777728_P2_O30_I2 TA
+  SYSIBM.AGT261110015556777728_P2_O30_I2 TA
+  SYSIBM.AIJ261110015556777728_P2_O30_I2 TA
+  NDL_CONN.F1_NULLABLE TA
+  NDL_CONN.F1_NULLABLE_VIX VI
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		515.723
+	Query Degree:		1
+
+
+             Rows 
+            RETURN
+            (   1)
+             Cost 
+              I/O 
+              |
+              10 
+            TBSCAN
+            (   2)
+            515.723 
+            72.4144 
+              |
+              10 
+            SORT  
+            (   3)
+            515.723 
+            72.4144 
+              |
+             10.56 
+            FETCH 
+            (   4)
+            515.713 
+            72.4144 
+          /---+----\
+        11          26210 
+      IXSCAN   TABLE: NDL_CONN
+      (   5)     F1_NULLABLE
+      438.358        Q1
+      61.4353 
+        |
+       26210 
+ VECIDX: NDL_CONN
+  F1_NULLABLE_VIX
+        Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+```
+B NDL_CONN.F1_NULLABLE APPROX k=10 + EMB IS NOT NULL           index=NDL_CONN.F1_NULLABLE_VIX   cost=515.7 | APPROX n=20 median=2.4 ms p95=2.6 ms min=2.2 max=4.6 | EXACT n=20 median=71.0 ms p95=72.5 ms min=69.7 max=75.5 | APPROX-vs-EXACT overlap@10 mean=0.955
+```
+
+### B NDL_CONN.F1_NOTNULL APPROX k=10
+
+```sql
+SELECT ADV_ID FROM NDL_CONN.F1_NOTNULL ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 10 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 01:59:24.975474  QUERYTAG CF5A1E005  total cost 501.7857666015625  **vector index used: ['NDL_CONN.F1_NOTNULL_VIX']**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        501.7857666015625
+          2 TBSCAN        501.7857666015625
+          3 SORT          501.78558349609375
+          4 FETCH         501.7760009765625
+          5 IXSCAN        431.440185546875
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 4 O  NDL_CONN.F1_NOTNULL  26210.0
+  -1 D -> 5 O  NDL_CONN.F1_NOTNULL_VIX  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015715404425_P2_O31_I2 TA
+  SYSIBM.AGT261110015715404425_P2_O31_I2 TA
+  SYSIBM.AIJ261110015715404425_P2_O31_I2 TA
+  NDL_CONN.F1_NOTNULL TA
+  NDL_CONN.F1_NOTNULL_VIX VI
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		501.786
+	Query Degree:		1
+
+
+             Rows 
+            RETURN
+            (   1)
+             Cost 
+              I/O 
+              |
+              10 
+            TBSCAN
+            (   2)
+            501.786 
+            70.4365 
+              |
+              10 
+            SORT  
+            (   3)
+            501.786 
+            70.4365 
+              |
+              10 
+            FETCH 
+            (   4)
+            501.776 
+            70.4365 
+          /---+----\
+        10          26210 
+      IXSCAN   TABLE: NDL_CONN
+      (   5)     F1_NOTNULL
+      431.44         Q1
+      60.4536 
+        |
+       26210 
+ VECIDX: NDL_CONN
+  F1_NOTNULL_VIX
+        Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+```
+B NDL_CONN.F1_NOTNULL APPROX k=10                              index=NDL_CONN.F1_NOTNULL_VIX    cost=501.8 | APPROX n=20 median=2.3 ms p95=3.1 ms min=2.2 max=4.4 | EXACT n=20 median=71.3 ms p95=72.9 ms min=69.7 max=74.3 | APPROX-vs-EXACT overlap@10 mean=0.960
+```
+
+### B NDL_CONN.F1_NOTNULL APPROX k=10 + EMB IS NOT NULL
+
+```sql
+SELECT ADV_ID FROM NDL_CONN.F1_NOTNULL WHERE EMB IS NOT NULL ORDER BY VECTOR_DISTANCE(EMB, VECTOR(CAST(? AS CLOB(100K)), 768, FLOAT32), COSINE) FETCH APPROX FIRST 10 ROWS ONLY
+```
+
+EXPLAIN_TIME 2026-11-10 01:59:26.764365  QUERYTAG CF5A1E006  total cost 501.7857666015625  **vector index used: ['NDL_CONN.F1_NOTNULL_VIX']**
+
+```
+OPERATOR_ID OPERATOR_TYPE TOTAL_COST
+          1 RETURN        501.7857666015625
+          2 TBSCAN        501.7857666015625
+          3 SORT          501.78558349609375
+          4 FETCH         501.7760009765625
+          5 IXSCAN        431.440185546875
+EXPLAIN_STREAM (SRC -> TGT  OBJECT  ROWS):
+  -1 D -> 4 O  NDL_CONN.F1_NOTNULL  26210.0
+  -1 D -> 5 O  NDL_CONN.F1_NOTNULL_VIX  26210.0
+EXPLAIN_OBJECT:
+  SYSIBM.ACV261110015715404425_P2_O31_I2 TA
+  SYSIBM.AGT261110015715404425_P2_O31_I2 TA
+  SYSIBM.AIJ261110015715404425_P2_O31_I2 TA
+  NDL_CONN.F1_NOTNULL TA
+  NDL_CONN.F1_NOTNULL_VIX VI
+```
+
+db2exfmt access plan:
+
+```
+Access Plan:
+-----------
+	Total Cost: 		501.786
+	Query Degree:		1
+
+
+             Rows 
+            RETURN
+            (   1)
+             Cost 
+              I/O 
+              |
+              10 
+            TBSCAN
+            (   2)
+            501.786 
+            70.4365 
+              |
+              10 
+            SORT  
+            (   3)
+            501.786 
+            70.4365 
+              |
+              10 
+            FETCH 
+            (   4)
+            501.776 
+            70.4365 
+          /---+----\
+        10          26210 
+      IXSCAN   TABLE: NDL_CONN
+      (   5)     F1_NOTNULL
+      431.44         Q1
+      60.4536 
+        |
+       26210 
+ VECIDX: NDL_CONN
+  F1_NOTNULL_VIX
+        Q1
+```
+
+```
+Extended Diagnostic Information:
+--------------------------------
+
+No extended Diagnostic Information for this statement.
+```
+
+```
+B NDL_CONN.F1_NOTNULL APPROX k=10 + EMB IS NOT NULL            index=NDL_CONN.F1_NOTNULL_VIX    cost=501.8 | APPROX n=20 median=2.3 ms p95=2.5 ms min=2.2 max=5.6 | EXACT n=20 median=71.5 ms p95=74.3 ms min=69.7 max=83.2 | APPROX-vs-EXACT overlap@10 mean=0.960
+```
+
+### F1 summary
+
+```
+A NDL_CONN.F1_NULLABLE APPROX k=10                             index=NO                         cost=3049.0
+A NDL_CONN.F1_NULLABLE APPROX k=10 + EMB IS NOT NULL           index=NDL_CONN.F1_NULLABLE_VIX   cost=515.7
+B NDL_CONN.F1_NULLABLE APPROX k=10                             index=NO                         cost=3049.0 | APPROX n=20 median=71.2 ms p95=74.1 ms min=69.6 max=74.2 | EXACT n=20 median=70.8 ms p95=76.9 ms min=69.4 max=80.0 | APPROX-vs-EXACT overlap@10 mean=1.000
+B NDL_CONN.F1_NULLABLE APPROX k=10 + EMB IS NOT NULL           index=NDL_CONN.F1_NULLABLE_VIX   cost=515.7 | APPROX n=20 median=2.4 ms p95=2.6 ms min=2.2 max=4.6 | EXACT n=20 median=71.0 ms p95=72.5 ms min=69.7 max=75.5 | APPROX-vs-EXACT overlap@10 mean=0.955
+B NDL_CONN.F1_NOTNULL APPROX k=10                              index=NDL_CONN.F1_NOTNULL_VIX    cost=501.8 | APPROX n=20 median=2.3 ms p95=3.1 ms min=2.2 max=4.4 | EXACT n=20 median=71.3 ms p95=72.9 ms min=69.7 max=74.3 | APPROX-vs-EXACT overlap@10 mean=0.960
+B NDL_CONN.F1_NOTNULL APPROX k=10 + EMB IS NOT NULL            index=NDL_CONN.F1_NOTNULL_VIX    cost=501.8 | APPROX n=20 median=2.3 ms p95=2.5 ms min=2.2 max=5.6 | EXACT n=20 median=71.5 ms p95=74.3 ms min=69.7 max=83.2 | APPROX-vs-EXACT overlap@10 mean=0.960
+```
+
+ADM13500E count in notify log now: 10

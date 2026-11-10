@@ -1,0 +1,46 @@
+user=DB2_USER path=CALL NEEDLE.TRIAGE_MODE(..., 'HYBRID') candidates=83 visible_docs_fetched=17 timings_ms={'embed': 2053.1, 'triage_sql': 416.5, 'docs_sql': 454.6}
+
+[keyword] top-10
+   1 GHSA-fm6c-f59h-7mmg    kw=1 vec=32 rrf=0.02726  'MS SWIFT Remote Code Execution via unsafe PyYAML deserializa' pkgs=['ms-swift']
+   2 PYSEC-2026-1683        kw=2 vec=33 rrf=0.02688  'MS SWIFT Remote Code Execution via unsafe PyYAML deserializa' pkgs=['ms-swift']
+   3 GHSA-34wm-4hw7-qfjv    kw=3 vec=44 rrf=0.02549  'Feast vulnerable to Deserialization of Untrusted Data' pkgs=['feast']
+   4 PYSEC-2026-1366        kw=4 vec=45 rrf=0.02515  'Feast vulnerable to Deserialization of Untrusted Data' pkgs=['feast']
+   5 PYSEC-2020-96          kw=5 vec=3 rrf=0.03126  '' pkgs=['pyyaml']
+   6 GHSA-6757-jp84-gxfx    kw=6 vec=11 rrf=0.02924  'Improper Input Validation in PyYAML' pkgs=['pyyaml']
+   7 PYSEC-2021-142         kw=7 vec=1 rrf=0.03132  '' pkgs=['pyyaml']
+   8 GHSA-8q59-q68h-6hv4    kw=8 vec=4 rrf=0.03033  'Improper Input Validation in PyYAML' pkgs=['pyyaml']
+   9 GHSA-8278-88vv-x98r    kw=9 vec=2 rrf=0.03062  'Execution of untrusted code through config file' pkgs=['tenable-jira-cloud']
+  10 GHSA-rpj2-4hq8-938g    kw=10 vec=37 rrf=0.02459  'VCR.py: Arbitrary code execution via unsafe YAML deserializa' pkgs=['vcrpy']
+
+[vector] top-10
+   1 PYSEC-2021-142         kw=7 vec=1 rrf=0.03132  '' pkgs=['pyyaml']
+   2 GHSA-8278-88vv-x98r    kw=9 vec=2 rrf=0.03062  'Execution of untrusted code through config file' pkgs=['tenable-jira-cloud']
+   3 PYSEC-2020-96          kw=5 vec=3 rrf=0.03126  '' pkgs=['pyyaml']
+   4 GHSA-8q59-q68h-6hv4    kw=8 vec=4 rrf=0.03033  'Improper Input Validation in PyYAML' pkgs=['pyyaml']
+   5 GHSA-hrf3-622q-8366    kw=None vec=5 rrf=0.01538  'Unsafe yaml deserialization in NVFlare' pkgs=['nvflare']
+   6 PYSEC-2022-232         kw=None vec=6 rrf=0.01515  '' pkgs=['nvflare']
+   7 GHSA-rprw-h62v-c2w7    kw=None vec=7 rrf=0.01493  'PyYAML insecurely deserializes YAML strings leading to arbit' pkgs=['pyyaml']
+   8 PYSEC-2017-78          kw=None vec=8 rrf=0.01471  '' pkgs=['confire']
+   9 GHSA-jv2h-4p9v-wf5w    kw=44 vec=9 rrf=0.02411  'ouroboros-ai: Incomplete fix of CVE-2026-47211: untrusted pr' pkgs=['ouroboros-ai']
+  10 GHSA-ggmr-44cv-24pm    kw=12 vec=10 rrf=0.02817  'Code injection via unsafe YAML loading' pkgs=['sockeye']
+
+[hybrid] top-10
+   1 PYSEC-2021-142         kw=7 vec=1 rrf=0.03132  '' pkgs=['pyyaml']
+   2 PYSEC-2020-96          kw=5 vec=3 rrf=0.03126  '' pkgs=['pyyaml']
+   3 GHSA-8278-88vv-x98r    kw=9 vec=2 rrf=0.03062  'Execution of untrusted code through config file' pkgs=['tenable-jira-cloud']
+   4 GHSA-8q59-q68h-6hv4    kw=8 vec=4 rrf=0.03033  'Improper Input Validation in PyYAML' pkgs=['pyyaml']
+   5 GHSA-6757-jp84-gxfx    kw=6 vec=11 rrf=0.02924  'Improper Input Validation in PyYAML' pkgs=['pyyaml']
+   6 GHSA-ggmr-44cv-24pm    kw=12 vec=10 rrf=0.02817  'Code injection via unsafe YAML loading' pkgs=['sockeye']
+   7 GHSA-fm6c-f59h-7mmg    kw=1 vec=32 rrf=0.02726  'MS SWIFT Remote Code Execution via unsafe PyYAML deserializa' pkgs=['ms-swift']
+   8 PYSEC-2026-1683        kw=2 vec=33 rrf=0.02688  'MS SWIFT Remote Code Execution via unsafe PyYAML deserializa' pkgs=['ms-swift']
+   9 GHSA-v5f6-hjmf-9mc5    kw=16 vec=14 rrf=0.02667  "PyDrive2's unsafe YAML deserialization in LoadSettingsFile a" pkgs=['pydrive2']
+  10 GHSA-34wm-4hw7-qfjv    kw=3 vec=44 rrf=0.02549  'Feast vulnerable to Deserialization of Untrusted Data' pkgs=['feast']
+
+exposure rows=42 in 271 ms for 17 advisory ids
+Counter({'NOT_CONFIRMED': 26, 'PREVIOUSLY_AFFECTED': 12, 'AFFECTED': 4})
+  AFFECTED legacy-reporting       pyyaml==5.1 GHSA-6757-jp84-gxfx since 2020-02-27 days=2448
+  AFFECTED legacy-reporting       pyyaml==5.1 GHSA-8q59-q68h-6hv4 since 2020-02-27 days=2448
+  AFFECTED legacy-reporting       pyyaml==5.1 PYSEC-2020-96 since 2020-02-27 days=2448
+  AFFECTED legacy-reporting       pyyaml==5.1 PYSEC-2021-142 since 2020-02-27 days=2448
+
+LangChain retriever (hybrid, k=5): [('PYSEC-2021-142', 7, 1), ('PYSEC-2020-96', 5, 3), ('GHSA-8278-88vv-x98r', 9, 2), ('GHSA-8q59-q68h-6hv4', 8, 4), ('GHSA-6757-jp84-gxfx', 6, 11)]
