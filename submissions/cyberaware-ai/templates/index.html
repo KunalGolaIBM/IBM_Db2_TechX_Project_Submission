@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberAware AI</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        header {
+            background: #0f172a;
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        header h1 {
+            color: #38bdf8;
+        }
+
+        nav {
+            background: #1e293b;
+            padding: 15px;
+            text-align: center;
+        }
+
+        nav a {
+            color: white;
+            margin: 12px;
+            text-decoration: none;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 55px 20px;
+            background: #0f172a;
+            color: white;
+        }
+
+        .hero h2 {
+            font-size: 32px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            padding: 25px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px #0001;
+        }
+
+        .assistant {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-top: 30px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            margin: 12px 0;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+        }
+
+        button {
+            background: #0284c7;
+            color: white;
+            border: none;
+            padding: 13px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0369a1;
+        }
+
+        #answer {
+            white-space: pre-line;
+            margin-top: 20px;
+            line-height: 1.7;
+        }
+
+        footer {
+            background: #0f172a;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>CyberAware AI</h1>
+    <p>Your Digital Safety Starts Here</p>
+</header>
+
+<nav>
+    <a href="#lessons">Lessons</a>
+    <a href="#quizzes">Quizzes</a>
+    <a href="#assistant">AI Assistant</a>
+    <a href="#scams">Scam Awareness</a>
+</nav>
+
+<section class="hero">
+    <h2>Stay Safe in the Digital World</h2>
+    <p>Learn to recognize scams, phishing attacks and online threats.</p>
+</section>
+
+<main class="container">
+
+    <h2 id="lessons">Cybersecurity Lessons</h2>
+
+    <div class="cards">
+        <div class="card">
+            <h3>Phishing Awareness</h3>
+            <p>Learn how to identify suspicious emails and messages.</p>
+        </div>
+
+        <div class="card">
+            <h3>Password Security</h3>
+            <p>Learn how to create strong passwords and protect accounts.</p>
+        </div>
+
+        <div class="card">
+            <h3>Mobile Money Safety</h3>
+            <p>Protect your mobile money account from fraud.</p>
+        </div>
+    </div>
+
+    <h2 id="quizzes">Cybersecurity Quiz</h2>
+
+    <div class="card">
+        <p>Someone calls asking for your mobile money PIN. What should you do?</p>
+
+        <button onclick="checkAnswer('A')">A. Share the PIN</button>
+        <button onclick="checkAnswer('B')">B. Refuse to share it</button>
+
+        <p id="quizResult"></p>
+    </div>
+
+    <h2 id="scams">Scam Awareness</h2>
+
+    <div class="card">
+        <h3>Fake Prize Messages</h3>
+        <p>
+            Warning: A message claiming you won a prize and asking
+            for money or personal information may be a scam.
+        </p>
+        <p><strong>Safety tip:</strong> Verify the source before responding.</p>
+    </div>
+
+    <section class="assistant" id="assistant">
+        <h2>CyberAware AI Assistant</h2>
+
+        <p>Ask a question about online safety.</p>
+
+        <input
+            type="text"
+            id="question"
+            placeholder="Example: How can I recognize a scam?"
+        >
+
+        <button onclick="askAssistant()">Ask Assistant</button>
+
+        <p id="answer"></p>
+    </section>
+
+</main>
+
+<footer>
+    <p>CyberAware AI | Cybersecurity Education for Everyone</p>
+    <p>Created by NGELI MALIKA MARIE</p>
+</footer>
+
+<script>
+    function checkAnswer(choice) {
+        const result = document.getElementById("quizResult");
+
+        if (choice === "B") {
+            result.textContent = "Correct! Never share your mobile money PIN.";
+            result.style.color = "green";
+        } else {
+            result.textContent = "Incorrect. Never share your PIN.";
+            result.style.color = "red";
+        }
+    }
+
+    async function askAssistant() {
+        const question = document.getElementById("question").value;
+        const answer = document.getElementById("answer");
+
+        if (!question.trim()) {
+            answer.textContent = "Please enter a question.";
+            return;
+        }
+
+        answer.textContent = "Thinking...";
+
+        try {
+            const response = await fetch("/api/ask", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ question: question })
+            });
+
+            const data = await response.json();
+            answer.textContent = data.answer;
+        } catch (error) {
+            answer.textContent = "Unable to connect. Please try again.";
+        }
+    }
+</script>
+
+</body>
+</html>
