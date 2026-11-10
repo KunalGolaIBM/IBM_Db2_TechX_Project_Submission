@@ -1,91 +1,276 @@
 # SupplyChain Sentinel
+### An Agentic AI Control Tower for Intelligent Supply Chain Risk Detection & Recovery
 
-> **One-line pitch:** An IBM Db2-backed, LangGraph-orchestrated agentic control tower that detects manufacturing supply risks, traces their operational impact, and prepares evidence-backed recovery options for human approval.
+<p align="center">
 
-## Problem statement
-Manufacturers often keep purchase orders, inventory, supplier performance, shipment events, quality holds, and production demand in separate operational records. A late component can become a production interruption before a planner has reconciled all those records. Dashboards surface individual alerts, but do not consistently connect the alert to affected orders, inventory runway, policy constraints, and a traceable decision.
+**Detect Early. Investigate Intelligently. Recover Confidently.**
 
-## Solution overview
-SupplyChain Sentinel turns a disruption signal into a structured risk case:
-1. **Monitor Agent** detects a shipment delay or low inventory signal.
-2. **Db2 Investigator Agent** retrieves the relevant supplier, purchase order, inventory, shipment, quality, and production records using narrow, parameterized tools.
-3. **Impact Analyst Agent** calculates inventory runway and identifies exposed production orders using deterministic business rules.
-4. **Mitigation Planner Agent** ranks safe options such as expediting, partial allocation, alternate-source review, or schedule review.
-5. **Evidence Verifier Agent** checks that recommendations are supported by retrieved records and clearly labels assumptions.
-6. **Human approval** is required before an approval event is recorded. The demo never automatically issues purchase orders or changes production schedules.
+</p>
 
-## IBM Db2 integration
-- **Edition/environment:** IBM Db2 Community Edition (Docker) or an accessible IBM Db2 instance.
-- **Connector:** `ibm_db` Python driver.
-- **Real Db2 path:** Set `DB2_HOST`, `DB2_PORT`, `DB2_DATABASE`, `DB2_USERNAME`, and `DB2_PASSWORD`. The application then connects to Db2 and executes the SQL in `sql/schema_db2.sql` and `sql/seed_db2.sql`.
-- **Tables:** `SUPPLIER`, `COMPONENT`, `INVENTORY`, `PURCHASE_ORDER`, `SHIPMENT_EVENT`, `QUALITY_INSPECTION`, `PRODUCTION_ORDER`, `RISK_CASE`, `RECOMMENDATION`, and `APPROVAL_AUDIT`.
-- **Meaningful operations:** multi-table joins, aggregations for supplier delivery performance, parameterized lookups, risk-case persistence, and transactional approval audit writes.
-- **Demo fallback:** If Db2 credentials are absent, a local SQLite demo store is used so the interface and workflow can be explored. This fallback is clearly marked and is **not a substitute for demonstrating the Db2 connection** during judging.
+<p align="center">
 
-## AI / agent architecture
-- **Framework:** LangGraph `StateGraph`.
-- **Agent workflow:** `monitor -> investigate -> assess -> plan -> verify -> persist`.
-- **Model role:** The core workflow uses deterministic, inspectable calculations so that the demo works without a paid model key. An optional LLM can be added for natural-language narrative, but the LLM must not invent quantities or override Db2 facts.
-- **Tool boundary:** Agents can call only allow-listed repository methods. No unrestricted text-to-SQL is exposed.
+[🚀 Live Demo](https://bhatt-submissionssupplychain-sentinelsrcapp-wm4kdi.streamlit.app/) · [🎥 Watch Demo Video](https://youtu.be/B6Wv24nLZPc?si=g40h9UImbcTebczA) · [💻 GitHub Repository](https://github.com/bhattbhumika31-dotcom/IBM_Db2_TechX_Project_Submission)
 
-## Tech stack
-Python 3.11+, IBM Db2, `ibm_db`, LangGraph, Streamlit, Pandas, python-dotenv, pytest.
+</p>
 
-## Prerequisites
-- Python 3.11+
-- IBM Db2 Community Edition or a reachable IBM Db2 database for the full integration path
+---
+
+## Overview
+
+**SupplyChain Sentinel** is an AI-powered supply chain risk management platform designed to help manufacturers identify disruptions, understand their operational consequences, and evaluate evidence-backed recovery strategies.
+
+Manufacturing operations depend on interconnected processes involving suppliers, purchase orders, inventory, shipments, quality inspections, and production schedules. When these systems operate in isolation, even a small delay can escalate into a significant production disruption.
+
+SupplyChain Sentinel addresses this challenge through an agentic workflow powered by **LangGraph and an IBM Db2-oriented data architecture**.
+
+Instead of simply displaying alerts, it investigates the underlying records, calculates operational impact, generates mitigation options, and maintains a traceable human approval process.
+
+## 🚀 Live Project
+
+| Resource | Link |
+|---|---|
+| Live Application | [Open SupplyChain Sentinel](https://bhatt-submissionssupplychain-sentinelsrcapp-wm4kdi.streamlit.app/) |
+| Demo Video | [Watch on YouTube](https://youtu.be/B6Wv24nLZPc?si=g40h9UImbcTebczA) |
+| GitHub Repository | [View Source Code](https://github.com/bhattbhumika31-dotcom/IBM_Db2_TechX_Project_Submission) |
+
+## Problem Statement
+
+Manufacturers frequently manage purchase orders, supplier performance, inventory, shipment events, quality holds, and production demand through separate operational records.
+
+A delayed shipment may appear as an isolated alert, while its actual consequences remain hidden:
+
+- Which production orders depend on the delayed component?
+- How much usable inventory is available?
+- How long can production continue?
+- Which suppliers or orders are exposed?
+- What recovery options are feasible?
+- What evidence supports the recommended action?
+
+SupplyChain Sentinel connects these operational signals to help planners make informed decisions before disruptions escalate.
+
+## 💡 Our Solution
+
+SupplyChain Sentinel transforms a disruption signal into an explainable risk investigation.
+
+### Agentic AI Workflow
+
+The application follows a structured multi-agent workflow orchestrated using LangGraph.
+
+1. **Monitor Agent** – Identifies potential supply disruptions, including delayed shipments and low inventory.
+2. **Db2 Investigator Agent** – Retrieves relevant supplier, purchase order, inventory, shipment, quality, and production records.
+3. **Impact Analyst Agent** – Calculates inventory runway and identifies potentially affected production orders.
+4. **Mitigation Planner Agent** – Evaluates and ranks recovery options such as expediting, partial allocation, alternate-source review, and schedule review.
+5. **Evidence Verifier Agent** – Checks whether proposed recommendations are supported by retrieved records and labels assumptions.
+6. **Human Approval Layer** – Allows an authorized human decision-maker to review and record an approval event.
+
+**Workflow:**
+
+`Monitor → Investigate → Assess → Plan → Verify → Persist`
+
+The platform does not automatically issue purchase orders or modify production schedules. Human oversight remains central to operational decisions.
+
+## 🏗️ Technology Stack
+
+| Component | Technology |
+|---|---|
+| Programming Language | Python 3.11+ |
+| Database | IBM Db2 |
+| Database Driver | ibm_db |
+| Agent Orchestration | LangGraph |
+| Application Framework | Streamlit |
+| Data Processing | Pandas |
+| Configuration | python-dotenv |
+| Testing | pytest |
+| Demo Fallback | SQLite |
+
+## IBM Db2 Integration
+
+IBM Db2 is the intended primary database backend for SupplyChain Sentinel.
+
+The application is designed to use the `ibm_db` Python driver to connect to an IBM Db2 instance through environment-based configuration.
+
+### Database Schema
+
+The database design includes the following operational tables:
+
+- `SUPPLIER`
+- `COMPONENT`
+- `INVENTORY`
+- `PURCHASE_ORDER`
+- `SHIPMENT_EVENT`
+- `QUALITY_INSPECTION`
+- `PRODUCTION_ORDER`
+- `RISK_CASE`
+- `RECOMMENDATION`
+- `APPROVAL_AUDIT`
+
+### Database Operations
+
+The repository includes SQL scripts and application logic for:
+
+- Multi-table relational queries and joins.
+- Supplier delivery performance analysis.
+- Parameterized database lookups.
+- Risk investigation persistence.
+- Recommendation records.
+- Human approval audit events.
+
+**Database configuration:** Set the required Db2 connection variables in `.env`:
+
+`DB2_HOST`, `DB2_PORT`, `DB2_DATABASE`, `DB2_USERNAME`, and `DB2_PASSWORD`.
+
+The application also provides an explicitly labelled SQLite demonstration fallback when Db2 credentials are not configured. This fallback supports local exploration but does not replace demonstrating a real Db2 connection.
+
+## ✨ Key Features
+
+- **Early Disruption Detection:** Identify potential supply chain risks.
+- **Operational Impact Analysis:** Connect shipment delays to inventory and production exposure.
+- **Inventory Runway Calculation:** Estimate available inventory coverage.
+- **Explainable Recommendations:** Present mitigation options supported by retrieved evidence.
+- **Multi-Agent Investigation:** Coordinate specialized agents through LangGraph.
+- **Human-in-the-Loop Approval:** Keep important operational decisions under human control.
+- **Investigation History:** Maintain traceable risk cases and approval records.
+- **Reproducible Demo:** Includes database scripts, sample data, setup instructions, and tests.
+
+## 🖥️ Running the Project Locally
+
+### Prerequisites
+
+- Python 3.11 or later
+- Git
+- IBM Db2 instance for the full database integration
 - Docker Desktop if running Db2 locally
-- Optional: Git
 
-## Setup & installation
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/bhattbhumika31-dotcom/IBM_Db2_TechX_Project_Submission.git
+
+cd IBM_Db2_TechX_Project_Submission
+```
+
+### 2. Navigate to the project
+
+```bash
+cd submissions/supplychain-sentinel
+```
+
+### 3. Create a virtual environment
 
 ```bash
 python -m venv .venv
-# Windows: .venv\Scripts\activate
-# macOS/Linux:
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
 ```
 
-For a local Db2 container, use IBM's official Db2 Community Edition image and its current setup instructions. Configure the environment variables in `.env`, then execute `sql/schema_db2.sql` followed by `sql/seed_db2.sql` using a Db2 SQL client.
+Windows:
 
-For quick UI exploration without Db2 credentials, leave the Db2 variables empty; the app starts in explicitly labelled SQLite demo mode and creates synthetic sample records.
+```bash
+.venv\Scripts\activate
+```
 
-## Configuration
-See `.env.example`. Never commit `.env` or real credentials.
+macOS/Linux:
 
-## Running the project
+```bash
+source .venv/bin/activate
+```
+
+### 4. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 5. Configure environment variables
+
+Copy `.env.example` to `.env` and configure the required settings.
+
+Never commit actual database credentials or secrets.
+
+### 6. Prepare the database
+
+For the Db2 integration path, execute:
+
+```text
+sql/schema_db2.sql
+sql/seed_db2.sql
+```
+
+Use a compatible Db2 SQL client and a configured Db2 instance.
+
+### 7. Launch the application
 
 ```bash
 streamlit run src/app.py
 ```
 
-## Demo walkthrough
-1. Open the dashboard and select **Investigate disruption**.
-2. Use the seeded scenario `SHIP-1008` (delayed motor-controller shipment).
-3. Review the Db2/SQLite mode indicator and the source records retrieved.
-4. Inspect inventory runway, affected production orders, ranked mitigation options, and evidence checks.
-5. Select an option and click **Record human approval** to persist an approval audit event.
-6. Open the case history to inspect the saved investigation and approval trail.
+The application opens in your browser.
 
-## Testing & verification
+## 🎬 Demo Walkthrough
+
+The demonstration uses the seeded scenario:
+
+**Scenario: `SHIP-1008` — Delayed Motor-Controller Shipment**
+
+The demo showcases:
+
+1. Opening the SupplyChain Sentinel dashboard.
+2. Starting a disruption investigation.
+3. Reviewing the database mode and retrieved source records.
+4. Examining inventory runway and affected production orders.
+5. Exploring ranked recovery recommendations.
+6. Reviewing evidence verification.
+7. Recording a human approval event.
+8. Inspecting the investigation and approval history.
+
+**Watch the complete demonstration:**  
+[SupplyChain Sentinel – Project Demo](https://youtu.be/B6Wv24nLZPc?si=g40h9UImbcTebczA)
+
+## 🧪 Testing
+
+Run the available test suite using:
 
 ```bash
 pytest -q
 ```
 
-Unit tests cover deterministic impact calculations and recommendation verification. To verify Db2 specifically, run the app with valid Db2 credentials and confirm the sidebar reports `IBM Db2 connected`; the seeded tables and parameterized repository queries are then exercised against Db2.
+The tests cover deterministic impact calculations and recommendation verification.
 
-## Screenshots & demo
-Add real screenshots captured from your running application to `docs/screenshots/` before final submission. Do not present mockups as live application screenshots.
+For Db2-specific verification, configure valid Db2 credentials, run the application, and confirm that the application reports a successful IBM Db2 connection.
 
-## Known limitations & roadmap
-- The included dataset is synthetic and designed for a reproducible hackathon demonstration.
-- Supplier alternate-source feasibility is represented as a review recommendation; real qualification requires external supplier and compliance data.
-- Future work: role-based approvals, ERP connectors, streaming shipment feeds, forecast uncertainty, and IBM watsonx.ai narrative synthesis.
+## 🔐 Responsible AI & Human Oversight
 
-## Individual participation
-| Name | GitHub handle | Role |
-|---|---|---|
-| Bhumika Bhatt | bhattbhumika31-dotcom | Product design, Db2 integration, agent workflow and application |
+SupplyChain Sentinel is designed around explainability and controlled decision-making.
+
+- Database records remain the source of operational facts.
+- Business calculations use inspectable deterministic rules.
+- Recommendations are checked against retrieved evidence.
+- Assumptions are explicitly identified.
+- Human approval is required before an approval event is recorded.
+- The system does not autonomously change production schedules or issue purchase orders.
+
+## 🔭 Future Scope
+
+Potential enhancements include:
+
+- Real-time shipment tracking and event streaming.
+- ERP and procurement platform integrations.
+- Role-based approval workflows.
+- Supplier reliability forecasting.
+- More advanced uncertainty-aware risk prediction.
+- IBM watsonx.ai integration for evidence-grounded natural-language explanations.
+
+## 👩‍💻 Individual Participation
+
+**Project:** SupplyChain Sentinel  
+**Participant:** Bhumika Bhatt  
+**GitHub:** [@bhattbhumika31-dotcom](https://github.com/bhattbhumika31-dotcom)  
+**Institution:** Graphic Era Deemed to be University
+
+**Contribution:** Project design, database integration, agent workflow development, application implementation, and documentation.
+
+---
+
+## Final Note
+
+SupplyChain Sentinel demonstrates how relational enterprise data and agentic AI workflows can work together to move beyond isolated alerts toward explainable, evidence-backed supply chain decisions.
+
+**Built for IBM Db2 TechX Summit – Db2Hack 2026.**
