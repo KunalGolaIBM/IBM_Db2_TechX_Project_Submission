@@ -1,0 +1,50 @@
+# BLACKSTART AI — Render Blueprint
+# Two services: FastAPI backend (Python web service) + React/Vite static site.
+# Paths are relative to the repository root.
+# See DEPLOYMENT.md for step-by-step deploy instructions.
+
+services:
+  # ---------- FastAPI backend ----------
+  - type: web
+    name: blackstart-ai-api
+    runtime: python
+    rootDir: submissions/blackstart-ai/src/backend
+    buildCommand: pip install -r requirements.txt
+    # Bind 0.0.0.0 and listen on Render's $PORT (required by Render).
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.10"
+      - key: ENVIRONMENT
+        value: production
+      # Comma-separated allowed browser origins (the deployed frontend).
+      # If you rename the frontend service, update this value to match.
+      - key: CORS_ORIGINS
+        value: https://blackstart-ai-web.onrender.com
+      # IBM Db2 DSN — set as a secret in the Render Dashboard (never in git).
+      # Example form: DATABASE=...;HOSTNAME=...;PORT=50000;PROTOCOL=TCPIP;UID=...;PWD=...;
+      - key: DB2_DSN
+        sync: false
+
+  # ---------- React + TypeScript + Vite static site ----------
+  - type: web
+    name: blackstart-ai-web
+    runtime: static
+    rootDir: submissions/blackstart-ai/src/frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    # SPA fallback: React Router routes (/agents, /cascade, ...) must serve index.html.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # Baked into the JS bundle at build time. Must point at the backend service URL.
+      # If you rename the backend service, update this value to match.
+      - key: VITE_API_BASE_URL
+        value: https://blackstart-ai-api.onrender.com/api/v1

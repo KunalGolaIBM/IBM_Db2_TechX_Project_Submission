@@ -1,0 +1,48 @@
+{
+    "$schema":  "https://json-schema.org/draft/2020-12/schema",
+    "project":  {
+                    "title":  "BLACKSTART AI",
+                    "slug":  "blackstart-ai",
+                    "short_description":  "Power-grid intelligence platform using five deterministic LangGraph agents to analyze synthetic IBM Db2 demonstration data, identify overloads and cascading risks, and provide advisory-only recovery recommendations.",
+                    "category":  "AI",
+                    "demo_url":  "",
+                    "video_url":  "",
+                    "repo_url":  "https://github.com/khanadil84/IBM_Db2_TechX_Project_Submission"
+                },
+    "team":  {
+                 "name":  "Adil Khan",
+                 "members":  [
+                                 {
+                                     "name":  "Adil Khan",
+                                     "github":  "khanadil84",
+                                     "email":  "khanadil84@gmail.com",
+                                     "role":  "Solo Developer"
+                                 }
+                             ]
+             },
+    "ibm_db2":  {
+                    "edition":  "IBM Db2 (local development instance on port 50000)",
+                    "connector":  "ibm_db",
+                    "features_used":  [
+                                          "Relational Tables",
+                                          "Parameterized INSERT (AGENT_EVENT audit log)",
+                                          "Runtime connection probing (/api/v1/db2/status)"
+                                      ]
+                },
+    "tech_stack":  {
+                       "languages":  [
+                                         "Python",
+                                         "TypeScript"
+                                     ],
+                       "frameworks":  [
+                                          "FastAPI",
+                                          "LangGraph",
+                                          "React",
+                                          "Vite",
+                                          "Tailwind CSS"
+                                      ],
+                       "ai_models":  [
+                                         "LangGraph deterministic agent pipeline (no LLM calls in the request path)"
+                                     ]
+                   }
+}

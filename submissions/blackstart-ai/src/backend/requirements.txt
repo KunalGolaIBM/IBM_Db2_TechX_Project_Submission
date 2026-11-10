@@ -1,0 +1,18 @@
+# BLACKSTART AI backend — pinned to versions verified in development (Python 3.12.10)
+fastapi==0.162.2
+starlette==1.10.0
+uvicorn==0.54.0
+pydantic==2.14.3
+pydantic-settings==2.16.2
+ibm_db==3.3.0
+
+# LangGraph orchestration (LangChain ecosystem)
+langgraph==1.2.20
+langchain-core==1.7.6
+
+python-dotenv==1.2.4
+
+# Test tooling (development verification)
+pytest==9.2.0
+pytest-cov==7.1.0
+httpx==0.28.1
