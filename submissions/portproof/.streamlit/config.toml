@@ -1,0 +1,51 @@
+# PortProof's theme. Dark only, on purpose.
+#
+# The app is read in two situations: a migration review, where someone is
+# staring at two SQL panels looking for the difference, and a demo. Both are
+# better served by a low luminance background with a small number of saturated
+# accents than by Streamlit's default, where everything competes.
+#
+# The palette is defined once here so Streamlit's own widgets pick it up, and
+# again as CSS custom properties in src/app.py for the parts this file cannot
+# reach. Changing a colour means changing both.
+#
+#   ink        #0A0F15  the page
+#   surface    #111A24  cards, inputs, code blocks
+#   raised     #18242F  hover, the active tab
+#   border     #223141
+#   text       #E4ECF4
+#   dim        #7E91A5  captions and secondary text
+#   amber      #F0A93B  the primary action, and the active tab underline
+#   mint       #3FD894  proven equivalent
+#   coral      #FF6B72  proven different
+
+[theme]
+base = "dark"
+
+# Amber rather than a blue. Every verdict in this app is colour coded green,
+# red or orange, so the action colour has to be something a verdict never is,
+# or a button starts looking like a result.
+primaryColor = "#F0A93B"
+
+backgroundColor = "#0A0F15"
+secondaryBackgroundColor = "#111A24"
+textColor = "#E4ECF4"
+linkColor = "#5FC9F0"
+
+codeBackgroundColor = "#0D1620"
+
+font = "sans-serif"
+codeFont = "monospace"
+headingFont = "sans-serif"
+
+borderColor = "#223141"
+dataframeBorderColor = "#223141"
+dataframeHeaderBackgroundColor = "#18242F"
+
+showWidgetBorder = true
+baseRadius = "0.4rem"
+
+[client]
+# Hides the "Deploy" button and the hamburger. Neither does anything useful
+# for a local proof run, and both are the first thing a viewer's eye lands on.
+toolbarMode = "minimal"

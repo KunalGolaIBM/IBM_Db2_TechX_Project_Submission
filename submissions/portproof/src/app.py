@@ -47,12 +47,26 @@ from src.safety import UnsafeSql, check_read_only  # noqa: E402
 
 st.set_page_config(page_title="PortProof", page_icon="✓", layout="wide")
 
+#: The palette, kept in one place. `.streamlit/config.toml` declares the same
+#: values to Streamlit's own widgets; these are for the parts of the page this
+#: file draws itself. Changing a colour means changing both.
+INK = "#0A0F15"
+SURFACE = "#111A24"
+RAISED = "#18242F"
+BORDER = "#223141"
+TEXT = "#E4ECF4"
+DIM = "#7E91A5"
+AMBER = "#F0A93B"
+
+#: Verdict colours are read as text on a dark background, not as badge fills,
+#: so each one is a light tint rather than the saturated version that works on
+#: white. The GitHub palette this started from was unreadable here.
 VERDICT_COLOUR = {
-    "EQUIVALENT": "#1f883d",
-    "DIFFERENT": "#cf222e",
-    "UNSTABLE": "#bc4c00",
-    "VACUOUS": "#8250df",
-    "INCONCLUSIVE": "#9a6700",
+    "EQUIVALENT": "#3FD894",
+    "DIFFERENT": "#FF6B72",
+    "UNSTABLE": "#FFA857",
+    "VACUOUS": "#B48CFF",
+    "INCONCLUSIVE": "#E9C46A",
 }
 
 #: "DIFFERENT" understates it: the engines were run and disagreed.
@@ -68,11 +82,131 @@ VERDICT_LABEL = {
 #: a verdict without its strength invites exactly the over-reading PortProof is
 #: supposed to prevent.
 STRENGTH_COLOUR = {
-    "STRONG": "#1f883d",
-    "MODERATE": "#9a6700",
-    "WEAK": "#bc4c00",
-    "NONE": "#57606a",
+    "STRONG": "#3FD894",
+    "MODERATE": "#E9C46A",
+    "WEAK": "#FFA857",
+    "NONE": DIM,
 }
+
+#: Injected once, after set_page_config. config.toml colours Streamlit's own
+#: widgets; this covers what it cannot reach, which is mostly the tab strip,
+#: the metric tiles and the two SQL panels that carry the whole argument of
+#: tab 1. Selectors are kept to Streamlit's stable `data-testid` attributes
+#: rather than its generated class names, which change between releases.
+THEME_CSS = f"""
+<style>
+:root {{
+  --pp-ink: {INK};
+  --pp-surface: {SURFACE};
+  --pp-raised: {RAISED};
+  --pp-border: {BORDER};
+  --pp-text: {TEXT};
+  --pp-dim: {DIM};
+  --pp-amber: {AMBER};
+}}
+
+.stApp {{
+  background:
+    radial-gradient(1100px 500px at 15% -10%, #16242F 0%, rgba(22,36,47,0) 60%),
+    radial-gradient(900px 450px at 95% 0%, #1A2030 0%, rgba(26,32,48,0) 55%),
+    var(--pp-ink);
+}}
+
+/* The title, set as a thin wordmark with a rule under it. */
+h1 {{
+  font-weight: 300 !important;
+  letter-spacing: -0.02em;
+  font-size: 2.9rem !important;
+  background: linear-gradient(96deg, var(--pp-text) 15%, var(--pp-amber) 112%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  padding-bottom: .1em;
+}}
+h3, h4 {{ letter-spacing: -0.01em; }}
+
+/* Metric tiles: cards rather than floating numbers. */
+div[data-testid="stMetric"] {{
+  background: linear-gradient(180deg, var(--pp-surface) 0%, rgba(17,26,36,.55) 100%);
+  border: 1px solid var(--pp-border);
+  border-radius: .55rem;
+  padding: .85rem 1rem;
+}}
+div[data-testid="stMetric"] label p {{
+  color: var(--pp-dim) !important;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  font-size: .68rem !important;
+  font-weight: 600;
+}}
+div[data-testid="stMetricValue"] {{
+  font-size: 1.45rem !important;
+  font-weight: 500;
+}}
+/* The delta line here is a caption, not a movement, so the arrow glyph goes.
+   delta_color="off" greys it but Streamlit still draws the triangle. */
+div[data-testid="stMetricDelta"] svg {{ display: none; }}
+div[data-testid="stMetricDelta"] {{
+  font-size: .78rem;
+  color: var(--pp-dim) !important;
+}}
+
+/* Tabs: an amber underline on the active one, nothing else. */
+div[data-testid="stTabs"] button[role="tab"] {{
+  color: var(--pp-dim);
+  font-weight: 500;
+  letter-spacing: .01em;
+}}
+div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{
+  color: var(--pp-text);
+  background: var(--pp-raised);
+  border-radius: .4rem .4rem 0 0;
+}}
+
+/* SQL panels. Tab 1 is an argument made by two code blocks side by side, so
+   they get a left rule to separate them from the prose around them. */
+div[data-testid="stCode"], pre {{
+  border: 1px solid var(--pp-border) !important;
+  border-left: 3px solid var(--pp-amber) !important;
+  border-radius: .45rem !important;
+}}
+code {{ font-size: .86em; }}
+
+/* Alerts, toned down. Streamlit's defaults are loud enough to out-shout the
+   verdict they are sitting next to. */
+div[data-testid="stAlert"] {{
+  border: 1px solid var(--pp-border);
+  border-left-width: 3px;
+  background: var(--pp-surface);
+  border-radius: .45rem;
+}}
+
+div[data-testid="stExpander"] details {{
+  background: var(--pp-surface);
+  border: 1px solid var(--pp-border);
+  border-radius: .5rem;
+}}
+
+div[data-testid="stDataFrame"] {{
+  border: 1px solid var(--pp-border);
+  border-radius: .5rem;
+}}
+
+/* The primary action reads as the one thing to press on each tab. */
+button[kind="primary"] {{
+  background: linear-gradient(180deg, #F7BC5C 0%, var(--pp-amber) 100%);
+  color: #10161E !important;
+  font-weight: 650;
+  border: 0;
+}}
+button[kind="primary"]:hover {{ filter: brightness(1.08); }}
+
+div[data-testid="stCaptionContainer"] p {{ color: var(--pp-dim) !important; }}
+hr {{ border-color: var(--pp-border); }}
+
+footer, #MainMenu {{ visibility: hidden; }}
+</style>
+"""
 
 
 # --------------------------------------------------------------------------
@@ -130,19 +264,35 @@ except Exception as exc:  # pragma: no cover - UI path
     st.stop()
 
 cfg = llm_config()
+st.markdown(THEME_CSS, unsafe_allow_html=True)
 st.title("PortProof")
 st.markdown(
     "**AI proposes, Db2 proves.** A migration is only done when the engine says so."
 )
 
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Db2", db.server_version(owner_conn))
-c2.metric("runtime identity", db.current_identity(app_conn)[0], "least privilege")
-c3.metric("owner identity", db.current_identity(owner_conn)[0], "DDL only")
+# delta_color="off" throughout: these are captions, not movements. Streamlit's
+# default renders a delta as a green upward arrow, which reads as "this went
+# up" and is nonsense next to "least privilege".
+c1.metric("Db2", db.server_version(owner_conn), "Community Edition", delta_color="off")
+c2.metric(
+    "runtime identity",
+    db.current_identity(app_conn)[0],
+    "least privilege",
+    delta_color="off",
+)
+c3.metric(
+    "owner identity", db.current_identity(owner_conn)[0], "DDL only", delta_color="off"
+)
 c4.metric(
-    "repair model",
-    cfg.provider,
-    "deterministic rules, no key" if cfg.is_mock else cfg.model,
+    "repair engine",
+    # Not "mock". The provider is named `mock` in the configuration because it
+    # substitutes for a model, but what it actually runs is a deterministic
+    # rewrite rule set, and calling that a mock on screen understates it: these
+    # are the rules that repaired all fourteen rejected statements.
+    "rules" if cfg.is_mock else cfg.provider,
+    "deterministic, no API key" if cfg.is_mock else cfg.model,
+    delta_color="off",
 )
 
 tab_prove, tab_semantic, tab_ledger = st.tabs(
@@ -283,8 +433,8 @@ with tab_prove:
                 if outcome.repaired:
                     repairs = max(outcome.attempt_count - 1, 1)
                     st.success(
-                        f"Repaired in {repairs} repair attempt(s), {elapsed:.1f}s "
-                        "-- and **Db2 re-verified it**, which is the only reason "
+                        f"Repaired in {repairs} repair attempt(s), {elapsed:.1f}s, "
+                        "and **Db2 re-verified it**, which is the only reason "
                         "this says 'repaired'."
                     )
                     st.session_state["proved_sql"] = outcome.final_sql
@@ -365,15 +515,15 @@ with tab_semantic:
                     dialect=statement.dialect,
                 )
 
-            colour = VERDICT_COLOUR.get(verdict.outcome, "#57606a")
-            strength_colour = STRENGTH_COLOUR.get(verdict.strength, "#57606a")
+            colour = VERDICT_COLOUR.get(verdict.outcome, DIM)
+            strength_colour = STRENGTH_COLOUR.get(verdict.strength, DIM)
             st.markdown(
                 f"<h3 style='color:{colour};margin-bottom:0'>"
                 f"{VERDICT_LABEL.get(verdict.outcome, verdict.outcome)}"
                 f"<span style='color:{strength_colour};font-size:0.6em;"
                 f"font-weight:600;margin-left:.6em'>evidence "
                 f"{verdict.strength}</span></h3>"
-                f"<p style='color:#57606a'>{html.escape(verdict.headline)}</p>",
+                f"<p style='color:{DIM}'>{html.escape(verdict.headline)}</p>",
                 unsafe_allow_html=True,
             )
             for note in verdict.notes:

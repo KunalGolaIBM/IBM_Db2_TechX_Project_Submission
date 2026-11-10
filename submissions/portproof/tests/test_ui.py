@@ -33,7 +33,7 @@ def test_the_page_loads_without_raising():
     assert any("PortProof" in t.value for t in app.title)
     # The header metrics prove the page really talked to Db2 on load.
     labels = {m.label for m in app.metric}
-    assert {"Db2", "runtime identity", "owner identity", "repair model"} <= labels
+    assert {"Db2", "runtime identity", "owner identity", "repair engine"} <= labels
 
 
 def test_header_shows_the_least_privilege_identity_not_the_owner():
