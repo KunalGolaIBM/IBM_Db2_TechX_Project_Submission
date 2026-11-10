@@ -68,7 +68,7 @@ The dashboard shows live Db2 metrics and recent orders. Data Explorer previews a
 2. From the cloned repository root, create a virtual environment outside the submission folder (the official validator scans every file under the submission, including ignored virtual environments) and install project packages:
 
    ```powershell
-   py -3.14 -m venv .venv-db2ops-ai
+   py -3.12 -m venv .venv-db2ops-ai
    .\.venv-db2ops-ai\Scripts\Activate.ps1
    cd submissions/db2ops-ai
    python -m pip install --upgrade pip
@@ -91,6 +91,22 @@ The dashboard shows live Db2 metrics and recent orders. Data Explorer previews a
    ```
 
 The app does not bundle an embedded database and does not switch to a different database if Db2 is unavailable.
+
+### Optional hosted preview (Streamlit Community Cloud)
+
+The app entrypoint is `src/app.py`; its deployment dependency file is `src/requirements.txt`. Create a Community Cloud app from the public GitHub fork, select branch `submission/db2ops-ai`, entrypoint `submissions/db2ops-ai/src/app.py`, and Python 3.12. The app can render its disconnected state without secrets, but live analytics and AI queries require a Db2 server reachable from the hosted app and the settings below in Community Cloud's **Secrets** page. `localhost` points to the hosted container, not your PC. Keep credentials out of GitHub.
+
+```toml
+DB2_DATABASE = "DB2OPS"
+DB2_HOSTNAME = "your-reachable-db2-host"
+DB2_PORT = "50000"
+DB2_PROTOCOL = "TCPIP"
+DB2_UID = "db2inst1"
+DB2_PWD = "your-db2-password"
+DB2_SCHEMA = "DB2INST1"
+OPENAI_API_KEY = "your-openai-api-key"
+OPENAI_MODEL = "gpt-4o-mini"
+```
 
 ## Configuration
 

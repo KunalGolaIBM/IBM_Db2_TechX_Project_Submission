@@ -7,14 +7,14 @@
     "category": "AI / Analytics",
     "demo_url": "",
     "video_url": "",
-    "repo_url": ""
+    "repo_url": "https://github.com/gireeshpatgar17/IBM_Db2_TechX_Project_Submission/tree/submission/db2ops-ai/submissions/db2ops-ai"
   },
   "team": {
     "name": "Gireesh Patgar",
     "members": [
       {
         "name": "Gireesh Patgar",
-        "github": "",
+        "github": "gireeshpatgar17",
         "email": "",
         "role": "Individual participant — application, Db2 integration, and AI workflow"
       }
