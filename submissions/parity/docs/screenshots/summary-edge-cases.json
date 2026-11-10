@@ -1,0 +1,1066 @@
+{
+  "queries": [
+    {
+      "query_id": "c998686af78f",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "e70a299bca8e",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "c9ff047550f2",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "06219eadc2c6",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "5f4f65355edd",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "0d4fa7305bc7",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "04b8bed1bcc9",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "370c29f325b2",
+      "status": "MISMATCH",
+      "risk_score": 30,
+      "risk_label": "MEDIUM",
+      "note": "needs a human after 3 tries: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.",
+      "diff_count": 1
+    },
+    {
+      "query_id": "f3992e1a4785",
+      "status": "MISMATCH",
+      "risk_score": 73,
+      "risk_label": "HIGH",
+      "note": "needs a human after 3 tries: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.",
+      "diff_count": 6
+    },
+    {
+      "query_id": "4502c80a42d9",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "5505f90c20ac",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "c72ffd4a3105",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "8eedf31f3d17",
+      "status": "MISMATCH",
+      "risk_score": 23,
+      "risk_label": "MEDIUM",
+      "note": "needs a human after 3 tries: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.",
+      "diff_count": 1
+    },
+    {
+      "query_id": "61f3ca6fbfe5",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "d7d5be3ab634",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "c67c004b5ebb",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "fa8f29c4870b",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "2b32dc1fbbca",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "1be538b9ab36",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "ba28b87d8b27",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "dcbba27b8f81",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "2704e3dea784",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "930d359475db",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "f380c14e9903",
+      "status": "MISMATCH",
+      "risk_score": 23,
+      "risk_label": "MEDIUM",
+      "note": "needs a human after 3 tries: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.",
+      "diff_count": 1
+    },
+    {
+      "query_id": "35e2a1fd9f20",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "5f1893b48507",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "4994d143db8a",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "05adbe3bb627",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "dcae6e89b2cd",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "12a5f8a28902",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "5cda162a2ba3",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "ee25db69fe08",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "3c326cc67b89",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "b4a79cacaf66",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "fc92095c76e3",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "0ed60628924b",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "8562f704244a",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "2b716ae65183",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "57da235e2641",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "5a9185922950",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "ff07d5728a3a",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "6cc8bc298b16",
+      "status": "MISMATCH",
+      "risk_score": 73,
+      "risk_label": "HIGH",
+      "note": "needs a human after 3 tries: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.",
+      "diff_count": 6
+    },
+    {
+      "query_id": "b50a471b5183",
+      "status": "MISMATCH",
+      "risk_score": 73,
+      "risk_label": "HIGH",
+      "note": "needs a human after 3 tries: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.",
+      "diff_count": 6
+    },
+    {
+      "query_id": "0eef4d8e0102",
+      "status": "MISMATCH",
+      "risk_score": 73,
+      "risk_label": "HIGH",
+      "note": "needs a human after 3 tries: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.",
+      "diff_count": 6
+    },
+    {
+      "query_id": "5b0b6f3921f9",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "82625df9ef00",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "df94ad4b2447",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "ff42ad94dba1",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "2df089db45d9",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "baf8e51d6657",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "9d7eed0761d5",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "540f36297137",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "1fb02e3b9e53",
+      "status": "MISMATCH",
+      "risk_score": 23,
+      "risk_label": "MEDIUM",
+      "note": "needs a human after 3 tries: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.",
+      "diff_count": 1
+    },
+    {
+      "query_id": "3a1692fe4c42",
+      "status": "MISMATCH",
+      "risk_score": 23,
+      "risk_label": "MEDIUM",
+      "note": "needs a human after 3 tries: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.",
+      "diff_count": 1
+    },
+    {
+      "query_id": "105b942091e9",
+      "status": "MISMATCH",
+      "risk_score": 23,
+      "risk_label": "MEDIUM",
+      "note": "needs a human after 3 tries: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.",
+      "diff_count": 1
+    },
+    {
+      "query_id": "fdd2daf19615",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "ec9114b10d41",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "45ac9db02cfe",
+      "status": "MISMATCH",
+      "risk_score": 23,
+      "risk_label": "MEDIUM",
+      "note": "needs a human after 3 tries: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.",
+      "diff_count": 1
+    },
+    {
+      "query_id": "5288627de1b3",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "3d11107e9f31",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "bffdeb09da6c",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "39c37e0d6fa9",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "35b62465b49b",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "cb9828642f02",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "b83e4b4007f5",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "799fae1d4a79",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "bcb32e44ee2c",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "1e4321292839",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "7c217e986464",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "aef18b42ca7a",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "32e65741ac79",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "60a98207f936",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "be86410a71b8",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "1ef4fd582592",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "b0fc1c101c43",
+      "status": "MISMATCH",
+      "risk_score": 60,
+      "risk_label": "HIGH",
+      "note": "needs a human after 3 tries: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.",
+      "diff_count": 4
+    },
+    {
+      "query_id": "f480fa189337",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "c512d712cc04",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "252b45e75ad0",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "5d8b758c90bc",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "b9683017be94",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "2e2359ff1134",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "230869740a83",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "dd0a77e5612d",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "fixed by the agent: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.",
+      "diff_count": 0
+    },
+    {
+      "query_id": "e1287c5b7ded",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "95326ed713cd",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "bb50662f1e80",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "4c6a5804b201",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "6eeeeee9184c",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "f2bf701de8b7",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "54c9469ec109",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "24c8f8f1e33d",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "0e2324822633",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "08a46f3c74bf",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "06e2664abbcd",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "19525f0daab0",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "52c67bac3ef0",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "13e5881e97fd",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "8d414745b376",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "1dc2f5ecaf5e",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "07cea23a4848",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "abbcf80b60ba",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "679448f1468d",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "d4bc2df58d22",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "f02bbb087f57",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "d7995d2448d8",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "c46f34535d9b",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "a9033ab49fd2",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "c79a4ea6cff7",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "f99bac116bb0",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "d67406361f46",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "2427e6a6dbad",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "ad6d4d95463b",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "c059536550b9",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "498bc00d20ed",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "dfb959e0a8f8",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "25fc1a50c7e2",
+      "status": "MISMATCH",
+      "risk_score": 30,
+      "risk_label": "MEDIUM",
+      "note": "needs a human after 3 tries: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.",
+      "diff_count": 1
+    },
+    {
+      "query_id": "01acae959630",
+      "status": "MISMATCH",
+      "risk_score": 23,
+      "risk_label": "MEDIUM",
+      "note": "needs a human after 3 tries: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.",
+      "diff_count": 1
+    },
+    {
+      "query_id": "e461d00d8a22",
+      "status": "MISMATCH",
+      "risk_score": 23,
+      "risk_label": "MEDIUM",
+      "note": "needs a human after 3 tries: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.",
+      "diff_count": 1
+    },
+    {
+      "query_id": "85ba85aa734f",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "dd39fda10c4a",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "65a1cc881c0b",
+      "status": "MISMATCH",
+      "risk_score": 73,
+      "risk_label": "HIGH",
+      "note": "needs a human after 3 tries: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.",
+      "diff_count": 6
+    },
+    {
+      "query_id": "fdf4e53bac32",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "bb7be82eed92",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "3302224fad82",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "620253991d66",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "90ec0673379f",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "cb4897180502",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "b1cb8a3b62f9",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "31445a71689e",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    },
+    {
+      "query_id": "8282491bb8dc",
+      "status": "MATCH",
+      "risk_score": 0,
+      "risk_label": "LOW",
+      "note": "",
+      "diff_count": 0
+    }
+  ],
+  "metrics": {
+    "queries_total": 130,
+    "match_rate": 0.8769,
+    "mismatch_rate": 0.1231,
+    "error_rate": 0.0,
+    "not_comparable_rate": 0.0,
+    "high_risk_count": 6,
+    "avg_risk": 5.15,
+    "cost_per_query_tokens": 15,
+    "note": "fix rate tracks agent re-proven fixes in a later branch"
+  },
+  "run_id": 2,
+  "llm_usage": {
+    "calls": 66,
+    "cache_hits": 32,
+    "cache_hit_rate": 0.4848,
+    "tokens_in": 1320,
+    "tokens_out": 660,
+    "by_provider": {
+      "live": 66
+    }
+  }
+}

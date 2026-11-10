@@ -1,0 +1,50 @@
+Parity: the agent fix loop on real databases
+PostgreSQL 16 and IBM Db2 12.1.5.0 in Docker.
+
+Step 1. Seed the sample schema and data into both databases.
+
+  $ docker run --rm ... parity-bridge python /app/scripts/seed_workload.py
+  seeded postgres
+  ddl: CREATE TABLE "CUSTOMERS" ("ID" INTEGER NOT NULL, ... PRIMARY KEY ("ID"))
+  copied 10 rows for customers, checksum 976a96ada728
+  copied 20 rows for order_items, checksum 6fbf3fd633c4
+  copied 15 rows for orders, checksum 4b5addac105e
+  copied 10 rows for products, checksum 951a7948da99
+
+Step 2. Load 20 edge case rows into every table of both databases.
+
+  $ docker run --rm ... parity-bridge python /app/scripts/fuzz_workload.py --dir /app/samples --rows 20
+  fuzzed customers: 20 rows, plan 6c9b7d2dbb4f, checksum b5348a80a4e7
+  fuzzed order_items: 20 rows, plan 7392a59370f7, checksum 6fbf3fd633c4
+  fuzzed orders: 20 rows, plan cd5ad17af2dd, checksum eb3140a99a0c
+  fuzzed products: 20 rows, plan 96e215f0e97e, checksum 3ea58ab70e42
+  result: {'MATCH': 113, 'MISMATCH': 17}
+
+  The same workload on clean data:
+  result: {'MATCH': 130}   exit code 0
+
+Step 3. Run with the agent fix loop. The agent explains the difference,
+proposes a rewrite, and the engine proves the rewrite on both databases.
+
+  $ export PARITY_LLM_BASE_URL=http://127.0.0.1:8099/v1
+  $ export PARITY_LLM_MODEL=demo-model
+  $ python -m parity.cli run --dir samples --history parity-history.json --fix-loop --bridge
+  history written: parity-history.json (run id 2)
+  report written: parity-report.html
+  summary written: parity-summary.json
+  exit code 1
+
+The query the agent fixed:
+
+  query id : dd0a77e5612d
+  status   : MATCH   risk 0 (LOW)
+  note     : fixed by the agent: Db2 treats an empty string and a string of blanks as equal, so the filter matches more rows than it does on Postgres.
+
+The fix that was proved on both databases:
+  SELECT COUNT(*) AS count FROM "CUSTOMERS" WHERE LENGTH(country) = 0
+
+Model usage for the run:
+  calls 66, cache hits 32, cache hit rate 0.4848, tokens in 1320, tokens out 660
+
+The same run without the fix loop: 113 MATCH, 17 MISMATCH, 1 ERROR.
+With the fix loop: 114 MATCH, 16 MISMATCH, 0 ERROR.

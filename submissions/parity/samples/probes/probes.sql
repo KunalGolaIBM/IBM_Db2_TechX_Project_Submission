@@ -1,0 +1,14 @@
+SELECT COUNT(*) FROM customers;
+SELECT 1;
+SELECT id, name FROM customers WHERE name LIKE '%a%';
+SELECT 'a ' = 'a';
+SELECT LENGTH('café');
+SELECT ROUND(2.5);
+SELECT name FROM customers ORDER BY name;
+SELECT id FROM customers ORDER BY name;
+SELECT COUNT(*) FROM customers WHERE name IS NULL;
+SELECT CASE WHEN '' IS NULL THEN 'null' ELSE 'notnull' END;
+SELECT 1/2;
+SELECT 0.1 + 0.2;
+SELECT 'HELLO' LIKE 'hello';
+SELECT UPPER(name) FROM customers WHERE id = 1;

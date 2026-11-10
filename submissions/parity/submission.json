@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Parity: Differential Testing for PostgreSQL to Db2 Migrations",
+    "slug": "parity",
+    "short_description": "Proves that SQL returns the same result on PostgreSQL and IBM Db2 by running it on both databases, comparing the rows, letting an agent fix a mismatch, and keeping every proven lesson in Db2.",
+    "category": "AI / RAG / Data Engineering / Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/Amitk003/Parity"
+  },
+  "team": {
+    "name": "Parity Team",
+    "members": [
+      {
+        "name": "Amit Kumar",
+        "github": "Amitk003",
+        "email": "amitkumar023410@gmail.com",
+        "role": "Backend, Db2 integration, AI agent workflow"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1.5.0 (Docker)",
+    "connector": "ibm_db 3.3.0 (direct client and a Linux bridge container for Windows)",
+    "features_used": [
+      "Relational Tables",
+      "Identity Columns and Primary Keys",
+      "Vector Search (VECTOR(384, FLOAT32) with VECTOR_DISTANCE COSINE)",
+      "Identity Generated Keys",
+      "Bound Parameters and Prepared Statements"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python 3.11"],
+    "frameworks": ["Custom plain Python agent flow", "CrewAI adapter (optional)", "pytest", "ruff"],
+    "ai_models": ["Any OpenAI compatible endpoint", "Local model via Ollama", "Local model double for offline demos"]
+  }
+}
