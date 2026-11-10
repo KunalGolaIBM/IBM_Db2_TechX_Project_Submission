@@ -463,3 +463,62 @@ def intake_messages(document_name: str, pages: Sequence[str], existing: Iterable
         f"<document name=\"{escape(document_name)}\">\n{body}\n</document>"
     )
     return [("system", system), ("human", human)]
+
+
+# ---- Domain-neutral wording (the third domain, SPR, onboarded for the unseen-domain evaluation) ---------------
+# The airline prompts with only the role named neutrally: every rule and every example is the airline's, word for
+# word (tests/test_domains.py checks that nothing else differs). Written from SPR's policy text alone, before its
+# test cases were read, and never changed because of them.
+GENERIC_PROMPT_VERSION = "generic-2026-11-10.1"
+NEUTRAL_WORDING = (
+    ("an airline's customer-service assistant", "a company's customer-service assistant"),
+    ("the airline's policy", "the company's policy"),
+    ("an airline assistant's", "a customer-service assistant's"),
+    ("an airline's policy", "a company's policy"),
+)
+
+
+def neutral(text: str) -> str:
+    """An airline prompt with the airline named as a company, nothing else changed."""
+    for old, new in NEUTRAL_WORDING:
+        text = text.replace(old, new)
+    if "airline" in text.lower():
+        raise ValueError("an airline reference has no neutral wording")
+    return text
+
+
+GENERIC_EXTRACT_SYSTEM = neutral(EXTRACT_SYSTEM)
+GENERIC_JUDGE_SYSTEM = neutral(JUDGE_SYSTEM)
+GENERIC_REWRITE_SYSTEM = neutral(REWRITE_SYSTEM)
+GENERIC_INVESTIGATE_SYSTEM = neutral(INVESTIGATE_SYSTEM)
+GENERIC_IMPACT_SYSTEM = neutral(IMPACT_SYSTEM)
+GENERIC_NOTICE_SYSTEM = neutral(NOTICE_SYSTEM)
+
+# Policy intake for a document with more sections than the shipped cap of 12: SPR's policy has 14 numbered sections
+# (P-01 to P-09 and E1 to E5), so 12 proposals could never hold it. LONG_INTAKE_SYSTEM changes only the cap; it is
+# what SPR's first two uploads used (docs/eval/unseen-intake.md, "Trial").
+LONG_INTAKE_MAX_ITEMS = 16
+LONG_INTAKE_SYSTEM = INTAKE_SYSTEM.replace("Return at most 12 proposals.",
+                                           f"Return at most {LONG_INTAKE_MAX_ITEMS} proposals.")
+if LONG_INTAKE_SYSTEM == INTAKE_SYSTEM:
+    raise RuntimeError("INTAKE_SYSTEM no longer states the cap of 12 proposals; update LONG_INTAKE_SYSTEM")
+
+# SPR's own intake prompt, written from its policy text before any SPR test case was read. The shipped prompt (with
+# the cap raised) proposed only 8 and 7 of the 14 sections in two uploads and ended every one a day early. A first
+# version of these rules got all 14 proposed but named rupee amounts _usd (which intake's checks then blocked); a
+# second ended v1 on 2026-05-01 as told, and then no v2 item could be applied, because APPLY_POLICY_CHANGE needs a
+# version in force to replace (SQLSTATE 75013). Four rules are added; nothing else changes
+# (docs/eval/unseen-intake.md).
+SPR_INTAKE_RULES = """\
+- This document numbers its sections P-01 to P-09 and E1 to E5. Make one proposal for every numbered \
+section, in document order. That includes the sections that define terms, say which version of the \
+policy applies, list exclusions or say how to read the policy, and a section that says an exception is \
+not in force: an answer to a customer can rely on each of them.
+- A section's text includes any table in it: copy the table's rows as they appear, with the rest of the section.
+- effective_to: null for every section, whatever the header's END says. Each version of this document \
+is loaded in turn, and loading the next version is what ends this one on the day before its own effective date.
+- Amounts in this document are in Indian rupees (INR): end an amount's key with _inr, never _usd."""
+_RESTATED = "- Include sections that the document restates without change.\n"
+SPR_INTAKE_SYSTEM = LONG_INTAKE_SYSTEM.replace(_RESTATED, _RESTATED + SPR_INTAKE_RULES + "\n")
+if SPR_INTAKE_SYSTEM == LONG_INTAKE_SYSTEM:
+    raise RuntimeError("INTAKE_SYSTEM no longer has the restated-sections rule; update SPR_INTAKE_SYSTEM")

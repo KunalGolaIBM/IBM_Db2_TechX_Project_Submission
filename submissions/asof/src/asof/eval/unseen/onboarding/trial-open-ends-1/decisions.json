@@ -1,0 +1,84 @@
+{
+ "uploads": [
+  {
+   "upload": 1,
+   "version": 1,
+   "items": {
+    "1": "OTH-001",
+    "2": "OTH-002",
+    "3": "CAN-001",
+    "4": "OTH-003",
+    "5": "CAN-002",
+    "6": "CAN-003",
+    "7": "CAN-004",
+    "8": "REF-001",
+    "9": "CAN-005",
+    "10": "DEL-001",
+    "11": "OTH-004",
+    "12": "OTH-005",
+    "13": "OTH-006",
+    "14": "OTH-007"
+   },
+   "accept": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    8,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "notes": {
+    "all": "One proposal per section, 14 of 14, open-ended from 2026-01-01 (v2's upload ends them on 2026-05-01). Accepted as proposed where intake's checks pass: every accepted text is word for word in the document and no accepted parameter states a value the text does not.",
+    "3": "Not accepted: blocked. P-03's parameters give min_t_hours twice, and min_t_hours = 48 fails as 'not stated' (the table writes 'T >= 48 h', which the checker does not read as hours). Uploaded again (upload 2).",
+    "7": "Not accepted: blocked. The proposed P-07 text is not in the document word for word. Uploaded again (upload 2).",
+    "9": "Not accepted: blocked. E1 says 'no later than 7 calendar days', and the checker does not read '7 calendar days' as 7 days, so max_claim_deadline_days = 7 fails as 'not stated'. Db2 refuses a blocked item (DECIDE_POLICY_DRAFT, SQLSTATE 75045).",
+    "1": "max_retroactive_version_switch_allowed = false: a strange name for 'A booking cannot be retroactively switched to a later version', but what it says is right, and the rule checker has no cue for it, so it checks nothing. Accepted.",
+    "13": "E5's proposal leaves out the words 'NOT IN FORCE -' that open the section and keeps 'No separate evacuation exception exists.' The title says Not in force; accepted."
+   },
+   "changes": []
+  },
+  {
+   "upload": 2,
+   "version": 1,
+   "items": {
+    "1": "OTH-001",
+    "2": "OTH-002",
+    "3": "CAN-002",
+    "4": "OTH-003",
+    "5": "CAN-002",
+    "6": "CAN-003",
+    "7": "OTH-008",
+    "8": "REF-001",
+    "9": "CAN-004",
+    "10": "DEL-001",
+    "11": "OTH-004",
+    "12": "OTH-005",
+    "13": "OTH-006",
+    "14": "OTH-007"
+   },
+   "accept": [
+    7
+   ],
+   "notes": {
+    "all": "Second upload of v1, for the three sections the first could not load. 11 proposals restate clauses in force word for word (UNCHANGED).",
+    "7": "P-07, now word for word: accepted as a new clause (OTH-008). Its one parameter, min_passengers_for_partial_allowed = 3, has no unit the checker reads, so it checks nothing.",
+    "3": "Not accepted: a wrong clause. It is P-03's text (the cancellation charge table), proposed as a new version of CAN-002, which is P-05 (Premium QuickBook), with P-05's title and voluntary_refund_allowed = true. Intake's checks pass it (the text is in the document), but applying it would replace the Premium QuickBook clause with the fare table from 2026-01-01.",
+    "9": "Not accepted: E1 blocked again (max_claim_deadline_days = 7 against '7 calendar days')."
+   },
+   "changes": []
+  },
+  {
+   "upload": 3,
+   "version": 1,
+   "accept": [],
+   "notes": {
+    "all": "Not decided: the onboarding was started over (see unseen-intake.md). Same as upload 2: P-03 proposed as a new version of CAN-002 (Premium QuickBook), E1 blocked, the rest UNCHANGED."
+   }
+  }
+ ]
+}

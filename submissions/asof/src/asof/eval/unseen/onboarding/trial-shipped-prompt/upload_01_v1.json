@@ -1,0 +1,192 @@
+{
+ "upload": 1,
+ "model": "openrouter:google/gemini-3.1-flash-lite",
+ "messages_sha256": "4c2b3a69cdcbb8797e6b460d6af931e4cf2d94280f5ad3a2990040dcee02fd77",
+ "latency_ms": 7094,
+ "input_tokens": 3353,
+ "output_tokens": 2626,
+ "result": {
+  "clauses": [
+   {
+    "existing_clause_id": null,
+    "area": "other",
+    "title": "Booking Service Fee",
+    "clause_text": "SPR collects INR 20 per booking reference (PNR), once per original booking and not once per passenger. It is separate from every base fare. No additional \"processing\", \"gateway\", \"reinstatement\", or \"expedited refund\" charge is imposed by SPR. The original booking service fee is never returned on a normal voluntary, waitlist, premium, or medical cancellation; only exceptions expressly saying otherwise can refund it. Multiple cancelled passengers do not multiply the booking service fee.",
+    "effective_from": "2026-01-01",
+    "effective_to": "2026-04-30",
+    "date_quote": "This policy governs bookings made from 2026-01-01 through 2026-04-30.",
+    "rule": [
+     {
+      "key": "max_booking_fee_inr",
+      "number": 20.0,
+      "flag": null,
+      "items": null
+     },
+     {
+      "key": "refund_allowed",
+      "number": null,
+      "flag": false,
+      "items": null
+     }
+    ]
+   },
+   {
+    "existing_clause_id": null,
+    "area": "cancellation",
+    "title": "Premium QuickBook (PQ) Cancellation",
+    "clause_text": "No voluntary refund is available for a confirmed Premium QuickBook ticket at any time before or after departure. This special rule replaces P-03 for a confirmed PQ passenger regardless of 1A, 2A, SL, or 2S class. An unconfirmed PQ waitlisted passenger instead follows P-06. A booking becomes PQ only if sold explicitly under the PQ quota; paying a high fare alone does not make it PQ. E1 and E2 can override the confirmed-PQ rule, and E3 can override it only where that version expressly permits.",
+    "effective_from": "2026-01-01",
+    "effective_to": "2026-04-30",
+    "date_quote": "This policy governs bookings made from 2026-01-01 through 2026-04-30.",
+    "rule": [
+     {
+      "key": "voluntary_refund_allowed",
+      "number": null,
+      "flag": false,
+      "items": null
+     }
+    ]
+   },
+   {
+    "existing_clause_id": null,
+    "area": "cancellation",
+    "title": "Waitlisted Tickets",
+    "clause_text": "A still-waitlisted passenger may voluntarily cancel while T >= 4 hours and receives the full base fare less a flat clerkage of INR 20 (but not below zero), irrespective of class and PQ quota; the service fee stays non-refundable. For T < 4 hours voluntary cancellation is closed for waitlisted passengers. However, a passenger still waitlisted at scheduled departure is automatically refunded base fare less that same INR 20 clerkage, without any request, even if the passenger missed the voluntary cancellation cutoff. A passenger promoted to confirmed status before requesting cancellation must use P-03 or P-05 instead; if confirmed by departure, no automatic waitlist refund is due. SPR has no guarantee of promotion from waitlist to confirmed.",
+    "effective_from": "2026-01-01",
+    "effective_to": "2026-04-30",
+    "date_quote": "This policy governs bookings made from 2026-01-01 through 2026-04-30.",
+    "rule": [
+     {
+      "key": "min_t_voluntary_cancellation_hours",
+      "number": 4.0,
+      "flag": null,
+      "items": null
+     },
+     {
+      "key": "clerkage_inr",
+      "number": 20.0,
+      "flag": null,
+      "items": null
+     },
+     {
+      "key": "voluntary_cancellation_allowed",
+      "number": null,
+      "flag": true,
+      "items": null
+     }
+    ]
+   },
+   {
+    "existing_clause_id": null,
+    "area": "other",
+    "title": "Partial Cancellations",
+    "clause_text": "Voluntary partial cancellation is supported only when the original PNR has at least 3 passengers and at least 2 passenger(s) remain active after the request. Each cancelled passenger is assessed independently by class, PQ quota, base fare, and current confirmation status; never apply a single percentage or one clerkage to the combined PNR fare. The booking fee of INR 20 remains a single non-refundable fee on the PNR. A request that cancels every passenger is a full cancellation, not an eligible partial cancellation, and is evaluated passenger by passenger under the applicable provisions. Once a passenger is removed from the PNR, that cancellation cannot be reversed; a fresh ticket is needed to travel.",
+    "effective_from": "2026-01-01",
+    "effective_to": "2026-04-30",
+    "date_quote": "This policy governs bookings made from 2026-01-01 through 2026-04-30.",
+    "rule": [
+     {
+      "key": "min_pnr_passengers_count",
+      "number": 3.0,
+      "flag": null,
+      "items": null
+     },
+     {
+      "key": "min_remaining_passengers_count",
+      "number": 2.0,
+      "flag": null,
+      "items": null
+     }
+    ]
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Operator-Cancelled Service",
+    "clause_text": "If SPR cancels the passenger's scheduled train, an affected passenger who files a claim no later than 7 calendar days after scheduled departure receives 100% of that passenger's base fare, including confirmed PQ or waitlisted status. The single PNR booking service fee is also refunded once if all passengers on that PNR are affected by this operator cancellation. No ordinary cancellation charge or clerkage applies. A customer choosing not to board an operating train is not an operator cancellation. A late E1 claim is not eligible under E1.",
+    "effective_from": "2026-01-01",
+    "effective_to": "2026-04-30",
+    "date_quote": "This policy governs bookings made from 2026-01-01 through 2026-04-30.",
+    "rule": [
+     {
+      "key": "max_claim_deadline_days",
+      "number": 7.0,
+      "flag": null,
+      "items": null
+     },
+     {
+      "key": "refund_pct",
+      "number": 100.0,
+      "flag": null,
+      "items": null
+     }
+    ]
+   },
+   {
+    "existing_clause_id": null,
+    "area": "delay",
+    "title": "Major Departure Delay",
+    "clause_text": "If SPR officially reschedules departure from the passenger's origin by at least 180 minutes beyond its original scheduled departure, and the passenger elects not to travel and submits an E2 claim BEFORE the train's actual departure from that origin, the passenger receives 100% of base fare, including confirmed PQ fares; clerkage and ordinary cancellation fees do not apply. The booking service fee is not refunded. A passenger who boarded or submits only after actual departure cannot claim E2. A delay of one minute less than the threshold does not qualify.",
+    "effective_from": "2026-01-01",
+    "effective_to": "2026-04-30",
+    "date_quote": "This policy governs bookings made from 2026-01-01 through 2026-04-30.",
+    "rule": [
+     {
+      "key": "min_delay_threshold_minutes",
+      "number": 180.0,
+      "flag": null,
+      "items": null
+     },
+     {
+      "key": "refund_pct",
+      "number": 100.0,
+      "flag": null,
+      "items": null
+     }
+    ]
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Medical Emergency",
+    "clause_text": "If an affected passenger cannot travel because of an acute medical emergency certified by a licensed clinician with an examination documented before scheduled departure, an E3 claim filed within 24 hours AFTER scheduled departure can recover the passenger's base fare minus a flat medical deduction of INR 100 (not below zero), regardless of how close to departure the request is made. The claimant must not have boarded. Premium QuickBook passengers are excluded from E3. E3 does not reimburse the booking fee. This is a claim-based exception, not an automatic refund merely because a medical problem is alleged.",
+    "effective_from": "2026-01-01",
+    "effective_to": "2026-04-30",
+    "date_quote": "This policy governs bookings made from 2026-01-01 through 2026-04-30.",
+    "rule": [
+     {
+      "key": "max_claim_deadline_hours",
+      "number": 24.0,
+      "flag": null,
+      "items": null
+     },
+     {
+      "key": "medical_deduction_inr",
+      "number": 100.0,
+      "flag": null,
+      "items": null
+     }
+    ]
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Accidental Duplicate Purchase",
+    "clause_text": "If two separate PNRs are purchased for exactly the same passenger, train, travel date, origin, destination, and class, and the second purchase is identified as accidental within 15 minutes after that purchase and before scheduled departure, SPR refunds the full base fare on the SECOND PNR plus that second PNR's booking service fee; the first booking remains active. PQ status does not disqualify a genuine duplicate. The 15-minute limit is inclusive. A similar journey or a different class is not an exact duplicate. Merely cancelling the first PNR is not covered.",
+    "effective_from": "2026-01-01",
+    "effective_to": "2026-04-30",
+    "date_quote": "This policy governs bookings made from 2026-01-01 through 2026-04-30.",
+    "rule": [
+     {
+      "key": "max_claim_deadline_minutes",
+      "number": 15.0,
+      "flag": null,
+      "items": null
+     }
+    ]
+   }
+  ]
+ },
+ "version": 1,
+ "pdf_sha256": "6f7d1934bc52ee4b3b9ec70ee737fdf77c00e92934ab449008059dbd3944c900"
+}

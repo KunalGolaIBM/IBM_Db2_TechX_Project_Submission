@@ -34,7 +34,7 @@ from langchain_core.embeddings import Embeddings
 
 from . import db, ledger
 from .anchor import AnchorLog
-from .domains import AIRLINE, DOMAINS, Domain
+from .domains import AIRLINE, ALL_DOMAINS, Domain
 from .llm import LLMError, ModelClient
 from .prompts import extract_messages, judge_messages, rewrite_messages
 from .redact import redact
@@ -354,7 +354,7 @@ class Gate:
     def domain(doc_id: str) -> Domain:
         """The domain's prompts for a document. An unknown document (the API never lets one through)
         gets the airline wording and retrieves nothing for that doc_id, so it escalates."""
-        return DOMAINS.get(doc_id, AIRLINE)
+        return ALL_DOMAINS.get(doc_id, AIRLINE)
 
     def extract(self, question: str, text: str, domain: Domain = AIRLINE) -> list[ExtractedClaim]:
         extracted = self.llm.structured(domain.extraction_schema,

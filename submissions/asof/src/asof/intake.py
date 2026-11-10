@@ -224,14 +224,17 @@ def existing_clauses(conn: ibm_db_dbi.Connection, doc_id: str, schema: str = db.
 # ---------- the model's proposal ----------
 
 def extraction_schema(doc_id: str) -> type[IntakeResult]:
-    return BankIntakeResult if domain_for(doc_id).key == "bank" else IntakeResult
+    domain = domain_for(doc_id)
+    if domain.intake_schema is not None:
+        return domain.intake_schema
+    return BankIntakeResult if domain.key == "bank" else IntakeResult
 
 
 def extract(llm: ModelClient, source: SourceDocument, doc_id: str,
             existing: dict[str, ExistingClause]) -> tuple[IntakeResult, str]:
     """One structured call: the model proposes clause versions. Returns them and the model's name."""
     listed = [(c.clause_id, c.area, c.title, sorted(c.latest.rule)) for c in existing.values()]
-    messages = prompts.intake_messages(source.name, source.pages, listed)
+    messages = prompts.intake_messages(source.name, source.pages, listed, domain_for(doc_id).intake_system)
     schema = extraction_schema(doc_id)
     result = llm.structured(schema, messages, choices={"existing_clause_id": sorted(existing)}, max_chars=MAX_CLAUSE_CHARS)
     return result.value, llm.info
@@ -355,16 +358,17 @@ def _new_id(area: str, existing: dict[str, ExistingClause], taken: set[str]) -> 
     return f"{prefix}-{(max(used) if used else 0) + 1:03d}"
 
 
-def check_items(extracted: IntakeResult, source: SourceDocument,
-                existing: dict[str, ExistingClause]) -> tuple[list[Proposal], list[Discarded]]:
+def check_items(extracted: IntakeResult, source: SourceDocument, existing: dict[str, ExistingClause],
+                max_items: int = MAX_INTAKE_ITEMS) -> tuple[list[Proposal], list[Discarded]]:
     """Turn the model's proposal into checked items. Items that cannot even be stored (no usable date, text
-    too long) are discarded with a reason; every other failed check is recorded and blocks the item."""
+    too long) are discarded with a reason; every other failed check is recorded and blocks the item.
+    `max_items` is the document's domain's cap (Domain.intake_max_items)."""
     doc_norm = normalize(source.text)
     doc_dates = dates_in(doc_norm)
     proposals: list[Proposal] = []
     discarded: list[Discarded] = []
     taken: set[str] = set()
-    for raw in extracted.clauses[:MAX_INTAKE_ITEMS]:
+    for raw in extracted.clauses[:max_items]:
         proposal = _check_one(raw, source, doc_norm, doc_dates, existing, taken, len(proposals) + 1)
         if isinstance(proposal, Discarded):
             discarded.append(proposal)
@@ -372,8 +376,8 @@ def check_items(extracted: IntakeResult, source: SourceDocument,
         if proposal.kind == "NEW":
             taken.add(proposal.clause_id)
         proposals.append(proposal)
-    for raw in extracted.clauses[MAX_INTAKE_ITEMS:]:
-        discarded.append(Discarded(raw.title[:200], f"more than {MAX_INTAKE_ITEMS} proposals in one document"))
+    for raw in extracted.clauses[max_items:]:
+        discarded.append(Discarded(raw.title[:200], f"more than {max_items} proposals in one document"))
     return proposals, discarded
 
 
@@ -474,7 +478,7 @@ def propose(llm: ModelClient, source: SourceDocument, doc_id: str, conn: ibm_db_
     """Extract and check. `conn` reads the policy (any user with SELECT on the timeline view)."""
     existing = existing_clauses(conn, doc_id, schema)
     extracted, model = extract(llm, source, doc_id, existing)
-    proposals, discarded = check_items(extracted, source, existing)
+    proposals, discarded = check_items(extracted, source, existing, domain_for(doc_id).intake_max_items)
     return proposals, discarded, model
 
 

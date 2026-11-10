@@ -1,0 +1,441 @@
+{
+ "uploads": [
+  {
+   "upload": 1,
+   "version": 1,
+   "items": {
+    "1": "OTH-001",
+    "2": "OTH-002",
+    "3": "CAN-001",
+    "4": "OTH-003",
+    "5": "CAN-002",
+    "6": "CAN-003",
+    "7": "CAN-004",
+    "8": "OTH-004",
+    "9": "REF-001",
+    "10": "REF-002",
+    "11": "REF-003",
+    "12": "REF-004",
+    "13": "OTH-005",
+    "14": "OTH-006"
+   },
+   "accept": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "missing_before": [
+    "P-01",
+    "P-02",
+    "P-03",
+    "P-04",
+    "P-05",
+    "P-06",
+    "P-07",
+    "P-08",
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "P-09"
+   ],
+   "notes": {
+    "1": "accepted: P-01",
+    "2": "accepted: P-02",
+    "3": "blocked by intake's checks: rule keys: min_t_hours is given twice; rule keys: max_t_hours is given twice; rule keys: min_t_hours is given twice; rule keys: max_t_hours is given twice; rule keys: min_t_hours is given twice",
+    "4": "accepted: P-04",
+    "5": "accepted: P-05",
+    "6": "accepted: P-06",
+    "7": "blocked by intake's checks: verbatim text: this text is not in the document word for word",
+    "8": "accepted: P-08",
+    "9": "accepted: E1",
+    "10": "accepted: E2",
+    "11": "accepted: E3",
+    "12": "accepted: E4",
+    "13": "accepted: E5 (without its opening words 'NOT IN FORCE -')",
+    "14": "accepted: P-09"
+   },
+   "changes": []
+  },
+  {
+   "upload": 2,
+   "version": 1,
+   "items": {
+    "1": "OTH-001",
+    "2": "OTH-002",
+    "3": "CAN-004",
+    "4": "OTH-003",
+    "5": "CAN-002",
+    "6": "CAN-003",
+    "7": "OTH-007",
+    "8": "OTH-004",
+    "9": "REF-001",
+    "10": "REF-002",
+    "11": "REF-003",
+    "12": "REF-004",
+    "13": "OTH-005",
+    "14": "OTH-006"
+   },
+   "accept": [
+    3,
+    7
+   ],
+   "missing_before": [
+    "P-03",
+    "P-07"
+   ],
+   "notes": {
+    "1": "restates OTH-001 word for word; nothing to apply",
+    "2": "restates OTH-002 word for word; nothing to apply",
+    "3": "accepted: P-03",
+    "4": "restates OTH-003 word for word; nothing to apply",
+    "5": "restates CAN-002 word for word; nothing to apply",
+    "6": "restates CAN-003 word for word; nothing to apply",
+    "7": "accepted: P-07",
+    "8": "restates OTH-004 word for word; nothing to apply",
+    "9": "restates REF-001 word for word; nothing to apply",
+    "10": "restates REF-002 word for word; nothing to apply",
+    "11": "restates REF-003 word for word; nothing to apply",
+    "12": "restates REF-004 word for word; nothing to apply",
+    "13": "restates OTH-005 word for word; nothing to apply",
+    "14": "restates OTH-006 word for word; nothing to apply"
+   },
+   "changes": []
+  },
+  {
+   "upload": 3,
+   "version": 2,
+   "items": {
+    "1": "OTH-001",
+    "2": "OTH-002",
+    "3": "CAN-004",
+    "4": "OTH-003",
+    "5": "CAN-002",
+    "6": "CAN-003",
+    "7": "OTH-007",
+    "8": "OTH-004",
+    "9": "REF-001",
+    "10": "REF-002",
+    "11": "REF-003",
+    "12": "REF-004",
+    "13": "OTH-005",
+    "14": "OTH-006"
+   },
+   "accept": [
+    1,
+    3,
+    4,
+    5,
+    6,
+    7,
+    9,
+    10,
+    11,
+    12
+   ],
+   "missing_before": [
+    "P-01",
+    "P-03",
+    "P-04",
+    "P-05",
+    "P-06",
+    "P-07",
+    "E1",
+    "E2",
+    "E3",
+    "E4"
+   ],
+   "notes": {
+    "1": "accepted: P-01",
+    "2": "restates OTH-002 word for word; nothing to apply",
+    "3": "accepted: P-03",
+    "4": "accepted: P-04",
+    "5": "accepted: P-05",
+    "6": "accepted: P-06",
+    "7": "accepted: P-07",
+    "8": "restates OTH-004 word for word; nothing to apply",
+    "9": "accepted: E1",
+    "10": "accepted: E2",
+    "11": "accepted: E3",
+    "12": "accepted: E4",
+    "13": "restates OTH-005 word for word; nothing to apply",
+    "14": "restates OTH-006 word for word; nothing to apply"
+   },
+   "changes": []
+  },
+  {
+   "upload": 4,
+   "version": 3,
+   "items": {
+    "1": "OTH-001",
+    "2": "OTH-002",
+    "3": "CAN-004",
+    "4": "OTH-003",
+    "5": "CAN-002",
+    "6": "CAN-003",
+    "7": "OTH-007",
+    "8": "OTH-004",
+    "9": "REF-001",
+    "10": "REF-002",
+    "11": "REF-003",
+    "12": "REF-004",
+    "13": "REF-005",
+    "14": "OTH-006",
+    "15": "OTH-005"
+   },
+   "accept": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ],
+   "missing_before": [
+    "P-01",
+    "P-02",
+    "P-03",
+    "P-04",
+    "P-05",
+    "P-06",
+    "P-07",
+    "P-08",
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5"
+   ],
+   "notes": {
+    "1": "accepted: P-01",
+    "2": "accepted: P-02",
+    "3": "accepted: P-03",
+    "4": "accepted: P-04",
+    "5": "accepted: P-05",
+    "6": "accepted: P-06",
+    "7": "accepted: P-07",
+    "8": "accepted: P-08",
+    "9": "accepted: E1",
+    "10": "accepted: E2",
+    "11": "accepted: E3",
+    "12": "accepted: E4",
+    "13": "E5 is already in force under another clause",
+    "14": "restates OTH-006 word for word; nothing to apply",
+    "15": "cuts P-02 short"
+   },
+   "changes": []
+  },
+  {
+   "upload": 5,
+   "version": 3,
+   "items": {
+    "1": "OTH-001",
+    "2": "OTH-002",
+    "3": "CAN-004",
+    "4": "OTH-003",
+    "5": "CAN-002",
+    "6": "CAN-003",
+    "7": "OTH-007",
+    "8": "OTH-004",
+    "9": "REF-001",
+    "10": "REF-002",
+    "11": "REF-003",
+    "12": "REF-004",
+    "13": "OTH-008",
+    "14": "OTH-006",
+    "15": "OTH-005"
+   },
+   "accept": [],
+   "missing_before": [
+    "E5"
+   ],
+   "notes": {
+    "1": "restates OTH-001 word for word; nothing to apply",
+    "2": "restates OTH-002 word for word; nothing to apply",
+    "3": "restates CAN-004 word for word; nothing to apply",
+    "4": "restates OTH-003 word for word; nothing to apply",
+    "5": "restates CAN-002 word for word; nothing to apply",
+    "6": "restates CAN-003 word for word; nothing to apply",
+    "7": "restates OTH-007 word for word; nothing to apply",
+    "8": "restates OTH-004 word for word; nothing to apply",
+    "9": "restates REF-001 word for word; nothing to apply",
+    "10": "restates REF-002 word for word; nothing to apply",
+    "11": "restates REF-003 word for word; nothing to apply",
+    "12": "restates REF-004 word for word; nothing to apply",
+    "13": "E5 is already in force under another clause",
+    "14": "restates OTH-006 word for word; nothing to apply",
+    "15": "blocked by intake's checks: verbatim text: this text is not in the document word for word"
+   },
+   "changes": []
+  },
+  {
+   "upload": 6,
+   "version": 3,
+   "items": {
+    "1": "OTH-001",
+    "2": "OTH-002",
+    "3": "CAN-004",
+    "4": "OTH-003",
+    "5": "CAN-002",
+    "6": "CAN-003",
+    "7": "OTH-007",
+    "8": "OTH-004",
+    "9": "REF-001",
+    "10": "REF-002",
+    "11": "REF-003",
+    "12": "REF-004",
+    "13": "REF-005",
+    "14": "OTH-006",
+    "15": "OTH-005"
+   },
+   "accept": [],
+   "missing_before": [
+    "E5"
+   ],
+   "notes": {
+    "1": "restates OTH-001 word for word; nothing to apply",
+    "2": "restates OTH-002 word for word; nothing to apply",
+    "3": "restates CAN-004 word for word; nothing to apply",
+    "4": "restates OTH-003 word for word; nothing to apply",
+    "5": "restates CAN-002 word for word; nothing to apply",
+    "6": "restates CAN-003 word for word; nothing to apply",
+    "7": "restates OTH-007 word for word; nothing to apply",
+    "8": "restates OTH-004 word for word; nothing to apply",
+    "9": "restates REF-001 word for word; nothing to apply",
+    "10": "restates REF-002 word for word; nothing to apply",
+    "11": "restates REF-003 word for word; nothing to apply",
+    "12": "restates REF-004 word for word; nothing to apply",
+    "13": "E5 is already in force under another clause",
+    "14": "restates OTH-006 word for word; nothing to apply",
+    "15": "its text is not one section of the document"
+   },
+   "changes": []
+  },
+  {
+   "upload": 7,
+   "version": 3,
+   "items": {
+    "1": "OTH-001",
+    "2": "OTH-002",
+    "3": "CAN-004",
+    "4": "OTH-003",
+    "5": "CAN-002",
+    "6": "CAN-003",
+    "7": "OTH-007",
+    "8": "OTH-004",
+    "9": "REF-001",
+    "10": "REF-002",
+    "11": "REF-003",
+    "12": "REF-004",
+    "13": "OTH-008",
+    "14": "OTH-006",
+    "15": "OTH-005"
+   },
+   "accept": [],
+   "missing_before": [
+    "E5"
+   ],
+   "notes": {
+    "1": "restates OTH-001 word for word; nothing to apply",
+    "2": "restates OTH-002 word for word; nothing to apply",
+    "3": "restates CAN-004 word for word; nothing to apply",
+    "4": "restates OTH-003 word for word; nothing to apply",
+    "5": "restates CAN-002 word for word; nothing to apply",
+    "6": "restates CAN-003 word for word; nothing to apply",
+    "7": "restates OTH-007 word for word; nothing to apply",
+    "8": "restates OTH-004 word for word; nothing to apply",
+    "9": "restates REF-001 word for word; nothing to apply",
+    "10": "restates REF-002 word for word; nothing to apply",
+    "11": "restates REF-003 word for word; nothing to apply",
+    "12": "restates REF-004 word for word; nothing to apply",
+    "13": "E5 is already in force under another clause",
+    "14": "restates OTH-006 word for word; nothing to apply",
+    "15": "its text is not one section of the document"
+   },
+   "changes": []
+  },
+  {
+   "upload": 8,
+   "version": 3,
+   "items": {
+    "1": "OTH-001",
+    "2": "OTH-002",
+    "3": "CAN-004",
+    "4": "OTH-003",
+    "5": "CAN-002",
+    "6": "CAN-003",
+    "7": "OTH-007",
+    "8": "OTH-004",
+    "9": "REF-001",
+    "10": "REF-002",
+    "11": "REF-003",
+    "12": "REF-004",
+    "13": "OTH-008",
+    "14": "OTH-006"
+   },
+   "accept": [],
+   "missing_before": [
+    "E5"
+   ],
+   "notes": {
+    "1": "restates OTH-001 word for word; nothing to apply",
+    "2": "restates OTH-002 word for word; nothing to apply",
+    "3": "restates CAN-004 word for word; nothing to apply",
+    "4": "restates OTH-003 word for word; nothing to apply",
+    "5": "restates CAN-002 word for word; nothing to apply",
+    "6": "restates CAN-003 word for word; nothing to apply",
+    "7": "restates OTH-007 word for word; nothing to apply",
+    "8": "restates OTH-004 word for word; nothing to apply",
+    "9": "restates REF-001 word for word; nothing to apply",
+    "10": "restates REF-002 word for word; nothing to apply",
+    "11": "restates REF-003 word for word; nothing to apply",
+    "12": "restates REF-004 word for word; nothing to apply",
+    "13": "E5 is already in force under another clause",
+    "14": "restates OTH-006 word for word; nothing to apply"
+   },
+   "changes": [
+    {
+     "clause_id": "OTH-005",
+     "effective_from": "2026-09-01",
+     "effective_to": null,
+     "version_label": "v2",
+     "clause_text": "Evacuation order. When a government evacuation order explicitly prohibits boarding at the origin station for the scheduled service, the passenger can claim the full base fare (but not the booking service fee) within 30 calendar days after scheduled departure, regardless of fare type or cancellation cutoff. A general travel advisory is not an evacuation order.",
+     "rule": {
+      "max_evacuation_claim_deadline_days": 30
+     },
+     "change_note": "SPR v3 E5 (evacuation order), corrected by the editor: five uploads of v3 proposed it only as a new clause",
+     "why": "v3 replaces E5 'NOT IN FORCE - No separate evacuation exception exists.' with an evacuation-order exception. All five v3 uploads proposed it as a new clause (rejected: E5 is already held by OTH-005), so without this the v1 text, that no evacuation exception exists, would stay in force for v3 bookings. Applied with APPLY_POLICY_CHANGE from 2026-09-01, open-ended: the section's text word for word and the one parameter intake had proposed for it (max_evacuation_claim_deadline_days = 30, which intake's check passes). The clause keeps its v1 title, 'Not in Force': APPLY_POLICY_CHANGE cannot change a title."
+    },
+    {
+     "clause_id": "CAN-002",
+     "effective_from": "2026-09-01",
+     "effective_to": null,
+     "version_label": "v4",
+     "clause_text": "A confirmed Premium QuickBook passenger who requests voluntary cancellation at least 24 hours before scheduled departure pays a charge of 35% of that passenger's base fare; with less than 24 hours remaining, the base fare is non-refundable. This special rule replaces P-03 for a confirmed PQ passenger regardless of 1A, 2A, SL, or 2S class. An unconfirmed PQ waitlisted passenger instead follows P-06. A booking becomes PQ only if sold explicitly under the PQ quota; paying a high fare alone does not make it PQ. E1 and E2 can override the confirmed-PQ rule, and E3 can override it only where that version expressly permits.",
+     "rule": {
+      "charge_pq_24h_pct": 35,
+      "voluntary_refund_pq_allowed": true
+     },
+     "change_note": "SPR v3 P-05: voluntary_refund_pq_allowed corrected to true (a refund less 35% at least 24 hours before departure)",
+     "why": "Upload 4 proposed v3's P-05 with voluntary_refund_pq_allowed = false, but v3 refunds a confirmed PQ passenger less a 35% charge when they cancel at least 24 hours before departure (v2's proposal said true for the same rule). Intake flagged the value as one it could not read, for the editor to confirm. Same text and charge, the permission corrected. The rule checker has no cue for this key, so no check changes; the correction keeps the data right. Db2 gives the new row the label v4, since v3 is taken."
+    }
+   ]
+  }
+ ]
+}

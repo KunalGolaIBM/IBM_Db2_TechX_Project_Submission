@@ -1,0 +1,70 @@
+{
+ "uploads": [
+  {
+   "upload": 1,
+   "version": 1,
+   "items": {
+    "1": "OTH-001",
+    "2": "OTH-002",
+    "3": "CAN-001",
+    "4": "OTH-003",
+    "5": "CAN-002",
+    "6": "CAN-003",
+    "7": "CAN-004",
+    "8": "OTH-004",
+    "9": "CAN-005",
+    "10": "DEL-001",
+    "11": "CAN-006",
+    "12": "CAN-007",
+    "13": "OTH-005",
+    "14": "OTH-006"
+   },
+   "accept": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "notes": {
+    "all": "One proposal per section, 14 of 14, each copied word for word from the document and dated 2026-01-01 to 2026-05-01 (exclusive), which is v1's period. Accepted as proposed, parameters included: none states a value the text does not.",
+    "9": "Not accepted: blocked by intake's rule-value check. E1 says 'no later than 7 calendar days', and the checker does not read '7 calendar days' as 7 days, so max_claim_deadline_days = 7 fails as 'not stated'. Db2 refuses a blocked item (DECIDE_POLICY_DRAFT, SQLSTATE 75045). The editor uploads the PDF again (upload 2).",
+    "13": "E5's proposal leaves out the words 'NOT IN FORCE -' that open the section and keeps 'No separate evacuation exception exists.' The meaning is kept and the title says NOT IN FORCE; accepted."
+   },
+   "changes": []
+  },
+  {
+   "upload": 2,
+   "version": 1,
+   "items": {
+    "1": "OTH-001",
+    "2": "OTH-002",
+    "3": "CAN-001",
+    "4": "OTH-003",
+    "5": "CAN-002",
+    "6": "CAN-003",
+    "7": "CAN-004",
+    "8": "OTH-004",
+    "9": "CAN-008",
+    "10": "DEL-001",
+    "11": "CAN-006",
+    "12": "CAN-007",
+    "13": "OTH-005",
+    "14": "OTH-006"
+   },
+   "accept": [],
+   "notes": {
+    "all": "Rejected: 13 of the 14 proposals restate clauses already in force word for word (UNCHANGED, nothing to apply), and E1 is blocked again for the same reason (max_e1_claim_days = 7 against '7 calendar days'). The editor uploads each version at most twice; E1 stays out of v1. Without E1, claims about a train SPR cancelled find no clause in force and are held for a person."
+   },
+   "changes": []
+  }
+ ]
+}

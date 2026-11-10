@@ -37,6 +37,15 @@ BankArea = Literal[
     "checks",
     "other",
 ]
+# The third domain, onboarded from its policy text alone for the unseen-domain evaluation (asof/eval/unseen): SPR, a
+# fictional railway's cancellation and refund policy. Its areas reuse four of the airline's, so Db2's area
+# constraint (CK_CLAUSE_AREA) is unchanged and no existing database needs a migration.
+RailArea = Literal[
+    "cancellation",
+    "refund",
+    "delay",
+    "other",
+]
 AnyArea = Literal[Area, BankArea]
 ClaimType = Literal["eligibility", "amount", "deadline", "procedure", "other"]
 Verdict = Literal["SUPPORTED", "CONTRADICTED", "NOT_COVERED"]
@@ -72,6 +81,16 @@ class BankExtractedClaim(ExtractedClaim):
 
 class BankExtractionResult(ExtractionResult):
     claims: list[BankExtractedClaim] = Field(  # type: ignore[assignment]
+        description="Policy claims found in the answer. Empty if there are none."
+    )
+
+
+class RailExtractedClaim(ExtractedClaim):
+    area: RailArea = Field(description="The policy area the claim is about.")
+
+
+class RailExtractionResult(ExtractionResult):
+    claims: list[RailExtractedClaim] = Field(  # type: ignore[assignment]
         description="Policy claims found in the answer. Empty if there are none."
     )
 
@@ -166,5 +185,15 @@ class BankIntakeClause(IntakeClause):
 
 class BankIntakeResult(IntakeResult):
     clauses: list[BankIntakeClause] = Field(  # type: ignore[assignment]
+        description="One proposal per policy section, in document order."
+    )
+
+
+class RailIntakeClause(IntakeClause):
+    area: RailArea = Field(description="The policy area of the section.")
+
+
+class RailIntakeResult(IntakeResult):
+    clauses: list[RailIntakeClause] = Field(  # type: ignore[assignment]
         description="One proposal per policy section, in document order."
     )
