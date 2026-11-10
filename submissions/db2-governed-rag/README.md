@@ -1,75 +1,53 @@
-# Governed RAG: Clearance-Aware Vector Search Inside IBM Db2
+# Governed RAG: Clearance-Aware Vector Search Inside Db2
 
-## Problem Statement
-In enterprise Retrieval-Augmented Generation (RAG) systems, data security and access control are critical. Standard RAG architectures retrieve context vectors indiscriminately before filtering, leading to potential confidential data leaks or authorization bypasses at the LLM prompt level. 
+The same question, asked as a **public**, **internal** or **restricted** user, retrieves only the documents that role may read. The clearance rule and the vector search run in one Db2 SQL statement, so restricted text is never returned to the LLM for an unauthorised role.
 
-**Db2 Governed RAG** solves this challenge by enforcing strict role-based metadata access controls (`Public`, `Internal`, `Restricted`) **directly inside IBM Db2** during vector similarity search execution. By pairing native `VECTOR_DISTANCE` COSINE operations with metadata filtering in single SQL queries, unauthorized text is never retrieved or passed to the LLM.
-
----
-
-## How Db2 is Used
-- **Native Vector Type**: `VECTOR(384, FLOAT32)` column storing document chunk embeddings.
-- **In-Database Filtering & Distance**: `VECTOR_DISTANCE(..., COSINE)` combined with `JSON_VALUE` clearance metadata filtering inside the `WHERE` clause of Db2 SQL queries.
-- **Haystack 2.x Integration**: Utilizes `ibm-db-haystack` (`IBMDb2DocumentStore`, `IBMDb2EmbeddingRetriever`) over native `ibm_db` drivers.
-
----
+## How Db2 is used
+- `VECTOR(384, FLOAT32)` column and `VECTOR_DISTANCE(..., COSINE)` (Db2 12.1.2+).
+- Document metadata (`clearance`, `category`, `priority`, `department`) stored as JSON and filtered with `JSON_VALUE` in the `WHERE` clause of the same statement that ranks by distance.
+- Connector: `ibm-db-haystack` (`IBMDb2DocumentStore`, `IBMDb2EmbeddingRetriever`) over `ibm_db`.
 
 ## Prerequisites
 - Python 3.10+
-- IBM Db2 12.1.2 or later with vector extensions reachable over TCP/IP.
-- Ollama running `qwen2.5:7b` (optional for local LLM generation; demo mode supported without LLM).
+- IBM Db2 12.1.2 or later, reachable over TCP/IP, with a user that can create tables
+- Ollama with `qwen2.5:7b` (not needed with `--no-llm`)
 
----
+## Setup
+```bash
+cd submissions/db2-governed-rag
+python3.11 -m venv .venv && . .venv/bin/activate
+pip install -r src/requirements.txt
+cp .env.example .env     # set DB2_HOST, DB2_PORT, DB2_DB, DB2_USERNAME, DB2_PASSWORD
+```
 
-## Setup Instructions
+## Run
+```bash
+cd src
+python index.py                                                    # writes 30 documents to table gov_kb
+python query.py "How was the security incident handled?"           # runs the question as all 3 roles
+python query.py --no-llm "How was the security incident handled?"  # retrieval only
+```
 
-1. **Clone & Navigate:**
-   ```bash
-   git clone https://github.com/Pavan3030-pr/IBM_Db2_TechX_Project_Submission.git
-   cd IBM_Db2_TechX_Project_Submission/submissions/db2-governed-rag
-   ```
+| Role | Clearance levels retrieved |
+|---|---|
+| public user | public |
+| internal user | public, internal |
+| restricted user | public, internal, restricted |
 
-2. **Set up Virtual Environment & Install Dependencies:**
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   ```
+## Check the data in Db2
+```sql
+SELECT id, JSON_VALUE(SYSTOOLS.BSON2JSON(meta), '$.clearance' RETURNING VARCHAR(100)) AS clearance
+FROM gov_kb;
+```
 
-3. **Environment Configuration:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your IBM Db2 host, port, database, user, and password credentials.
-   ```
+## Tests
+```bash
+pip install pytest && python -m pytest tests -q
+```
+`tests/test_filters.py` checks that each role's filter is translated into a SQL `IN (...)` predicate and that the dataset contains all three clearance levels. It does not need a database.
 
-4. **Index Documents into Db2:**
-   ```bash
-   python src/index.py
-   ```
+## Data
+30 fictional documents in `src/data/documents.jsonl`. Regenerate with `python build_dataset.py` from `src/`.
 
-5. **Run CLI Query:**
-   ```bash
-   python src/query.py --role Public "What are the security guidelines?"
-   python src/query.py --role Restricted "What are the security guidelines?"
-   ```
-
----
-
-## How to Run with Streamlit
-
-A unified interactive web application is available in `submissions/streamlit_app`.
-
-1. **Install Streamlit dependencies:**
-   ```bash
-   pip install -r submissions/streamlit_app/requirements.txt
-   ```
-
-2. **Launch Streamlit Application:**
-   ```bash
-   streamlit run submissions/streamlit_app/app.py
-   ```
-
-3. **Select Mode:**
-   - Choose **"Db2 Governed RAG"** in the sidebar.
-   - Test queries under **Public**, **Internal**, or **Restricted** roles.
-   - Toggle **"Compare all roles mode"** to see side-by-side clearance level enforcement.
+## Dependency licenses
+haystack-ai, ibm-db-haystack, ibm_db, sentence-transformers and the model `all-MiniLM-L6-v2`: Apache-2.0.
