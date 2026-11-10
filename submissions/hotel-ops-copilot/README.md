@@ -2,6 +2,8 @@
 
 > **One-line pitch:** A LangGraph team of AI agents that reads a hotel's IBM Db2 database, mines guest reviews with Db2 vector search, and proposes pricing, upgrade and maintenance actions. **Db2 itself** governs the agents: it decides what they may read, re-checks every action in stored procedures before applying it, and can undo any change with temporal time travel.
 
+**🎥 [Watch the demo video](https://www.youtube.com/watch?v=Y4Pjs3ybs2k)**
+
 **"The database governs the AI, not the prompt."** Below, in a real recorded run, the AI is wrong. It cites a policy and claims Deluxe isn't full, then proposes blocking room 307. A manager presses **Dry run**: Db2 executes the real stored procedure inside a transaction, finds **Deluxe would be OVERSOLD on the conference nights**, and rolls back, before anyone approves.
 
 ![Db2 dry run catches the agent's overbooking mistake](docs/screenshots/12-dry-run-catches-oversell.png)
@@ -365,7 +367,7 @@ python src/redteam.py              # red-team scoreboard -> docs/redteam_results
   - the 35% guardrail fires at apply time.
 
 ## Screenshots & Demo
-- **Demo video:** _to be added_
+- **Demo video:** [https://www.youtube.com/watch?v=Y4Pjs3ybs2k](https://www.youtube.com/watch?v=Y4Pjs3ybs2k)
 - Round 1 proposal: the [13-slide deck](docs/Round1_Proposal_Hotel_Ops_Copilot_Deck.pdf).
 
 All screenshots are from real Gemini runs against the live Db2 database.
