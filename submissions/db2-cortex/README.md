@@ -145,7 +145,109 @@ python verify.py            # needs a running, seeded Db2: vector search, cache,
 | Ask home | ![Ask](docs/screenshots/01-ask-hero.png) |
 | Answer + agent trace | ![Answer](docs/screenshots/02-answer.png) |
 | Semantic cache hit | ![Cache](docs/screenshots/03-cache-hit.png) |
+| Destructive request blocked | ![Blocked](docs/scre# Db2 Cortex
+
+> **Governed, self-auditing multi-agent analytics copilot for enterprise data on IBM Db2**
+
+Db2 Cortex demonstrates how IBM Db2 12.1.x serves as the single source of truth for analytical data, agent memory, semantic caching, vector search, and tamper-evident auditing—all within a unified, governed runtime.
+
+---
+
+## Key Features
+
+- **Multi-Agent Orchestration:** Guardrail, Router, SQL Analyst, Vector Analyst, and Audit Agent.
+- **Db2 Native Vector Search:** Fast cosine similarity over enterprise document chunks.
+- **Db2 Semantic Cache:** Query & embedding caching inside Db2 tables to eliminate redundant LLM calls.
+- **Session Memory:** Multi-turn conversation state persisted directly in Db2.
+- **Hash-Chained Audit Ledger:** Immutable audit trail with cryptographic tamper detection.
+
+---
+
+## Architecture Overview
+
+See [architecture.md](architecture.md) for full system diagrams, Db2 schema definitions, and agent interaction flows.
+
+---
+
+## Project Structure
+
+```
+submissions/db2-cortex/
+├── README.md
+├── architecture.md
+├── submission.json
+└── .env.example
+```
+
+---
+
+## Prerequisites
+
+- IBM Db2 12.1.x (Community Edition in Docker or Cloud)
+- Python 3.10+
+- OpenAI or compatible LLM API Key (optional for live mode; built-in mock mode included)
+
+---
+
+## Quick Start
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Pavan3030-pr/IBM_Db2_TechX_Project_Submission.git
+   cd IBM_Db2_TechX_Project_Submission/submissions/db2-cortex
+   ```
+
+2. **Configure environment:**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your Db2 connection details
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r ../../requirements.txt
+   ```
+
+4. **Initialize Db2 Schema:**
+   ```bash
+   python scripts/init_db2.py
+   ```
+
+5. **Run tests & verification:**
+   ```bash
+   pytest ../../tests/
+   python verify.py
+   ```
+
+---
+
+## Testing & Verification
+
+```bash
+pytest ../../tests                # no database needed (guardrail, planner, routing, hash chain)
+python verify.py                  # needs a running, seeded Db2: vector search, cache, guard, PII, audit tamper test
+```
+
+`verify.py` also tampers with an audit row inside a transaction and confirms the chain breaks, then rolls back.
+
+## Screenshots & Demo
+
+- **Live Demo Link:** runs locally (see Running the Project).
+
+| Screen | File |
+|---|---|
+| Ask home | ![Ask](docs/screenshots/01-ask-hero.png) |
+| Answer + agent trace | ![Answer](docs/screenshots/02-answer.png) |
+| Semantic cache hit | ![Cache](docs/screenshots/03-cache-hit.png) |
 | Destructive request blocked | ![Blocked](docs/screenshots/04-blocked.png) |
+| Audit ledger + chain verify | ![Audit](docs/screenshots/05-audit.png) |
+| Db2 inside (live object counts) | ![Db2](docs/screenshots/06-db2-inside.png) |
+
+## Known Limitations & Future Roadmap
+
+- **Current limitations:** demo mode covers 6 built-in topics (a live LLM is needed for free-form questions; the live path is exercised only with your own API key); the audit chain gives tamper evidence, not legal compliance on its own (a database administrator could recompute a chain, so anchor the latest hash externally in production); the role switch is a UI toggle; the hash chain proves tampering after the fact but is not a WORM store.
+- **Next steps:** bind roles to Db2 authorities / SSO and add RCAC column masks, Db2 vector indexes for large semantic layers, multi-tenant schemas.
+enshots/04-blocked.png) |
 | Audit ledger + chain verify | ![Audit](docs/screenshots/05-audit.png) |
 | Db2 inside (live object counts) | ![Db2](docs/screenshots/06-db2-inside.png) |
 
