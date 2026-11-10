@@ -7,7 +7,7 @@ _CI runs in the source repo [debi910/aqi-truth](https://github.com/debi910/aqi-t
 > **One-Line Pitch:** Delhi's air-quality dashboards print a number even when the monitors were blank, frozen or reporting impossible values. AQI Truth puts the official CPCB method inside IBM Db2, so Db2 checks every hour and **refuses to give an AQI when the data cannot support one**, with a tamper-proof evidence ledger for each decision.
 
 - **Live demo:** https://debi910.github.io/aqi-truth/ (calls the hosted Db2 + Granite server when it is up; otherwise shows a clearly labelled export of the same run)
-- **Demo video:** _to be added_
+- **Demo video:** https://youtu.be/Gm_d_ZOlTV8 (3:52, captions included)
 - **Code:** https://github.com/debi910/aqi-truth
 
 ![Verdict card: a plain average shows 175, Db2 says no AQI is computable](docs/screenshots/verdict.png)
@@ -21,7 +21,7 @@ _CI runs in the source repo [debi910/aqi-truth](https://github.com/debi910/aqi-t
    - *Delete all verdicts*: refused before it reaches Db2. Even if it got through, the read-only user and the append-only triggers stop it.
 4. **Check every Db2 claim with one command:** `python scripts/db2_evidence.py`. It runs 27 checks as real SQL against the database and writes [`docs/DB2_VERIFICATION.md`](docs/DB2_VERIFICATION.md). The checks cover temporal `AS OF`, append-only triggers, RCAC, the column mask, MQT query rewrite and partition elimination.
 5. **Real revisions, honestly:** we re-fetched 1 Oct to 6 Nov 2026 on 10 Nov and `MERGE`d it over the 8–9 Nov copy. **0 of 963,043 overlapping readings had changed**, so no receipt reports a real revision yet. The system-time history is in place to record one when CPCB revises a value. Until then, the tamper demo is a clearly labelled injected edit.
-6. **Video (3:52):** _link added on submission day_
+6. **Video (3:52):** https://youtu.be/Gm_d_ZOlTV8
 
 ### For judges: where to look
 | Criterion | Where to look |
@@ -253,7 +253,7 @@ The tests run against a real Db2, not mocks. They check: CPCB sub-index values; 
 
 ## Screenshots & Demo
 - **Live Demo Link:** https://debi910.github.io/aqi-truth/ — talks to the live Db2 + Granite server when it is up (green "Live" pill; during judging it is kept up), otherwise falls back to a clearly labelled read-only export of the same run.
-- **Demo Video Link:** _to be added_
+- **Demo Video Link:** https://youtu.be/Gm_d_ZOlTV8
 
 | | |
 |---|---|
