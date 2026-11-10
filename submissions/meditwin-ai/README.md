@@ -292,6 +292,15 @@ tests/unit/test_validation_models.py::test_review_decision_invalid_date PASSED [
 ### 4. Evidence-Grounded Q&A with Safety Guardrails
 ![Ask MediTwin](docs/screenshots/04_ask_meditwin.png)
 
+### 5. Official Demonstration Video (2.5 Minutes)
+- **Local Video File:** [`docs/demo_video.mp4`](docs/demo_video.mp4) (720p HD, 175s, 1.44 MB)
+- **Act 1 (0:00 - 0:25):** System architecture & core innovation overview
+- **Act 2 (0:25 - 0:50):** Dashboard & IBM Db2 operational health
+- **Act 3 (0:50 - 1:15):** Lab report ingestion & LangGraph multi-node state machine
+- **Act 4 (1:15 - 1:40):** Mandatory human clinician verification gate
+- **Act 5 (1:40 - 2:05):** Longitudinal patient workspace & Plotly metric trends
+- **Act 6 (2:05 - 2:30):** Evidence-grounded clinical Q&A & safety boundaries
+
 ---
 
 ## 9. End-to-End User Journey
