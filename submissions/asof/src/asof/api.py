@@ -32,7 +32,21 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationErr
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from . import __version__, backtest, db, demolive, headline, impactagent, intake, ledger, notices, policy, review, router, rowaccess
+from . import (
+    __version__,
+    backtest,
+    db,
+    demolive,
+    headline,
+    impactagent,
+    intake,
+    ledger,
+    notices,
+    policy,
+    review,
+    router,
+    rowaccess,
+)
 from .anchor import AnchorLog
 from .anchor import verify as verify_anchors
 from .askledger import LedgerAsker

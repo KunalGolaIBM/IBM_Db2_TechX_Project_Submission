@@ -115,7 +115,7 @@ const ICONS = {
 
 // ---------- shell ----------
 const view = $("#view");
-const routes = { playground: Playground, timeline: Timeline, intake: Intake, ledger: Ledger, inbox: Inbox, ask: Ask, impact: Impact, analytics: Analytics };
+const routes = { playground: Playground, timeline: Timeline, intake: Intake, ledger: Ledger, inbox: Inbox, ask: Ask, impact: Impact, backtest: Backtest, analytics: Analytics };
 async function route() {
   const [name, arg] = location.hash.replace(/^#\/?/, "").split("/");
   const key = routes[name] ? name : "playground";
@@ -129,7 +129,7 @@ async function route() {
 }
 window.addEventListener("hashchange", route);
 
-const health = { replay: false, live: null, clock: null, headline: [] };
+const health = { replay: false, live: null, clock: null, headline: [], demo: false };
 // The public demo's live checks: "on", "paused" (the banner says why) or "unavailable".
 const liveTag = (b) => (b.live_checks === "on" ? `replay + live: ${String(b.live_model).split("/").pop()}`
   : `replay only: live checks ${b.live_checks}`);
@@ -146,6 +146,7 @@ async function status() {
     health.headline = Array.isArray(body.headline) ? body.headline : [];  // measured results, from the result files
     health.clock = body.db2_clock || null;
     if (body.replay && $("#replay-mode") && body.public_demo_notice) $("#replay-mode").textContent = body.public_demo_notice;
+    health.demo = Boolean(body.public_demo);
     if (body.replay && !$("#replay-mode")) {
       const bar = document.createElement("div");
       bar.id = "replay-mode";
@@ -590,7 +591,7 @@ async function Ledger(id) {
     <table><thead><tr><th>#</th><th>Recorded</th><th>Customer date</th><th>Decision</th><th>Reason</th><th>Question</th><th>Row hash</th></tr></thead>
     <tbody>${rows.map((r) => html`<tr class="click" data-id="${r.ledger_id}">
       <td class="num"><a href="#/ledger/${r.ledger_id}">${r.ledger_id}</a></td><td class="ts">${sqlTs(r.created_at).slice(0, 10)}<br><span class="muted small">${fmtTs(r.created_at).slice(11)}</span></td><td>${fmtDate(r.as_of_date)}</td>
-      <td>${pill(r.decision)}</td><td class="small muted">${sentence(r.reason_code)}${r.uncovered && r.uncovered.length ? html`<div class="trunc reason-claim" title="No clause covers ${quoted(r.uncovered)}">${quoted(r.uncovered)}</div>` : ""}</td>
+      <td>${pill(r.decision)}${r.channel === "backtest" ? html` <span class="pill neutral plain" title="A past answer checked by a backtest: not an answer AsOf released">Backtest</span>` : ""}</td><td class="small muted">${sentence(r.reason_code)}${r.uncovered && r.uncovered.length ? html`<div class="trunc reason-claim" title="No clause covers ${quoted(r.uncovered)}">${quoted(r.uncovered)}</div>` : ""}</td>
       <td class="trunc" title="${r.question_redacted}">${r.question_redacted}</td><td class="hash nowrap">${shortHash(r.row_hash)}</td></tr>`)}</tbody></table>`
     : html`<div class="empty"><h3>No decisions recorded yet</h3><p>Check an answer in the <a href="#/playground">Playground</a>.</p></div>`);
   $("#ledger-table").addEventListener("click", (e) => { const tr = e.target.closest("tr[data-id]"); if (tr) location.hash = `#/ledger/${tr.dataset.id}`; });
@@ -1363,6 +1364,155 @@ function wireIntake() {
   if (reject) reject.addEventListener("click", () => decide({ approve: false }, reject));
 }
 
+// ---------- Backtest ----------
+// A CSV of past answers, each checked through the normal check (ledger channel "backtest"); Db2 records each row's
+// outcome and the money its contradicted claims put at stake, and the report below is SQL over those tables.
+const bt = { runs: [], sampleId: null, report: null, busy: false, timer: null, error: null };
+const BT_OUTCOME = { WRONG: "contradicted", UNCONFIRMED: "needs_review", OK: "pass", FAILED: "error", SKIPPED: "neutral" };
+const BT_STATE = { RUNNING: "pending", DONE: "approved", DEADLINE: "needs_review", STOPPED: "needs_review", FAILED: "error", INTERRUPTED: "error" };
+const usd = (v) => (v === null || v === undefined ? "–" : `$${Number(v).toFixed(2)}`);
+async function sendCsv(path, blob) {
+  const headers = { "content-type": "text/csv" };
+  const token = savedToken();
+  if (token) headers.authorization = `Bearer ${token}`;
+  const res = await fetch(path, { method: "POST", body: blob, headers });
+  if (res.status === 401) { askToken(); throw new Error("This AsOf server needs an API token: enter it at the top of the page."); }
+  let body = null;
+  try { body = await res.json(); } catch { /* empty body */ }
+  if (!res.ok) { const err = new Error(errorText(body, res.status)); err.rows = (body && body.errors) || []; throw err; }
+  return body;
+}
+async function Backtest(arg) {
+  clearTimeout(bt.timer);
+  const list = (await api("/api/backtests")).body;
+  bt.runs = list.runs; bt.sampleId = list.sample_run_id;
+  const id = Number(arg) || bt.sampleId || (bt.runs[0] && bt.runs[0].run_id) || null;
+  bt.report = id ? (await api(`/api/backtests/${id}`)).body : null;
+  renderBacktest();
+  if (bt.report && bt.report.run.state === "RUNNING") {
+    bt.timer = setTimeout(() => { if (location.hash.startsWith("#/backtest")) Backtest(String(id)).catch(() => {}); }, 2500);
+  }
+}
+function btRunRow(r) {
+  const on = bt.report && bt.report.run.run_id === r.run_id;
+  return html`<tr class="click ${on ? "on" : ""}" data-run="${r.run_id}"><td>#${r.run_id}</td>
+    <td><div class="itk-name">${r.source_name}</div><div class="small muted">${pill(r.state, BT_STATE[r.state])} ${fmtTs(r.created_at)} · ${r.rows} rows${r.state === "RUNNING" ? `, ${r.items} checked` : `, ${r.wrong} wrong`}</div></td></tr>`;
+}
+function btClaim(c) {
+  return html`<li><span class="mono">${c.clause_id} ${c.version}</span> <span class="muted small">${period(c.from, c.to)}</span>
+    <div>${c.claim}</div>${c.money === "COMPUTED" ? html`<div class="small">said ${usd(c.stated_usd)}, the version in force set ${usd(c.policy_usd)} (<code>${c.rule_key}</code>): ${c.favours === "CUSTOMER" ? "in the customer's favour" : "against the customer"}</div>` : html`<div class="small muted">no money difference: ${c.note}</div>`}</li>`;
+}
+function btReport(rep) {
+  const r = rep.run, m = rep.money;
+  const running = r.state === "RUNNING";
+  return html`
+    <div class="card">
+      <div class="card-head"><h2>Run ${r.run_id}: ${r.source_name}</h2>${pill(r.state, BT_STATE[r.state])}</div>
+      <dl class="kv">
+        <dt>Rows</dt><dd>${r.rows}${r.sample ? " · the built-in fictional sample" : ""}${r.doc_id === "auto" ? " · rows without a doc_id routed by Db2's vote" : ` · rows without a doc_id checked against ${DOC_NAME[r.doc_id] || r.doc_id}`}</dd>
+        <dt>Checked by</dt><dd>${r.model}</dd>
+        <dt>Started</dt><dd>${fmtTs(r.created_at)}${r.requested_by ? ` by ${r.requested_by}` : ""}${r.finished_at ? ` · finished ${fmtTs(r.finished_at)}` : ""}</dd>
+        <dt>File SHA-256</dt><dd class="hash">${r.sha256}</dd>
+        ${r.note ? html`<dt>Note</dt><dd>${r.note}</dd>` : ""}
+      </dl>
+    </div>
+    ${running ? html`<div class="banner fix"><strong>Running: ${r.items} of ${r.rows} rows checked.</strong><span>Each row goes through the full check and into the ledger; this page refreshes until the run ends. No row starts after ${fmtTs(r.deadline_at)}.</span></div>` : ""}
+    ${r.state === "INTERRUPTED" ? html`<div class="banner"><strong>Interrupted.</strong><span>The process running it stopped after ${r.items} of ${r.rows} rows; the rest were never checked.</span></div>` : ""}
+    ${r.unaccounted > 0 && !running ? html`<div class="banner"><strong>${r.unaccounted} row${r.unaccounted === 1 ? " has" : "s have"} no outcome.</strong><span>The run stopped before it could record them.</span></div>` : ""}
+    <div class="bt-stats">
+      <div class="stat bad"><div class="n">${r.wrong}</div><div class="l">wrong for their date</div></div>
+      <div class="stat warn"><div class="n">${r.unconfirmed}</div><div class="l">not confirmed by the policy</div></div>
+      <div class="stat good"><div class="n">${r.ok}</div><div class="l">right for their date</div></div>
+      <div class="stat"><div class="n">${r.failed}</div><div class="l">check failed closed</div></div>
+      <div class="stat"><div class="n">${r.skipped}</div><div class="l">not checked</div></div>
+    </div>
+    <div class="card"><div class="card-head"><h2>Wrong answers by clause version</h2><span class="sub">V_BACKTEST_CONTRADICTIONS</span></div>
+        ${rep.by_clause.length ? html`<div class="scroll-x"><table><thead><tr><th>Clause version in force</th><th class="num">Answers</th><th class="num">Claims</th><th class="num">Priced</th></tr></thead><tbody>
+          ${rep.by_clause.map((c) => html`<tr><td>${clauseRef(c.clause_id, c.version, c.from, c.to)}</td><td class="num">${c.wrong_answers}</td><td class="num">${c.contradicted_claims}</td><td class="num">${usd(c.abs_usd)}</td></tr>`)}</tbody></table></div>`
+          : html`<p class="muted">${running ? "Nothing wrong yet." : "No answer contradicted the policy in force on its date."}</p>`}</div>
+    <div class="card"><div class="card-head"><h2>Money at stake</h2><span class="sub">BACKTEST_COST</span></div>
+        <dl class="kv">
+          <dt>Priced</dt><dd><b>${usd(m.total_abs_usd)}</b> over ${m.computed_claims} of ${rep.contradicted_claims} contradicted claim${rep.contradicted_claims === 1 ? "" : "s"}</dd>
+          <dt>Customer's favour</dt><dd>${usd(m.customer_favour_usd)} (${m.customer_favour_claims}): a lower fee or a larger payment than the policy, what the company could be held to</dd>
+          <dt>Against them</dt><dd>${usd(m.company_favour_usd)} (${m.company_favour_claims}): told to pay more or expect less than the policy</dd>
+        </dl>
+        ${rep.not_computable.length ? html`<div class="sep"></div><h3>Not priced</h3><ul class="small">${rep.not_computable.map((x) => html`<li>${x.claims} claim${x.claims === 1 ? "" : "s"}: ${x.reason}</li>`)}</ul>` : ""}
+        <p class="small muted">${rep.cost_method}</p></div>
+    <div class="card"><div class="card-head"><h2>Costliest examples</h2><span class="sub">largest priced difference first; question and draft as the ledger keeps them, redacted</span></div>
+      ${rep.costliest.length ? rep.costliest.map((x) => html`<div class="bt-example">
+        <div class="bt-example-head"><b>Row ${x.row}</b> · ${fmtDate(x.customer_date)} · ${x.channel} · <a href="#/ledger/${x.ledger_id}">ledger #${x.ledger_id}</a><span class="grow"></span><b>${usd(x.abs_usd)}</b></div>
+        <div class="small muted">${x.question}</div>
+        <p class="bt-draft"><s>${x.draft}</s></p>
+        <ul class="bt-claims">${x.contradicted.map(btClaim)}</ul>
+        ${x.decision === "CORRECTED" ? html`<div class="small"><span class="eyebrow">What the policy in force supports (rewritten from the clauses, re-checked)</span><div>${x.final_answer}</div></div>` : ""}
+      </div>`) : html`<p class="muted">No contradicted claim had a dollar amount to compare.</p>`}</div>
+    <div class="card"><div class="card-head"><h2>Every row</h2><span class="sub">BACKTEST_ITEM: the outcome Db2 derived from each row's ledger decision</span></div>
+      <div class="scroll-x"><table><thead><tr><th>Row</th><th>Customer date</th><th>Channel</th><th>Outcome</th><th>Reason</th><th>Question</th><th>Ledger</th></tr></thead><tbody>
+      ${rep.items.map((i) => html`<tr><td class="num">${i.row}</td><td>${fmtDate(i.customer_date)}</td><td>${i.channel}</td><td>${pill(i.outcome, BT_OUTCOME[i.outcome])}</td>
+        <td class="small muted">${sentence(i.reason)}${i.contradicted.length ? html`<div>${i.contradicted.map((c) => `${c.clause_id} ${c.version}`).filter((v, k, a) => a.indexOf(v) === k).join(", ")}</div>` : ""}${i.detail && !i.ledger_id ? html`<div class="trunc" title="${i.detail}">${i.detail}</div>` : ""}</td>
+        <td class="trunc" title="${i.question || ""}">${i.question || ""}</td><td>${i.ledger_id ? html`<a href="#/ledger/${i.ledger_id}">#${i.ledger_id}</a>` : "–"}</td></tr>`)}
+      </tbody></table></div></div>`;
+}
+function renderBacktest() {
+  const demo = health.demo;
+  mount(view, html`
+    <div class="page-head"><div><h1>Backtest</h1>
+      <p>Upload past conversations as a CSV. Every row goes through the full check for its customer's date and is recorded in the ledger on channel <code>backtest</code>, kept out of the live numbers. Db2 derives each row's outcome from its ledger decision and reads the money at stake out of the cited clause version's <code>RULE_JSON</code>.</p></div></div>
+    <div class="grid-2 bt-layout">
+      <div class="stack">
+        <form class="card" id="bt-form" autocomplete="off">
+          <div class="field"><label for="bt-file">CSV file</label><input id="bt-file" type="file" accept=".csv,text/csv" ${demo ? raw("disabled") : ""}>
+            <div class="hint">UTF-8 with a header row: <code>question,draft,customer_date,channel</code>, optionally <code>doc_id</code>. Dates as YYYY-MM-DD; channel chat, email, faq or api; at most 500 rows and 2 MB.${health.replay ? " Replay mode has recorded model outputs for the sample's rows only; other rows fail closed." : ""}</div></div>
+          <div class="field"><label for="bt-doc">Policy for rows without a doc_id</label>
+            <select id="bt-doc" ${demo ? raw("disabled") : ""}><option value="auto">Route each row (Db2's vote)</option>${Object.entries(DOC_NAME).map(([k, v]) => html`<option value="${k}">${v} (${k})</option>`)}</select></div>
+          <div class="field row"><button class="btn grow" id="bt-upload" type="submit" ${demo || bt.busy ? raw("disabled") : ""}>Check file</button>
+            <button class="btn ghost grow" id="bt-sample" type="button" ${demo || bt.busy ? raw("disabled") : ""} title="20 fictional past answers over both policies">Run the sample</button></div>
+          <div class="small"><a href="#" id="bt-sample-dl">Download the sample CSV</a></div>
+          ${demo ? html`<p class="small muted">Disabled in the public demo: uploads and runs. The report shown is a run of the built-in sample made when the demo was seeded; run AsOf locally with ./quickstart.sh to check your own file.</p>` : ""}
+          <div id="bt-status" aria-live="polite">${bt.error ? html`<div class="error-box">${bt.error.message}${bt.error.rows && bt.error.rows.length ? html`<ul class="small">${bt.error.rows.slice(0, 10).map((e) => html`<li>${e.row ? `Row ${e.row}${e.line ? ` (line ${e.line})` : ""}: ` : ""}${e.message}</li>`)}</ul>` : ""}</div>` : ""}</div>
+        </form>
+        <div class="card"><div class="card-head"><h2>Runs</h2><span class="sub">BACKTEST_RUN</span></div>
+          ${bt.runs.length ? html`<table><tbody>${bt.runs.map(btRunRow)}</tbody></table>` : html`<p class="muted">No backtests yet. Try the sample.</p>`}</div>
+      </div>
+      <section id="bt-report">${bt.report ? btReport(bt.report) : html`<div class="empty"><h3>No run open</h3>
+        <p>Run the sample: 20 fictional past answers from Aurelia Air and Fernhollow Bank, with customer dates on both sides of policy changes.</p></div>`}</section>
+    </div>`);
+  wireBacktest();
+}
+function wireBacktest() {
+  const start = async (blob, name) => {
+    if (bt.busy) return;
+    bt.busy = true; bt.error = null;
+    $("#bt-upload").disabled = true; $("#bt-sample").disabled = true;
+    mount($("#bt-status"), html`<div class="loading small"><div class="spinner"></div>Validating the file and starting the run...</div>`);
+    try {
+      const doc = $("#bt-doc").value;
+      const body = await sendCsv(`/api/backtests?doc_id=${encodeURIComponent(doc)}&name=${encodeURIComponent(name)}`, blob);
+      bt.busy = false;
+      location.hash = `#/backtest/${body.run_id}`;
+    } catch (err) {
+      bt.busy = false; bt.error = err;
+      renderBacktest();
+    }
+  };
+  $("#bt-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const f = $("#bt-file").files[0];
+    if (!f) { mount($("#bt-status"), html`<div class="error-box">Choose a CSV first, or run the sample.</div>`); return; }
+    start(f, f.name);
+  });
+  $("#bt-sample").addEventListener("click", async () => {
+    try {
+      const headers = {}; const token = savedToken(); if (token) headers.authorization = `Bearer ${token}`;
+      const res = await fetch("/api/backtests/sample", { headers });
+      if (!res.ok) throw new Error(`Could not load the sample (${res.status})`);
+      start(await res.blob(), "fictional-backtest-sample.csv");
+    } catch (err) { mount($("#bt-status"), html`<div class="error-box">${err.message}</div>`); }
+  });
+  $("#bt-sample-dl").addEventListener("click", (e) => { e.preventDefault(); download("/api/backtests/sample", "fictional-backtest-sample.csv").catch((err) => alert(err.message)); });
+  $$("[data-run]").forEach((tr) => tr.addEventListener("click", () => { location.hash = `#/backtest/${tr.dataset.run}`; }));
+}
+
 // ---------- Analytics ----------
 async function Analytics() {
   mount(view, html`<div class="loading"><div class="spinner"></div>Querying Db2 views...</div>`);
@@ -1377,7 +1527,7 @@ async function Analytics() {
       <div class="card"><div class="card-head"><h2>Decisions</h2><span class="sub">${total} recorded</span></div><div class="bars">
         ${["PASS", "CORRECTED", "ESCALATED", "REVIEWED"].map((k) => { const d = a.decisions.find((x) => x.decision === k) || { count: 0, avg_latency_ms: 0 };
           return html`<div class="bar-row"><span>${pill(k)}</span><div class="bar"><i class="${lower(k)}" data-width="${pct(d.count, total)}"></i></div><span class="num">${d.count}</span></div>`; })}
-      </div>${a.replayed_decisions ? html`<p class="small muted">${a.replayed_decisions} of these ${total} decisions were made in replay mode, from recorded model outputs, so their latency leaves out model time.</p>` : ""}<div class="sep"></div><table><thead><tr><th>Reason</th><th class="num">Decisions</th></tr></thead><tbody>
+      </div>${a.backtest_decisions ? html`<p class="small muted">${a.backtest_decisions} backtest decision${a.backtest_decisions === 1 ? " is" : "s are"} left out of every number on this page: they are checks of past answers, not answers AsOf released. See <a href="#/backtest">Backtest</a>.</p>` : ""}${a.replayed_decisions ? html`<p class="small muted">${a.replayed_decisions} of these ${total} decisions were made in replay mode, from recorded model outputs, so their latency leaves out model time.</p>` : ""}<div class="sep"></div><table><thead><tr><th>Reason</th><th class="num">Decisions</th></tr></thead><tbody>
         ${a.reasons.map((r) => html`<tr><td>${sentence(r.reason)}</td><td class="num">${r.count}</td></tr>`)}</tbody></table></div>
       <div class="card"><div class="card-head"><h2>Claims in drafts, by area</h2></div>
         <div class="legend"><span><i class="supported"></i>Supported</span><span><i class="contradicted"></i>Contradicted</span><span><i class="not_covered"></i>Not covered</span></div>

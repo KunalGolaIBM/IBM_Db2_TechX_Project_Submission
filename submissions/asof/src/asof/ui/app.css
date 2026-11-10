@@ -476,3 +476,19 @@ tr.click.on td { background: var(--brand-soft); }
 
 #chain:not(:empty) { margin-bottom: 16px; }
 .bars-note { margin-top: 12px; }
+
+/* Backtest */
+.bt-layout > * { min-width: 0; }
+.bt-layout .hash { overflow-wrap: anywhere; }
+.bt-layout .card-head { flex-wrap: wrap; }
+.bt-layout .card-head .sub { white-space: normal; }
+.bt-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-top: 16px; }
+.bt-stats + .card { margin-top: 16px; }
+.bt-example { padding: 12px 0; border-top: 1px solid var(--line); }
+.bt-example:first-of-type { border-top: 0; }
+.bt-example-head { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.bt-example-head .grow { flex: 1; }
+.bt-draft { margin: 6px 0; color: var(--muted); }
+.bt-claims { margin: 6px 0 8px; padding-left: 18px; }
+.bt-claims li + li { margin-top: 6px; }
+@media (max-width: 1080px) { .bt-stats { grid-template-columns: repeat(2, 1fr); } }
