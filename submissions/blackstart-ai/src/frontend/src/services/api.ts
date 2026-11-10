@@ -7,9 +7,13 @@ import type {
 
 const configured = import.meta.env.VITE_API_BASE_URL;
 
+// Vite dev only — production builds must set VITE_API_BASE_URL (Render env);
+// DEV=false strips this localhost string from the production bundle.
+const localDevFallback = import.meta.env.DEV ? 'http://127.0.0.1:8000/api/v1' : '';
+
 export const API_BASE_URL = (configured && configured.trim().length > 0
   ? configured
-  : 'http://127.0.0.1:8000/api/v1'
+  : localDevFallback
 ).replace(/\/+$/, '');
 
 export const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api\/v1$/, '');
