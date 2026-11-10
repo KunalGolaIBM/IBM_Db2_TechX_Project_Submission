@@ -5,6 +5,8 @@
 
 [![CI](https://github.com/JustJay7/asof/actions/workflows/ci.yml/badge.svg)](https://github.com/JustJay7/asof/actions/workflows/ci.yml)
 
+**Try it:** [Live demo](https://136-108-251-170.sslip.io) | [Demo video (2:58)](https://www.youtube.com/watch?v=mntehVWQn8E) | `./quickstart.sh` (one command, no API key)
+
 **Built on IBM Db2 12.1 for Db2Hack 2026.** Source: [github.com/JustJay7/asof](https://github.com/JustJay7/asof) (standalone mirror of `submissions/asof`). Bitemporal tables, native `VECTOR` search, SQL/JSON, in-database SHA-256, triggers, SQL PL and least-privilege users, with LangGraph, LangChain and the official `langchain-db2` connector.
 
 ![The same draft checked for two customer dates: for 10 March 2026 the retroactive bereavement claim is contradicted by BRV-002 v1 and the answer is corrected; for 2 June 2026 it is supported by BRV-002 v2 and released as written](docs/screenshots/00-same-draft-two-dates.png)
