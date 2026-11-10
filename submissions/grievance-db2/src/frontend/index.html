@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CPGRAMS - Centralized Public Grievance Redress and Monitoring System, Government of India. File and track grievances online. Powered by IBM Db2 Community Edition and LangChain AI.">
+    <meta property="og:title" content="CPGRAMS AI — IBM Db2Hack 2026 Submission">
+    <meta property="og:description" content="AI-powered citizen grievance portal using IBM Db2, LangChain, stored procedures, triggers, and NL-to-SQL.">
+    <meta property="og:type" content="website">
+    <title>CPGRAMS | Government of India - Public Grievance Portal</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%231a2744'/><text y='68' x='12' font-size='58' font-family='Arial,sans-serif' font-weight='bold' fill='white'>CP</text></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 1. Skip Link -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <!-- 2. Government Identity Bar -->
+    <div class="gov-bar">
+        <div class="container">
+            <div class="gov-identity">
+                <svg width="20" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="emblem" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                <span data-i18n="gov_identity">Government of India</span>
+            </div>
+            <div class="gov-tools">
+                <div class="accessibility-tools" aria-label="Accessibility options">
+                    <button type="button" aria-label="Decrease text size">A-</button>
+                    <button type="button" aria-label="Normal text size">A</button>
+                    <button type="button" aria-label="Increase text size">A+</button>
+                    <button type="button" aria-label="High contrast mode">Contrast</button>
+                    <button type="button" id="btn-theme-toggle" aria-label="Toggle Dark Mode" title="Toggle Dark/Light Mode">🌙 Dark</button>
+                    <button type="button" id="btn-history-toggle" class="btn-history-toggle" aria-label="View Recent Grievances" title="View Recent Grievances">📋 My Grievances</button>
+                </div>
+                <div class="language-selector">
+                    <label for="lang-select" class="sr-only">Select Language</label>
+                    <select id="lang-select" class="lang-select" aria-label="Select Language">
+                        <option value="en">English</option>
+                        <option value="hi">हिन्दी (Hindi)</option>
+                        <option value="bn">বাংলা (Bengali)</option>
+                        <option value="ta">தமிழ் (Tamil)</option>
+                        <option value="te">తెలుగు (Telugu)</option>
+                        <option value="mr">मराठी (Marathi)</option>
+                        <option value="gu">ગુજરાતી (Gujarati)</option>
+                        <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                        <option value="ml">മലയാളം (Malayalam)</option>
+                        <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                        <option value="or">ଓଡ଼ିଆ (Odia)</option>
+                        <option value="as">অসমীয়া (Assamese)</option>
+                        <option value="ur">اردو (Urdu)</option>
+                        <option value="sa">संस्कृतम् (Sanskrit)</option>
+                        <option value="mai">मैथिली (Maithili)</option>
+                        <option value="doi">डोगरी (Dogri)</option>
+                        <option value="kok">कोंकणी (Konkani)</option>
+                        <option value="ne">नेपाली (Nepali)</option>
+                        <option value="sd">سنڌي (Sindhi)</option>
+                        <option value="ks">کٲشُر (Kashmiri)</option>
+                        <option value="sat">संथाली (Santali)</option>
+                        <option value="brx">बर' (Bodo)</option>
+                        <option value="mni">মৈতৈলোন্ (Manipuri)</option>
+                    </select>
+                    <div id="google_translate_element" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Main Header -->
+    <header class="main-header">
+        <div class="container">
+            <div class="brand">
+                <div class="brand-logo" aria-hidden="true">CP</div>
+                <div class="brand-text">
+                    <h1 data-i18n="cpgrams_title">CPGRAMS</h1>
+                    <span class="brand-subtitle" data-i18n="cpgrams_subtitle">Centralized Public Grievance Redress & Monitoring System</span>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+                <span id="db2-live-badge" class="db2-live-badge db2-badge--checking" title="IBM Db2 Community Edition connection status" aria-live="polite">
+                    <span class="db2-pulse"></span>
+                    <span id="db2-badge-text">IBM Db2…</span>
+                </span>
+                <button class="menu-toggle" aria-expanded="false" aria-controls="main-nav" aria-label="Toggle navigation menu">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+                </button>
+            </div>
+            <nav id="main-nav" class="main-nav">
+                <ul>
+                    <li><a href="index.html" class="active" aria-current="page" data-i18n="nav_home">Home</a></li>
+                    <li><a href="lodge-grievance.html" data-i18n="nav_lodge">Lodge Grievance</a></li>
+                    <li><a href="track-status.html" data-i18n="nav_track">Track Status</a></li>
+                    <li><a href="officer.html">Officer Portal</a></li>
+                    <li><a href="dashboard.html">Analytics Dashboard</a></li>
+                    <li><a href="ask-data.html">Ask the Data (AI)</a></li>
+                    <li><a href="help-faq.html" data-i18n="nav_help">Help & FAQs</a></li>
+                    <li><a href="contact.html" data-i18n="nav_contact">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main id="main-content">
+        <!-- 4. Hero Section -->
+        <section class="hero">
+            <div class="container">
+                <span class="hero__badge" data-i18n="hero_badge">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"></path><path d="M4 21V9"></path><path d="M8 21V9"></path><path d="M12 21V9"></path><path d="M16 21V9"></path><path d="M20 21V9"></path><path d="M2 9h20L12 2z"></path></svg>
+                    Official Government Portal
+                </span>
+                <h2 class="hero__title" data-i18n="hero_title">File a complaint about a government service and track its progress online.</h2>
+                <p class="hero__subtitle" data-i18n="hero_subtitle">CPGRAMS makes it easy for every citizen to raise public grievances related to central government departments and ministries, and track them until resolution.</p>
+                <div class="hero__actions">
+                    <a href="lodge-grievance.html" class="btn btn--primary btn--lg" data-i18n="hero_btn_lodge">Lodge a Grievance</a>
+                    <a href="track-status.html" class="btn btn--secondary btn--lg" data-i18n="hero_btn_track">Track Your Status</a>
+                </div>
+                <div class="hero__note" data-i18n="hero_note">
+                    <svg class="icon--info" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    Filing a grievance is completely free. Save your registration number to track your case.
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. How It Works Section -->
+        <section class="section how-it-works">
+            <div class="container">
+                <div class="section__header text-center">
+                    <span class="section__eyebrow" data-i18n="how_eyebrow">SIMPLE PROCESS</span>
+                    <h2 class="section__title" data-i18n="how_title">How CPGRAMS Works</h2>
+                    <p class="section__subtitle" data-i18n="how_subtitle">Three simple steps to file and resolve your grievance</p>
+                </div>
+                <div class="steps-grid">
+                    <div class="step-card">
+                        <div class="step-number">1</div>
+                        <h3 class="step-title" data-i18n="step1_title">Submit Your Grievance</h3>
+                        <p class="step-text" data-i18n="step1_desc">Fill out a simple form describing your issue with a central government service. You can also use voice input and attach supporting documents.</p>
+                    </div>
+                    <div class="step-connector" aria-hidden="true"></div>
+                    <div class="step-card">
+                        <div class="step-number">2</div>
+                        <h3 class="step-title" data-i18n="step2_title">Track Progress</h3>
+                        <p class="step-text" data-i18n="step2_desc">Use your registration number to check the status of your grievance at any time. You'll see which department is handling your case.</p>
+                    </div>
+                    <div class="step-connector" aria-hidden="true"></div>
+                    <div class="step-card">
+                        <div class="step-number">3</div>
+                        <h3 class="step-title" data-i18n="step3_title">Receive a Response</h3>
+                        <p class="step-text" data-i18n="step3_desc">The concerned department reviews and addresses your grievance. You'll be notified of the outcome and can escalate if delayed.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. Eligibility Section -->
+        <section class="section--alt eligibility">
+            <div class="container">
+                <div class="section__header">
+                    <h2 class="section__title">Can I file this grievance?</h2>
+                    <p class="section__subtitle">CPGRAMS handles grievances related to central government services. Here's a quick guide.</p>
+                </div>
+                <div class="eligibility__columns">
+                    <div class="eligibility-box eligibility-box--yes">
+                        <h3 class="eligibility-box__title header-green">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            You CAN file about
+                        </h3>
+                        <ul class="eligibility-list">
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-green"><polyline points="20 6 9 17 4 12"></polyline></svg> Delays in government services (passport, pension, ration, etc.)</li>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-green"><polyline points="20 6 9 17 4 12"></polyline></svg> Issues with central government employees' conduct</li>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-green"><polyline points="20 6 9 17 4 12"></polyline></svg> Problems with central government schemes or DBT benefits</li>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-green"><polyline points="20 6 9 17 4 12"></polyline></svg> Complaints about public sector banks, insurance, and post</li>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-green"><polyline points="20 6 9 17 4 12"></polyline></svg> Issues with railways, telecom, highways, power boards</li>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-green"><polyline points="20 6 9 17 4 12"></polyline></svg> Misuse of authority or corruption</li>
+                        </ul>
+                    </div>
+                    <div class="eligibility-box eligibility-box--no">
+                        <h3 class="eligibility-box__title header-red">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            Not handled by CPGRAMS
+                        </h3>
+                        <ul class="eligibility-list">
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-red"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Matters pending in courts of law (Sub-judice)</li>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-red"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> RTI (Right to Information) requests (file at rtionline.gov.in)</li>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-red"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Purely state government or local municipal disputes</li>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-red"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Private consumer or purely commercial contracts</li>
+                            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-red"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Matters related to armed forces strategic operations</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. Quick Links Section -->
+        <section class="section--white quick-links">
+            <div class="container">
+                <h2 class="section__title mb-4" data-i18n="quick_title">Quick Actions</h2>
+                <div class="quick-links__grid" style="margin-top: 1.5rem;">
+                    <a href="lodge-grievance.html" class="quick-card">
+                        <div class="quick-card__icon bg-navy">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </div>
+                        <span class="quick-card__text" data-i18n="quick_lodge">Lodge a New Grievance</span>
+                    </a>
+                    <a href="track-status.html" class="quick-card">
+                        <div class="quick-card__icon bg-maroon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        </div>
+                        <span class="quick-card__text" data-i18n="quick_track">Track Existing Grievance</span>
+                    </a>
+                    <a href="help-faq.html" class="quick-card">
+                        <div class="quick-card__icon bg-accent">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        </div>
+                        <span class="quick-card__text" data-i18n="quick_faq">View Help & FAQs</span>
+                    </a>
+                    <a href="contact.html" class="quick-card">
+                        <div class="quick-card__icon bg-success">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                        </div>
+                        <span class="quick-card__text" data-i18n="quick_contact">Contact Support</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- 8. What's New Section -->
+        <section class="section updates">
+            <div class="container">
+                <h2 class="section__title mb-4">Latest Portal Updates</h2>
+                <div class="updates-grid" style="margin-top: 1.5rem;">
+                    <article class="notice-card">
+                        <div class="notice-card__date">February 2026</div>
+                        <h3 class="notice-card__title">AI Voice Assistant & Live Department Suggestions</h3>
+                        <p class="notice-card__text">Citizens can now dictate grievances with simulated speech recognition and receive automated department routing.</p>
+                        <a href="lodge-grievance.html" class="notice-card__link">Try New Feature &rarr;</a>
+                    </article>
+                    <article class="notice-card">
+                        <div class="notice-card__date">January 2026</div>
+                        <h3 class="notice-card__title">12-Day Escalation Workflow Enabled</h3>
+                        <p class="notice-card__text">If a registered grievance is unaddressed for more than 12 days, citizens can instantly escalate to an Appellate Nodal Officer.</p>
+                        <a href="track-status.html" class="notice-card__link">Track & Escalate &rarr;</a>
+                    </article>
+                    <article class="notice-card">
+                        <div class="notice-card__date">December 2025</div>
+                        <h3 class="notice-card__title">Enhanced Accessibility & Multilingual UI</h3>
+                        <p class="notice-card__text">Seamless high contrast mode, dynamic font scaling (A-/A/A+), and instant English-to-Hindi language toggle support.</p>
+                        <a href="help-faq.html" class="notice-card__link">Learn more &rarr;</a>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <!-- 9. Important Notice Section -->
+        <section class="section--alt notices">
+            <div class="container">
+                <div class="alert alert--warning alert--dismissible mb-3">
+                    <svg class="alert__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    <div class="alert__content">
+                        <strong>Beware of fraudulent portals:</strong> CPGRAMS is an official service of the Government of India and is 100% free. Never pay any fee or share OTPs with third parties.
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 10. Footer -->
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer__grid">
+                <div class="footer__col">
+                    <h3 class="footer__title">CPGRAMS</h3>
+                    <p class="footer__desc">Centralized Public Grievance Redress and Monitoring System, Department of Administrative Reforms & Public Grievances, Government of India.</p>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">Quick Links</h4>
+                    <ul class="footer__links">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="lodge-grievance.html">Lodge Grievance</a></li>
+                        <li><a href="track-status.html">Track Status</a></li>
+                        <li><a href="help-faq.html">Help & FAQs</a></li>
+                        <li><a href="contact.html">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">Legal & Policies</h4>
+                    <ul class="footer__links">
+                        <li><a href="#" data-i18n="footer_privacy">Privacy Policy</a></li>
+                        <li><a href="#" data-i18n="footer_terms">Terms of Use</a></li>
+                        <li><a href="#" data-i18n="footer_a11y">Accessibility Statement</a></li>
+                    </ul>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">Helpline</h4>
+                    <p style="color: #cbd5e1; font-size: 0.875rem; margin: 0 0 0.5rem 0;">Toll-Free Helpline: <strong>1800-11-0000</strong></p>
+                    <p style="color: #cbd5e1; font-size: 0.875rem; margin: 0;">Hours: 9:30 AM – 5:30 PM (Mon–Fri)</p>
+                </div>
+            </div>
+            <div class="footer__bottom">
+                <div data-i18n="footer_copyright">&copy; 2026 Government of India. All rights reserved.</div>
+                <div style="opacity: 0.8;">Designed for IBM Db2Hack 2026 - AI & Modern Data Apps Track.</div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+    <script>
+    // IBM Db2 Live Badge — polls /api/health and updates badge color/text
+    (function() {
+        const badge = document.getElementById('db2-live-badge');
+        const badgeText = document.getElementById('db2-badge-text');
+        if (!badge) return;
+        const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:8000/api' : '/api';
+        function checkDb2() {
+            fetch(API + '/health', { method: 'GET', cache: 'no-cache', signal: AbortSignal.timeout(4000) })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.database && data.database.status === 'connected') {
+                        badge.className = 'db2-live-badge';
+                        badgeText.textContent = 'IBM Db2 Live ✓';
+                        badge.title = `Connected to ${data.database.database} · ${data.database.total_grievances} dockets`;
+                    } else {
+                        badge.className = 'db2-live-badge db2-badge--error';
+                        badgeText.textContent = 'Db2 Degraded';
+                    }
+                })
+                .catch(() => {
+                    badge.className = 'db2-live-badge db2-badge--error';
+                    badgeText.textContent = 'Db2 Offline';
+                });
+        }
+        checkDb2();
+        setInterval(checkDb2, 30000);
+    })();
+    </script>
+</body>
+</html>

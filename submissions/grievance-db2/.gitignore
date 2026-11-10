@@ -1,0 +1,31 @@
+# SQLite / Local DB files (forbidden - IBM Db2 used exclusively)
+*.db
+*.sqlite
+*.sqlite3
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environments & Secrets
+.env
+*.env
+.venv/
+venv/
+ENV/
+
+# Docker volumes & local data
+db2data/
+*.log
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# IDE configurations
+.vscode/
+.idea/

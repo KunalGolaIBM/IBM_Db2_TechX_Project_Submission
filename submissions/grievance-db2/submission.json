@@ -1,0 +1,148 @@
+{
+  "project_name": "Citizen Grievance Portal (IBM Db2 + AI)",
+  "hackathon": "IBM Db2Hack 2026",
+  "track": "AI & Modern Data Apps with IBM Db2",
+  "participant_type": "Individual",
+  "developer_name": "Falak Naaz",
+  "ai_framework": "LangChain",
+  "db2_version": "11.5.8.0",
+  "docker_compose_cmd": "docker compose up --build -d",
+  "version": "2.0.0",
+  "submission_summary": {
+    "title": "Production-Grade AI Citizen Grievance Portal Powered by IBM Db2 & LangChain",
+    "description": "An enterprise-ready civic grievance redressal portal combining high-contrast accessible UI, automated LangChain AI triage, natural language Db2 SQL generation, ward hotspot clustering, and real-time SLA breach analytics using native IBM Db2 date arithmetic.",
+    "ibm_db2_integration_depth": {
+      "database_engine": "IBM Db2 Community Edition 11.5.8.0 (icr.io/db2_community/db2)",
+      "driver": "ibm_db & ibm_db_sa (SQLAlchemy dialect)",
+      "core_tables": [
+        "departments",
+        "grievances",
+        "grievance_updates"
+      ],
+      "indexes": [
+        "idx_grv_tracking_id",
+        "idx_grv_category",
+        "idx_grv_ward",
+        "idx_grv_status",
+        "idx_grv_priority",
+        "idx_upd_grievance_id"
+      ],
+      "native_db2_features_used": [
+        "Continuous calendar date arithmetic: DAYS(CURRENT DATE) - DAYS(DATE(created_at)) > 15 for SLA breach identification",
+        "Native row limitation syntax: FETCH FIRST <N> ROWS ONLY (Db2 SQL standard)",
+        "Catalog inspection via SYSCAT.COLUMNS for zero-downtime startup schema reflection and migration",
+        "Table reorganizations via SYSPROC.ADMIN_CMD('REORG TABLE grievances') avoiding REORG PENDING (SQL0668N)",
+        "Native Db2 Stored Procedure SP_ESCALATE_OVERDUE executing in-engine SLA calculations and priority elevation",
+        "Native Db2 Kernel Trigger TRG_AUDIT_STATUS_CHANGE executing in-engine AFTER UPDATE audit logging into grievance_updates",
+        "ACID transactional audit history logging in grievance_updates with cascade referential integrity"
+      ],
+      "seed_dataset": "75 realistic civic grievances across 18 Delhi NCT municipal wards with seed history, AI triage metadata, and SLA breach timelines",
+      "reproducibility": "1-command reproducibility via `docker compose up --build -d` without manual schema preparation"
+    },
+    "ai_and_analytics_components": {
+      "framework": "LangChain Core (v0.3.0+) & LangChain Community",
+      "capabilities": [
+        "Automated AI Triage on POST /api/grievances extracting normalized category, priority, and 1-sentence summary",
+        "'Ask the Data' NL-to-SQL Engine on POST /api/ask translating English questions into IBM Db2 SQL",
+        "Deterministic multi-tier security guardrails (SELECT-only whitelist, table restrictions, no DDL/DML, FETCH FIRST 50 ROWS ONLY)",
+        "Ward hotspot and potential duplicate complaint clustering in IBM Db2",
+        "Advanced Analytics Dashboard on GET /api/analytics with SLA monitoring and departmental performance charts",
+        "Officer Redressal Console & LangChain AI Action Drafter generating structured administrative action orders, inspection notices, and compliance directives",
+        "Interactive GIS Ward Hotspot Command Map (Leaflet.js) aggregating open dockets by ward with dynamic CircleMarkers and 1-click drilldown",
+        "Agentic Tool-Calling CPGRAMS Sahayak Assistant (POST /api/sahayak/chat) autonomously dispatching tool_track_docket, tool_ward_status, and tool_civic_knowledge on IBM Db2"
+      ]
+    }
+  },
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "description": "System healthcheck and IBM Db2 live connection status with total grievance count"
+    },
+    {
+      "method": "POST",
+      "path": "/api/grievances",
+      "description": "Lodge grievance with automated LangChain AI triage, hotspot detection, and tracking ID generation"
+    },
+    {
+      "method": "GET",
+      "path": "/api/grievances/{tracking_id}",
+      "description": "Fetch complete grievance docket, AI triage tags, and milestone timeline history"
+    },
+    {
+      "method": "GET",
+      "path": "/api/grievances",
+      "description": "Filter grievances by category, status, priority, ward, and keyword text search"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/grievances/{tracking_id}/status",
+      "description": "Update grievance status and append immutable audit log row to grievance_updates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics",
+      "description": "Real-time civic analytics and SLA breaches (>15 days) using IBM Db2 DAYS() date arithmetic"
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/geo-hotspots",
+      "description": "Geospatial GIS telemetry aggregating open complaints by ward across Delhi NCT with GeoJSON and coordinates"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ask",
+      "description": "'Ask the Data' natural language query engine converting English to IBM Db2 SQL with strict guardrails"
+    },
+    {
+      "method": "POST",
+      "path": "/api/escalate-overdue",
+      "description": "Execute native IBM Db2 Stored Procedure SP_ESCALATE_OVERDUE evaluating SLA breaches on Db2 engine"
+    },
+    {
+      "method": "GET",
+      "path": "/api/officer/dockets",
+      "description": "Filter active grievances with Db2 date arithmetic calculating elapsed days and SLA breach flags"
+    },
+    {
+      "method": "POST",
+      "path": "/api/officer/draft-action",
+      "description": "LangChain prompt chain drafting bureaucratic action order directives, deadlines, and assigned officers"
+    },
+    {
+      "method": "POST",
+      "path": "/api/officer/resolve",
+      "description": "Atomic Db2 transaction closing grievance docket with Action Taken Report (ATR) and audit trail history"
+    },
+    {
+      "method": "POST",
+      "path": "/api/sahayak/chat",
+      "description": "Agentic AI tool-dispatcher invoking Db2 docket tracking, ward telemetry, and Citizen Charter rules"
+    },
+    {
+      "method": "GET",
+      "path": "/api/departments",
+      "description": "List all registered government departments and ministries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/stats",
+      "description": "Summary counters for status, category, and priority distributions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/db2/catalog",
+      "description": "Expose live IBM Db2 system catalog metadata (SYSCAT.TABLES, SYSCAT.INDEXES, SYSCAT.TRIGGERS, SYSCAT.ROUTINES)"
+    },
+    {
+      "method": "GET",
+      "path": "/api/export/csv",
+      "description": "Backend CSV streaming export with category, priority, status, and SLA breach filters"
+    }
+  ],
+  "healthcheck_url": "http://localhost:8000/api/health",
+  "portal_url": "http://localhost:80",
+  "dashboard_url": "http://localhost:80/dashboard.html",
+  "ask_data_url": "http://localhost:80/ask-data.html",
+  "officer_url": "http://localhost:80/officer.html"
+}

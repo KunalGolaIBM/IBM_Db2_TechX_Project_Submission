@@ -1,0 +1,916 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Civic Analytics & SLA Dashboard | CPGRAMS - IBM Db2</title>
+    <meta name="description" content="Real-time public grievance analytics, ward hotspots, and SLA breach monitoring powered by IBM Db2 Community Edition.">
+        <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%231a2744'/><text y='68' x='12' font-size='58' font-family='Arial,sans-serif' font-weight='bold' fill='white'>CP</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js v4 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <!-- Leaflet.js GIS Mapping Library -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <style>
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .metric-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+        .metric-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #0284c7;
+        }
+        .metric-card--green::before { background: #16a34a; }
+        .metric-card--amber::before { background: #d97706; }
+        .metric-card--red::before { background: #dc2626; }
+        .metric-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .metric-value {
+            font-size: 2.25rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0.5rem 0 0.25rem;
+        }
+        .metric-sub {
+            font-size: 0.8125rem;
+            color: #64748b;
+        }
+        .analytics-section {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .analytics-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .chart-wrapper {
+            position: relative;
+            height: 280px;
+            width: 100%;
+        }
+        .sla-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+        .sla-table th {
+            background: #f8fafc;
+            color: #475569;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .sla-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            color: #1e293b;
+        }
+        .sla-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .sla-badge--breached {
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+        .sla-badge--warning {
+            background: #fffbeb;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+        .db2-chip {
+            background: #0043ce;
+            color: #ffffff;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        @media (max-width: 900px) {
+            .charts-grid { grid-template-columns: 1fr; }
+        }
+        /* GIS Map Styles */
+        #ward-geo-map {
+            height: 420px;
+            width: 100%;
+            border-radius: 6px;
+            z-index: 1;
+            box-shadow: inset 0 0 4px rgba(0,0,0,0.1);
+        }
+        .map-legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.8125rem;
+            color: #334155;
+        }
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Access Bar -->
+    <div class="top-bar">
+        <div class="container">
+            <div class="top-bar__inner">
+                <div class="top-bar__left">
+                    <span class="gov-text">GOVERNMENT OF INDIA &bull; CPGRAMS PORTAL</span>
+                </div>
+                <div class="top-bar__right">
+                    <span class="db2-chip">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                        IBM Db2 Engine Active
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Header -->
+    <header class="main-header">
+        <div class="container">
+            <div class="brand">
+                <div class="brand-logo" aria-hidden="true">CP</div>
+                <div class="brand-text">
+                    <h1>CPGRAMS</h1>
+                    <span class="brand-subtitle">Centralized Public Grievance Redress & Monitoring System</span>
+                </div>
+            </div>
+                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                <span id="db2-live-badge" class="db2-live-badge db2-badge--checking" title="IBM Db2 connection status" aria-live="polite">
+                    <span class="db2-pulse"></span>
+                    <span id="db2-badge-text">IBM Db2…</span>
+                </span>
+                <button class="menu-toggle" aria-expanded="false" aria-controls="main-nav" aria-label="Toggle navigation menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            </button>
+            </div>
+            <nav id="main-nav" class="main-nav">
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="lodge-grievance.html">Lodge Grievance</a></li>
+                    <li><a href="track-status.html">Track Status</a></li>
+                    <li><a href="officer.html">Officer Portal</a></li>
+                    <li><a href="dashboard.html" class="active" aria-current="page">Analytics Dashboard</a></li>
+                    <li><a href="ask-data.html">Ask the Data (AI)</a></li>
+                    <li><a href="help-faq.html">Help & FAQs</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Breadcrumb -->
+    <nav aria-label="Breadcrumb" class="breadcrumb-container">
+        <div class="container">
+            <ol class="breadcrumb">
+                <li><a href="index.html">Home</a></li>
+                <li aria-current="page">Civic Analytics & SLA Dashboard</li>
+            </ol>
+        </div>
+    </nav>
+
+    <main id="main-content" class="container" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        <!-- Header Banner -->
+        <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <span style="font-size: 0.8125rem; font-weight: 700; color: #0284c7; text-transform: uppercase; letter-spacing: 0.05em;">Public Administration Intelligence</span>
+                <h2 style="font-size: 2rem; color: #0f172a; margin: 0.25rem 0 0.5rem; font-weight: 800;">Real-Time Grievance Analytics & SLA Monitor</h2>
+                <p style="color: #64748b; margin: 0; max-width: 780px;">
+                    Aggregated live from <strong>IBM Db2 Community Edition (GRIEVDB)</strong>. Utilizing native Db2 date arithmetic
+                    <code>DAYS(CURRENT DATE) - DAYS(DATE(created_at))</code> to audit citizen service charters and isolate departmental bottlenecks.
+                </p>
+            </div>
+            <div>
+                <button type="button" class="btn btn--secondary" id="btn-trigger-escalation" style="font-size: 0.8125rem; padding: 0.5rem 1rem;">
+                    ⚡ Run Db2 Stored Procedure (SP_ESCALATE_OVERDUE)
+                </button>
+            </div>
+        </div>
+
+        <!-- Metric Cards Grid -->
+        <div class="dashboard-grid">
+            <div class="metric-card">
+                <span class="metric-label">Total Grievances</span>
+                <div class="metric-value" id="val-total">--</div>
+                <span class="metric-sub">Registered across all Delhi wards</span>
+            </div>
+            <div class="metric-card metric-card--green">
+                <span class="metric-label">Resolution Rate</span>
+                <div class="metric-value" id="val-rate">--%</div>
+                <span class="metric-sub" id="sub-resolved">-- cases resolved</span>
+            </div>
+            <div class="metric-card metric-card--amber">
+                <span class="metric-label">Avg. Resolution Time</span>
+                <div class="metric-value" id="val-avg-days">--</div>
+                <span class="metric-sub">Computed using Db2 DAYS() function</span>
+            </div>
+            <div class="metric-card metric-card--red">
+                <span class="metric-label">SLA Breaches (>15 Days)</span>
+                <div class="metric-value" id="val-breaches" style="color: #dc2626;">--</div>
+                <span class="metric-sub">Dockets requiring immediate escalation</span>
+            </div>
+        </div>
+
+        <!-- Charts Grid 1: Department Load & Hotspot Risk Wards -->
+        <div class="charts-grid" style="margin-bottom: 1.5rem;">
+            <!-- Department Load Bar Chart -->
+            <div class="analytics-section">
+                <div class="analytics-title">
+                    <span>Department Load Breakdown</span>
+                    <span style="font-size: 0.75rem; background: #eff6ff; color: #1d4ed8; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">Interactive Bar Chart</span>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="deptChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Ward Hotspots Bar Chart -->
+            <div class="analytics-section">
+                <div class="analytics-title">
+                    <span>Municipal Ward Hotspot Risk</span>
+                    <span style="font-size: 0.75rem; background: #fff7ed; color: #c2410c; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">Complaint Volume</span>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="wardChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Grid 2: Priority Doughnut & Status Breakdown -->
+        <div class="charts-grid" style="margin-bottom: 2rem;">
+            <!-- Priority Distribution Doughnut Chart -->
+            <div class="analytics-section">
+                <div class="analytics-title">
+                    <span>Priority Distribution</span>
+                    <span style="font-size: 0.75rem; background: #fef2f2; color: #b91c1c; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">Doughnut Chart</span>
+                </div>
+                <div class="chart-wrapper" style="height: 240px;">
+                    <canvas id="priorityChart"></canvas>
+                </div>
+                <div id="priority-pills" style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin-top: 1rem;">
+                    <!-- Injected dynamically -->
+                </div>
+            </div>
+
+            <!-- Category Distribution Bar Chart -->
+            <div class="analytics-section">
+                <div class="analytics-title">
+                    <span>Civic Category Distribution</span>
+                    <span style="font-size: 0.75rem; background: #f0fdf4; color: #166534; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">Live Db2 Distribution</span>
+                </div>
+                <div class="chart-wrapper" style="height: 240px;">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- IBM Db2 SYSCAT Explorer Panel -->
+        <div class="analytics-section" style="margin-bottom: 2rem;">
+            <div class="analytics-title" style="flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                    <span>🗄️ IBM Db2 System Catalog Inspector (SYSCAT)</span>
+                    <p style="font-size: 0.8125rem; color: #64748b; font-weight: normal; margin: 0.25rem 0 0;">
+                        Live schema metadata from <code>SYSCAT.TABLES</code>, <code>SYSCAT.INDEXES</code>, <code>SYSCAT.TRIGGERS</code>, and <code>SYSCAT.ROUTINES</code>.
+                    </p>
+                </div>
+            </div>
+            <div class="syscat-panel">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Table Name</th>
+                            <th>Row Count (Est.)</th>
+                            <th>Indexes</th>
+                            <th>Data Pages</th>
+                        </tr>
+                    </thead>
+                    <tbody id="syscat-panel-body">
+                        <tr><td colspan="4">Loading IBM Db2 catalog metadata...</td></tr>
+                    </tbody>
+                </table>
+                <div style="margin-top:0.75rem;padding-top:0.6rem;border-top:1px solid #1e293b;">
+                    <div style="color:#7dd3fc;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.3rem;">Active Triggers (TRG_AUDIT_STATUS_CHANGE)</div>
+                    <div id="syscat-triggers" style="color:#94a3b8;font-size:0.75rem;word-break:break-all;">Loading...</div>
+                </div>
+                <div style="margin-top:0.6rem;padding-top:0.5rem;border-top:1px solid #1e293b;">
+                    <div style="color:#7dd3fc;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.3rem;">Stored Procedures (SP_ESCALATE_OVERDUE)</div>
+                    <div id="syscat-procs" style="color:#22d3ee;font-size:0.75rem;">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Municipal Ward Geospatial Command Map Section -->
+        <div class="analytics-section" style="margin-bottom: 2rem;">
+            <div class="analytics-title" style="flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+                <div>
+                    <span style="display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0043ce" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+                        Municipal Ward Geospatial Command Map
+                    </span>
+                    <p style="font-size: 0.8125rem; color: #64748b; font-weight: normal; margin: 0.25rem 0 0;">
+                        Live spatial telemetry across 18 Delhi NCT Municipal Wards aggregated from <strong>IBM Db2 (GRIEVDB)</strong>. Circle radii dynamically scale with complaint volume.
+                    </p>
+                </div>
+                <!-- Map Legend -->
+                <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                    <div class="map-legend-item">
+                        <span class="legend-dot" style="background: #dc2626; border: 2px solid #991b1b;"></span>
+                        <span><strong>Critical Hotspot</strong> (&gt;3 cases)</span>
+                    </div>
+                    <div class="map-legend-item">
+                        <span class="legend-dot" style="background: #d97706; border: 2px solid #92400e;"></span>
+                        <span><strong>Active Monitoring</strong> (2-3 cases)</span>
+                    </div>
+                    <div class="map-legend-item">
+                        <span class="legend-dot" style="background: #2563eb; border: 2px solid #1e40af;"></span>
+                        <span><strong>Normal</strong> (&le;1 case)</span>
+                    </div>
+                </div>
+            </div>
+            <div id="ward-geo-map"></div>
+        </div>
+
+        <!-- SLA Breaches Table Section with CSV Export -->
+        <div class="analytics-section">
+            <div class="analytics-title" style="flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                    <span>Citizen Charter SLA Breaches (Pending > 15 Days)</span>
+                    <p style="font-size: 0.8125rem; color: #64748b; font-weight: normal; margin: 0.25rem 0 0;">
+                        Flagged via IBM Db2 query: <code>WHERE status != 'Resolved' AND (DAYS(CURRENT DATE) - DAYS(DATE(created_at))) > 15</code>
+                    </p>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button type="button" class="btn btn--secondary" id="btn-export-sla" style="font-size: 0.8125rem; padding: 0.4rem 0.8rem; display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Export SLA Audit (CSV)
+                    </button>
+                    <a href="ask-data.html" class="btn btn--primary" style="font-size: 0.8125rem; padding: 0.4rem 0.8rem;">Query in Ask Data &rarr;</a>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="sla-table">
+                    <thead>
+                        <tr>
+                            <th>Tracking ID</th>
+                            <th>Citizen Name</th>
+                            <th>Category</th>
+                            <th>Municipal Ward</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Days Overdue</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sla-table-body">
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: #94a3b8; padding: 2rem;">Loading SLA breach audit from IBM Db2...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Db2 Architectural Note -->
+        <div style="background: #eff6ff; border-left: 4px solid #0043ce; border-radius: 6px; padding: 1.25rem 1.5rem; margin-top: 2rem;">
+            <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0043ce" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <div>
+                    <h4 style="margin: 0 0 0.25rem; color: #1e3a8a; font-size: 0.9375rem;">IBM Db2 Technical Depth: Date Math, Indexing & Stored Procedures</h4>
+                    <p style="margin: 0; font-size: 0.875rem; color: #1e40af; line-height: 1.5;">
+                        Unlike standard databases requiring complex epoch conversions, IBM Db2 natively evaluates continuous civic service charters via calendar day arithmetic 
+                        <code>DAYS(CURRENT DATE) - DAYS(DATE(created_at))</code>. Combined with compound B-Tree indexes on <code>(status, created_at, ward)</code> 
+                        and the native stored procedure <code>SP_ESCALATE_OVERDUE</code>, SLA breaches are monitored and escalated on-the-fly directly inside the Db2 engine.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer__grid">
+                <div class="footer__col">
+                    <h3 class="footer__title">CPGRAMS</h3>
+                    <p class="footer__desc">Centralized Public Grievance Redress and Monitoring System, Department of Administrative Reforms & Public Grievances, Government of India.</p>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">Quick Links</h4>
+                    <ul class="footer__links">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="lodge-grievance.html">Lodge Grievance</a></li>
+                        <li><a href="track-status.html">Track Status</a></li>
+                        <li><a href="dashboard.html">Analytics Dashboard</a></li>
+                        <li><a href="ask-data.html">Ask the Data (AI)</a></li>
+                        <li><a href="help-faq.html">Help & FAQs</a></li>
+                    </ul>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">IBM Db2 Integration</h4>
+                    <p style="font-size: 0.8125rem; color: #94a3b8; line-height: 1.6;">
+                        IBM Db2Hack 2026 Submission.<br>
+                        Engine: IBM Db2 Community Edition 11.5.8.0<br>
+                        Database: GRIEVDB (port 50000)<br>
+                        AI Framework: LangChain Core
+                    </p>
+                </div>
+            </div>
+            <div class="footer__bottom">
+                <p>&copy; 2026 CPGRAMS Portal &bull; IBM Db2Hack Submission &bull; Government of India</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async function() {
+            let analyticsData = null;
+            let deptChartInstance = null;
+            let wardChartInstance = null;
+            let priorityChartInstance = null;
+            let categoryChartInstance = null;
+
+            async function loadDashboardData() {
+                try {
+                    const response = await fetch("/api/analytics");
+                    if (!response.ok) throw new Error("HTTP " + response.status);
+                    analyticsData = await response.json();
+
+                    // Metric Cards
+                    document.getElementById("val-total").textContent = analyticsData.total_grievances;
+                    document.getElementById("val-rate").textContent = analyticsData.resolution_rate + "%";
+                    document.getElementById("sub-resolved").textContent = `${analyticsData.resolved_count} resolved (${analyticsData.pending_count} pending)`;
+                    document.getElementById("val-avg-days").textContent = analyticsData.avg_resolution_days + " Days";
+                    document.getElementById("val-breaches").textContent = analyticsData.sla_breaches_count;
+
+                    // Render Charts using Chart.js
+                    renderDepartmentChart(analyticsData.department_breakdown);
+                    renderWardChart(analyticsData.ward_breakdown);
+                    renderPriorityChart(analyticsData.priority_breakdown);
+                    renderCategoryChart(analyticsData.category_breakdown);
+
+                    // SLA Breaches Table
+                    renderSlaTable(analyticsData.sla_breached_dockets);
+                } catch (err) {
+                    console.error("Dashboard data load error:", err);
+                    document.getElementById("val-total").textContent = "Err";
+                    document.getElementById("sla-table-body").innerHTML = `
+                        <tr><td colspan="8" style="text-align: center; color: #dc2626; padding: 2rem;">
+                            ⚠️ Failed to load analytics from IBM Db2 backend. Please verify that the API container is running.
+                        </td></tr>
+                    `;
+                }
+            }
+
+            // 1. Department Load Bar Chart
+            function renderDepartmentChart(depts) {
+                const ctx = document.getElementById("deptChart");
+                if (!ctx) return;
+                if (deptChartInstance) deptChartInstance.destroy();
+
+                const labels = depts.map(d => {
+                    const name = d.department;
+                    return name.length > 25 ? name.substring(0, 25) + "..." : name;
+                });
+                const counts = depts.map(d => d.count);
+
+                deptChartInstance = new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: "Total Dockets",
+                            data: counts,
+                            backgroundColor: "#0284c7",
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: "#f1f5f9" } },
+                            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                        }
+                    }
+                });
+            }
+
+            // 2. Ward Hotspot Risk Bar Chart (Highlight top wards in red/orange)
+            function renderWardChart(wards) {
+                const ctx = document.getElementById("wardChart");
+                if (!ctx) return;
+                if (wardChartInstance) wardChartInstance.destroy();
+
+                const topWards = wards.slice(0, 7);
+                const labels = topWards.map(w => w.ward.replace("Ward ", "W"));
+                const counts = topWards.map(w => w.count);
+                const colors = counts.map(c => c >= 8 ? "#dc2626" : (c >= 5 ? "#ea580c" : "#f59e0b"));
+
+                wardChartInstance = new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: "Complaints in Ward",
+                            data: counts,
+                            backgroundColor: colors,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    title: (items) => topWards[items[0].dataIndex].ward
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: "#f1f5f9" } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            }
+
+            // 3. Priority Distribution Doughnut Chart
+            function renderPriorityChart(priorities) {
+                const ctx = document.getElementById("priorityChart");
+                if (!ctx) return;
+                if (priorityChartInstance) priorityChartInstance.destroy();
+
+                const labels = ["Critical", "High", "Medium", "Low"];
+                const dataVals = labels.map(l => priorities[l] || 0);
+                const colors = ["#dc2626", "#d97706", "#2563eb", "#64748b"];
+
+                priorityChartInstance = new Chart(ctx, {
+                    type: "doughnut",
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: dataVals,
+                            backgroundColor: colors,
+                            borderWidth: 2,
+                            borderColor: "#ffffff"
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: "right", labels: { boxWidth: 12, font: { size: 11 } } }
+                        },
+                        cutout: "68%"
+                    }
+                });
+
+                // Update priority pills
+                const priContainer = document.getElementById("priority-pills");
+                priContainer.innerHTML = "";
+                const pillStyles = {
+                    "Critical": { bg: "#fef2f2", text: "#b91c1c", border: "#fecaca" },
+                    "High": { bg: "#fffbeb", text: "#b45309", border: "#fde68a" },
+                    "Medium": { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe" },
+                    "Low": { bg: "#f8fafc", text: "#475569", border: "#cbd5e1" }
+                };
+                labels.forEach(pri => {
+                    const count = priorities[pri] || 0;
+                    const style = pillStyles[pri];
+                    const pill = document.createElement("span");
+                    pill.style.cssText = `background: ${style.bg}; color: ${style.text}; border: 1px solid ${style.border}; padding: 0.25rem 0.6rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem;`;
+                    pill.textContent = `${pri}: ${count}`;
+                    priContainer.appendChild(pill);
+                });
+            }
+
+            // 4. Civic Category Distribution Chart
+            function renderCategoryChart(categories) {
+                const ctx = document.getElementById("categoryChart");
+                if (!ctx) return;
+                if (categoryChartInstance) categoryChartInstance.destroy();
+
+                const labels = Object.keys(categories);
+                const dataVals = Object.values(categories);
+
+                categoryChartInstance = new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        labels: labels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
+                        datasets: [{
+                            label: "Total Dockets",
+                            data: dataVals,
+                            backgroundColor: "#10b981",
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: "#f1f5f9" } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            }
+
+            // SLA Breaches Table
+            function renderSlaTable(dockets) {
+                const tbody = document.getElementById("sla-table-body");
+                tbody.innerHTML = "";
+                if (!dockets || dockets.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #16a34a; padding: 2rem;">🎉 No SLA breaches detected. All citizen charters are compliant!</td></tr>`;
+                    return;
+                }
+                dockets.forEach(docket => {
+                    const tr = document.createElement("tr");
+                    const priClass = docket.priority === "Critical" ? "color: #dc2626; font-weight: 700;" : (docket.priority === "High" ? "color: #d97706; font-weight: 600;" : "");
+                    tr.innerHTML = `
+                        <td><strong style="color: #0043ce;">${docket.tracking_id}</strong></td>
+                        <td>${docket.citizen_name}</td>
+                        <td><span style="text-transform: capitalize;">${docket.category}</span></td>
+                        <td>${docket.ward || 'N/A'}</td>
+                        <td style="${priClass}">${docket.priority}</td>
+                        <td><span class="sla-badge sla-badge--warning">${docket.status}</span></td>
+                        <td><span class="sla-badge sla-badge--breached">${docket.days_open} days</span></td>
+                        <td><a href="track-status.html?id=${docket.tracking_id}" class="btn btn--sm btn--primary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">Inspect</a></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            // CSV Export Handler for SLA Breaches
+            document.getElementById("btn-export-sla").addEventListener("click", () => {
+                if (!analyticsData || !analyticsData.sla_breached_dockets || analyticsData.sla_breached_dockets.length === 0) {
+                    alert("No SLA breach records available to export.");
+                    return;
+                }
+                const dockets = analyticsData.sla_breached_dockets;
+                const columns = ["tracking_id", "citizen_name", "category", "ward", "priority", "status", "days_open", "created_at"];
+                const header = "Tracking ID,Citizen Name,Category,Ward,Priority,Status,Days Overdue,Created At";
+                const csvLines = dockets.map(d => 
+                    columns.map(col => {
+                        let val = d[col] === null || d[col] === undefined ? "" : String(d[col]);
+                        if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+                            val = `"${val.replace(/"/g, '""')}"`;
+                        }
+                        return val;
+                    }).join(",")
+                );
+                const csvContent = "data:text/csv;charset=utf-8," + [header, ...csvLines].join("\n");
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "db2_sla_breach_audit.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+
+            // Trigger Stored Procedure Escalation
+            document.getElementById("btn-trigger-escalation").addEventListener("click", async () => {
+                const btn = document.getElementById("btn-trigger-escalation");
+                btn.textContent = "Executing Stored Procedure on Db2...";
+                btn.disabled = true;
+
+                try {
+                    const res = await fetch("/api/escalate-overdue", { method: "POST" });
+                    const resJson = await res.json();
+                    alert(`✅ IBM Db2 Stored Procedure Executed!\n\nProcedure: ${resJson.procedure}\nEscalated Records: ${resJson.escalated_count}\nMessage: ${resJson.message}`);
+                    await loadDashboardData();
+                } catch (e) {
+                    alert("Error triggering procedure: " + e.message);
+                } finally {
+                    btn.textContent = "⚡ Run Db2 Stored Procedure (SP_ESCALATE_OVERDUE)";
+                    btn.disabled = false;
+                }
+            });
+
+            // Initial Load
+            await loadDashboardData();
+            await loadGeoHotspotMap();
+        });
+
+        // GIS Leaflet Ward Hotspots Map
+        let geoMapInstance = null;
+
+        async function loadGeoHotspotMap() {
+            const mapEl = document.getElementById("ward-geo-map");
+            if (!mapEl || typeof L === "undefined") return;
+
+            if (!geoMapInstance) {
+                geoMapInstance = L.map("ward-geo-map", {
+                    center: [28.6139, 77.2090],
+                    zoom: 11,
+                    scrollWheelZoom: false
+                });
+
+                L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                    subdomains: "abcd",
+                    maxZoom: 19
+                }).addTo(geoMapInstance);
+            }
+
+            try {
+                const response = await fetch("/api/analytics/geo-hotspots");
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const data = await response.json();
+                const wards = data.wards || [];
+
+                if (window.wardMarkersGroup) {
+                    geoMapInstance.removeLayer(window.wardMarkersGroup);
+                }
+                window.wardMarkersGroup = L.layerGroup().addTo(geoMapInstance);
+
+                wards.forEach(w => {
+                    let color = "#2563eb";
+                    let fillColor = "#3b82f6";
+                    let statusLabel = "NORMAL";
+                    let badgeBg = "#eff6ff";
+                    let badgeColor = "#1e40af";
+
+                    if (w.total_cases > 3) {
+                        color = "#dc2626";
+                        fillColor = "#ef4444";
+                        statusLabel = "CRITICAL HOTSPOT";
+                        badgeBg = "#fef2f2";
+                        badgeColor = "#b91c1c";
+                    } else if (w.total_cases >= 2) {
+                        color = "#d97706";
+                        fillColor = "#f59e0b";
+                        statusLabel = "ACTIVE MONITORING";
+                        badgeBg = "#fffbeb";
+                        badgeColor = "#b45309";
+                    }
+
+                    // Radius scaled proportionally
+                    const radius = Math.min(Math.max(w.total_cases * 3.5, 9), 28);
+
+                    const marker = L.circleMarker([w.lat, w.lng], {
+                        radius: radius,
+                        fillColor: fillColor,
+                        color: color,
+                        weight: 2,
+                        opacity: 0.95,
+                        fillOpacity: 0.65
+                    });
+
+                    const popupHtml = `
+                        <div style="font-family: inherit; min-width: 210px; padding: 2px;">
+                            <div style="display: inline-block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; background: ${badgeBg}; color: ${badgeColor}; padding: 0.2rem 0.5rem; border-radius: 4px; margin-bottom: 0.4rem;">
+                                ${statusLabel}
+                            </div>
+                            <div style="font-size: 0.9375rem; font-weight: 700; color: #0f172a; margin-bottom: 0.5rem;">
+                                ${w.ward}
+                            </div>
+                            <div style="font-size: 0.8125rem; color: #475569; line-height: 1.6; margin-bottom: 0.75rem; background: #f8fafc; padding: 0.5rem; border-radius: 4px;">
+                                <div>Active Open Cases: <strong style="color: #0f172a;">${w.total_cases}</strong></div>
+                                <div>Critical Severity: <strong style="color: #dc2626;">${w.critical_cases}</strong></div>
+                                <div>SLA Breached (>15d): <strong style="color: #d97706;">${w.sla_breaches}</strong></div>
+                                <div>Dominant Issue: <strong style="text-transform: capitalize; color: #0284c7;">${w.primary_category}</strong></div>
+                            </div>
+                            <a href="officer.html?ward=${encodeURIComponent(w.ward)}" style="display: block; text-align: center; font-size: 0.75rem; font-weight: 600; padding: 0.45rem 0.6rem; border-radius: 4px; background: #0043ce; color: #ffffff; text-decoration: none;">
+                                View Wards in Officer Console &rarr;
+                            </a>
+                        </div>
+                    `;
+
+                    marker.bindPopup(popupHtml);
+                    marker.bindTooltip(`<strong>${w.ward}</strong><br>${w.total_cases} cases (${statusLabel})`, { direction: "top", sticky: true });
+
+                    window.wardMarkersGroup.addLayer(marker);
+                });
+            } catch (e) {
+                console.error("Failed to load geospatial ward hotspots:", e);
+            }
+        }
+    </script>
+    <script>
+    (function() {
+        var badge = document.getElementById('db2-live-badge');
+        var badgeText = document.getElementById('db2-badge-text');
+        if (!badge) return;
+        var API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:8000/api' : '/api';
+        function checkDb2() {
+            fetch(API + '/health', { method: 'GET', cache: 'no-cache' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.database && data.database.status === 'connected') {
+                        badge.className = 'db2-live-badge';
+                        badgeText.textContent = 'IBM Db2 Live ✓';
+                        badge.title = 'Connected to ' + data.database.database + ' · ' + data.database.total_grievances + ' dockets';
+                    } else {
+                        badge.className = 'db2-live-badge db2-badge--error';
+                        badgeText.textContent = 'Db2 Degraded';
+                    }
+                }).catch(function() {
+                    badge.className = 'db2-live-badge db2-badge--error';
+                    badgeText.textContent = 'Db2 Offline';
+                });
+        }
+        checkDb2();
+        setInterval(checkDb2, 30000);
+    })();
+    </script>
+    <script>
+    // SYSCAT Explorer — loads IBM Db2 catalog metadata
+    (function() {
+        var API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:8000/api' : '/api';
+        fetch(API + '/db2/catalog')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var wrap = document.getElementById('syscat-panel-body');
+                if (!wrap) return;
+                var rows = '';
+                (data.tables || []).forEach(function(t) {
+                    rows += '<tr><td>' + t.table_name + '</td><td>' + (t.row_count_estimate === 'stats_pending' ? 'Pending RUNSTATS' : t.row_count_estimate) + '</td><td>' + t.index_count + '</td><td>' + t.data_pages + '</td></tr>';
+                });
+                wrap.innerHTML = rows || '<tr><td colspan="4" style="color:#94a3b8;">No tables found</td></tr>';
+                var trigs = document.getElementById('syscat-triggers');
+                if (trigs && data.triggers) {
+                    trigs.textContent = data.triggers.map(function(t) { return t.trigger_name + ' ON ' + t.table_name + ' [' + t.event + ']'; }).join('  |  ');
+                }
+                var procs = document.getElementById('syscat-procs');
+                if (procs && data.stored_procedures) {
+                    procs.textContent = data.stored_procedures.map(function(p) { return p.procedure_name; }).join(', ') || 'None registered';
+                }
+            }).catch(function() {
+                var w = document.getElementById('syscat-panel-body');
+                if (w) w.innerHTML = '<tr><td colspan="4" style="color:#ef4444;">SYSCAT unavailable (start Docker containers)</td></tr>';
+            });
+    })();
+    </script>
+</body>
+</html>
+
+
+

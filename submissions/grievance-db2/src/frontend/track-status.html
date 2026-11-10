@@ -1,0 +1,416 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Track your Public Grievance online on CPGRAMS - Government of India">
+    <title>Track Grievance Status - CPGRAMS | Government of India</title>
+        <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%231a2744'/><text y='68' x='12' font-size='58' font-family='Arial,sans-serif' font-weight='bold' fill='white'>CP</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <!-- 1. Government Identity Bar -->
+    <div class="gov-bar">
+        <div class="container">
+            <div class="gov-identity">
+                <svg width="20" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="emblem" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                <span data-i18n="gov_identity">Government of India</span>
+            </div>
+            <div class="gov-tools">
+                <div class="accessibility-tools" aria-label="Accessibility options">
+                    <button type="button" aria-label="Decrease text size">A-</button>
+                    <button type="button" aria-label="Normal text size">A</button>
+                    <button type="button" aria-label="Increase text size">A+</button>
+                    <button type="button" aria-label="High contrast mode">Contrast</button>
+                    <button type="button" id="btn-theme-toggle" aria-label="Toggle Dark Mode" title="Toggle Dark/Light Mode">🌙 Dark</button>
+                    <button type="button" id="btn-history-toggle" class="btn-history-toggle" aria-label="View Recent Grievances" title="View Recent Grievances">📋 My Grievances</button>
+                </div>
+                <div class="language-selector">
+                    <label for="lang-select" class="sr-only">Select Language</label>
+                    <select id="lang-select" class="lang-select" aria-label="Select Language">
+                        <option value="en">English</option>
+                        <option value="hi">हिन्दी (Hindi)</option>
+                        <option value="bn">বাংলা (Bengali)</option>
+                        <option value="ta">தமிழ் (Tamil)</option>
+                        <option value="te">తెలుగు (Telugu)</option>
+                        <option value="mr">मराठी (Marathi)</option>
+                        <option value="gu">ગુજરાતી (Gujarati)</option>
+                        <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                        <option value="ml">മലയാളം (Malayalam)</option>
+                        <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                        <option value="or">ଓଡ଼ିଆ (Odia)</option>
+                        <option value="as">অসমীয়া (Assamese)</option>
+                        <option value="ur">اردو (Urdu)</option>
+                        <option value="sa">संस्कृतम् (Sanskrit)</option>
+                        <option value="mai">मैथिली (Maithili)</option>
+                        <option value="doi">डोगरी (Dogri)</option>
+                        <option value="kok">कोंकणी (Konkani)</option>
+                        <option value="ne">नेपाली (Nepali)</option>
+                        <option value="sd">سنڌي (Sindhi)</option>
+                        <option value="ks">کٲشُر (Kashmiri)</option>
+                        <option value="sat">संथाली (Santali)</option>
+                        <option value="brx">बर' (Bodo)</option>
+                        <option value="mni">মৈতৈলোন্ (Manipuri)</option>
+                    </select>
+                    <div id="google_translate_element" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Main Header -->
+    <header class="main-header">
+        <div class="container">
+            <div class="brand">
+                <div class="brand-logo" aria-hidden="true">CP</div>
+                <div class="brand-text">
+                    <h1 data-i18n="cpgrams_title">CPGRAMS</h1>
+                    <span class="brand-subtitle" data-i18n="cpgrams_subtitle">Centralized Public Grievance Redress and Monitoring System</span>
+                </div>
+            </div>
+                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                <span id="db2-live-badge" class="db2-live-badge db2-badge--checking" title="IBM Db2 connection status" aria-live="polite">
+                    <span class="db2-pulse"></span>
+                    <span id="db2-badge-text">IBM Db2…</span>
+                </span>
+                <button class="menu-toggle" aria-expanded="false" aria-controls="main-nav" aria-label="Toggle navigation menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            </button>
+            </div>
+            <nav id="main-nav" class="main-nav">
+                <ul>
+                    <li><a href="index.html" data-i18n="nav_home">Home</a></li>
+                    <li><a href="lodge-grievance.html" data-i18n="nav_lodge">Lodge Grievance</a></li>
+                    <li><a href="track-status.html" class="active" aria-current="page" data-i18n="nav_track">Track Status</a></li>
+                    <li><a href="officer.html">Officer Portal</a></li>
+                    <li><a href="dashboard.html">Analytics Dashboard</a></li>
+                    <li><a href="ask-data.html">Ask the Data (AI)</a></li>
+                    <li><a href="help-faq.html" data-i18n="nav_help">Help & FAQs</a></li>
+                    <li><a href="contact.html" data-i18n="nav_contact">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- 3. Breadcrumb -->
+    <nav aria-label="Breadcrumb" class="breadcrumb-container">
+        <div class="container">
+            <ol class="breadcrumb">
+                <li><a href="index.html" data-i18n="nav_home">Home</a></li>
+                <li aria-current="page" data-i18n="nav_track">Track Status</li>
+            </ol>
+        </div>
+    </nav>
+
+    <!-- 4. Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <h2 data-i18n="track_heading">Track Your Grievance</h2>
+            <p data-i18n="track_subheading">Check the current status and milestone progress of your registered grievance.</p>
+        </div>
+    </section>
+
+    <!-- 5. Main Content -->
+    <main id="main-content">
+        
+        <!-- Search Form Section -->
+        <section id="search-section" class="section section--white">
+            <div class="container">
+                <div class="form-card card" style="max-width: 560px; margin: 0 auto;">
+                    <h3 style="margin-top: 0; color: var(--color-navy);">Enter your registration number</h3>
+                    <p style="margin-bottom: 1.5rem; color: var(--color-text-muted);">Enter the tracking number received upon filing (format: <strong>GRV-2026-XXXX</strong> or <strong>CPGRM/2025/XXXXXXX</strong>).</p>
+                    
+                    <form id="track-form">
+                        <div class="form-group">
+                            <label for="reg-number" class="sr-only">Registration Number</label>
+                            <input type="text" id="reg-number" name="reg-number" required placeholder="e.g. GRV-2026-4821" value="GRV-2026-4821" class="form-control" style="font-size: 1.05rem; letter-spacing: 0.05em; font-weight: 600;">
+                        </div>
+                        <button type="submit" class="btn btn--primary btn--block btn--lg">Track Status &rarr;</button>
+                    </form>
+                    
+                    <div class="alert alert--info mt-4" style="margin-top: 1.5rem; margin-bottom: 0;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-icon"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        <div style="font-size: 0.8125rem;">Tip: You can search demo ID <code>GRV-2026-4821</code> or any grievance lodged during your session.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Status Result Section -->
+        <section id="status-result" class="section section--light" style="display: none;">
+            <div class="container" style="max-width: 900px; margin: 0 auto;">
+                
+                <!-- Status Card -->
+                <div class="status-card card" style="padding: 0; overflow: hidden; margin-bottom: 2rem;">
+                    <div style="background: linear-gradient(135deg, var(--color-navy), #273860); color: white; padding: 1.5rem 1.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <div>
+                            <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85;">Grievance Registration Number</span>
+                            <h3 style="margin: 0.25rem 0 0 0; font-size: 1.625rem; font-weight: 800; letter-spacing: 0.05em;" id="display-reg-num">GRV-2026-4821</h3>
+                        </div>
+                        <div>
+                            <span id="status-badge" class="status-badge status-badge--review">
+                                <span>⏳</span> Under Review
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div style="padding: 1.75rem;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                            <div>
+                                <strong style="display: block; color: var(--color-text-muted); font-size: 0.8125rem; text-transform: uppercase;">Submitted on</strong>
+                                <span id="meta-submitted" style="font-weight: 600; color: var(--color-navy);">14 Feb 2026</span>
+                            </div>
+                            <div>
+                                <strong style="display: block; color: var(--color-text-muted); font-size: 0.8125rem; text-transform: uppercase;">Department</strong>
+                                <span id="meta-dept" style="font-weight: 600; color: var(--color-navy);">Ministry of External Affairs</span>
+                            </div>
+                            <div>
+                                <strong style="display: block; color: var(--color-text-muted); font-size: 0.8125rem; text-transform: uppercase;">Category</strong>
+                                <span id="meta-cat" style="font-weight: 600; color: var(--color-navy);">Delay in service</span>
+                            </div>
+                            <div>
+                                <strong style="display: block; color: var(--color-text-muted); font-size: 0.8125rem; text-transform: uppercase;">Target Resolution</strong>
+                                <span style="font-weight: 600; color: var(--color-navy);">Within 30 Days (16 Mar 2026)</span>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert--info" style="margin-bottom: 0;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-icon"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            <div>
+                                <strong>Latest Officer Note:</strong> Application files acknowledged by Nodal Officer (Passport Division). Verification report is under technical scrutiny.
+                            </div>
+                        </div>
+                    </div>
+                        <!-- SLA Countdown Bar — Powered by IBM Db2 DAYS() date arithmetic -->
+                        <div class="sla-countdown-wrap" id="sla-countdown-wrap" style="margin-top:1.25rem;display:none;">
+                            <div class="sla-countdown-label">
+                                <span>&#128336; Citizen Charter SLA (15-Day Window)</span>
+                                <span class="sla-days-left" id="sla-days-label">–</span>
+                            </div>
+                            <div class="sla-bar-track">
+                                <div class="sla-bar-fill" id="sla-bar-fill" style="width:0%"></div>
+                            </div>
+                            <div style="font-size:0.72rem;color:var(--color-text-muted);margin-top:0.3rem;">
+                                Computed live via <code style="font-size:0.68rem;background:#f1f5f9;padding:0.1rem 0.3rem;border-radius:3px;">DAYS(CURRENT DATE) - DAYS(DATE(created_at))</code> in IBM Db2
+                            </div>
+                        </div>
+                </div>
+
+                <!-- 4-Stage Visual Timeline -->
+                <div class="card" style="margin-bottom: 2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
+                        <h3 style="margin: 0; color: var(--color-navy); font-size: 1.25rem;">Milestone Progress</h3>
+                        <span style="font-size: 0.8125rem; color: var(--color-text-muted); font-weight: 600;">Current Stage: <strong>Under Review</strong></span>
+                    </div>
+
+                    <div id="timeline-container">
+                        <!-- Rendered dynamically by js/main.js -->
+                    </div>
+                </div>
+
+                <!-- Escalation Feature Banner -->
+                <div class="escalation-card" id="escalation-card">
+                    <div class="escalation-content">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="escalation-icon"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <div>
+                            <h4 class="escalation-title" data-i18n="escalate_warning">This grievance has been pending for 12 days without resolution.</h4>
+                            <p class="escalation-text">Under the Citizen Charter norms, if your grievance remains unaddressed, you have the right to escalate directly to the Senior Appellate Officer.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn--maroon" id="btn-escalate" data-i18n="escalate_btn">Escalate This Grievance</button>
+                    </div>
+                </div>
+
+                <!-- Next Steps Card -->
+                <div class="card" style="margin-bottom: 2rem;">
+                    <h3 style="margin-top: 0; color: var(--color-navy); font-size: 1.15rem;">What happens next?</h3>
+                    <ul class="check-list" style="margin-bottom: 0;">
+                        <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> The designated Redressal Officer is reviewing the case documentation.</li>
+                        <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> You will receive an SMS and email notification once an official resolution or order is uploaded.</li>
+                        <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> If unsatisfied with the final resolution, you may submit an appeal within 30 days of closure.</li>
+                    </ul>
+                </div>
+
+                <!-- Action Controls -->
+                <div style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                        <button class="btn btn--outline" disabled title="Available after resolution response">File an Appeal</button>
+                        <button class="btn btn--outline" disabled title="Available after resolution response">Provide Feedback</button>
+                        <button class="btn btn--ghost" onclick="window.print()">🖨️ Print Status</button>
+                    </div>
+                    <div>
+                        <button id="search-again-btn" class="btn btn--text" style="color: var(--color-navy); font-weight: 700; text-decoration: underline;">&larr; Track Another Grievance</button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Error State Section -->
+        <section id="status-error" class="section section--white" style="display: none;">
+            <div class="container">
+                <div class="card" style="max-width: 600px; margin: 0 auto; border-color: var(--color-danger); border-left: 6px solid var(--color-danger);">
+                    <div style="display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="color: var(--color-danger); flex-shrink: 0;">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        </div>
+                        <div>
+                            <h3 style="margin-top: 0; color: var(--color-danger);">Grievance Not Found</h3>
+                            <p style="margin-bottom: 0; color: var(--color-text-muted);">We could not find an active grievance matching that registration number. Please check the number and try again.</p>
+                        </div>
+                    </div>
+                    
+                    <div style="background-color: var(--color-bg); padding: 1.25rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+                        <h4 style="margin-top: 0; font-size: 0.95rem; color: var(--color-navy);">Suggestions:</h4>
+                        <ul style="padding-left: 1.25rem; margin-bottom: 0; font-size: 0.875rem; color: var(--color-text-muted);">
+                            <li>Make sure the registration number is in the format <code>GRV-2026-XXXX</code>.</li>
+                            <li>Check your confirmation SMS or email for the exact number.</li>
+                            <li>Try searching our demo grievance: <strong>GRV-2026-4821</strong>.</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <button id="try-again-btn" class="btn btn--primary">Try Again</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Escalation Confirmation Modal -->
+        <div class="modal-overlay" id="escalate-modal">
+            <div class="modal-card">
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                    <div style="background: #fee2e2; color: #dc2626; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; color: var(--color-navy); font-size: 1.3rem;">Confirm Grievance Escalation</h3>
+                        <span style="font-size: 0.8125rem; color: var(--color-text-muted);">Level 2 - Appellate Nodal Authority</span>
+                    </div>
+                </div>
+
+                <p style="font-size: 0.9375rem; color: var(--color-text); line-height: 1.5; margin-bottom: 1.25rem;">
+                    You are escalating this grievance because it has been pending beyond standard response targets (<strong>12 days</strong>). 
+                    This will flag your case as <strong>High Priority</strong> and notify the Senior Nodal Officer of the ministry.
+                </p>
+
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label for="escalation-reason" style="font-size: 0.875rem;">Reason for Escalation (Optional):</label>
+                    <textarea id="escalation-reason" rows="2" class="form-control" placeholder="e.g. No update received from zonal office despite multiple follow-ups."></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                    <button type="button" class="btn btn--ghost" id="btn-cancel-escalate">Cancel</button>
+                    <button type="button" class="btn btn--maroon" id="btn-confirm-escalate">Confirm & Escalate</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 6. Footer -->
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer__grid">
+                <div class="footer__col">
+                    <h3 class="footer__title">CPGRAMS</h3>
+                    <p class="footer__desc">Centralized Public Grievance Redress and Monitoring System, Department of Administrative Reforms & Public Grievances, Government of India.</p>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">Quick Links</h4>
+                    <ul class="footer__links">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="lodge-grievance.html">Lodge Grievance</a></li>
+                        <li><a href="track-status.html">Track Status</a></li>
+                        <li><a href="help-faq.html">Help & FAQs</a></li>
+                        <li><a href="contact.html">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">Legal & Policies</h4>
+                    <ul class="footer__links">
+                        <li><a href="#" data-i18n="footer_privacy">Privacy Policy</a></li>
+                        <li><a href="#" data-i18n="footer_terms">Terms of Use</a></li>
+                        <li><a href="#" data-i18n="footer_a11y">Accessibility Statement</a></li>
+                    </ul>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">Helpline</h4>
+                    <p style="color: #cbd5e1; font-size: 0.875rem; margin: 0 0 0.5rem 0;">Toll-Free Helpline: <strong>1800-11-0000</strong></p>
+                    <p style="color: #cbd5e1; font-size: 0.875rem; margin: 0;">Hours: 9:30 AM – 5:30 PM (Mon–Fri)</p>
+                </div>
+            </div>
+            <div class="footer__bottom">
+                <div data-i18n="footer_copyright">&copy; 2026 Government of India. All rights reserved.</div>
+                <div style="opacity: 0.8;">Designed for IBM Db2Hack 2026 - AI & Modern Data Apps Track.</div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+    <script>
+    (function() {
+        var badge = document.getElementById('db2-live-badge');
+        var badgeText = document.getElementById('db2-badge-text');
+        if (!badge) return;
+        var API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:8000/api' : '/api';
+        function checkDb2() {
+            fetch(API + '/health', { method: 'GET', cache: 'no-cache' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.database && data.database.status === 'connected') {
+                        badge.className = 'db2-live-badge';
+                        badgeText.textContent = 'IBM Db2 Live ✓';
+                        badge.title = 'Connected to ' + data.database.database + ' · ' + data.database.total_grievances + ' dockets';
+                    } else {
+                        badge.className = 'db2-live-badge db2-badge--error';
+                        badgeText.textContent = 'Db2 Degraded';
+                    }
+                }).catch(function() {
+                    badge.className = 'db2-live-badge db2-badge--error';
+                    badgeText.textContent = 'Db2 Offline';
+                });
+        }
+        checkDb2();
+        setInterval(checkDb2, 30000);
+    })();
+    </script>
+    <script>
+    // SLA Countdown Bar — activated when grievance data is loaded from IBM Db2
+    window.updateSLABar = function(daysOpen, isResolved) {
+        var wrap = document.getElementById('sla-countdown-wrap');
+        var fill = document.getElementById('sla-bar-fill');
+        var label = document.getElementById('sla-days-label');
+        if (!wrap || !fill || !label) return;
+        wrap.style.display = 'block';
+        var pct = Math.min((daysOpen / 15) * 100, 100);
+        fill.style.width = pct + '%';
+        if (isResolved) {
+            fill.className = 'sla-bar-fill sla-safe';
+            label.className = 'sla-days-left sla-safe';
+            label.textContent = 'Resolved ✓';
+        } else if (daysOpen > 15) {
+            fill.className = 'sla-bar-fill sla-breach';
+            label.className = 'sla-days-left sla-breach';
+            label.textContent = 'SLA BREACHED by ' + (daysOpen - 15) + ' day(s)';
+        } else if (daysOpen >= 10) {
+            fill.className = 'sla-bar-fill sla-warning';
+            label.className = 'sla-days-left sla-warning';
+            label.textContent = (15 - daysOpen) + ' day(s) remaining';
+        } else {
+            fill.className = 'sla-bar-fill sla-safe';
+            label.className = 'sla-days-left sla-safe';
+            label.textContent = (15 - daysOpen) + ' day(s) remaining';
+        }
+    };
+    </script>
+</body>
+</html>
+
+
+

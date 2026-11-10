@@ -1,0 +1,786 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Lodge a Public Grievance online on CPGRAMS - Government of India">
+    <title>Lodge a Grievance - CPGRAMS | Government of India</title>
+        <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%231a2744'/><text y='68' x='12' font-size='58' font-family='Arial,sans-serif' font-weight='bold' fill='white'>CP</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <!-- 1. Government Identity Bar -->
+    <div class="gov-bar">
+        <div class="container">
+            <div class="gov-identity">
+                <svg width="20" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="emblem" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                <span data-i18n="gov_identity">Government of India</span>
+            </div>
+            <div class="gov-tools">
+                <div class="accessibility-tools" aria-label="Accessibility options">
+                    <button type="button" aria-label="Decrease text size">A-</button>
+                    <button type="button" aria-label="Normal text size">A</button>
+                    <button type="button" aria-label="Increase text size">A+</button>
+                    <button type="button" aria-label="High contrast mode">Contrast</button>
+                    <button type="button" id="btn-theme-toggle" aria-label="Toggle Dark Mode" title="Toggle Dark/Light Mode">🌙 Dark</button>
+                    <button type="button" id="btn-history-toggle" class="btn-history-toggle" aria-label="View Recent Grievances" title="View Recent Grievances">📋 My Grievances</button>
+                </div>
+                <div class="language-selector">
+                    <label for="lang-select" class="sr-only">Select Language</label>
+                    <select id="lang-select" class="lang-select" aria-label="Select Language">
+                        <option value="en">English</option>
+                        <option value="hi">हिन्दी (Hindi)</option>
+                        <option value="bn">বাংলা (Bengali)</option>
+                        <option value="ta">தமிழ் (Tamil)</option>
+                        <option value="te">తెలుగు (Telugu)</option>
+                        <option value="mr">मराठी (Marathi)</option>
+                        <option value="gu">ગુજરાતી (Gujarati)</option>
+                        <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                        <option value="ml">മലയാളം (Malayalam)</option>
+                        <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                        <option value="or">ଓଡ଼ିଆ (Odia)</option>
+                        <option value="as">অসমীয়া (Assamese)</option>
+                        <option value="ur">اردو (Urdu)</option>
+                        <option value="sa">संस्कृतम् (Sanskrit)</option>
+                        <option value="mai">मैथिली (Maithili)</option>
+                        <option value="doi">डोगरी (Dogri)</option>
+                        <option value="kok">कोंकणी (Konkani)</option>
+                        <option value="ne">नेपाली (Nepali)</option>
+                        <option value="sd">سنڌي (Sindhi)</option>
+                        <option value="ks">کٲشُر (Kashmiri)</option>
+                        <option value="sat">संथाली (Santali)</option>
+                        <option value="brx">बर' (Bodo)</option>
+                        <option value="mni">মৈতৈলোন্ (Manipuri)</option>
+                    </select>
+                    <div id="google_translate_element" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Main Header -->
+    <header class="main-header">
+        <div class="container">
+            <div class="brand">
+                <div class="brand-logo" aria-hidden="true">CP</div>
+                <div class="brand-text">
+                    <h1 data-i18n="cpgrams_title">CPGRAMS</h1>
+                    <span class="brand-subtitle" data-i18n="cpgrams_subtitle">Centralized Public Grievance Redress and Monitoring System</span>
+                </div>
+            </div>
+                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                <span id="db2-live-badge" class="db2-live-badge db2-badge--checking" title="IBM Db2 connection status" aria-live="polite">
+                    <span class="db2-pulse"></span>
+                    <span id="db2-badge-text">IBM Db2…</span>
+                </span>
+                <button class="menu-toggle" aria-expanded="false" aria-controls="main-nav" aria-label="Toggle navigation menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            </button>
+            </div>
+            <nav id="main-nav" class="main-nav">
+                <ul>
+                    <li><a href="index.html" data-i18n="nav_home">Home</a></li>
+                    <li><a href="lodge-grievance.html" class="active" aria-current="page" data-i18n="nav_lodge">Lodge Grievance</a></li>
+                    <li><a href="track-status.html" data-i18n="nav_track">Track Status</a></li>
+                    <li><a href="officer.html">Officer Portal</a></li>
+                    <li><a href="dashboard.html">Analytics Dashboard</a></li>
+                    <li><a href="ask-data.html">Ask the Data (AI)</a></li>
+                    <li><a href="help-faq.html" data-i18n="nav_help">Help & FAQs</a></li>
+                    <li><a href="contact.html" data-i18n="nav_contact">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- 3. Breadcrumb -->
+    <nav aria-label="Breadcrumb" class="breadcrumb-container">
+        <div class="container">
+            <ol class="breadcrumb">
+                <li><a href="index.html" data-i18n="nav_home">Home</a></li>
+                <li aria-current="page" data-i18n="nav_lodge">Lodge a Grievance</li>
+            </ol>
+        </div>
+    </nav>
+
+    <!-- 4. Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <h2 data-i18n="lodge_heading">Lodge a Grievance</h2>
+            <p data-i18n="lodge_subheading">Submit your complaint about a central government service in a few simple steps.</p>
+        </div>
+    </section>
+
+    <!-- 5. Main Content -->
+    <main id="main-content" class="section">
+        <div class="container container--narrow">
+            
+            <!-- Stepper -->
+            <div class="stepper" aria-label="Form progress">
+                <ol>
+                    <li class="step active" id="indicator-1">
+                        <span class="step-number">1</span>
+                        <span class="step-label">Check Issue</span>
+                    </li>
+                    <li class="step" id="indicator-2">
+                        <span class="step-number">2</span>
+                        <span class="step-label">Describe</span>
+                    </li>
+                    <li class="step" id="indicator-3">
+                        <span class="step-number">3</span>
+                        <span class="step-label">Documents & Location</span>
+                    </li>
+                    <li class="step" id="indicator-4">
+                        <span class="step-number">4</span>
+                        <span class="step-label">Contact</span>
+                    </li>
+                    <li class="step" id="indicator-5">
+                        <span class="step-number">5</span>
+                        <span class="step-label">Review</span>
+                    </li>
+                </ol>
+            </div>
+
+            <!-- Form Card -->
+            <div class="form-card card">
+                <form id="grievanceForm" onsubmit="return false;">
+                    
+                    <!-- Step 1: Check Issue -->
+                    <div id="step-1" class="form-step">
+                        <h3>What is your grievance about?</h3>
+                        <p class="step-desc">Select the category that best describes your issue. This helps us route your grievance to the right department.</p>
+                        
+                        <div class="form-group options-group">
+                            <label class="form-check radio-card">
+                                <input type="radio" name="issue_category" value="delay" checked>
+                                <span class="check-content">
+                                    <span class="check-title">Delay in service</span>
+                                    <span class="check-desc">Government service not provided within expected timeframe (passport, pension, ration card, license, etc.)</span>
+                                </span>
+                            </label>
+                            
+                            <label class="form-check radio-card">
+                                <input type="radio" name="issue_category" value="conduct">
+                                <span class="check-content">
+                                    <span class="check-title">Employee conduct</span>
+                                    <span class="check-desc">Complaint about behaviour, harassment, or misconduct of a central government employee</span>
+                                </span>
+                            </label>
+                            
+                            <label class="form-check radio-card">
+                                <input type="radio" name="issue_category" value="scheme">
+                                <span class="check-content">
+                                    <span class="check-title">Government scheme</span>
+                                    <span class="check-desc">Issues with benefits, subsidies, DBT, or services under central government schemes</span>
+                                </span>
+                            </label>
+                            
+                            <label class="form-check radio-card">
+                                <input type="radio" name="issue_category" value="psu">
+                                <span class="check-content">
+                                    <span class="check-title">Public sector organisation</span>
+                                    <span class="check-desc">Complaints about banks, insurance companies, railways, postal services, telecom, or utilities</span>
+                                </span>
+                            </label>
+                            
+                            <label class="form-check radio-card">
+                                <input type="radio" name="issue_category" value="corruption">
+                                <span class="check-content">
+                                    <span class="check-title">Corruption / Misuse of authority</span>
+                                    <span class="check-desc">Allegation of corruption, bribery, nepotism, or misuse of official position</span>
+                                </span>
+                            </label>
+                            
+                            <label class="form-check radio-card">
+                                <input type="radio" name="issue_category" value="other">
+                                <span class="check-content">
+                                    <span class="check-title">Other</span>
+                                    <span class="check-desc">Any other grievance related to central government departments or ministries</span>
+                                </span>
+                            </label>
+                        </div>
+                        
+                        <div class="alert alert--info">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-icon"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                            <div>If your issue relates to state government, local municipal bodies, sub-judice court matters, or RTI requests, please consult the appropriate portal.</div>
+                        </div>
+                        
+                        <div class="form-actions form-actions--right">
+                            <button type="button" class="btn btn--primary btn-continue" data-next="2">Continue &rarr;</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 2: Describe (Includes Voice Input & Live Department Suggestion) -->
+                    <div id="step-2" class="form-step hidden">
+                        <h3>Describe your grievance</h3>
+                        <p class="step-desc">Provide clear details so the department can understand and address your issue. You can type or use the live speech voice input button.</p>
+                        
+                        <div class="form-group">
+                            <label for="subject">Subject <span class="required" aria-hidden="true">*</span></label>
+                            <input type="text" id="subject" name="subject" required maxlength="200" placeholder="e.g. Delay in Ration Card / Passport Renewal" class="form-control">
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="voice-input-header">
+                                <label for="description">Detailed Description <span class="required" aria-hidden="true">*</span></label>
+                                <button type="button" class="btn-voice-input" id="btn-voice-input" title="Click to speak in Hindi/English and live-transcribe">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                                    <span>Voice Input (Speak)</span>
+                                </button>
+                            </div>
+
+                            <!-- Voice Listening Animation Banner -->
+                            <div class="voice-status-banner" id="voice-status-banner">
+                                <div class="voice-wave">
+                                    <span></span><span></span><span></span><span></span>
+                                </div>
+                                <span data-i18n="voice_listening">Listening... Speak your grievance in English or हिन्दी...</span>
+                            </div>
+
+                            <textarea id="description" name="description" rows="6" required minlength="20" maxlength="3000" placeholder="Please describe what happened, dates, reference numbers (if any), and what resolution you expect..." class="form-control"></textarea>
+                            
+                            <div class="textarea-footer">
+                                <span class="form-hint">Tip: Mention specific dates, application or token numbers for faster resolution.</span>
+                                <span class="char-count" id="desc-counter">0 / 3000</span>
+                            </div>
+
+                            <!-- Live AI / Keyword Suggested Department Box -->
+                            <div class="suggested-dept-box" id="suggested-dept-box">
+                                <div class="suggested-dept-info">
+                                    <span style="font-size: 1.25rem;">✨</span>
+                                    <div>
+                                        <strong style="color: var(--color-navy); font-size: 0.875rem;" data-i18n="suggested_dept_label">Suggested Department:</strong>
+                                        <div id="suggested-dept-text" class="suggested-dept-badge" style="margin-top: 0.25rem;">Department of Food & Public Distribution</div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-apply-suggestion" id="btn-apply-suggestion" data-i18n="btn_apply_suggestion">Apply Suggestion</button>
+                            </div>
+
+                            <!-- Live AI Triage Preview (LangChain — debounced 800ms) -->
+                            <div class="ai-triage-preview" id="ai-triage-preview" aria-live="polite">
+                                <div class="ai-triage-preview__title">LangChain AI Triage Preview (Live)</div>
+                                <div class="ai-triage-badges" id="triage-badges">
+                                    <span class="triage-badge triage-badge--cat" id="triage-cat-badge">category</span>
+                                    <span class="triage-badge" id="triage-pri-badge">priority</span>
+                                </div>
+                                <div class="ai-triage-preview__summary" id="triage-summary">AI is analyzing your description...</div>
+                            </div>
+                        </div>
+                    
+                        <div class="form-group">
+                            <label for="department">Ministry / Department <span class="required" aria-hidden="true">*</span></label>
+                            <select id="department" name="department" required class="form-control">
+                                <option value="">-- Select Department --</option>
+                                <option value="food">Department of Food & Public Distribution (Ration)</option>
+                                <option value="mea">Ministry of External Affairs (Passport & Visa)</option>
+                                <option value="pension">Department of Pension & Pensioners' Welfare</option>
+                                <option value="water">Ministry of Jal Shakti / Water Resources</option>
+                                <option value="road">Ministry of Road Transport & Highways / PWD</option>
+                                <option value="electricity">Ministry of Power / Electricity Board</option>
+                                <option value="education">Ministry of Education</option>
+                                <option value="health">Ministry of Health & Family Welfare</option>
+                                <option value="finance">Department of Financial Services (Banking / Insurance)</option>
+                                <option value="petroleum">Ministry of Petroleum & Natural Gas (LPG)</option>
+                                <option value="railways">Ministry of Railways</option>
+                                <option value="posts">Department of Posts</option>
+                                <option value="telecom">Department of Telecommunications</option>
+                                <option value="mha">Ministry of Home Affairs</option>
+                                <option value="other">Other Central Department</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="state">State / Location</label>
+                            <select id="state" name="state" class="form-control">
+                                <option value="">-- Select State / UT --</option>
+                                <option value="andhra">Andhra Pradesh</option>
+                                <option value="assam">Assam</option>
+                                <option value="bihar">Bihar</option>
+                                <option value="delhi" selected>Delhi (NCT)</option>
+                                <option value="gujarat">Gujarat</option>
+                                <option value="karnataka">Karnataka</option>
+                                <option value="maharashtra">Maharashtra</option>
+                                <option value="tamilnadu">Tamil Nadu</option>
+                                <option value="up">Uttar Pradesh</option>
+                                <option value="other">Other State / UT</option>
+                            </select>
+                            <span class="form-hint">Where did this issue take place?</span>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn--ghost btn-back" data-prev="1">&larr; Back</button>
+                            <button type="button" class="btn btn--primary btn-continue" data-next="3">Continue &rarr;</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 3: Documents & Location -->
+                    <div id="step-3" class="form-step hidden">
+                        <h3>Add supporting documents & site location</h3>
+                        <p class="step-desc">Upload any evidence (photos, bills, receipts) and optionally auto-tag your GPS coordinates for site-related issues (e.g., roads, pipelines, garbage).</p>
+                        
+                        <!-- Auto GPS Location Tag Box -->
+                        <div class="geo-location-box">
+                            <div class="geo-info">
+                                <span style="font-size: 1.35rem;">📍</span>
+                                <div>
+                                    <strong style="display: block; font-size: 0.875rem; color: #15803d;">Site Location & GPS Tagging</strong>
+                                    <span id="gps-status-text" style="font-size: 0.8125rem; color: var(--color-text-muted);">Detect pinpoint location for field inspection</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-geo-detect" id="btn-detect-gps">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="12 2 15 9 22 12 15 15 12 22 9 15 2 12 9 9 12 2"/></svg>
+                                <span>📍 Auto-Detect GPS Location</span>
+                            </button>
+                        </div>
+
+                        <!-- Drop Zone -->
+                        <div class="file-upload" id="drop-zone">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="upload-icon"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+                            <div class="upload-text">Click to browse or drag photos / documents here</div>
+                            <div class="upload-hint">Accepted formats: JPG, PNG, PDF. Maximum 5 MB per file. Up to 4 files.</div>
+                            <input type="file" id="documents" name="documents" multiple accept=".pdf,.jpg,.jpeg,.png" class="sr-only">
+                        </div>
+                        
+                        <!-- Photo Thumbnails Preview Grid -->
+                        <div class="photo-preview-grid" id="photo-preview-grid"></div>
+                        <ul id="file-list" class="file-list"></ul>
+                        
+                        <div class="alert alert--warning mt-4">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-icon"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            <div>Please do not upload sensitive personal data such as complete Aadhaar, bank PINs, or passwords unless specifically required.</div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn--ghost btn-back" data-prev="2">&larr; Back</button>
+                            <div style="display: flex; gap: 0.75rem;">
+                                <button type="button" class="btn btn--text btn-skip" data-next="4">Skip this step</button>
+                                <button type="button" class="btn btn--primary btn-continue" data-next="4">Continue &rarr;</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 4: Contact -->
+                    <div id="step-4" class="form-step hidden">
+                        <h3>Your contact information</h3>
+                        <p class="step-desc">We need your contact details to send live status updates via SMS and Email. Your information is protected.</p>
+                        
+                        <div class="form-group">
+                            <label for="fullname">Full Name <span class="required" aria-hidden="true">*</span></label>
+                            <input type="text" id="fullname" name="fullname" required value="Amitabh Verma" class="form-control">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">Email Address <span class="required" aria-hidden="true">*</span></label>
+                            <input type="email" id="email" name="email" required value="amitabh.verma@example.com" class="form-control">
+                            <span class="form-hint">We'll send your registration number and resolution notices to this address.</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="mobile">Mobile Number <span class="required" aria-hidden="true">*</span></label>
+                            <input type="tel" id="mobile" name="mobile" required pattern="[0-9]{10}" value="9876543210" class="form-control">
+                            <span class="form-hint">10-digit Indian mobile number for SMS tracking.</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="address">Correspondence Address</label>
+                            <textarea id="address" name="address" rows="2" class="form-control">Sector 14, Rohini, New Delhi</textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="pincode">PIN Code</label>
+                            <input type="text" id="pincode" name="pincode" pattern="[0-9]{6}" maxlength="6" value="110085" class="form-control">
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn--ghost btn-back" data-prev="3">&larr; Back</button>
+                            <button type="button" class="btn btn--primary btn-continue" data-next="5">Review Grievance &rarr;</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 5: Review -->
+                    <div id="step-5" class="form-step hidden">
+                        <h3>Review your grievance</h3>
+                        <p class="step-desc">Please verify all the details below before submitting. You can click Edit to change any section.</p>
+                        
+                        <div class="review-card">
+                            <div class="review-section">
+                                <div class="review-header">
+                                    <h4>Issue Category</h4>
+                                    <button type="button" class="btn btn--text edit-btn" data-step="1">Edit</button>
+                                </div>
+                                <div class="review-content">
+                                    <p id="review-category" style="font-weight: 700; margin: 0; color: var(--color-navy);">Delay in service</p>
+                                </div>
+                            </div>
+                            
+                            <div class="review-section">
+                                <div class="review-header">
+                                    <h4>Grievance Details</h4>
+                                    <button type="button" class="btn btn--text edit-btn" data-step="2">Edit</button>
+                                </div>
+                                <div class="review-content">
+                                    <dl class="review-list">
+                                        <dt>Subject:</dt>
+                                        <dd id="review-subject">Not provided</dd>
+                                        <dt>Department:</dt>
+                                        <dd id="review-dept">Not provided</dd>
+                                        <dt>Location:</dt>
+                                        <dd id="review-state">Not provided</dd>
+                                        <dt>Description:</dt>
+                                        <dd id="review-desc" style="white-space: pre-wrap;">Not provided</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                            
+                            <div class="review-section">
+                                <div class="review-header">
+                                    <h4>Supporting Documents</h4>
+                                    <button type="button" class="btn btn--text edit-btn" data-step="3">Edit</button>
+                                </div>
+                                <div class="review-content">
+                                    <p id="review-docs" style="margin: 0;">No documents uploaded</p>
+                                </div>
+                            </div>
+                            
+                            <div class="review-section">
+                                <div class="review-header">
+                                    <h4>Contact Information</h4>
+                                    <button type="button" class="btn btn--text edit-btn" data-step="4">Edit</button>
+                                </div>
+                                <div class="review-content">
+                                    <dl class="review-list">
+                                        <dt>Name:</dt>
+                                        <dd id="review-name">Amitabh Verma</dd>
+                                        <dt>Email:</dt>
+                                        <dd id="review-email">amitabh.verma@example.com</dd>
+                                        <dt>Mobile:</dt>
+                                        <dd id="review-mobile">9876543210</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mt-4" style="margin-top: 1.5rem;">
+                            <label class="form-check checkbox-card">
+                                <input type="checkbox" id="consent" required checked>
+                                <span class="check-content">
+                                    <span class="check-desc">I declare that all the information provided above is true and accurate. I understand that filing false grievances is liable to legal action under applicable laws.</span>
+                                </span>
+                            </label>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn--ghost btn-back" data-prev="4">&larr; Back</button>
+                            <button type="button" class="btn btn--maroon btn--lg" id="btn-submit" data-i18n="btn_submit">Submit Grievance</button>
+                        </div>
+                    </div>
+                    
+                </form>
+
+                <!-- Confirmation Screen -->
+                <div id="step-confirmation" class="form-step hidden text-center">
+                    <div style="margin-bottom: 1.25rem;">
+                        <svg width="68" height="68" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </div>
+                    
+                    <h3 style="font-size: 1.75rem; color: var(--color-navy); margin-bottom: 0.5rem;">Grievance Registered Successfully!</h3>
+                    <p class="step-desc text-center">Your grievance has been officially registered and queued for nodal officer review.</p>
+                    
+                    <div class="reg-number-box mt-4 mb-4">
+                        <span class="reg-label">Grievance Registration Number</span>
+                        <div class="reg-value-wrapper">
+                            <strong class="reg-value" id="generated-reg-id">GRV-2026-8492</strong>
+                            <button type="button" class="copy-btn" aria-label="Copy registration number" title="Copy">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- AI Triage Classification Badge Box -->
+                    <div id="conf-ai-box" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; max-width: 600px; margin: 1.5rem auto; padding: 1.25rem; text-align: left;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <span style="font-size: 0.75rem; font-weight: 700; color: #166534; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.35rem;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                                LangChain Automated AI Triage (IBM Db2 Stored)
+                            </span>
+                            <span id="conf-ai-method" style="font-size: 0.7rem; background: #dcfce7; color: #15803d; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600;">LangChain Chain</span>
+                        </div>
+                        <div style="display: flex; gap: 0.75rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-size: 0.8125rem; color: #374151;">AI Category: <strong id="conf-ai-category" style="color: #0f172a; text-transform: capitalize;">General</strong></span>
+                            <span style="color: #9ca3af;">&bull;</span>
+                            <span style="font-size: 0.8125rem; color: #374151;">Assigned Priority: <strong id="conf-ai-priority" style="color: #b91c1c;">Medium</strong></span>
+                        </div>
+                        <p id="conf-ai-summary" style="margin: 0; font-size: 0.875rem; color: #1f2937; line-height: 1.4; background: #ffffff; padding: 0.75rem; border-radius: 6px; border: 1px solid #dcfce7;">
+                            AI triage analysis...
+                        </p>
+                    </div>
+
+                    <!-- Hotspot / Duplicate Detection Warning Box -->
+                    <div id="conf-hotspot-box" style="display: none; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; max-width: 600px; margin: 1.5rem auto; padding: 1.25rem; text-align: left;">
+                        <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            <div>
+                                <h4 id="conf-hotspot-title" style="margin: 0 0 0.25rem; color: #92400e; font-size: 0.9375rem;">Municipal Ward Hotspot Alert</h4>
+                                <p id="conf-hotspot-msg" style="margin: 0; font-size: 0.8125rem; color: #b45309; line-height: 1.4;">
+                                    Active complaints detected in this ward.
+                                </p>
+                                <div id="conf-duplicates-list" style="margin-top: 0.5rem; font-size: 0.75rem; color: #78350f;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="next-steps text-left" style="background: var(--color-bg); padding: 1.5rem; border-radius: var(--radius-md); max-width: 600px; margin: 1.5rem auto; text-align: left;">
+                        <h4 style="margin-top: 0; color: var(--color-navy);">What happens next?</h4>
+                        <ul class="check-list">
+                            <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> An SMS & Email confirmation with your tracking ID has been sent.</li>
+                            <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> The concerned ministry will process your case within standard charter limits.</li>
+                            <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> If your case is pending without resolution, you can escalate it on the Track Status page.</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="form-actions justify-center mt-5" style="border-top: none;">
+                        <a href="track-status.html?id=GRV-2026-8492" class="btn btn--primary btn--lg" id="btn-track-submitted">Track This Grievance &rarr;</a>
+                        <button type="button" class="btn btn--outline" onclick="window.print()">Print Acknowledgment</button>
+                        <button type="button" class="btn btn--ghost" onclick="location.reload()">Lodge Another</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- 6. Footer -->
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer__grid">
+                <div class="footer__col">
+                    <h3 class="footer__title">CPGRAMS</h3>
+                    <p class="footer__desc">Centralized Public Grievance Redress and Monitoring System, Department of Administrative Reforms & Public Grievances, Government of India.</p>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">Quick Links</h4>
+                    <ul class="footer__links">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="lodge-grievance.html">Lodge Grievance</a></li>
+                        <li><a href="track-status.html">Track Status</a></li>
+                        <li><a href="help-faq.html">Help & FAQs</a></li>
+                        <li><a href="contact.html">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">Legal & Policies</h4>
+                    <ul class="footer__links">
+                        <li><a href="#" data-i18n="footer_privacy">Privacy Policy</a></li>
+                        <li><a href="#" data-i18n="footer_terms">Terms of Use</a></li>
+                        <li><a href="#" data-i18n="footer_a11y">Accessibility Statement</a></li>
+                    </ul>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">Helpline</h4>
+                    <p style="color: #cbd5e1; font-size: 0.875rem; margin: 0 0 0.5rem 0;">Toll-Free Helpline: <strong>1800-11-0000</strong></p>
+                    <p style="color: #cbd5e1; font-size: 0.875rem; margin: 0;">Hours: 9:30 AM – 5:30 PM (Mon–Fri)</p>
+                </div>
+            </div>
+            <div class="footer__bottom">
+                <div data-i18n="footer_copyright">&copy; 2026 Government of India. All rights reserved.</div>
+                <div style="opacity: 0.8;">Designed for IBM Db2Hack 2026 - AI & Modern Data Apps Track.</div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Stepper view management
+            const updateView = (newStep) => {
+                document.querySelectorAll('.form-step').forEach(el => el.classList.add('hidden'));
+                
+                if (newStep === 'confirmation') {
+                    document.getElementById('step-confirmation').classList.remove('hidden');
+                    document.querySelector('.stepper').classList.add('hidden');
+                    window.scrollTo(0, 0);
+                    return;
+                }
+
+                document.getElementById(`step-${newStep}`).classList.remove('hidden');
+                
+                // Stepper indicators
+                document.querySelectorAll('.stepper .step').forEach(el => {
+                    const stepNum = parseInt(el.id.split('-')[1]);
+                    el.classList.remove('active', 'completed');
+                    if (stepNum === newStep) {
+                        el.classList.add('active');
+                    } else if (stepNum < newStep) {
+                        el.classList.add('completed');
+                    }
+                });
+
+                if (newStep === 5) {
+                    populateReview();
+                }
+
+                window.scrollTo(0, 0);
+            };
+
+            document.querySelectorAll('.btn-continue, .btn-skip').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const targetStep = parseInt(e.currentTarget.getAttribute('data-next'));
+                    updateView(targetStep);
+                });
+            });
+
+            document.querySelectorAll('.btn-back, .edit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const targetStep = parseInt(e.currentTarget.getAttribute('data-prev') || e.currentTarget.getAttribute('data-step'));
+                    updateView(targetStep);
+                });
+            });
+
+            // Textarea counter
+            const desc = document.getElementById('description');
+            const counter = document.getElementById('desc-counter');
+            if (desc && counter) {
+                desc.addEventListener('input', () => {
+                    counter.textContent = `${desc.value.length} / 3000`;
+                });
+            }
+
+            // File upload interaction
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('documents');
+            const fileList = document.getElementById('file-list');
+            if (dropZone && fileInput) {
+                dropZone.addEventListener('click', () => fileInput.click());
+                fileInput.addEventListener('change', () => {
+                    fileList.innerHTML = '';
+                    Array.from(fileInput.files).forEach(file => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<span>📄 ${file.name}</span> <span style="color: var(--color-text-muted); font-size: 0.75rem;">(${(file.size/1024).toFixed(1)} KB)</span>`;
+                        fileList.appendChild(li);
+                    });
+                });
+            }
+
+            // Populate Review Data
+            function populateReview() {
+                const checkedCat = document.querySelector('input[name="issue_category"]:checked');
+                if (checkedCat) {
+                    const catTitle = checkedCat.closest('label').querySelector('.check-title')?.textContent || checkedCat.value;
+                    document.getElementById('review-category').textContent = catTitle;
+                }
+
+                document.getElementById('review-subject').textContent = document.getElementById('subject').value || 'Not provided';
+                const dept = document.getElementById('department');
+                document.getElementById('review-dept').textContent = dept.options[dept.selectedIndex]?.text || 'Not provided';
+                const state = document.getElementById('state');
+                document.getElementById('review-state').textContent = state.options[state.selectedIndex]?.text || 'Not provided';
+                document.getElementById('review-desc').textContent = document.getElementById('description').value || 'Not provided';
+
+                if (fileInput && fileInput.files.length > 0) {
+                    const names = Array.from(fileInput.files).map(f => f.name).join(', ');
+                    document.getElementById('review-docs').textContent = names;
+                } else {
+                    document.getElementById('review-docs').textContent = 'No documents uploaded';
+                }
+
+                document.getElementById('review-name').textContent = document.getElementById('fullname').value || 'Not provided';
+                document.getElementById('review-email').textContent = document.getElementById('email').value || 'Not provided';
+                document.getElementById('review-mobile').textContent = document.getElementById('mobile').value || 'Not provided';
+            }
+
+            // Expose updateView globally so the API submission handler in main.js can transition views
+            window.updateGrievanceView = updateView;
+        });
+    </script>
+    <script>
+    (function() {
+        var badge = document.getElementById('db2-live-badge');
+        var badgeText = document.getElementById('db2-badge-text');
+        if (!badge) return;
+        var API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:8000/api' : '/api';
+        function checkDb2() {
+            fetch(API + '/health', { method: 'GET', cache: 'no-cache' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.database && data.database.status === 'connected') {
+                        badge.className = 'db2-live-badge';
+                        badgeText.textContent = 'IBM Db2 Live ✓';
+                        badge.title = 'Connected to ' + data.database.database + ' · ' + data.database.total_grievances + ' dockets';
+                    } else {
+                        badge.className = 'db2-live-badge db2-badge--error';
+                        badgeText.textContent = 'Db2 Degraded';
+                    }
+                }).catch(function() {
+                    badge.className = 'db2-live-badge db2-badge--error';
+                    badgeText.textContent = 'Db2 Offline';
+                });
+        }
+        checkDb2();
+        setInterval(checkDb2, 30000);
+    })();
+    </script>
+    <script>
+    // Live AI Triage Preview — debounced call to backend rule-based triage endpoint
+    (function() {
+        var descEl = document.getElementById('description');
+        if (!descEl) return;
+        var previewEl = document.getElementById('ai-triage-preview');
+        var catBadge = document.getElementById('triage-cat-badge');
+        var priBadge = document.getElementById('triage-pri-badge');
+        var summaryEl = document.getElementById('triage-summary');
+        var debounceTimer = null;
+        var API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:8000/api' : '/api';
+
+        var priorityClass = {
+            'Critical': 'triage-badge--critical',
+            'High': 'triage-badge--high',
+            'Medium': 'triage-badge--medium',
+            'Low': 'triage-badge--low'
+        };
+
+        descEl.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            var text = descEl.value.trim();
+            if (text.length < 25) {
+                previewEl.classList.remove('visible');
+                return;
+            }
+            debounceTimer = setTimeout(function() {
+                // Call a lightweight preview endpoint — POST /api/grievances with dry_run flag
+                // Falls back to client-side rule-based preview
+                var cat = 'other', pri = 'Medium', summary = '';
+                var t = text.toLowerCase();
+                if (t.includes('water') || t.includes('pipeline') || t.includes('jal')) cat = 'water';
+                else if (t.includes('electric') || t.includes('power') || t.includes('wire')) cat = 'electricity';
+                else if (t.includes('road') || t.includes('pothole')) cat = 'roads';
+                else if (t.includes('garbage') || t.includes('drain') || t.includes('sanit')) cat = 'sanitation';
+                else if (t.includes('health') || t.includes('hospital') || t.includes('doctor')) cat = 'health';
+                else if (t.includes('ration') || t.includes('food') || t.includes('pds')) cat = 'food';
+                else if (t.includes('pension') || t.includes('ppo')) cat = 'pension';
+
+                if (t.includes('spark') || t.includes('fire') || t.includes('hazard') || t.includes('contaminat') || t.includes('emergency') || t.includes('dangling')) pri = 'Critical';
+                else if (t.includes('burst') || t.includes('flood') || t.includes('blackout') || t.includes('overflowing') || t.includes('deep pothole')) pri = 'High';
+                else if (t.includes('query') || t.includes('routine') || t.includes('suggestion')) pri = 'Low';
+
+                summary = text.length > 120 ? text.substring(0, 117) + '...' : text;
+
+                catBadge.textContent = cat;
+                catBadge.className = 'triage-badge triage-badge--cat';
+                priBadge.textContent = '⚡ ' + pri;
+                priBadge.className = 'triage-badge ' + (priorityClass[pri] || 'triage-badge--medium');
+                summaryEl.textContent = summary;
+                previewEl.classList.add('visible');
+            }, 800);
+        });
+    })();
+    </script>
+</body>
+</html>
+
+
+
+

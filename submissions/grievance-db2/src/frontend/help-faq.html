@@ -1,0 +1,335 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CPGRAMS Help & FAQs - Common questions and answers about public grievance filing and status tracking.">
+    <title>Help & FAQs - CPGRAMS | Government of India</title>
+        <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%231a2744'/><text y='68' x='12' font-size='58' font-family='Arial,sans-serif' font-weight='bold' fill='white'>CP</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <!-- 1. Government Identity Bar -->
+    <div class="gov-bar">
+        <div class="container">
+            <div class="gov-identity">
+                <svg width="20" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="emblem" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                <span data-i18n="gov_identity">Government of India</span>
+            </div>
+            <div class="gov-tools">
+                <div class="accessibility-tools" aria-label="Accessibility options">
+                    <button type="button" aria-label="Decrease text size">A-</button>
+                    <button type="button" aria-label="Normal text size">A</button>
+                    <button type="button" aria-label="Increase text size">A+</button>
+                    <button type="button" aria-label="High contrast mode">Contrast</button>
+                    <button type="button" id="btn-theme-toggle" aria-label="Toggle Dark Mode" title="Toggle Dark/Light Mode">🌙 Dark</button>
+                    <button type="button" id="btn-history-toggle" class="btn-history-toggle" aria-label="View Recent Grievances" title="View Recent Grievances">📋 My Grievances</button>
+                </div>
+                <div class="language-selector">
+                    <label for="lang-select" class="sr-only">Select Language</label>
+                    <select id="lang-select" class="lang-select" aria-label="Select Language">
+                        <option value="en">English</option>
+                        <option value="hi">हिन्दी (Hindi)</option>
+                        <option value="bn">বাংলা (Bengali)</option>
+                        <option value="ta">தமிழ் (Tamil)</option>
+                        <option value="te">తెలుగు (Telugu)</option>
+                        <option value="mr">मराठी (Marathi)</option>
+                        <option value="gu">ગુજરાતી (Gujarati)</option>
+                        <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                        <option value="ml">മലയാളം (Malayalam)</option>
+                        <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                        <option value="or">ଓଡ଼ିଆ (Odia)</option>
+                        <option value="as">অসমীয়া (Assamese)</option>
+                        <option value="ur">اردو (Urdu)</option>
+                        <option value="sa">संस्कृतम् (Sanskrit)</option>
+                        <option value="mai">मैथिली (Maithili)</option>
+                        <option value="doi">डोगरी (Dogri)</option>
+                        <option value="kok">कोंकणी (Konkani)</option>
+                        <option value="ne">नेपाली (Nepali)</option>
+                        <option value="sd">سنڌي (Sindhi)</option>
+                        <option value="ks">کٲشُر (Kashmiri)</option>
+                        <option value="sat">संथाली (Santali)</option>
+                        <option value="brx">बर' (Bodo)</option>
+                        <option value="mni">মৈতৈলোন্ (Manipuri)</option>
+                    </select>
+                    <div id="google_translate_element" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Main Header -->
+    <header class="main-header">
+        <div class="container">
+            <div class="brand">
+                <div class="brand-logo" aria-hidden="true">CP</div>
+                <div class="brand-text">
+                    <h1 data-i18n="cpgrams_title">CPGRAMS</h1>
+                    <span class="brand-subtitle" data-i18n="cpgrams_subtitle">Centralized Public Grievance Redress & Monitoring System</span>
+                </div>
+            </div>
+                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                <span id="db2-live-badge" class="db2-live-badge db2-badge--checking" title="IBM Db2 connection status" aria-live="polite">
+                    <span class="db2-pulse"></span>
+                    <span id="db2-badge-text">IBM Db2…</span>
+                </span>
+                <button class="menu-toggle" aria-expanded="false" aria-controls="main-nav" aria-label="Toggle navigation menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            </button>
+            </div>
+            <nav id="main-nav" class="main-nav">
+                <ul>
+                    <li><a href="index.html" data-i18n="nav_home">Home</a></li>
+                    <li><a href="lodge-grievance.html" data-i18n="nav_lodge">Lodge Grievance</a></li>
+                    <li><a href="track-status.html" data-i18n="nav_track">Track Status</a></li>
+                    <li><a href="officer.html">Officer Portal</a></li>
+                    <li><a href="dashboard.html">Analytics Dashboard</a></li>
+                    <li><a href="ask-data.html">Ask the Data (AI)</a></li>
+                    <li><a href="help-faq.html" class="active" aria-current="page" data-i18n="nav_help">Help & FAQs</a></li>
+                    <li><a href="contact.html" data-i18n="nav_contact">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main id="main-content">
+        <!-- 3. Breadcrumb -->
+        <nav aria-label="Breadcrumb" class="breadcrumb-container">
+            <div class="container">
+                <ol class="breadcrumb">
+                    <li><a href="index.html" data-i18n="nav_home">Home</a></li>
+                    <li aria-current="page" data-i18n="nav_help">Help & FAQs</li>
+                </ol>
+            </div>
+        </nav>
+
+        <!-- 4. Page Header -->
+        <section class="page-header">
+            <div class="container">
+                <h2 data-i18n="faq_heading">Help & Frequently Asked Questions</h2>
+                <p>Find answers to common questions about filing, tracking, and escalating public grievances.</p>
+            </div>
+        </section>
+
+        <!-- Search Section -->
+        <section class="section--white search-section" style="padding: 2rem 0; border-bottom: 1px solid var(--color-border);">
+            <div class="container">
+                <div class="search-box">
+                    <label for="faq-search" class="sr-only">Search help topics</label>
+                    <input type="search" id="faq-search" placeholder="Search keywords (e.g. passport, ration, escalation, timeline)..." class="form-control">
+                    <button type="button" class="btn btn--primary" id="btn-faq-search">Search</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ Categories -->
+        <section class="faq-section section">
+            <div class="container" style="max-width: 900px;">
+                
+                <!-- Category 1 -->
+                <div class="faq-category">
+                    <h3>1. Filing a Grievance</h3>
+                    <div class="accordion" id="faq-filing">
+                        <details open>
+                            <summary>Who is eligible to file a grievance on CPGRAMS?</summary>
+                            <div class="accordion-content">
+                                <p>Any citizen of India can file a grievance related to central government departments, ministries, public sector banks, and PSUs. You do not need any special registration or fee. You can file on behalf of yourself or a family member with their consent.</p>
+                            </div>
+                        </details>
+                        <details>
+                            <summary>How does the Voice Input and Suggested Department feature work?</summary>
+                            <div class="accordion-content">
+                                <p>On the <strong>Lodge Grievance</strong> page, click the <em>🎙️ Voice Input (Speak)</em> button to dictate your issue. As you describe your problem, our keyword engine automatically detects relevant departments (e.g. typing "ration card" suggests the Department of Food & Public Distribution) and allows 1-click department selection.</p>
+                            </div>
+                        </details>
+                        <details>
+                            <summary>What information should I provide for fastest resolution?</summary>
+                            <div class="accordion-content">
+                                <p>Please include: a clear subject, specific dates, previous application/reference/acknowledgment numbers, the exact location/office involved, and what resolution you expect. You can also attach up to 3 supporting PDF or image files.</p>
+                            </div>
+                        </details>
+                        <details>
+                            <summary>Is there any fee or charge for filing a grievance?</summary>
+                            <div class="accordion-content">
+                                <p><strong>No.</strong> CPGRAMS is an official service of the Government of India and is 100% free. Never pay anyone claiming to expedite or file your grievance.</p>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+
+                <!-- Category 2 -->
+                <div class="faq-category">
+                    <h3>2. Tracking & 12-Day Escalation Workflow</h3>
+                    <div class="accordion" id="faq-tracking">
+                        <details open>
+                            <summary>How do I track my submitted grievance?</summary>
+                            <div class="accordion-content">
+                                <p>Visit the <strong>Track Status</strong> page and enter your registration number (format: <code>GRV-2026-XXXX</code> or <code>CPGRM/2025/XXXXXXX</code>). You will see a visual 4-stage milestone timeline: Filed &rarr; Under Review &rarr; Forwarded to Department &rarr; Resolved.</p>
+                            </div>
+                        </details>
+                        <details>
+                            <summary>What is the 12-Day Escalation Feature?</summary>
+                            <div class="accordion-content">
+                                <p>Under Citizen Charter guidelines, if your grievance has been pending in <em>Under Review</em> for more than 12 days without an official response, an <strong>Escalate This Grievance</strong> option appears on your status card. Clicking it flags your case as High Priority and forwards it to the Senior Appellate Nodal Officer.</p>
+                            </div>
+                        </details>
+                        <details>
+                            <summary>Where do I find my registration tracking number?</summary>
+                            <div class="accordion-content">
+                                <p>Your registration number is displayed immediately upon submitting on the confirmation screen and is sent via SMS and Email to your registered contact details.</p>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+
+                <!-- Category 3 -->
+                <div class="faq-category">
+                    <h3>3. Excluded Matters</h3>
+                    <div class="accordion" id="faq-excluded">
+                        <details>
+                            <summary>Can I file grievances about state government or municipal issues?</summary>
+                            <div class="accordion-content">
+                                <p>CPGRAMS handles grievances related to central government ministries and organizations. For municipal or state-specific matters (like local property tax or state police), please file on your state's respective CM helpline portal.</p>
+                            </div>
+                        </details>
+                        <details>
+                            <summary>Can I file RTI (Right to Information) requests here?</summary>
+                            <div class="accordion-content">
+                                <p>No. RTI requests should be filed on the RTI Online portal at <code>rtionline.gov.in</code>. CPGRAMS is designated strictly for grievance redressal.</p>
+                            </div>
+                        </details>
+                        <details>
+                            <summary>Can I file matters that are currently pending in court (Sub-judice)?</summary>
+                            <div class="accordion-content">
+                                <p>No. Matters pending in any court of law or judicial tribunal cannot be adjudicated through CPGRAMS.</p>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+
+                <!-- Category 4 -->
+                <div class="faq-category">
+                    <h3>4. Appeals & Feedback</h3>
+                    <div class="accordion" id="faq-appeals">
+                        <details>
+                            <summary>What if I am not satisfied with the department's resolution?</summary>
+                            <div class="accordion-content">
+                                <p>If you are not satisfied with the resolution order, you can file an Appeal within 30 days of closure through the Track Status page for review by an Appellate Authority.</p>
+                            </div>
+                        </details>
+                        <details>
+                            <summary>Can I provide feedback on officer handling?</summary>
+                            <div class="accordion-content">
+                                <p>Yes. Once your grievance reaches the <em>Resolved</em> stage, a feedback rating prompt enables citizens to rate the timeliness and quality of resolution.</p>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Still Need Help? Section -->
+        <section class="section--alt help-support-section">
+            <div class="container">
+                <div class="card text-center" style="max-width: 650px; margin: 0 auto; padding: 2.5rem;">
+                    <h3 style="margin-top: 0; color: var(--color-navy);">Still need assistance?</h3>
+                    <p style="color: var(--color-text-muted);">Our citizen grievance support desk is available to assist you during working hours.</p>
+                    <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                        <a href="contact.html" class="btn btn--primary">Contact Support Team</a>
+                        <a href="tel:1800110000" class="btn btn--outline">📞 Call Helpline: 1800-11-0000</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 5. Footer -->
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer__grid">
+                <div class="footer__col">
+                    <h3 class="footer__title">CPGRAMS</h3>
+                    <p class="footer__desc">Centralized Public Grievance Redress and Monitoring System, Department of Administrative Reforms & Public Grievances, Government of India.</p>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">Quick Links</h4>
+                    <ul class="footer__links">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="lodge-grievance.html">Lodge Grievance</a></li>
+                        <li><a href="track-status.html">Track Status</a></li>
+                        <li><a href="help-faq.html">Help & FAQs</a></li>
+                        <li><a href="contact.html">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">Legal & Policies</h4>
+                    <ul class="footer__links">
+                        <li><a href="#" data-i18n="footer_privacy">Privacy Policy</a></li>
+                        <li><a href="#" data-i18n="footer_terms">Terms of Use</a></li>
+                        <li><a href="#" data-i18n="footer_a11y">Accessibility Statement</a></li>
+                    </ul>
+                </div>
+                <div class="footer__col">
+                    <h4 class="footer__subtitle">Helpline</h4>
+                    <p style="color: #cbd5e1; font-size: 0.875rem; margin: 0 0 0.5rem 0;">Toll-Free Helpline: <strong>1800-11-0000</strong></p>
+                    <p style="color: #cbd5e1; font-size: 0.875rem; margin: 0;">Hours: 9:30 AM – 5:30 PM (Mon–Fri)</p>
+                </div>
+            </div>
+            <div class="footer__bottom">
+                <div data-i18n="footer_copyright">&copy; 2026 Government of India. All rights reserved.</div>
+                <div style="opacity: 0.8;">Designed for IBM Db2Hack 2026 - AI & Modern Data Apps Track.</div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+    <script>
+        // Simple FAQ Search filter
+        document.getElementById('faq-search')?.addEventListener('input', function(e) {
+            const val = e.target.value.toLowerCase().trim();
+            document.querySelectorAll('.accordion details').forEach(details => {
+                const text = details.textContent.toLowerCase();
+                if (!val || text.includes(val)) {
+                    details.style.display = 'block';
+                    if (val) details.open = true;
+                } else {
+                    details.style.display = 'none';
+                }
+            });
+        });
+    </script>
+    <script>
+    (function() {
+        var badge = document.getElementById('db2-live-badge');
+        var badgeText = document.getElementById('db2-badge-text');
+        if (!badge) return;
+        var API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:8000/api' : '/api';
+        function checkDb2() {
+            fetch(API + '/health', { method: 'GET', cache: 'no-cache' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.database && data.database.status === 'connected') {
+                        badge.className = 'db2-live-badge';
+                        badgeText.textContent = 'IBM Db2 Live ✓';
+                        badge.title = 'Connected to ' + data.database.database + ' · ' + data.database.total_grievances + ' dockets';
+                    } else {
+                        badge.className = 'db2-live-badge db2-badge--error';
+                        badgeText.textContent = 'Db2 Degraded';
+                    }
+                }).catch(function() {
+                    badge.className = 'db2-live-badge db2-badge--error';
+                    badgeText.textContent = 'Db2 Offline';
+                });
+        }
+        checkDb2();
+        setInterval(checkDb2, 30000);
+    })();
+    </script>
+</body>
+</html>
+
