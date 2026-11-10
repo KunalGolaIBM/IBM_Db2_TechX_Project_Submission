@@ -129,15 +129,22 @@ async function route() {
 }
 window.addEventListener("hashchange", route);
 
-const health = { replay: false, clock: null };
+const health = { replay: false, live: null, clock: null };
+// The public demo's live checks: "on", "paused" (the banner says why) or "unavailable".
+const liveTag = (b) => (b.live_checks === "on" ? `replay + live: ${String(b.live_model).split("/").pop()}`
+  : `replay only: live checks ${b.live_checks}`);
 async function status() {
   try {
     const { body } = await api("/healthz");
     mount($("#status"), html`
       <span class="tag db2 ${body.db2 === "ok" ? "ok" : "warn"}" title="IBM Db2 connection as the least-privilege user"><i aria-hidden="true"></i><span class="label">Db2 ${body.db2 === "ok" ? "connected" : "unavailable"}</span></span>
-      <span class="tag ${body.llm_ready ? (body.replay ? "warn" : "brand") : "warn"}" title="LLM provider and model: ${body.llm}">${body.llm_ready ? (body.replay ? "replay: recorded model outputs" : String(body.llm).split("/").pop()) : "no model configured"}</span>`);
+      <span class="tag ${body.llm_ready ? (body.replay && body.live_checks !== "on" ? "warn" : "brand") : "warn"}" title="LLM provider and model: ${body.live_model ? `${body.llm}, and ${body.live_model} for live checks` : body.llm}">${body.llm_ready ? (body.live_checks ? liveTag(body) : body.replay ? "replay: recorded model outputs" : String(body.llm).split("/").pop()) : "no model configured"}</span>`);
     health.replay = Boolean(body.replay);
+    // The public demo with live checks: a check's new input goes live (or is refused while live checks are paused),
+    // never held as a replay miss. Policy intake and the inbox's reply check stay replay-only.
+    health.live = body.live_checks || null;
     health.clock = body.db2_clock || null;
+    if (body.replay && $("#replay-mode") && body.public_demo_notice) $("#replay-mode").textContent = body.public_demo_notice;
     if (body.replay && !$("#replay-mode")) {
       const bar = document.createElement("div");
       bar.id = "replay-mode";
@@ -186,7 +193,7 @@ function explain(r, asOf) {
     case "CORRECTION_FAILED": return "The answer contradicted the policy, and the rewrite did not pass the re-check, so it was held back.";
     case "TOO_MANY_CLAIMS": return "The answer makes more than 8 policy claims; long answers go to a person.";
     case "ERROR_FAIL_CLOSED": return "A check could not complete, so the answer was held (fail closed)."
-      + (health.replay ? " In replay mode this is what happens to any input without a recorded model output." : "");
+      + (health.replay && !health.live ? " In replay mode this is what happens to any input without a recorded model output." : "");
     case "LEDGER_UNAVAILABLE": return "The decision could not be recorded in the ledger, so nothing was released.";
     case "ROUTE_UNCERTAIN": return "AsOf could not tell which policy document this is about, so it did not guess: a specialist picks the document and answers, in the inbox.";
     default: return r.reason_code;
@@ -283,6 +290,7 @@ async function runCheck() {
     mount(box, html`<div class="error-box">${err.message}</div>`);
   } finally {
     btn.disabled = false;
+    if (health.live) status();  // the banner shows today's live-check count, or why live checks paused
   }
 }
 function claimCard(c) {

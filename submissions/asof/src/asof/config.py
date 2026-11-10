@@ -103,6 +103,14 @@ class Settings(BaseSettings):
     # A hosted public demo for judges: replay mode only, no model keys, and nothing that changes policy or sends
     # anything (see api.py). Behind its own reverse proxy on the same machine; off by default.
     asof_public_demo: bool = False
+    # Live checks on the public demo (asof/demolive.py): input that is not a recorded built-in scenario is checked by
+    # OpenRouter, while the built-in scenarios keep replaying. Needs ASOF_PUBLIC_DEMO=true and LLM_PROVIDER=replay, and
+    # OPENROUTER_API_KEY from the process environment (a systemd EnvironmentFile), never from .env. Db2 holds the
+    # daily cap for the whole demo (CLAIM_DEMO_CHECK); the per-visitor limits are kept in memory.
+    asof_demo_live: bool = False
+    asof_demo_live_daily_cap: int = Field(400, ge=1, le=100000)
+    asof_demo_live_per_minute: int = Field(3, ge=1, le=60)
+    asof_demo_live_per_day: int = Field(20, ge=1, le=1000)
 
     # LLM provider
     llm_provider: LLMProvider = "openrouter"
@@ -178,10 +186,19 @@ class Settings(BaseSettings):
         if self.asof_public_demo:
             if self.llm_provider != "replay":
                 raise ValueError("ASOF_PUBLIC_DEMO=true runs in replay mode only: set LLM_PROVIDER=replay")
+            allowed = {"openrouter_api_key"} if self.asof_demo_live else set()
             keys = [name.upper() for name in ("openrouter_api_key", "openai_compat_api_key", "watsonx_api_key",
-                                              "embedding_api_key") if _is_set(getattr(self, name))]
+                                              "embedding_api_key") if _is_set(getattr(self, name)) and name not in allowed]
             if keys:
-                raise ValueError("ASOF_PUBLIC_DEMO=true holds no model keys; remove " + ", ".join(keys))
+                raise ValueError("ASOF_PUBLIC_DEMO=true holds no model keys" + (" but OPENROUTER_API_KEY" if allowed else "")
+                                 + "; remove " + ", ".join(keys))
+            if allowed and _is_set(self.openrouter_api_key) and os.environ.get("OPENROUTER_API_KEY") != \
+                    self.openrouter_api_key.get_secret_value():  # type: ignore[union-attr]
+                raise ValueError("ASOF_DEMO_LIVE=true takes OPENROUTER_API_KEY from the process environment only (a "
+                                 "systemd EnvironmentFile), never from .env")
+        elif self.asof_demo_live:
+            raise ValueError("ASOF_DEMO_LIVE=true is for the public demo only: set ASOF_PUBLIC_DEMO=true, or use "
+                             "LLM_PROVIDER=openrouter to check everything live")
         return self
 
     @model_validator(mode="after")
@@ -273,6 +290,8 @@ class Settings(BaseSettings):
 
     @property
     def embedding_key(self) -> SecretStr | None:
+        if self.asof_public_demo:  # the demo's live-check key never becomes Db2's embedding key (CREATE EXTERNAL MODEL)
+            return None
         return self.embedding_api_key if _is_set(self.embedding_api_key) else self.openrouter_api_key
 
     @property

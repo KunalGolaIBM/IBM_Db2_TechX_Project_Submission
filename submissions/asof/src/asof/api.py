@@ -24,13 +24,14 @@ from typing import Annotated, Any, Literal
 
 from fastapi import FastAPI, Header, HTTPException, Path, Query, Request
 from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationError
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from . import __version__, db, impactagent, intake, ledger, notices, policy, review, router
+from . import __version__, db, demolive, impactagent, intake, ledger, notices, policy, review, router
 from .anchor import AnchorLog
 from .anchor import verify as verify_anchors
 from .askledger import LedgerAsker
@@ -296,7 +297,7 @@ class ReplyIn(_In):
 
 def create_app(settings: Settings | None = None, *, gate: Gate | None = None, assistant: DemoAssistant | None = None,
                asker: LedgerAsker | None = None, schema: str = db.SCHEMA, rate_limit: int = 30,
-               intake_model: Any = None, read_limit: int = 240) -> FastAPI:
+               intake_model: Any = None, read_limit: int = 240, live: demolive.LiveChecks | None = None) -> FastAPI:
     settings = settings or get_settings()
     state: dict[str, Any] = {"gate": gate, "assistant": assistant, "asker": asker, "intake_llm": intake_model}
     users_mode = settings.asof_auth == "users"
@@ -470,13 +471,54 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
                                           "in .env (or use Ollama), then restart."}, status_code=503)
         return JSONResponse({"error": "the language model is unavailable"}, status_code=503)
 
+    # ---------- live checks on the public demo (asof/demolive.py) ----------
+    # With ASOF_DEMO_LIVE=true, an input the recording holds exactly replays; anything else is a live check, if one can
+    # start (input limits, then the pause, the visitor's limits, free slots and Db2's daily cap); otherwise it is refused.
+    def live_gate(llm: demolive.Meter) -> Gate:
+        return Gate(llm, get_embeddings(settings.embedding_model), app_conn, schema,
+                    deadline_s=min(settings.asof_check_deadline_s, demolive.LIVE_CHECK_DEADLINE_S), anchors=anchors)
+
+    def live_assistant(llm: demolive.Meter) -> DemoAssistant:
+        return DemoAssistant(llm, get_embeddings(settings.embedding_model), app_conn, schema)
+
+    if not (demo and settings.asof_demo_live):
+        live = None
+    elif live is None:
+        live = demolive.LiveChecks.from_settings(settings, app_conn, schema, live_gate, live_assistant)
+        log.info("public demo: live checks %s (%s, %d a day, %d recorded inputs replay)",
+                 "on" if live.available else "unavailable: no OPENROUTER_API_KEY in the environment", live.model,
+                 live.cap, len(live.recorded))
+
+    def live_limits(model: type[BaseModel], **fields: str) -> None:
+        """The live input limits, checked before anything else runs; a 422 like any other invalid input."""
+        try:
+            model.model_validate(fields)
+        except ValidationError as exc:
+            raise RequestValidationError([{**e, "loc": ("body", *e["loc"])} for e in exc.errors()]) from None
+
+    def run_gate(g: Gate, req: GateRequest, request: Request) -> GateResult:
+        """Check one draft: replayed if the recording holds it exactly, else live (or refused, in the demo)."""
+        if live is None or live.recorded_gate(req.doc_id, req.question, req.draft_answer, req.as_of):
+            return g.check(req)
+        with live.check(client_address(request)) as session:
+            result: GateResult = session.gate.check(req)
+            return result
+
+    @app.exception_handler(demolive.LiveRefused)
+    async def _live_refused(_: Request, exc: demolive.LiveRefused):
+        log.warning("live check refused (%s)", exc.reason)
+        return JSONResponse({"error": exc.message, "reason": exc.reason,
+                             "live_checks": "unavailable" if exc.reason == "unavailable" else "paused"},
+                            status_code=exc.status,
+                            headers={"Retry-After": str(exc.retry_after_s)} if exc.retry_after_s else None)
+
     def replay_model() -> str | None:
         from .replay import shipped_model
 
         return shipped_model() if settings.llm_provider == "replay" else None
 
     @app.get("/healthz")
-    def healthz():
+    def healthz(request: Request):
         clock = None
         try:
             conn = app_conn()
@@ -489,13 +531,16 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
             db_state = "error: not configured"
         except db.DatabaseError as exc:
             db_state = f"error: SQLSTATE {exc.sqlstate or 'unknown'}"  # no host, user or message details
+        live_now = live.status(client_address(request)) if live is not None else None  # says nothing about the key
         return {"status": "ok" if db_state == "ok" and settings.llm_ready else "degraded", "db2": db_state,
                 "db2_clock": clock,  # the zone of every Db2 timestamp the UI shows
                 "llm": f"{settings.llm_provider}:{settings.llm_model_name}", "llm_ready": settings.llm_ready,
                 "replay": settings.llm_provider == "replay", "replay_model": replay_model(),
                 "anchoring": "on" if anchors is not None else "off", "db2_tls": settings.db2_ssl,
                 "auth": "users" if users_mode else ("token" if api_token else "local"),
-                "public_demo": demo, "public_demo_notice": PUBLIC_DEMO_NOTICE if demo else None,
+                "public_demo": demo,
+                "public_demo_notice": live_now["notice"] if live_now else (PUBLIC_DEMO_NOTICE if demo else None),
+                "live_checks": live_now["state"] if live_now else None, "live_model": live.model if live else None,
                 "version": __version__}
 
     def respond(result: GateResult) -> JSONResponse:
@@ -510,20 +555,30 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
 
     @app.post("/api/gate", response_model=GateOut)
     def check_answer(body: GateIn, request: Request):
+        if live is not None:
+            live_limits(demolive.LiveGateIn, question=body.question, draft_answer=body.draft_answer)
         g, _ = components()
         if body.doc_id != "auto":
-            return respond(g.check(GateRequest(body.question, body.draft_answer, body.as_of_date, body.doc_id,
-                                               body.channel, requested_by(request))))
+            return respond(run_gate(g, GateRequest(body.question, body.draft_answer, body.as_of_date, body.doc_id,
+                                                   body.channel, requested_by(request)), request))
         r = doc_router().route(body.question, body.draft_answer, body.as_of_date)
         req = GateRequest(body.question, body.draft_answer, body.as_of_date, r.doc_id or r.leader, body.channel,
                           requested_by(request), r.as_json())
-        result = g.check(req) if r.doc_id else g.hold(req, "ROUTE_UNCERTAIN", f"router:{r.method}")
+        result = run_gate(g, req, request) if r.doc_id else g.hold(req, "ROUTE_UNCERTAIN", f"router:{r.method}")
         out = gate_out(result).model_dump(mode="json") | {"route": jsonable_encoder(router.describe(r))}
         return JSONResponse(out, status_code=200 if result.released else 503)
 
     @app.post("/api/assistant/ask")
     def ask_assistant(body: AskIn, request: Request):
+        if live is not None:
+            live_limits(demolive.LiveAskIn, question=body.question)
         g, a = components()
+        if live is not None and not live.recorded_ask(body.doc_id, body.question, body.as_of_date):
+            with live.check(client_address(request)) as session:
+                return assistant_reply(session.gate, session.assistant, body, request)
+        return assistant_reply(g, a, body, request)
+
+    def assistant_reply(g: Gate, a: DemoAssistant, body: AskIn, request: Request) -> JSONResponse:
         draft = a.answer(body.question)
         result = g.check(GateRequest(body.question, draft.text, body.as_of_date, body.doc_id, body.channel,
                                      requested_by(request)))

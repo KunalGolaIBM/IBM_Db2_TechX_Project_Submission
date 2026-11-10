@@ -55,7 +55,9 @@ async function call(path, body) {
   }
   // A held answer is a 503 that carries the full decision; anything else that is not 2xx is an error.
   if (!res.ok && !(res.status === 503 && data && data.decision)) {
-    throw new Error((data && (data.error || (typeof data.detail === "string" && data.detail))) || `Request failed (${res.status})`);
+    // A refused live check (public demo) says why in `error`; an input over the limits is a 422 with `detail`.
+    const detail = data && Array.isArray(data.detail) ? data.detail.map((d) => d.msg).join("; ") : data && data.detail;
+    throw new Error((data && (data.error || (typeof detail === "string" && detail))) || `Request failed (${res.status})`);
   }
   return data;
 }
