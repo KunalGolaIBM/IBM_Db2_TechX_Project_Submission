@@ -1,10 +1,11 @@
 -- The claim citations of one decision
+-- Schema: ASOF
 -- Statement (as the app runs it, values bound as parameters):
 -- SELECT PASS_NO, CLAIM_NO, CLAIM_TEXT, AREA, VERDICT, LLM_VERDICT, RULE_CHECK, CLAUSE_ID, CLAUSE_VERSION, CLAUSE_BUS_START, CLAUSE_SYS_START, DISTANCE, QUOTED_SPAN FROM CLAIM_CITATION WHERE LEDGER_ID = ? ORDER BY PASS_NO, CLAIM_NO
 
 Access Plan:
 -----------
-	Total Cost: 		0.00762169
+	Total Cost: 		0.00227029
 	Query Degree:		1
 
 
@@ -17,13 +18,13 @@ Access Plan:
                 0 
              FETCH 
              (   2)
-           0.00762169 
+           0.00227029 
                 0 
           /----+----\
          0             0 
       IXSCAN    TABLE: ASOF    
       (   3)    CLAIM_CITATION
-    0.00745334        Q1
+    0.00222014        Q1
          0 
         |
          0 
@@ -36,13 +37,13 @@ Plan Details:
 
 
 	1) RETURN: (Return Result)
-		Cumulative Total Cost: 		0.00762169
+		Cumulative Total Cost: 		0.00227029
 		Cumulative CPU Cost: 		41198
 		Cumulative I/O Cost: 		0
-		Cumulative Re-Total Cost: 	0.00106135
+		Cumulative Re-Total Cost: 	0.000316148
 		Cumulative Re-CPU Cost: 	5737
 		Cumulative Re-I/O Cost: 	0
-		Cumulative First Row Cost: 	0.00762169
+		Cumulative First Row Cost: 	0.00227029
 		Estimated Bufferpool Buffers: 	1
 
 		Arguments:
@@ -50,13 +51,13 @@ Plan Details:
 		BLDLEVEL: (Build level)
 			DB2 v12.1.5.0 : special_85816
 		CPUCACHE: (Per-thread CPU cache size)
-			0
+			2097152
 		HEAPUSE : (Maximum Statement Heap Usage)
 			176 Pages
 		PLANID  : (Access plan identifier)
 			f83d5c6ad7d7a8fb
 		PREPTIME: (Statement prepare time)
-			         5 milliseconds
+			        27 milliseconds
 		SEMEVID : (Semantic environment identifier)
 			03584f1d775a74f4
 		STMTHEAP: (Statement heap size)
@@ -86,13 +87,13 @@ Plan Details:
 
 
 	2) FETCH : (Fetch)
-		Cumulative Total Cost: 		0.00762169
+		Cumulative Total Cost: 		0.00227029
 		Cumulative CPU Cost: 		41198
 		Cumulative I/O Cost: 		0
-		Cumulative Re-Total Cost: 	0.00106135
+		Cumulative Re-Total Cost: 	0.000316148
 		Cumulative Re-CPU Cost: 	5737
 		Cumulative Re-I/O Cost: 	0
-		Cumulative First Row Cost: 	0.00762169
+		Cumulative First Row Cost: 	0.00227029
 		Estimated Bufferpool Buffers: 	1
 
 		Arguments:
@@ -167,13 +168,13 @@ Plan Details:
 
 
 	3) IXSCAN: (Index Scan)
-		Cumulative Total Cost: 		0.00745334
+		Cumulative Total Cost: 		0.00222014
 		Cumulative CPU Cost: 		40288
 		Cumulative I/O Cost: 		0
-		Cumulative Re-Total Cost: 	0.000893002
+		Cumulative Re-Total Cost: 	0.000266001
 		Cumulative Re-CPU Cost: 	4827
 		Cumulative Re-I/O Cost: 	0
-		Cumulative First Row Cost: 	0.00745334
+		Cumulative First Row Cost: 	0.00222014
 		Estimated Bufferpool Buffers: 	1
 
 		Arguments:

@@ -1,10 +1,11 @@
 -- The same, as the database held it at a past moment (replay)
+-- Schema: ASOF
 -- Statement (as the app runs it, values bound as parameters):
 -- SELECT c.CLAUSE_ID, c.AREA, c.TITLE, c.VERSION_LABEL, c.CLAUSE_TEXT, c.RULE_JSON, c.BUS_START, c.BUS_END, c.SYS_START, VECTOR_DISTANCE(c.EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE) AS DIST FROM POLICY_CLAUSE FOR SYSTEM_TIME AS OF ? FOR BUSINESS_TIME AS OF ? AS c WHERE c.DOC_ID = ? ORDER BY DIST FETCH EXACT FIRST ? ROWS ONLY
 
 Access Plan:
 -----------
-	Total Cost: 		7.07319
+	Total Cost: 		7.0534
 	Query Degree:		1
 
 
@@ -17,56 +18,56 @@ Access Plan:
                             0.131687 
                              FILTER
                              (   2)
-                             7.07319 
+                             7.0534 
                                 1 
                                |
                             0.395062 
                              TBSCAN
                              (   3)
-                             7.07144 
+                             7.05288 
                                 1 
                                |
                             0.395062 
                              SORT  
                              (   4)
-                             7.07114 
+                             7.05279 
                                 1 
                                |
                             0.395062 
                              UNION 
                              (   5)
-                             7.07035 
+                             7.05255 
                                 1 
-                  /------------+------------\
-                 0                         0.395062 
-              FETCH                         FETCH 
-              (   6)                        (   8)
-            0.00756064                      7.06279 
-                 0                             1 
-          /-----+-----\                  /----+----\
-         0               0           3.55556         64 
-      IXSCAN      TABLE: ASOF        IXSCAN    TABLE: ASOF    
-      (   7)    POLICY_CLAUSE_HIST   (   9)     POLICY_CLAUSE
-    0.00739229          Q1          0.0140009        Q3
-         0                              0 
-        |                              |
-         0                             64 
-  INDEX: ASOF                    INDEX: ASOF    
- IX_CLAUSE_HIST_ID             IX_CLAUSE_DOC_ASOF
-        Q1                             Q3
+                  /------------+-------------\
+                 0                          0.395062 
+              FETCH                          FETCH 
+              (   6)                         (   8)
+            0.00225211                       7.0503 
+                 0                              1 
+          /-----+-----\                   /----+----\
+         0               0            3.55556         64 
+      IXSCAN      TABLE: ASOF         IXSCAN    TABLE: ASOF    
+      (   7)    POLICY_CLAUSE_HIST    (   9)     POLICY_CLAUSE
+    0.00220196          Q1          0.00417049        Q3
+         0                               0 
+        |                               |
+         0                              64 
+  INDEX: ASOF                     INDEX: ASOF    
+ IX_CLAUSE_HIST_ID              IX_CLAUSE_DOC_ASOF
+        Q1                              Q3
 
 Plan Details:
 -------------
 
 
 	1) RETURN: (Return Result)
-		Cumulative Total Cost: 		7.07319
+		Cumulative Total Cost: 		7.0534
 		Cumulative CPU Cost: 		152350
 		Cumulative I/O Cost: 		1
-		Cumulative Re-Total Cost: 	0.0121076
+		Cumulative Re-Total Cost: 	0.00360653
 		Cumulative Re-CPU Cost: 	65446.2
 		Cumulative Re-I/O Cost: 	0
-		Cumulative First Row Cost: 	7.07319
+		Cumulative First Row Cost: 	7.0534
 		Estimated Bufferpool Buffers: 	0
 
 		Arguments:
@@ -74,13 +75,13 @@ Plan Details:
 		BLDLEVEL: (Build level)
 			DB2 v12.1.5.0 : special_85816
 		CPUCACHE: (Per-thread CPU cache size)
-			0
+			2097152
 		HEAPUSE : (Maximum Statement Heap Usage)
 			256 Pages
 		PLANID  : (Access plan identifier)
 			c52b692157f94380
 		PREPTIME: (Statement prepare time)
-			         7 milliseconds
+			        27 milliseconds
 		SEMEVID : (Semantic environment identifier)
 			03584f1d775a74f4
 		STMTHEAP: (Statement heap size)
@@ -108,13 +109,13 @@ Plan Details:
 
 
 	2) FILTER: (Filter)
-		Cumulative Total Cost: 		7.07319
+		Cumulative Total Cost: 		7.0534
 		Cumulative CPU Cost: 		152350
 		Cumulative I/O Cost: 		1
-		Cumulative Re-Total Cost: 	0.0121076
+		Cumulative Re-Total Cost: 	0.00360653
 		Cumulative Re-CPU Cost: 	65446.2
 		Cumulative Re-I/O Cost: 	0
-		Cumulative First Row Cost: 	7.07319
+		Cumulative First Row Cost: 	7.0534
 		Estimated Bufferpool Buffers: 	0
 
 		Predicates:
@@ -161,13 +162,13 @@ Plan Details:
 
 
 	3) TBSCAN: (Table Scan)
-		Cumulative Total Cost: 		7.07144
+		Cumulative Total Cost: 		7.05288
 		Cumulative CPU Cost: 		142907
 		Cumulative I/O Cost: 		1
-		Cumulative Re-Total Cost: 	0.0103606
+		Cumulative Re-Total Cost: 	0.00308615
 		Cumulative Re-CPU Cost: 	56003
 		Cumulative Re-I/O Cost: 	0
-		Cumulative First Row Cost: 	7.07142
+		Cumulative First Row Cost: 	7.05287
 		Estimated Bufferpool Buffers: 	0
 
 		Arguments:
@@ -218,13 +219,13 @@ Plan Details:
 
 
 	4) SORT  : (Sort)
-		Cumulative Total Cost: 		7.07114
+		Cumulative Total Cost: 		7.05279
 		Cumulative CPU Cost: 		141271
 		Cumulative I/O Cost: 		1
-		Cumulative Re-Total Cost: 	0.010058
+		Cumulative Re-Total Cost: 	0.00299601
 		Cumulative Re-CPU Cost: 	54367.2
 		Cumulative Re-I/O Cost: 	0
-		Cumulative First Row Cost: 	7.07114
+		Cumulative First Row Cost: 	7.05279
 		Estimated Bufferpool Buffers: 	3
 
 		Arguments:
@@ -277,13 +278,13 @@ Plan Details:
 
 
 	5) UNION : (Union)
-		Cumulative Total Cost: 		7.07035
+		Cumulative Total Cost: 		7.05255
 		Cumulative CPU Cost: 		137048
 		Cumulative I/O Cost: 		1
-		Cumulative Re-Total Cost: 	0.00982832
+		Cumulative Re-Total Cost: 	0.00292759
 		Cumulative Re-CPU Cost: 	53125.6
 		Cumulative Re-I/O Cost: 	0
-		Cumulative First Row Cost: 	7.0691
+		Cumulative First Row Cost: 	7.05218
 		Estimated Bufferpool Buffers: 	3
 
 		Input Streams:
@@ -329,13 +330,13 @@ Plan Details:
 
 
 	6) FETCH : (Fetch)
-		Cumulative Total Cost: 		0.00756064
+		Cumulative Total Cost: 		0.00225211
 		Cumulative CPU Cost: 		40868
 		Cumulative I/O Cost: 		0
-		Cumulative Re-Total Cost: 	0.0010003
+		Cumulative Re-Total Cost: 	0.000297963
 		Cumulative Re-CPU Cost: 	5407
 		Cumulative Re-I/O Cost: 	0
-		Cumulative First Row Cost: 	0.00756064
+		Cumulative First Row Cost: 	0.00225211
 		Estimated Bufferpool Buffers: 	1
 
 		Arguments:
@@ -449,13 +450,13 @@ Plan Details:
 
 
 	7) IXSCAN: (Index Scan)
-		Cumulative Total Cost: 		0.00739229
+		Cumulative Total Cost: 		0.00220196
 		Cumulative CPU Cost: 		39958
 		Cumulative I/O Cost: 		0
-		Cumulative Re-Total Cost: 	0.000831952
+		Cumulative Re-Total Cost: 	0.000247815
 		Cumulative Re-CPU Cost: 	4497
 		Cumulative Re-I/O Cost: 	0
-		Cumulative First Row Cost: 	0.00739229
+		Cumulative First Row Cost: 	0.00220196
 		Estimated Bufferpool Buffers: 	1
 
 		Arguments:
@@ -519,13 +520,13 @@ Plan Details:
 
 
 	8) FETCH : (Fetch)
-		Cumulative Total Cost: 		7.06279
+		Cumulative Total Cost: 		7.0503
 		Cumulative CPU Cost: 		96179.6
 		Cumulative I/O Cost: 		1
-		Cumulative Re-Total Cost: 	0.00882802
+		Cumulative Re-Total Cost: 	0.00262962
 		Cumulative Re-CPU Cost: 	47718.6
 		Cumulative Re-I/O Cost: 	0
-		Cumulative First Row Cost: 	7.06154
+		Cumulative First Row Cost: 	7.04993
 		Estimated Bufferpool Buffers: 	2
 
 		Arguments:
@@ -619,13 +620,13 @@ Plan Details:
 
 
 	9) IXSCAN: (Index Scan)
-		Cumulative Total Cost: 		0.0140009
+		Cumulative Total Cost: 		0.00417049
 		Cumulative CPU Cost: 		75680
 		Cumulative I/O Cost: 		0
-		Cumulative Re-Total Cost: 	0.00744058
+		Cumulative Re-Total Cost: 	0.00221634
 		Cumulative Re-CPU Cost: 	40219
 		Cumulative Re-I/O Cost: 	0
-		Cumulative First Row Cost: 	0.010595
+		Cumulative First Row Cost: 	0.00315594
 		Estimated Bufferpool Buffers: 	1
 
 		Arguments:

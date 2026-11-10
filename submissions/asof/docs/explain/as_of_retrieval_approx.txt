@@ -1,0 +1,398 @@
+-- The same with FETCH APPROX FIRST 10 ROWS (not used by the app: see vector_benchmark.md)
+-- Schema: ASOF
+-- Statement (as the app runs it, values bound as parameters):
+-- SELECT c.CLAUSE_ID, c.AREA, c.TITLE, c.VERSION_LABEL, c.CLAUSE_TEXT, c.RULE_JSON, c.BUS_START, c.BUS_END, c.SYS_START, VECTOR_DISTANCE(c.EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE) AS DIST FROM POLICY_CLAUSE FOR BUSINESS_TIME AS OF ? AS c WHERE c.DOC_ID = ? ORDER BY DIST FETCH APPROX FIRST 10 ROWS ONLY
+
+Access Plan:
+-----------
+	Total Cost: 		7.05256
+	Query Degree:		1
+
+
+               Rows 
+              RETURN
+              (   1)
+               Cost 
+                I/O 
+                |
+              3.55556 
+              TBSCAN
+              (   2)
+              7.05256 
+                 1 
+                |
+              3.55556 
+              SORT  
+              (   3)
+              7.05242 
+                 1 
+                |
+              3.55556 
+              FETCH 
+              (   4)
+              7.05012 
+                 1 
+           /----+----\
+       3.55556         64 
+       IXSCAN    TABLE: ASOF    
+       (   5)     POLICY_CLAUSE
+     0.00417049        Q1
+          0 
+         |
+         64 
+   INDEX: ASOF    
+ IX_CLAUSE_DOC_ASOF
+         Q1
+
+Plan Details:
+-------------
+
+
+	1) RETURN: (Return Result)
+		Cumulative Total Cost: 		7.05256
+		Cumulative CPU Cost: 		137145
+		Cumulative I/O Cost: 		1
+		Cumulative Re-Total Cost: 	0.00454374
+		Cumulative Re-CPU Cost: 	82453.2
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	7.05251
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		BLDLEVEL: (Build level)
+			DB2 v12.1.5.0 : special_85816
+		CPUCACHE: (Per-thread CPU cache size)
+			2097152
+		HEAPUSE : (Maximum Statement Heap Usage)
+			176 Pages
+		MAX CARD: (Maximum Cardinality)
+			10
+		PLANID  : (Access plan identifier)
+			d6703cc7b78ca137
+		PREPTIME: (Statement prepare time)
+			        15 milliseconds
+		SEMEVID : (Semantic environment identifier)
+			03584f1d775a74f4
+		STMTHEAP: (Statement heap size)
+			8192
+		STMTID  : (Normalized statement identifier)
+			a485f4ccf6719dff
+		TENANTID: (Compiled In Tenant ID)
+			0
+		TENANTNM: (Compiled In Tenant Name)
+			SYSTEM
+
+		Input Streams:
+		-------------
+			6) From Operator #2
+
+				Estimated number of rows: 	3.55556
+				Number of columns: 		10
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q3.DIST(A)+Q3.SYS_START+Q3.BUS_END
+				+Q3.BUS_START+Q3.RULE_JSON+Q3.CLAUSE_TEXT
+				+Q3.VERSION_LABEL+Q3.TITLE+Q3.AREA+Q3.CLAUSE_ID
+
+
+	2) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		7.05256
+		Cumulative CPU Cost: 		137145
+		Cumulative I/O Cost: 		1
+		Cumulative Re-Total Cost: 	0.00454374
+		Cumulative Re-CPU Cost: 	82453.2
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	7.05251
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		MAX CARD: (Maximum Cardinality)
+			10
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			5) From Operator #3
+
+				Estimated number of rows: 	3.55556
+				Number of columns: 		10
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.DIST(A)+Q2.SYS_START+Q2.BUS_END
+				+Q2.BUS_START+Q2.RULE_JSON+Q2.CLAUSE_TEXT
+				+Q2.VERSION_LABEL+Q2.TITLE+Q2.AREA+Q2.CLAUSE_ID
+
+
+		Output Streams:
+		--------------
+			6) To Operator #1
+
+				Estimated number of rows: 	3.55556
+				Number of columns: 		10
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q3.DIST(A)+Q3.SYS_START+Q3.BUS_END
+				+Q3.BUS_START+Q3.RULE_JSON+Q3.CLAUSE_TEXT
+				+Q3.VERSION_LABEL+Q3.TITLE+Q3.AREA+Q3.CLAUSE_ID
+
+
+	3) SORT  : (Sort)
+		Cumulative Total Cost: 		7.05242
+		Cumulative CPU Cost: 		134719
+		Cumulative I/O Cost: 		1
+		Cumulative Re-Total Cost: 	0.00441005
+		Cumulative Re-CPU Cost: 	80027.3
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	7.05242
+		Estimated Bufferpool Buffers: 	2
+
+		Arguments:
+		---------
+		DUPLWARN: (Duplicates Warning flag)
+			FALSE
+		EXTROWS : (Some rows may be too large and represented as a large object (LOB))
+			TRUE
+		KEYS    : (Key cardinality)
+			2
+		MAX CARD: (Maximum Cardinality)
+			10
+		NUMROWS : (Estimated number of rows)
+			10
+		ROWWIDTH: (Estimated width of rows)
+			284.000000
+		SORTKEY : (Sort Key column)
+			1: Q2.DIST(A)
+		TEMPSIZE: (Temporary Table Page Size)
+			4096
+		TRUNCSRT: (Truncated sort (for Fetch First n Rows Only))
+			TRUE
+		UNIQUE  : (Uniqueness required flag)
+			FALSE
+
+		Input Streams:
+		-------------
+			4) From Operator #4
+
+				Estimated number of rows: 	3.55556
+				Number of columns: 		10
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.DIST+Q2.SYS_START+Q2.BUS_END+Q2.BUS_START
+				+Q2.RULE_JSON+Q2.CLAUSE_TEXT+Q2.VERSION_LABEL
+				+Q2.TITLE+Q2.AREA+Q2.CLAUSE_ID
+
+
+		Output Streams:
+		--------------
+			5) To Operator #2
+
+				Estimated number of rows: 	3.55556
+				Number of columns: 		10
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.DIST(A)+Q2.SYS_START+Q2.BUS_END
+				+Q2.BUS_START+Q2.RULE_JSON+Q2.CLAUSE_TEXT
+				+Q2.VERSION_LABEL+Q2.TITLE+Q2.AREA+Q2.CLAUSE_ID
+
+
+	4) FETCH : (Fetch)
+		Cumulative Total Cost: 		7.05012
+		Cumulative CPU Cost: 		92825.6
+		Cumulative I/O Cost: 		1
+		Cumulative Re-Total Cost: 	0.00244479
+		Cumulative Re-CPU Cost: 	44364.6
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	7.04892
+		Estimated Bufferpool Buffers: 	2
+
+		Arguments:
+		---------
+		CUR_COMM: (Currently Committed)
+			TRUE
+		LCKAVOID: (Lock Avoidance)
+			TRUE
+		MAXPAGES: (Maximum pages for prefetch)
+			1
+		PREFETCH: (Type of Prefetch)
+			SEQUENTIAL          
+		ROWLOCK : (Row Lock intent)
+			SHARE (CS/RS)
+		SKIP_INS: (Skip Inserted Rows)
+			TRUE
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		TABLOCK : (Table Lock intent)
+			INTENT SHARE
+		TBISOLVL: (Table access Isolation Level)
+			CURSOR STABILITY
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			2) From Operator #5
+
+				Estimated number of rows: 	3.55556
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.BUS_START(A)+Q1.BUS_END(A)+Q1.$RID$
+
+			3) From Object ASOF.POLICY_CLAUSE
+
+				Estimated number of rows: 	64
+				Number of columns: 		8
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.SYS_START+Q1.EMBEDDING+Q1.RULE_JSON
+				+Q1.CLAUSE_TEXT+Q1.VERSION_LABEL+Q1.TITLE
+				+Q1.AREA+Q1.CLAUSE_ID
+
+
+		Output Streams:
+		--------------
+			4) To Operator #3
+
+				Estimated number of rows: 	3.55556
+				Number of columns: 		10
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.DIST+Q2.SYS_START+Q2.BUS_END+Q2.BUS_START
+				+Q2.RULE_JSON+Q2.CLAUSE_TEXT+Q2.VERSION_LABEL
+				+Q2.TITLE+Q2.AREA+Q2.CLAUSE_ID
+
+
+	5) IXSCAN: (Index Scan)
+		Cumulative Total Cost: 		0.00417049
+		Cumulative CPU Cost: 		75680
+		Cumulative I/O Cost: 		0
+		Cumulative Re-Total Cost: 	0.00221634
+		Cumulative Re-CPU Cost: 	40219
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	0.00315594
+		Estimated Bufferpool Buffers: 	1
+
+		Arguments:
+		---------
+		CUR_COMM: (Currently Committed)
+			TRUE
+		LCKAVOID: (Lock Avoidance)
+			TRUE
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		ROWLOCK : (Row Lock intent)
+			SHARE (CS/RS)
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SKIP_INS: (Skip Inserted Rows)
+			TRUE
+		TABLOCK : (Table Lock intent)
+			INTENT SHARE
+		TBISOLVL: (Table access Isolation Level)
+			CURSOR STABILITY
+
+		Predicates:
+		----------
+		2) Stop Key Predicate, 
+			Comparison Operator: 		Less Than or Equal (<=)
+			Subquery Input Required: 	No
+			Filter Factor: 			0.333333
+
+			Predicate Text:
+			--------------
+			(Q1.BUS_START <= ?)
+
+
+		3) Sargable Predicate, 
+			Comparison Operator: 		Less Than (<)
+			Subquery Input Required: 	No
+			Filter Factor: 			0.333333
+
+			Predicate Text:
+			--------------
+			(? < Q1.BUS_END)
+
+
+		4) Start Key Predicate, 
+			Comparison Operator: 		Equal (=)
+			Subquery Input Required: 	No
+			Filter Factor: 			0.5
+
+			Predicate Text:
+			--------------
+			(Q1.DOC_ID = ?)
+
+
+		4) Stop Key Predicate, 
+			Comparison Operator: 		Equal (=)
+			Subquery Input Required: 	No
+			Filter Factor: 			0.5
+
+			Predicate Text:
+			--------------
+			(Q1.DOC_ID = ?)
+
+
+
+		Input Streams:
+		-------------
+			1) From Object ASOF.IX_CLAUSE_DOC_ASOF
+
+				Estimated number of rows: 	64
+				Number of columns: 		4
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.BUS_START(A)+Q1.BUS_END(A)+Q1.$RID$
+				+Q1.DOC_ID
+
+
+		Output Streams:
+		--------------
+			2) To Operator #4
+
+				Estimated number of rows: 	3.55556
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.BUS_START(A)+Q1.BUS_END(A)+Q1.$RID$
