@@ -8,6 +8,8 @@ langchain-google-genai>=2.1
 langchain-db2>=1.0
 # Local embeddings (ONNX, no GPU/torch needed)
 fastembed>=0.6
+# Structural (AST) check of LLM-written SQL
+sqlglot>=25.0
 # UI and utilities
 streamlit>=1.40
 pandas>=2.2

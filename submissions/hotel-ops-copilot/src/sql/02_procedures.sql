@@ -46,6 +46,11 @@ BEGIN
         RETURN;
     END IF;
 
+    -- Concurrency: take the row's exclusive lock before reading its state. Two managers approving the
+    -- same action at the same instant are serialised here: the second waits, then reads APPLIED and stops,
+    -- so an action can never be applied twice.
+    UPDATE AGENT_ACTIONS SET STATUS = STATUS WHERE ACTION_ID = P_ACTION_ID;
+
     SELECT ACTION_TYPE, PAYLOAD, STATUS INTO V_TYPE, V_PAYLOAD, V_STATE
       FROM AGENT_ACTIONS WHERE ACTION_ID = P_ACTION_ID;
 
@@ -200,6 +205,10 @@ BEGIN
         SET P_MESSAGE = 'Action not found';
         RETURN;
     END IF;
+
+    -- Concurrency: lock the action row before reading its state, so two managers rolling back the same
+    -- action at the same instant are serialised; the second sees ROLLED_BACK and stops.
+    UPDATE AGENT_ACTIONS SET STATUS = STATUS WHERE ACTION_ID = P_ACTION_ID;
 
     SELECT ACTION_TYPE, PAYLOAD, STATUS, APPLIED_AT INTO V_TYPE, V_PAYLOAD, V_STATE, V_AT
       FROM AGENT_ACTIONS WHERE ACTION_ID = P_ACTION_ID;

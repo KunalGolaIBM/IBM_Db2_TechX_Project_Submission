@@ -1,6 +1,6 @@
 import pytest
 
-from hotelops.sqlguard import UnsafeSqlError, validate_select
+from hotelops.sqlguard import UnsafeSqlError, check_ast, validate_select
 
 
 def test_select_gets_row_limit():
@@ -47,3 +47,54 @@ def test_unsafe_statements_rejected(sql):
 def test_comment_cannot_hide_second_statement():
     with pytest.raises(UnsafeSqlError):
         validate_select("SELECT 1 FROM SYSIBM.SYSDUMMY1 /* hi */ ; DELETE FROM GUESTS -- x")
+
+
+# --- AST layer (SQLGlot) -------------------------------------------------------------------------
+
+DB2_QUERIES_AGENTS_WRITE = [
+    "SELECT OCCUPANCY_PCT FROM V_DAILY_KPIS WHERE STAY_DATE = CURRENT DATE",
+    "SELECT COUNT(*) FROM RESERVATIONS WHERE CHECK_IN = CURRENT DATE + 1 DAY AND STATUS = 'CONFIRMED'",
+    "SELECT * FROM V_DAILY_KPIS WHERE STAY_DATE BETWEEN CURRENT DATE - 7 DAYS AND CURRENT DATE",
+    "SELECT CREATED_AT FROM GUEST_REVIEWS WHERE CREATED_AT >= CURRENT TIMESTAMP - 30 DAYS",
+    "SELECT RATE FROM RATE_PLAN FOR SYSTEM_TIME AS OF '2026-11-01-00.00.00' WHERE ROOM_TYPE_ID = 6",
+    "SELECT * FROM PROMOTIONS FOR BUSINESS_TIME AS OF '2026-11-21'",
+    "SELECT DAYS(CHECK_OUT) - DAYS(CHECK_IN) AS NIGHTS FROM RESERVATIONS",
+    "SELECT G.FULL_NAME, R.CHECK_IN FROM GUESTS G JOIN RESERVATIONS R ON R.GUEST_ID = G.GUEST_ID "
+    "WHERE G.LOYALTY_TIER = 'PLATINUM' AND R.CHECK_IN BETWEEN CURRENT DATE AND CURRENT DATE + 3 DAYS",
+    "SELECT VARCHAR_FORMAT(STAY_DATE, 'YYYY-MM') AS M, SUM(ROOM_REVENUE) FROM V_DAILY_KPIS "
+    "GROUP BY VARCHAR_FORMAT(STAY_DATE, 'YYYY-MM')",
+    "WITH T AS (SELECT ROOM_NO, COUNT(*) AS N FROM GUEST_REVIEWS GROUP BY ROOM_NO) "
+    "SELECT * FROM T ORDER BY N DESC FETCH FIRST 3 ROWS ONLY",
+    "SELECT * FROM HOTELOPS.ROOMS",
+    "SELECT CURRENT TIMESTAMP FROM SYSIBM.SYSDUMMY1",
+]
+
+
+@pytest.mark.parametrize("sql", DB2_QUERIES_AGENTS_WRITE)
+def test_ast_accepts_real_db2_agent_queries(sql):
+    assert validate_select(sql)
+
+
+@pytest.mark.parametrize("sql, why", [
+    ("SELECT * FROM SYSCAT.TABLES", "SYSCAT"),
+    ("SELECT * FROM SYSIBMADM.MON_LOCKWAITS", "SYSIBMADM"),
+    ("SELECT * FROM OTHERSCHEMA.PAYROLL", "OTHERSCHEMA"),
+    ("SELECT * FROM ROOMS WHERE ROOM_NO IN (SELECT TABNAME FROM SYSCAT.TABLES)", "SYSCAT"),
+    ("WITH X AS (SELECT * FROM SYSIBMADM.ENV_INST_INFO) SELECT * FROM X", "SYSIBMADM"),
+])
+def test_ast_rejects_tables_outside_the_app_schema(sql, why):
+    with pytest.raises(UnsafeSqlError, match=why):
+        validate_select(sql)
+
+
+def test_ast_fails_closed_on_unparseable_sql():
+    with pytest.raises(UnsafeSqlError, match="could not be parsed"):
+        check_ast("SELECT FROM WHERE (((")
+
+
+def test_ast_rejects_write_hidden_where_keywords_are_not_screened():
+    # The lexical screen alone is bypassed here (it is called directly); the tree still has the DELETE.
+    with pytest.raises(UnsafeSqlError):
+        check_ast("WITH X AS (SELECT 1 AS A FROM SYSIBM.SYSDUMMY1) DELETE FROM GUESTS")
+    with pytest.raises(UnsafeSqlError):
+        check_ast("UPDATE RATE_PLAN SET RATE = 1")

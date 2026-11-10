@@ -174,6 +174,55 @@ def apply_and_rollback(admin: Db2, agent: Db2) -> str:
             "ROLLBACK restored it")
 
 
+def concurrent_approval(admin: Db2, agent: Db2) -> str:
+    """Two managers approve the same action at once: Db2's row lock makes the second wait for the first."""
+    night = (dt.date.fromisoformat(str(admin.scalar("VALUES CURRENT DATE"))) + dt.timedelta(days=13)).isoformat()
+    rate = float(admin.scalar("SELECT RATE FROM RATE_PLAN WHERE ROOM_TYPE_ID = (SELECT ROOM_TYPE_ID FROM ROOM_TYPES "
+                              "WHERE CODE = 'STD') AND STAY_DATE = ?", (night,)))
+    payload = {"room_type_code": "STD", "start_date": night, "end_date": night, "new_rate": round(rate * 0.98, 2)}
+    out = admin.call(f"{SCHEMA}.SP_PROPOSE_ACTION", "verify", "RATE_CHANGE", json.dumps(payload),
+                     "verify.py concurrency check", 0, OUT_TEXT)
+    action_id = out[4]
+    assert action_id, out[5]
+    first, second = _own("admin"), _own("admin")
+    try:
+        second.execute("SET CURRENT LOCK TIMEOUT 3")
+        with _tx(first):
+            res = first.call(f"{SCHEMA}.SP_APPLY_ACTION", int(action_id), "manager-1", " " * 12, OUT_TEXT)
+            assert res[2].strip() == "APPLIED", res[2:4]
+            t0 = time.time()
+            try:
+                second.call(f"{SCHEMA}.SP_APPLY_ACTION", int(action_id), "manager-2", " " * 12, OUT_TEXT)
+                raise AssertionError("second approval was not blocked while the first was in flight")
+            except Db2Error as exc:
+                assert "SQL0911N" in str(exc), exc
+            waited = time.time() - t0
+    finally:
+        first.close()
+        second.close()
+        admin.execute("DELETE FROM AGENT_ACTIONS WHERE ACTION_ID = ?", (int(action_id),))
+    return (f"while manager 1's approval of action #{action_id} was in flight, manager 2's approval waited on "
+            f"Db2's row lock ({waited:.0f} s, then SQL0911N); an action can never be applied twice. Rolled back")
+
+
+def ast_guard(admin: Db2, agent: Db2) -> str:
+    from hotelops.sqlguard import UnsafeSqlError, validate_select
+
+    validate_select("SELECT RATE FROM RATE_PLAN FOR SYSTEM_TIME AS OF '2026-11-01-00.00.00' "
+                    "WHERE STAY_DATE = CURRENT DATE + 7 DAYS")
+    refused = []
+    for sql in ("SELECT * FROM ROOMS WHERE ROOM_NO IN (SELECT TABNAME FROM SYSCAT.TABLES)",
+                "WITH X AS (SELECT 1 AS A FROM SYSIBM.SYSDUMMY1) DELETE FROM GUESTS",
+                "SELECT * FROM SYSIBMADM.ENV_INST_INFO"):
+        try:
+            validate_select(sql)
+        except UnsafeSqlError:
+            refused.append(sql)
+    assert len(refused) == 3, refused
+    return ("SQLGlot parses LLM-written SQL into a syntax tree: a Db2 time-travel query passes; a catalog read in a "
+            "subquery, a DELETE inside a CTE and a system-view read are refused")
+
+
 def audit_chain(admin: Db2, agent: Db2) -> str:
     from hotelops.audit import simulate_tampering, verify_audit_chain
 
@@ -371,11 +420,13 @@ CHECKS: list[tuple[str, str, Callable[[Db2, Db2], str]]] = [
     ("Security", "RCAC column mask on PII", column_mask),
     ("Security", "RCAC row permission (AI consent)", row_permission),
     ("Security", "EXPLAIN cost guard", explain_cost_guard),
+    ("Security", "SQL syntax-tree (AST) guard", ast_guard),
     ("Security", "Agent cannot grant itself autonomy", agent_cannot_self_grant),
     ("Governance", "SQL PL guardrail on proposals", proposal_guardrail),
     ("Governance", "Guardrail fuzz: 1,000 random proposals", guardrail_fuzz),
     ("Governance", "JSON validation inside Db2", json_guardrail),
     ("Governance", "Guarded apply + transactional rollback", apply_and_rollback),
+    ("Governance", "Concurrent approvals serialised by Db2", concurrent_approval),
     ("Governance", "Earned autonomy decided inside Db2", earned_autonomy),
     ("Governance", "CHECK constraints cap autonomy", check_constraints),
     ("Governance", "Hash-chain trigger", hash_trigger),

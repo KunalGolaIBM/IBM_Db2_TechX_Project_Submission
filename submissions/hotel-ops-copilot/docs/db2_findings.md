@@ -102,6 +102,27 @@ indexed table (`SQL0964C`), so the benchmark commits in 20,000-row batches.
 
 ---
 
+## 6. Under cursor stability, a SQL PL "read the status, then act" procedure can run twice
+
+**What happened.** A race test released 4 managers' approvals of the same `PENDING` action from separate Db2
+connections at the same instant. **Two of them applied it**: both got `APPLIED`, and the rate was written twice
+(two extra `RATE_PLAN_HISTORY` versions; the slower writer hit `SQL20528N` on the system-period table).
+
+**Why.** `SP_APPLY_ACTION` read `STATUS` with a plain `SELECT ... INTO`. Under the default cursor-stability isolation
+(with currently committed semantics), a reader takes no lasting lock and does not wait for a writer, so concurrent
+sessions all saw `PENDING` before any of them committed.
+
+**Why it matters for AI apps.** Human-in-the-loop approval is the safety net for agent actions; if two people (or a
+person and an autonomous rule) can apply the same action twice, the net has a hole.
+
+**Fix:** both `SP_APPLY_ACTION` and `SP_ROLLBACK_ACTION` first take the action row's exclusive lock
+(`UPDATE ... SET STATUS = STATUS WHERE ACTION_ID = ?`) and only then read its state, so Db2 serialises them: the second
+session waits, then reads `APPLIED` and stops. **Proof:** `test_simultaneous_approvals_apply_an_action_exactly_once`
+(6 threads), `test_simultaneous_rollbacks_restore_exactly_once` (4 threads), and `verify.py` check 21, which shows a
+second approval blocked on the row lock while the first is in flight.
+
+---
+
 ## Smaller ones
 
 - `FOR SYSTEM_TIME AS OF` does not accept a scalar subquery (`SQL0104N`); fetch the timestamp first and pass it as a

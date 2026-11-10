@@ -461,3 +461,84 @@ def test_guardrail_fuzz_still_agrees_when_earned_autonomy_is_on():
         manager.set_autonomy("RATE_CHANGE", False, "pytest", "fuzz done")
     assert r["agree"] == r["proposals"], r["mismatches"][:3]
     assert r["autonomous"] > 0
+
+
+# --- concurrency: real conflicts between managers -----------------------------------------------
+
+def _fresh_admin():
+    from hotelops.config import load_settings
+    from hotelops.db import Db2
+
+    s = load_settings().db2
+    return Db2(s.conn_str(s.admin_user, s.admin_password), "pytest-concurrency")
+
+
+def _race(proc, action_id, n):
+    """Call ``proc`` for the same action from ``n`` separate Db2 connections released at the same instant."""
+    import threading
+
+    barrier, results, errors = threading.Barrier(n), [], []
+
+    def worker(i):
+        conn = _fresh_admin()
+        try:
+            barrier.wait()
+            out = conn.call(f"{SCHEMA}.{proc}", int(action_id), f"manager-{i}", " " * 12, OUT_TEXT)
+            results.append(str(out[3]))
+        except Exception as exc:  # noqa: BLE001 - reported by the assertion below
+            errors.append(str(exc))
+        finally:
+            conn.close()
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(n)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert not errors, errors
+    return results
+
+
+def _std_rate_action(days_ahead):
+    night = (dt.date.fromisoformat(str(ADMIN.scalar("VALUES CURRENT DATE"))) + dt.timedelta(days=days_ahead))
+    rate = float(ADMIN.scalar("SELECT RATE FROM RATE_PLAN WHERE ROOM_TYPE_ID = (SELECT ROOM_TYPE_ID FROM ROOM_TYPES "
+                              "WHERE CODE = 'STD') AND STAY_DATE = ?", (night.isoformat(),)))
+    action_id, msg = _propose("RATE_CHANGE", {"room_type_code": "STD", "start_date": night.isoformat(),
+                                              "end_date": night.isoformat(), "new_rate": round(rate * 0.97, 2)})
+    assert action_id, msg
+    return action_id, night
+
+
+def _versions(night):
+    return ADMIN.scalar("SELECT COUNT(*) FROM RATE_PLAN_HISTORY WHERE STAY_DATE = ? AND ROOM_TYPE_ID = "
+                        "(SELECT ROOM_TYPE_ID FROM ROOM_TYPES WHERE CODE = 'STD')", (night.isoformat(),))
+
+
+def test_simultaneous_approvals_apply_an_action_exactly_once():
+    action_id, night = _std_rate_action(41)
+    before = _versions(night)
+    msgs = _race("SP_APPLY_ACTION", action_id, 6)
+    assert sum(m.startswith("Repriced") for m in msgs) == 1, msgs
+    assert sum("not pending" in m for m in msgs) == 5, msgs
+    assert _versions(night) == before + 1  # the rate was written once, not six times
+
+
+def test_simultaneous_rollbacks_restore_exactly_once():
+    action_id, night = _std_rate_action(42)
+    assert manager.approve(action_id, "pytest")[0].strip() == "APPLIED"
+    msgs = _race("SP_ROLLBACK_ACTION", action_id, 4)
+    assert sum(m.startswith("Restored") for m in msgs) == 1, msgs
+    assert ADMIN.scalar("SELECT STATUS FROM AGENT_ACTIONS WHERE ACTION_ID = ?", (action_id,)).strip() == "ROLLED_BACK"
+
+
+def test_rollback_refused_after_a_later_change_to_the_same_night():
+    first, night = _std_rate_action(43)
+    assert manager.approve(first, "pytest")[0].strip() == "APPLIED"
+    rate = float(ADMIN.scalar("SELECT RATE FROM RATE_PLAN WHERE ROOM_TYPE_ID = (SELECT ROOM_TYPE_ID FROM ROOM_TYPES "
+                              "WHERE CODE = 'STD') AND STAY_DATE = ?", (night.isoformat(),)))
+    second, msg = _propose("RATE_CHANGE", {"room_type_code": "STD", "start_date": night.isoformat(),
+                                           "end_date": night.isoformat(), "new_rate": round(rate * 0.98, 2)})
+    assert second, msg
+    assert manager.approve(second, "pytest")[0].strip() == "APPLIED"
+    status, message = manager.rollback(first, "pytest")
+    assert status.strip() == "APPLIED" and "changed again" in message  # Db2 refuses to clobber the newer change
