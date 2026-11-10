@@ -56,7 +56,7 @@ StockSage combines the robust relational power of **IBM Db2** with a determinist
 
 ## AI / LLM Architecture
 - **Framework:** **LangGraph** (StateGraph architecture).
-- **Model Provider & Model:** **Google Gemini 2.5 Flash** via `langchain-google-genai`.
+- **Model Provider & Model:** **Google Gemini 3.5 Flash Lite** via `langchain-google-genai`.
 - **Deterministic Decoupling:**
   - The LLM **never** performs arithmetic or invents stock quantities.
   - User questions are classified into specialized intents (`low_stock`, `stockout_risk`, `expiry_risk`, `fast_slow_moving`, `reorder_advice`, `overview`).
@@ -70,7 +70,7 @@ StockSage combines the robust relational power of **IBM Db2** with a determinist
 - **Backend & Core:** Python 3.10+
 - **Database:** IBM Db2 Community Edition (Docker) / `ibm_db`
 - **Agent Orchestration:** LangGraph & LangChain Core
-- **LLM:** Google Gemini 2.5 Flash
+- **LLM:** Google Gemini 3.5 Flash Lite
 - **Frontend / UI:** Streamlit & Plotly
 - **Data Engineering:** Pandas & NumPy
 - **Testing:** PyTest

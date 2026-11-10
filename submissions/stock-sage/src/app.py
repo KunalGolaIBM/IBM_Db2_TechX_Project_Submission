@@ -80,17 +80,26 @@ st.markdown("""
     /* KPI Metric Cards */
     [data-testid="stMetric"] {
         background-color: #FFFFFF;
-        border: 1px solid #E2E8F0;
+        border: 2px solid #172B4D;
         border-radius: 8px;
         padding: 12px 14px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+        box-shadow: 0 2px 4px rgba(23, 43, 77, 0.08);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
-    [data-testid="stMetricLabel"] {
+    [data-testid="stMetric"]:hover {
+        box-shadow: 0 4px 8px rgba(23, 43, 77, 0.12);
+    }
+    [data-testid="stMetricLabel"],
+    [data-testid="stMetricLabel"] * {
         color: #64748B !important;
-        font-size: 0.8rem !important;
+        font-size: 0.78rem !important;
         font-weight: 600 !important;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.02em;
         text-transform: uppercase;
+        white-space: normal !important;
+        text-overflow: unset !important;
+        overflow: visible !important;
+        line-height: 1.25 !important;
     }
     [data-testid="stMetricValue"] {
         color: #172B4D !important;
@@ -137,16 +146,22 @@ st.markdown("""
     /* Preset & Action Buttons */
     .stButton > button {
         border-radius: 6px;
-        font-size: 0.85rem;
+        font-size: 0.82rem;
         font-weight: 500;
-        border: 1px solid #E2E8F0;
+        border: 1.5px solid #172B4D;
         color: #172B4D;
         background-color: #FFFFFF;
         transition: all 0.15s ease;
+        white-space: normal !important;
+        height: auto !important;
+        min-height: 44px;
+        line-height: 1.25 !important;
+        padding: 6px 10px !important;
     }
     .stButton > button:hover {
         border-color: #168B72;
         color: #168B72;
+        background-color: #F8FAFC;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -340,23 +355,19 @@ with tab_alerts:
                 x=stock_df["product_name"],
                 y=stock_df["total_available_stock"],
                 name="Current Stock",
-                marker_color="#168B72"
+                marker_color="#2563EB"
             ))
             fig.add_trace(go.Bar(
                 x=stock_df["product_name"],
                 y=stock_df["reorder_level"],
                 name="Reorder Level",
-                marker_color="#D9534F"
+                marker_color="#EF4444"
             ))
             fig.update_layout(
                 barmode="group",
                 xaxis_tickangle=-45,
                 margin=dict(l=20, r=20, t=30, b=100),
                 height=420,
-                paper_bgcolor="#FFFFFF",
-                plot_bgcolor="#FFFFFF",
-                font=dict(color="#172B4D", family="sans-serif"),
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
             st.plotly_chart(fig, use_container_width=True)
 
@@ -423,16 +434,10 @@ with tab_expiry:
             y="product_name",
             size="available_quantity",
             color="status",
-            color_discrete_map={"CRITICAL": "#D9534F", "WARNING": "#D99A37", "SAFE": "#168B72", "EXPIRED": "#64748B"},
+            color_discrete_map={"CRITICAL": "#DC2626", "WARNING": "#F59E0B", "SAFE": "#10B981", "EXPIRED": "#6B7280"},
             labels={"days_to_expiry": "Days Remaining Until Expiry", "product_name": "Product"},
             title="Batch Expiry Countdown (Bubble size = Available Quantity)",
             height=400,
-        )
-        fig_exp.update_layout(
-            paper_bgcolor="#FFFFFF",
-            plot_bgcolor="#FFFFFF",
-            font=dict(color="#172B4D"),
-            margin=dict(l=20, r=20, t=40, b=20),
         )
         st.plotly_chart(fig_exp, use_container_width=True)
 
@@ -473,28 +478,6 @@ with tab_reorder:
             use_container_width=True,
         )
 
-        # Action: CSV Export
-        csv_data = r_df.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            label="📥 Download Purchase Order CSV",
-            data=csv_data,
-            file_name=f"stock_sage_purchase_orders_{date.today().strftime('%Y%m%d')}.csv",
-            mime="text/csv",
-        )
-
-        st.markdown("---")
-        st.markdown("#### **Supplier Dispatch & WhatsApp Purchase Orders**")
-        st.caption("One-click direct dispatch to suppliers via WhatsApp with formatted order quantities and cost breakdown.")
-        grouped_orders = get_reorders_grouped_by_supplier(db_manager)
-
-        for supp_name, s_data in grouped_orders.items():
-            with st.expander(f"📦 Order for {supp_name} — {s_data['total_quantity']} units (₹{s_data['total_cost']:,.2f})", expanded=False):
-                wa_text = generate_whatsapp_order_text(supp_name, s_data)
-                st.text_area("Message Preview", value=wa_text, height=130, key=f"wa_txt_{supp_name}")
-                encoded_msg = urllib.parse.quote(wa_text)
-                wa_url = f"https://api.whatsapp.com/send?text={encoded_msg}"
-                st.link_button(f"📲 Send via WhatsApp to {supp_name}", wa_url)
-
 # -------------------------------------------------------------
 # TAB 5: Sales Analytics & Velocity
 # -------------------------------------------------------------
@@ -514,15 +497,9 @@ with tab_analytics:
                 title="Daily Store Revenue (₹)",
                 markers=True,
                 line_shape="spline",
-                color_discrete_sequence=["#168B72"],
+                color_discrete_sequence=["#2563EB"],
             )
-            fig_trend.update_layout(
-                height=350,
-                margin=dict(l=20, r=20, t=40, b=20),
-                paper_bgcolor="#FFFFFF",
-                plot_bgcolor="#FFFFFF",
-                font=dict(color="#172B4D"),
-            )
+            fig_trend.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20))
             st.plotly_chart(fig_trend, use_container_width=True)
 
     with col_cat:
@@ -534,14 +511,9 @@ with tab_analytics:
                 names="category",
                 values="category_revenue",
                 hole=0.45,
-                color_discrete_sequence=["#168B72", "#172B4D", "#D99A37", "#64748B", "#4A7C59", "#2A52BE"],
+                color_discrete_sequence=px.colors.qualitative.Pastel,
             )
-            fig_pie.update_layout(
-                height=350,
-                margin=dict(l=20, r=20, t=40, b=20),
-                paper_bgcolor="#FFFFFF",
-                font=dict(color="#172B4D"),
-            )
+            fig_pie.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20))
             st.plotly_chart(fig_pie, use_container_width=True)
 
     st.markdown("#### **Fast-Moving vs. Slow-Moving Product Analysis (Last 7 Days)**")

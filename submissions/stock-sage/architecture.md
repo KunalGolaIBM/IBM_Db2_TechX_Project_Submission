@@ -42,7 +42,7 @@ flowchart TD
     end
 
     subgraph LLM ["AI Reasoning (Google Gemini)"]
-        E1[Gemini 2.5 Flash]
+        E1[Gemini 3.5 Flash Lite]
     end
 
     A2 -->|Shopkeeper Natural Language Question| B1
