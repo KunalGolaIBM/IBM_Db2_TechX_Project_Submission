@@ -4,10 +4,23 @@
 
 ---
 
+## Demo Video
+📺 **Watch the Walkthrough & Demo Video:** [https://youtu.be/GtTyib14P7Y](https://youtu.be/GtTyib14P7Y)
+
+---
+
+## License
+License: MIT — Copyright (c) 2026 M. Karthik Reddy. See [LICENSE](LICENSE) for details.
+
+---
+
 ## Table of Contents
+- [Demo Video](#demo-video)
+- [License](#license)
 - [Problem Statement](#problem-statement)
 - [Solution Overview](#solution-overview)
 - [Synthetic Data Notice](#synthetic-data-notice)
+- [Screenshots](#screenshots)
 - [IBM Db2 Integration](#ibm-db2-integration)
 - [AI / LLM Architecture](#ai--llm-architecture)
 - [Tech Stack](#tech-stack)
@@ -18,7 +31,6 @@
 - [Running the Project](#running-the-project)
 - [Testing & Verification](#testing--verification)
 - [Security Guardrails & Attack Prevention](#security-guardrails--attack-prevention)
-- [Screenshots & Demo](#screenshots--demo)
 - [Known Limitations & Future Roadmap](#known-limitations--future-roadmap)
 - [Team Members & Credits](#team-members--credits)
 
@@ -49,6 +61,30 @@ Existing solutions either:
 ## Synthetic Data Notice
 > [!NOTE]
 > All customer profiles, orders, transactions, disputes, and payment records used in this project are **100% synthetic mock data** generated for demonstration and benchmarking purposes. No real customer or proprietary transaction data is included.
+
+---
+
+## Screenshots
+
+### 1. Streamlit Dashboard Overview
+![Streamlit Dashboard Overview](docs/screenshots/Screenshot-2026-11-10-124714.png)
+*Real-time Streamlit console displaying live IBM Db2 12.1 connection status, operational table row counts, and 1-click scenario test buttons.*
+
+### 2. Order 103 Dispute Resolution (Denied: Too Late)
+![Order 103 Dispute Resolution - Denied](docs/screenshots/Screenshot-2026-11-10-124730.png)
+*Order 103 dispute evaluation: Python date engine computes 47 elapsed days vs 30-day allowance, resulting in an authoritative DENIED verdict citing Policy #1.*
+
+### 3. Order 102 Dispute Resolution (VIP Exception Query)
+![Order 102 Dispute Resolution - VIP Exception](docs/screenshots/Screenshot-2026-11-10-124757.png)
+*Order 102 dispute scenario query: Evaluating Gold loyalty tier member refund request on a Smart TV.*
+
+### 4. Order 102 Verdict Detail (Approved: VIP Policy Override)
+![Order 102 Verdict Detail - VIP Policy Override](docs/screenshots/Screenshot-2026-11-10-124803.png)
+*Order 102 verdict: Full refund approved applying Policy #4 (39 days elapsed $\le$ 60-day VIP window), successfully superseding the standard 14-day electronics limit.*
+
+### 5. Native Db2 Vector Similarity Search Results
+![Db2 Vector Policy Search Results](docs/screenshots/Screenshot-2026-11-10-124811.png)
+*Semantic retrieval of policy clauses from Db2 `POLICIES` table using native `VECTOR_DISTANCE(embedding, query_vector, COSINE)`.*
 
 ---
 
@@ -230,17 +266,6 @@ Db2 Copilot enforces AST-level guardrails:
 
 ---
 
-## Screenshots & Demo
-- Real-time Streamlit UI available at `http://localhost:8501`.
-- Features 5 instantaneous 1-click dispute scenarios:
-  1. **Order 101**: Approved within 7-day damaged goods window (`4d <= 7d`).
-  2. **Order 103**: Denied as too late (`47d > 30d window`).
-  3. **Order 102**: VIP 60-day exception for Gold member (`39d < 60d`).
-  4. **Novel Query**: Aggregates customers with more than one refund using `LISTAGG` and `GROUP BY`.
-  5. **Security Test**: Blocks adversarial `DELETE` injection attempt and logs `REJECTED` to Db2 `QUERY_AUDIT`.
-
----
-
 ## Known Limitations & Future Roadmap
 - **Batch Dispute Processing**: Currently processes one dispute at a time; future releases can add batch processing from CSV uploads.
 - **Multi-Modal Receipt Uploads**: Incorporate OCR to extract damage photos and receipts directly into the dispute pipeline.
@@ -251,4 +276,4 @@ Db2 Copilot enforces AST-level guardrails:
 ## Team Members & Credits
 | Name | GitHub Handle | Role |
 |---|---|---|
-| M.Karthik Reddy | [@karthikreddy](https://github.com/karthikreddy) | AI & Database Engineer (Db2 Vectors, Text-to-SQL, Architecture) |
+| M.Karthik Reddy | [@karthikreddy06](https://github.com/karthikreddy06) | AI & Database Engineer (Db2 Vectors, Text-to-SQL, Architecture) |
