@@ -1,0 +1,47 @@
+# pytest run 2026-11-09T08:53:48Z | Python 3.13.18 | Db2 Community Edition 12.1.5 (Docker, local) | CIVICLENS_DB2_TESTS=1
+============================= test session starts ==============================
+platform linux -- Python 3.13.18, pytest-9.2.0, pluggy-1.7.0 -- /tmp/claude-0/venv-cl/bin/python3
+rootdir: <submission>
+configfile: pyproject.toml
+testpaths: tests
+plugins: langsmith-0.14.17, anyio-4.16.0
+collecting ... collected 36 items
+
+tests/integration/test_db2_live.py::test_migration_is_idempotent PASSED  [  2%]
+tests/integration/test_db2_live.py::test_insert_read_roundtrip PASSED    [  5%]
+tests/integration/test_db2_live.py::test_injection_strings_are_stored_literally PASSED [  8%]
+tests/integration/test_db2_live.py::test_check_constraint_enforced_by_db2 PASSED [ 11%]
+tests/integration/test_db2_live.py::test_duplicate_detection_uses_db2_distance PASSED [ 13%]
+tests/integration/test_db2_live.py::test_transaction_rollback PASSED     [ 16%]
+tests/integration/test_db2_live.py::test_agent_tools_hit_db2_and_write_audit_rows PASSED [ 19%]
+tests/integration/test_db2_live.py::test_api_end_to_end PASSED           [ 22%]
+tests/integration/test_db2_live.py::test_hotspots_over_seeded_synthetic_data PASSED [ 25%]
+tests/unit/test_agent_tools.py::test_toolkit_exposes_only_allowlisted_tools PASSED [ 27%]
+tests/unit/test_agent_tools.py::test_tool_args_are_bounded PASSED        [ 30%]
+tests/unit/test_agent_tools.py::test_every_call_is_audited_with_investigation_id PASSED [ 33%]
+tests/unit/test_agent_tools.py::test_failures_are_audited_and_not_leaked PASSED [ 36%]
+tests/unit/test_agent_tools.py::test_not_found_is_structured PASSED      [ 38%]
+tests/unit/test_api_no_db.py::test_health_is_db_independent PASSED       [ 41%]
+tests/unit/test_api_no_db.py::test_db_health_returns_503_without_credentials PASSED [ 44%]
+tests/unit/test_api_no_db.py::test_invalid_complaint_is_rejected_before_db PASSED [ 47%]
+tests/unit/test_config.py::test_connection_string_requires_password PASSED [ 50%]
+tests/unit/test_config.py::test_connection_string_plain_and_ssl PASSED   [ 52%]
+tests/unit/test_config.py::test_redacted_target_never_contains_password PASSED [ 55%]
+tests/unit/test_config.py::test_schema_identifier_validation[CIVIC;DROP] PASSED [ 58%]
+tests/unit/test_config.py::test_schema_identifier_validation[1ABC] PASSED [ 61%]
+tests/unit/test_config.py::test_schema_identifier_validation[a b] PASSED [ 63%]
+tests/unit/test_config.py::test_schema_identifier_validation[XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX] PASSED [ 66%]
+tests/unit/test_config.py::test_schema_identifier_validation[Q"] PASSED  [ 69%]
+tests/unit/test_config.py::test_schema_is_uppercased PASSED              [ 72%]
+tests/unit/test_config.py::test_connection_string_rejects_injection_in_host PASSED [ 75%]
+tests/unit/test_domain.py::test_geo_cell_is_deterministic_and_local PASSED [ 77%]
+tests/unit/test_domain.py::test_haversine_known_distance PASSED          [ 80%]
+tests/unit/test_domain.py::test_bounding_box_contains_radius PASSED      [ 83%]
+tests/unit/test_domain.py::test_fingerprint_ignores_case_order_and_stopwords PASSED [ 86%]
+tests/unit/test_domain.py::test_jaccard_and_score_bounds PASSED          [ 88%]
+tests/unit/test_domain.py::test_complaint_validation_rejects_bad_input PASSED [ 91%]
+tests/unit/test_domain.py::test_reported_at_normalised_to_naive_utc PASSED [ 94%]
+tests/unit/test_migrate_parser.py::test_schema_sql_parses_into_known_objects PASSED [ 97%]
+tests/unit/test_seed_time.py::test_seeded_times_are_never_in_the_future PASSED [100%]
+
+============================= 36 passed in 10.57s ==============================

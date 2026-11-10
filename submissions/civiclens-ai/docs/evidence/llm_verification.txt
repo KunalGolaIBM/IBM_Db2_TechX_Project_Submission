@@ -1,0 +1,73 @@
+# Real-LLM verification: status BLOCKED (no provider credentials are configured for the application)
+# Checked 2026-11-09T18:01:24Z for Phase 02. Only variable NAMES are inspected here; no value is ever printed, logged or committed. No request was sent to any model provider.
+
+## 1. Variables whose NAME looks like a provider / model / key setting, in the shell that runs the tests (names only)
+   ANTHROPIC_BASE_URL
+   CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST
+   (ANTHROPIC_BASE_URL and CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST belong to the sandbox host's own configuration for the coding assistant, not to the application: no application provider, model or API key is set.
+    It was deliberately NOT repurposed. The assistant's internal gateway credentials are not the application's and making billable calls needs the operator's authorization.)
+
+## 2. The application's own settings file (variable names only)
+   DB2_HOST
+   DB2_PORT
+   DB2_DATABASE
+   DB2_USER
+   DB2_PASSWORD
+   DB2_SCHEMA
+   CIVICLENS_AUTH_TOKENS
+   LLM_PROVIDER / LLM_MODEL / provider-key names defined there: 0
+
+## 3. The running API process (variable names matching the same pattern)
+   ANTHROPIC_BASE_URL
+   CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST
+
+## 4. What the API reports about itself (GET /api/overview -> system.llm, authenticated)
+   {'configured': False, 'provider': 'none', 'model': None, 'problem': None}
+
+## 5. The no-network readiness check (scripts/llm_preflight.py), run in the plain shell and with the application's settings loaded
+   LLM readiness (no provider is contacted, no value is printed)
+     provider : none
+     model    : (not set)
+     status   : BLOCKED
+     problem  : LLM_PROVIDER is 'none', so no real provider is selected.
+                Every recommendation will be 'Rule-based · no LLM' (or manual).
+                Nothing is claimed to be AI.
+     to enable: set LLM_PROVIDER (openai | anthropic | watsonx), LLM_MODEL and that
+                provider's credentials, pip install -r requirements-llm.txt,
+                then re-run this check.
+   (exit code 2; 2 means BLOCKED)
+   --- with the application's settings loaded ---
+   LLM readiness (no provider is contacted, no value is printed)
+     provider : none
+     model    : (not set)
+     status   : BLOCKED
+     problem  : LLM_PROVIDER is 'none', so no real provider is selected.
+                Every recommendation will be 'Rule-based · no LLM' (or manual).
+                Nothing is claimed to be AI.
+     to enable: set LLM_PROVIDER (openai | anthropic | watsonx), LLM_MODEL and that
+                provider's credentials, pip install -r requirements-llm.txt,
+                then re-run this check.
+   (exit code 2; 2 means BLOCKED)
+
+## 6. The opt-in real-LLM test (tests/integration/test_llm_provider_live.py), run without opting in
+   s                                                                        [100%]
+   =========================== short test summary info ============================
+   SKIPPED [1] tests/integration/test_llm_provider_live.py:34: real-LLM test: set CIVICLENS_LLM_TESTS=1, LLM_PROVIDER, LLM_MODEL and the provider key
+   1 skipped in 0.31s
+
+## What IS verified about the LLM path, with a scripted test double (the UI labels such output 'Test double · not a real model')
+   allow-listed tools only; step limit; timeout; JSON validation; every cited complaint must have been returned by a tool in the same run;
+   a failing provider call degrades to the labelled rule-based fallback in Auto mode (reason: the exception class only) and is a 502 + retryable in LLM-only mode;
+   a provider client that cannot be constructed is reported by exception class only; nothing from a failed call is ever stored as LLM output.
+
+## Conclusion
+   No provider, model or credential exists for the application, so NO real LLM investigation was run and no paid API call was made.
+   Everything the dashboard shows is therefore either rule-based ('Rule-based · no LLM', stored as DETERMINISTIC_FALLBACK) or analyst-written ('Manual · analyst-written', MANUAL).
+   The IBM watsonx.ai client authenticates when it is created, so it cannot even be constructed without credentials; it was reviewed statically, not run.
+
+## How to unblock (needs the operator's authorization: the call is billable)
+   pip install -r src/backend/requirements-llm.txt
+   export LLM_PROVIDER=<openai|anthropic|watsonx> LLM_MODEL=<model> and that provider's key variables in the application's own environment
+   python src/backend/scripts/llm_preflight.py            # must print READY (still no network call)
+   CIVICLENS_DB2_TESTS=1 CIVICLENS_LLM_TESTS=1 pytest tests/integration/test_llm_provider_live.py -v   # one bounded run: real model, real Db2, checks evidence ids, labels, tool calls and persistence
+   then start the API with the same LLM_* variables and run one investigation in 'Auto' or 'LLM only' mode; the result, the recommendation cards and the transparency page show provider:model.

@@ -1,0 +1,73 @@
+# Palette validation: output of the dataviz skill's validate_palette.js, run against the dashboard's real chart colours.
+# Tokens live in src/frontend/src/index.css; chart panels sit on the surface #1b1d22. Re-run the commands below to reproduce.
+
+# ---------------------------------------------------------------------------------------------------------------
+# 1. Categorical series. Used only for the recommendation generators (at most three series: rule-based = blue,
+#    manual = green, LLM = copper) and the fourth slot is reserved. Colour follows the entity everywhere.
+# ---------------------------------------------------------------------------------------------------------------
+$ node validate_palette.js "#cc7233,#3987e5,#199e70,#9085e9" --mode dark --surface "#1b1d22"
+
+Palette (dark, surface #1b1d22, categorical): 4 slots
+  [PASS] Lightness band         all 4 inside L 0.48–0.67
+  [PASS] Chroma floor           all 4 >= 0.1
+  [PASS] CVD separation         worst adjacent #9085e9↔#199e70 ΔE 17.3 (deutan) · tritan 4.0
+  [PASS] Normal-vision floor    worst adjacent #199e70↔#3987e5 ΔE 20.9 (normal)
+  [PASS] Contrast vs surface    all 4 >= 3:1
+
+  → ALL CHECKS PASS  (CVD in the 6–8 floor band is legal ONLY with secondary encoding: direct labels, gaps, or texture)
+  scope: categorical palettes only. For a lone status/text color check text contrast with this script's apca() or contrast(); for a sequential ramp, lightness monotonicity.
+
+(exit code 0)
+
+# ---------------------------------------------------------------------------------------------------------------
+# 2. Severity: a one-hue ordinal ramp (lighter = more severe). Severity is never colour-only: it is also drawn as
+#    1-5 dots, with a text label and an accessible name. The ramp's darkest step is 2.92:1 on the panel, which the
+#    ordinal check accepts (floor 2:1); the dots carry the meaning.
+# ---------------------------------------------------------------------------------------------------------------
+$ node validate_palette.js "#a14f09,#bb672c,#d67f46,#f2985f,#feb98f" --ordinal --mode dark --surface "#1b1d22"
+
+Palette (dark, surface #1b1d22, ordinal ramp): 5 slots
+  [PASS] Lightness monotone     steps read light→dark
+  [PASS] Adjacent ΔL            all gaps >= 0.06
+  [PASS] Light-end contrast     #a14f09 at 2.92:1 vs surface
+  [PASS] Single hue             hue spread 0°
+
+  → ALL CHECKS PASS  (ordinal: one hue, monotone L, visible step gaps, light end clears surface)
+(exit code 0)
+
+# ---------------------------------------------------------------------------------------------------------------
+# 3. Status colours. INFORMATIONAL: the validator's checks are written for categorical series, so these runs FAIL and
+#    are reported as they are. What they show, and what the product does about it:
+#      * the full four-step status ramp (good / warning / serious / critical) has an amber and an orange step that
+#        are only 13.6 apart for full-colour vision (< 15). So the "serious" step was NOT adopted: the UI uses only
+#        good / warning / critical (the second run).
+#      * amber is lighter than the categorical lightness band (a property of every amber), so that check fails too.
+#      * status colours are never the only signal: each is paired with an icon and a text label ("Approved",
+#        "Awaiting review", "Rejected"), and they are never plotted as neighbouring series.
+#      * contrast of the colours actually used against the panel surface (>= 3:1) is asserted in tests/theme.test.ts.
+# ---------------------------------------------------------------------------------------------------------------
+$ node validate_palette.js "#0ca30c,#fab219,#ec835a,#d03b3b" --mode dark --surface "#1b1d22"
+
+Palette (dark, surface #1b1d22, categorical): 4 slots
+  [FAIL] Lightness band         outside band: [["#fab219",0.811],["#ec835a",0.717]]
+  [PASS] Chroma floor           all 4 >= 0.1
+  [PASS] CVD separation         worst adjacent #ec835a↔#fab219 ΔE 11.3 (deutan) · tritan 9.6
+  [FAIL] Normal-vision floor    worst adjacent #ec835a↔#fab219 ΔE 13.6 (normal) — below 15, hard to tell apart even with full color vision
+  [PASS] Contrast vs surface    all 4 >= 3:1
+
+  → FAILED — fix the marked checks  (CVD in the 6–8 floor band is legal ONLY with secondary encoding: direct labels, gaps, or texture)
+  scope: categorical palettes only. For a lone status/text color check text contrast with this script's apca() or contrast(); for a sequential ramp, lightness monotonicity.
+(exit code 1)
+
+$ node validate_palette.js "#0ca30c,#fab219,#d03b3b" --mode dark --surface "#1b1d22"
+
+Palette (dark, surface #1b1d22, categorical): 3 slots
+  [FAIL] Lightness band         outside band: [["#fab219",0.811]]
+  [PASS] Chroma floor           all 3 >= 0.1
+  [PASS] CVD separation         worst adjacent #fab219↔#0ca30c ΔE 11.3 (protan) · tritan 24.4
+  [PASS] Normal-vision floor    worst adjacent #fab219↔#0ca30c ΔE 27.6 (normal)
+  [PASS] Contrast vs surface    all 3 >= 3:1
+
+  → FAILED — fix the marked checks  (CVD in the 6–8 floor band is legal ONLY with secondary encoding: direct labels, gaps, or texture)
+  scope: categorical palettes only. For a lone status/text color check text contrast with this script's apca() or contrast(); for a sequential ramp, lightness monotonicity.
+(exit code 1)

@@ -1,0 +1,22 @@
+# Tooling config only (pytest + ruff). Runtime deps: src/backend/requirements.txt
+[tool.pytest.ini_options]
+pythonpath = ["src/backend"]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "db2: requires a live IBM Db2 (set CIVICLENS_DB2_TESTS=1 and DB2_* variables)",
+    "llm: calls a real hosted LLM provider (set CIVICLENS_LLM_TESTS=1 plus provider credentials)",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+src = ["src/backend", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S"]
+ignore = ["S101", "S608"]  # asserts in tests; S608 reviewed: only static fragments/validated schema are formatted
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "E501"]
+"src/backend/scripts/**" = ["E402", "I001"]

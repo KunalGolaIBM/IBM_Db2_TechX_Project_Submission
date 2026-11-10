@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "CivicLens AI",
+    "slug": "civiclens-ai",
+    "short_description": "Agentic urban-infrastructure intelligence with a React dashboard: complaint ingestion, duplicate detection, geo-temporal hotspot analysis, evidence-backed recommendations and authenticated human review, all persisted and computed in IBM Db2. Every recommendation shows who or what wrote it (real LLM, labelled rule-based fallback, or analyst).",
+    "category": "AI / Agents / Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/tej-1916/IBM_Db2_TechX_Project_Submission/tree/submission/civiclens-ai/submissions/civiclens-ai"
+  },
+  "team": {
+    "name": "CivicLens",
+    "members": [
+      {
+        "name": "Tej Sagar",
+        "github": "tej-1916",
+        "email": "",
+        "role": "Lead Developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1 (Docker); Db2 on Cloud planned for hosted demo",
+    "connector": "ibm_db (native Python driver)",
+    "features_used": [
+      "Relational tables with CHECK / FOREIGN KEY constraints",
+      "Identity columns with SELECT ... FROM FINAL TABLE (INSERT ...)",
+      "Secondary indexes for geo-cell and time-window queries",
+      "In-database haversine distance (SQL trig functions) for duplicate detection",
+      "GROUP BY / HAVING aggregation for hotspot analysis",
+      "Transactions with commit / rollback",
+      "Catalog-driven idempotent migrations (SYSCAT)",
+      "Append-only audit log table",
+      "Composite foreign key enforcing evidence integrity across tables",
+      "Unique index as a double-review backstop",
+      "Compare-and-set UPDATE for atomic state transitions",
+      "Multi-statement atomic review transaction with rollback",
+      "Per-connection CURRENT LOCK TIMEOUT",
+      "Dashboard aggregates computed in Db2 per request (GROUP BY, windowed counts, hotspot totals, agent activity from the audit log)",
+      "Review queue and recommendation provenance read from Db2 (generator type and model name stored with every recommendation)"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "SQL",
+      "TypeScript"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "LangChain (langchain-core tools)",
+      "Pydantic",
+      "Pytest",
+      "React 19",
+      "Vite",
+      "Tailwind CSS v4",
+      "TanStack Query",
+      "zod",
+      "Leaflet + OpenStreetMap",
+      "Vitest + React Testing Library + MSW",
+      "Playwright + axe-core"
+    ],
+    "ai_models": [
+      "Provider-agnostic via LangChain: OpenAI, Anthropic or IBM watsonx.ai. NOT yet run against a real provider (no credentials were available; real-LLM verification is BLOCKED, see docs/PHASE_01B_REPORT.md)",
+      "Labelled deterministic rule-based fallback (no LLM): used for every recommendation produced so far and shown as 'Rule-based · no LLM' in the UI"
+    ]
+  }
+}

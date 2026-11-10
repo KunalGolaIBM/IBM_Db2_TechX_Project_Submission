@@ -1,0 +1,492 @@
+{
+  "about": "Real screenshots of the running CivicLens AI dashboard (production build, real FastAPI backend, real IBM Db2, real OpenStreetMap tiles). Complaint data is SYNTHETIC and labelled so in the UI. No file here is edited, composited or mocked. Regenerate with `npm run screenshots`.",
+  "viewportCssPx": {
+    "desktop": {
+      "width": 1440,
+      "height": 900
+    },
+    "phone": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  "deviceScaleFactor": 2,
+  "shots": [
+    {
+      "file": "01-sign-in.png",
+      "caption": "Sign-in: the access token goes in a password field and is kept for the browser tab only.",
+      "signedInAs": null,
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 900
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 1800
+      },
+      "bytes": 127921,
+      "sha256": "a58dd7056c7986f7aa376977ab5b63afc0beb38e6a5a4cbb3778b988b63d6155",
+      "capturedAt": "2026-11-09T16:45:28.422Z"
+    },
+    {
+      "file": "02-intelligence-overview.png",
+      "caption": "Intelligence overview: every figure is an aggregate query over IBM Db2; synthetic records are counted and labelled separately.",
+      "signedInAs": "alice (analyst)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 2362
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 4724
+      },
+      "bytes": 986133,
+      "sha256": "6bdc4bce868ba98b3d6a3cd1f6255e9038a55eb23a5c88bf597547cb931ed009",
+      "capturedAt": "2026-11-09T16:45:30.698Z"
+    },
+    {
+      "file": "03-geographic-intelligence.png",
+      "caption": "Geographic intelligence: OpenStreetMap basemap, one marker per complaint (dashed ring = synthetic) and Db2-aggregated hotspot cells.",
+      "signedInAs": "alice (analyst)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 1271
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 2542
+      },
+      "bytes": 1813815,
+      "sha256": "4ff944f7862a87f86fef3a213487101864c2ecc2e0c45b7a5c007c903c1d855a",
+      "capturedAt": "2026-11-09T16:45:35.657Z"
+    },
+    {
+      "file": "04-geographic-hotspot-selected.png",
+      "caption": "Category filter (water leak) applied and the hotspot selected: the map centres on the Db2 grid cell and its complaints.",
+      "signedInAs": "alice (analyst)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 1271
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 2542
+      },
+      "bytes": 1673194,
+      "sha256": "8c387a99b6d12f182f4a89e578f21107012a0262017c0d24dbd0c3e197d57a03",
+      "capturedAt": "2026-11-09T16:45:38.665Z"
+    },
+    {
+      "file": "05-complaints.png",
+      "caption": "Complaint browser: search, category and record-type filters, severity, and SYNTHETIC badges on every demo record.",
+      "signedInAs": "alice (analyst)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 1000
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 2000
+      },
+      "bytes": 465466,
+      "sha256": "0ad7a5011d40ef7b57267defcfa149810715e58e7a576fbd31ac82c39e7a3c7e",
+      "capturedAt": "2026-11-09T16:45:41.082Z"
+    },
+    {
+      "file": "06-complaint-detail.png",
+      "caption": "A complaint record opened from the browser, with a link to its place on the map.",
+      "signedInAs": "alice (analyst)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 1000
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 2000
+      },
+      "bytes": 411812,
+      "sha256": "db293e5cd2acabd6904d52a352fa6046281f36a98ad08344d9e5c19edfdbe159",
+      "capturedAt": "2026-11-09T16:45:41.822Z"
+    },
+    {
+      "file": "07-investigations.png",
+      "caption": "Investigation workspace: investigations in every lifecycle state.",
+      "signedInAs": "alice (analyst)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 800
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 1600
+      },
+      "bytes": 280388,
+      "sha256": "105ac015501c1b45601859d0b0a899d45e1e4f4f6d3f23b75c29503878dc6d52",
+      "capturedAt": "2026-11-09T16:45:43.967Z"
+    },
+    {
+      "file": "08-investigation-results.png",
+      "caption": "An investigated case: evidence from Db2, the audited tool calls the rule-based investigator made, its recommendations (labelled \"Rule-based · no LLM\") and the reviewers' decisions.",
+      "signedInAs": "alice (analyst)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 2899
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 5798
+      },
+      "bytes": 1606879,
+      "sha256": "39078d26eceab0f8f23efd3a707a278a1b1b9a00a2f9493d6d61878394f3628f",
+      "capturedAt": "2026-11-09T16:45:51.912Z"
+    },
+    {
+      "file": "09-investigation-run-options.png",
+      "caption": "An open investigation: the run options say plainly that no language model is configured, so Auto mode will use the labelled rule-based fallback.",
+      "signedInAs": "alice (analyst)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 1897
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 3794
+      },
+      "bytes": 623643,
+      "sha256": "32678e62db5dc48feacf284193719ee768526ba07ceec07e05ac5da17bbc0bc4",
+      "capturedAt": "2026-11-09T16:45:59.366Z"
+    },
+    {
+      "file": "10-human-review-queue.png",
+      "caption": "Human review as a reviewer: the proposal, who or what wrote it, the evidence behind it, and the decision controls.",
+      "signedInAs": "rita (reviewer)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 1295
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 2590
+      },
+      "bytes": 488299,
+      "sha256": "80ad58a0442ff22ac7035baff38b90894ddf0c585b1972b96d3f7e956e21adb9",
+      "capturedAt": "2026-11-09T16:46:03.664Z"
+    },
+    {
+      "file": "11-human-review-decided.png",
+      "caption": "A decided recommendation: the reviewer, the time and the comment are recorded and the decision cannot be changed.",
+      "signedInAs": "rita (reviewer)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 900
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 1800
+      },
+      "bytes": 487794,
+      "sha256": "11ac0ff288e4acc180e828f339b5ef1ffd19b777061626345d396f5e3abac44e",
+      "capturedAt": "2026-11-09T16:46:06.071Z"
+    },
+    {
+      "file": "12-human-review-analyst-readonly.png",
+      "caption": "An analyst can read the review queue but is shown no approve or reject controls (and the server would refuse them: 403).",
+      "signedInAs": "alice (analyst)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 800
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 1600
+      },
+      "bytes": 391820,
+      "sha256": "da00df02d68a599829c35f9772acff51e1fb2eb26ab2012d2a645c52e8948735",
+      "capturedAt": "2026-11-09T16:46:09.799Z"
+    },
+    {
+      "file": "13-agent-transparency.png",
+      "caption": "Agent transparency: no language model is configured, so every recommendation is shown as rule-based or manual; the guard rails and the audited tool activity are listed.",
+      "signedInAs": "alice (analyst)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 2089
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 4178
+      },
+      "bytes": 818334,
+      "sha256": "59233f9abeb11c5ac4bf23d6e72046378a63d475b417a93bef9363e8dd8c69fc",
+      "capturedAt": "2026-11-09T16:46:12.773Z"
+    },
+    {
+      "file": "14-phone-overview.png",
+      "caption": "Phone: the overview reflows to one column; charts stay readable and keep their data tables.",
+      "signedInAs": "alice (analyst)",
+      "viewportCssPx": {
+        "width": 390,
+        "height": 4200
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 780,
+        "height": 8400
+      },
+      "bytes": 755321,
+      "sha256": "4ace1e1d22e0fed4ed178219b35a66c1600e78b636a9c8ddd54996c9e19d956f",
+      "capturedAt": "2026-11-09T16:46:14.851Z"
+    },
+    {
+      "file": "15-phone-map.png",
+      "caption": "Phone: the filters start collapsed so the map is on the first screen; hotspot cells and complaint markers are plotted on it.",
+      "signedInAs": "alice (analyst)",
+      "viewportCssPx": {
+        "width": 390,
+        "height": 1871
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 780,
+        "height": 3742
+      },
+      "bytes": 1042818,
+      "sha256": "13a98ba48d31f5dd1fec87f81eb7179835cf26a692f4f7e6b135e151aafd1ef0",
+      "capturedAt": "2026-11-09T16:46:18.774Z"
+    },
+    {
+      "file": "16-phone-investigation.png",
+      "caption": "Phone: an investigation with evidence, recommendations and the audit trail.",
+      "signedInAs": "alice (analyst)",
+      "viewportCssPx": {
+        "width": 390,
+        "height": 3800
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 780,
+        "height": 7600
+      },
+      "bytes": 870881,
+      "sha256": "75bef405ed4e0d9a4c78e397986518866a61a7d7af4a775d438cc2029fc94107",
+      "capturedAt": "2026-11-09T16:46:25.913Z"
+    },
+    {
+      "file": "17-phone-review.png",
+      "caption": "Phone: the review queue and a recommendation with its decision controls.",
+      "signedInAs": "rita (reviewer)",
+      "viewportCssPx": {
+        "width": 390,
+        "height": 1956
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 780,
+        "height": 3912
+      },
+      "bytes": 413347,
+      "sha256": "149f44b70b991f1d0e0fb8b24c924fbcd99a69303ba68d9b01bc826d56ae036f",
+      "capturedAt": "2026-11-09T16:46:30.102Z"
+    },
+    {
+      "file": "18-new-investigation.png",
+      "caption": "Creating an investigation: a title and the question it should answer.",
+      "signedInAs": "alice (analyst)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 800
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 1600
+      },
+      "bytes": 278059,
+      "sha256": "5085dd069e8a9baf147a2d805ca5783140097c33ee0202cf385d519b05128081",
+      "capturedAt": "2026-11-09T16:46:32.823Z"
+    },
+    {
+      "file": "19-attach-evidence.png",
+      "caption": "Attaching evidence: complaints are picked from the database; synthetic records are badged and attached ones are marked.",
+      "signedInAs": "alice (analyst)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 800
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 1600
+      },
+      "bytes": 265972,
+      "sha256": "3cc34e8fad88efd117a5ee227747229bb471b7a65ca1e7bd542cf96a4659a7ba",
+      "capturedAt": "2026-11-09T16:46:42.807Z"
+    },
+    {
+      "file": "20-investigation-run-result.png",
+      "caption": "After Auto mode ran: the result says the rule-based fallback was used and why, the evidence, audited tool calls and the proposed recommendation (still awaiting a reviewer).",
+      "signedInAs": "alice (analyst)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 2386
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 4772
+      },
+      "bytes": 1116180,
+      "sha256": "a70255c6864f8a7b3fe68314ec117c0cdfb4a3ca519287a20cd241aae4fa0bae",
+      "capturedAt": "2026-11-09T16:46:56.055Z"
+    },
+    {
+      "file": "21-review-confirm.png",
+      "caption": "Approving asks for confirmation and states who the decision will be recorded as.",
+      "signedInAs": "rita (reviewer)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 1000
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 2000
+      },
+      "bytes": 309824,
+      "sha256": "84fdeef6c0cecf2262fa0668a7046d0b5d0a8e3826b1203c8a190cbef7f056c1",
+      "capturedAt": "2026-11-09T16:47:00.757Z"
+    },
+    {
+      "file": "22-review-approved.png",
+      "caption": "Success: the decision, the reviewer and the time are recorded in Db2 and in the audit log.",
+      "signedInAs": "rita (reviewer)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 1000
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 2000
+      },
+      "bytes": 457575,
+      "sha256": "7a081c966429966869912263d76a183f826223c2907ee46d08feb4972a9be3a6",
+      "capturedAt": "2026-11-09T16:47:06.384Z"
+    },
+    {
+      "file": "23-error-409-already-decided.png",
+      "caption": "409: reviewer B acted on a stale view; Db2's compare-and-set refused the second decision and the first one stands.",
+      "signedInAs": "omar (reviewer)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 1000
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 2000
+      },
+      "bytes": 454362,
+      "sha256": "30cdcf51ace43a8680de301445a0145d626afdc6029e9e54baad284556780a9a",
+      "capturedAt": "2026-11-09T16:47:29.118Z"
+    },
+    {
+      "file": "24-error-403-forbidden.png",
+      "caption": "403: the request carried an analyst token; the server refused it and nothing changed.",
+      "signedInAs": "rita (reviewer)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 1000
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 2000
+      },
+      "bytes": 513279,
+      "sha256": "42403ddc10db9269e82aa9492ff9f388cbde7a857630681fc03da933737d0b40",
+      "capturedAt": "2026-11-09T16:47:38.654Z"
+    },
+    {
+      "file": "25-error-422-validation.png",
+      "caption": "422: a rejection without a comment is refused by the server, with the reason in words.",
+      "signedInAs": "rita (reviewer)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 1000
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 2000
+      },
+      "bytes": 522038,
+      "sha256": "aa18fe554f55de1a966800e17ccc869efa326a1f10f7b8d9438e71f87931f866",
+      "capturedAt": "2026-11-09T16:47:48.979Z"
+    },
+    {
+      "file": "26-error-401-signed-out.png",
+      "caption": "401: the server rejected the token, so the session ended and the user is asked to sign in again.",
+      "signedInAs": null,
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 900
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 1800
+      },
+      "bytes": 153872,
+      "sha256": "433e8de4cfbb60dd27d16ed6ee8fa226ae22f3743abdc5c34bfb14ae235327e8",
+      "capturedAt": "2026-11-09T16:47:53.298Z"
+    },
+    {
+      "file": "27-error-503-database-unavailable.png",
+      "caption": "503: the API answers but the database does not. The message is generic (no host, port or credentials) and no unreliable figures are shown.",
+      "signedInAs": "alice (analyst)",
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 800
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 1600
+      },
+      "bytes": 125763,
+      "sha256": "5f7bb5ee17fdf5b388cb61aac0bee5f650f46aaf70ba315f0e5626b529dd8ba2",
+      "capturedAt": "2026-11-09T16:48:05.192Z"
+    },
+    {
+      "file": "28-error-503-auth-not-configured.png",
+      "caption": "503: a backend with no access tokens configured refuses everyone instead of letting them in.",
+      "signedInAs": null,
+      "viewportCssPx": {
+        "width": 1440,
+        "height": 800
+      },
+      "deviceScaleFactor": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 1600
+      },
+      "bytes": 162405,
+      "sha256": "51d78e790f33f2fc76bd57b2feaf17e30e6f84654518161686de999b2d3350a6",
+      "capturedAt": "2026-11-09T16:48:05.677Z"
+    }
+  ]
+}

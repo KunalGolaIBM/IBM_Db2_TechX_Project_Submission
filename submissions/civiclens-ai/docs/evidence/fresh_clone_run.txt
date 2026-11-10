@@ -1,0 +1,77 @@
+# Dry run of the documented submission procedure + a from-scratch install and test run | 2026-11-09T18:03:53Z | official main 4d685c2 cloned read-only; the project folder taken from commit 20314c4 on branch feat/civiclens-final (the one commit after it changes documentation wording and evidence files only, no code); fresh virtualenv (outside the folder) and fresh node_modules; no Db2, no tokens, no LLM settings
+
+
+### 1. official main (shallow clone, read-only) -> the base the PR will target (0s since start)
+official main: 4d685c2  (2026-10-29)
+
+### 2. the documented commands: submission branch from upstream/main + ONLY the project folder from the finished work (1s since start)
+branch: submission/civiclens-ai
+files staged by the checkout: 230
+files OUTSIDE submissions/civiclens-ai/ (must be none):
+  none
+untracked files after checkout (must be none):
+  (end)
+
+### 3. CI as the workflow runs it: python scripts/validate_submission.py (no arguments, every submission) (4s since start)
+Checking: submissions/crewai
+  ✅ PASSED all validation checks.
+
+Checking: submissions/db2-multilingual-voice-rag
+  ✅ PASSED all validation checks.
+
+Checking: submissions/civiclens-ai
+  ✅ PASSED all validation checks.
+
+Checking: submissions/db2-governed-rag
+  ✅ PASSED all validation checks.
+
+==================================================
+ALL VALIDATION CHECKS PASSED.
+
+### 4. what the PR would add (diff against the official main) (4s since start)
+ 230 files changed, 27754 insertions(+)
+paths touched outside the folder: 0
+
+### 5. backend from scratch: new venv, pip install -r src/backend/requirements-dev.txt (4s since start)
+Python 3.13.18
+
+installed: ibm_db 3.3.0, fastapi 0.162.2, pytest 9.2.0
+
+### 6. backend: ruff + unit tests (no database, no tokens, no LLM settings) (22s since start)
+All checks passed!
+71 files already formatted
+SKIPPED [1] tests/unit/test_fallback_and_llm.py:102: could not import 'langchain_anthropic': No module named 'langchain_anthropic'
+SKIPPED [1] tests/unit/test_fallback_and_llm.py:150: could not import 'langchain_openai': No module named 'langchain_openai'
+108 passed, 3 skipped in 1.41s
+LLM preflight (no provider, no network):
+LLM readiness (no provider is contacted, no value is printed)
+  provider : none
+  model    : (not set)
+  status   : BLOCKED
+
+### 7. frontend from scratch: npm ci (26s since start)
+v22.23.4
+
+added 294 packages in 6s
+
+### 8. frontend: typecheck, lint, component tests (32s since start)
+> tsc --noEmit
+
+> eslint .
+
+ Test Files  16 passed (16)
+      Tests  245 passed (245)
+
+### 9. frontend: production build + bundle scan (59s since start)
+✓ built in 582ms
+
+Scanned 5 bundle files, checked 0 literal secret value(s) from the environment: 0 finding(s)
+
+### 10. the official validator once more on the final tree, and the secret files check (66s since start)
+
+==================================================
+ALL VALIDATION CHECKS PASSED.
+forbidden files present (must be none): 0
+
+### done (66s since start)
+(exit code 0)

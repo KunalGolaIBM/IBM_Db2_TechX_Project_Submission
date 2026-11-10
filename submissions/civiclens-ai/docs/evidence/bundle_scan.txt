@@ -1,0 +1,9 @@
+# npm run verify:bundle | 2026-11-09T17:53:00Z | scans dist/ for the LITERAL values of every secret in the environment (DB password, auth tokens, LLM keys) and for database identifiers. Values are never printed.
+# The environment of the running API is exported for the literal-value check, so the scan is real.
+Scanned 5 bundle files, checked 4 literal secret value(s) from the environment: 0 finding(s)
+(exit code 0)
+
+# bundle contents (names and sizes only):
+167369 GeoView-DnEV5aGI.js
+535161 index-CZ00rA4D.js
+63145 index-UvRp_js8.css

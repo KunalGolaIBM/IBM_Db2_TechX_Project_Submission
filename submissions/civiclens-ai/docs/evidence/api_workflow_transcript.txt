@@ -1,0 +1,60 @@
+
+### anonymous: POST /api/investigations  body={"title": "x", "question": "y y y"}
+HTTP 401
+{"detail":{"code":"UNAUTHENTICATED","message":"A valid bearer token is required."}}
+
+### rita: POST /api/investigations  body={"title": "x", "question": "y y y"}
+HTTP 403
+{"detail":{"code":"FORBIDDEN","message":"Role 'reviewer' may not do this."}}
+
+### alice: POST /api/investigations  body={"title": "Pothole hotspots (SYNTHETIC demo data)", "question": "Where should crews go first?"}
+HTTP 201
+{"investigation_id":701,"title":"Pothole hotspots (SYNTHETIC demo data)","question":"Where should crews go first?","status":"OPEN","created_by":"alice","created_at":"2026-11-09T09:22:00.946761","closed_at":null}
+
+### alice: POST /api/investigations/701/run  body={"mode": "llm"}
+HTTP 409
+{"detail":{"code":"LLM_NOT_CONFIGURED","message":"No LLM provider is configured (LLM_PROVIDER=none).","llm_configured":false}}
+
+### alice: POST /api/investigations/701/run  body={"mode": "auto", "max_hotspots": 2}
+HTTP 200
+{"investigation_id":701,"status":"PENDING_REVIEW","generator":"DETERMINISTIC_FALLBACK","model_name":"hotspot-rules-v1","llm_configured":false,"fallback_reason":"No LLM provider configured (LLM_PROVIDER=none).","steps":3,"tool_calls":3,"recommendation_ids":[481,482],"notice":"Recommendations were produced by deterministic rule-based logic. NO LLM WAS USED. All are PROPOSED and need human review."}
+
+### alice: POST /api/investigations/701/run  body={"mode": "auto"}
+HTTP 409
+{"detail":{"code":"INVESTIGATION_NOT_RUNNABLE","message":"Investigation is not runnable (it is already running, awaiting review or closed)."}}
+
+### rita: GET /api/investigations/701/evidence
+HTTP 200
+[{"investigation_id":701,"complaint_id":141,"relevance":1.0,"note":"cited by DETERMINISTIC_FALLBACK","added_at":"2026-11-09T09:22:03.304042","title":"Large pothole near bus stop","category":"POTHOLE","geo_cell":"C5499_15535","severity":2,"reported_at":"2026-10-12T19:00:00","is_synthetic":true},{"investigation_id":701,"complaint_id":142,"relevance":1.0,"note":"cited by DETERMINISTIC_FALLBACK","added_at":"2026-11-09T09:22:03.304690","title":"Large pothole near bus stop","category":"POTHOLE","geo_cell":"C5499_15535","severity":5,"reported_at":"2026-10-26T13:00:00","is_synthetic":true},{"investigation_id":701,"complaint_id":143,"relevance":1.0,"note":"cited by DETERMINISTIC_FALLBACK","added_at": ...[trimmed]
+
+### rita: GET /api/investigations/701/recommendations
+HTTP 200
+[{"recommendation_id":481,"investigation_id":701,"summary":"Inspect pothole cluster in cell C5499_15535 (9 complaints)","rationale":"[RULE-BASED, NO LLM] Rule set hotspot-rules-v1. Db2 aggregation found 9 non-duplicate pothole complaints in geo-cell C5499_15535 between 2026-10-12T19:00:00 and 2026-11-08T21:00:00 (average severity 3.56/5; score 32.0). Evidence: the 9 most recent matching complaints (141, 142, 143, 144, 145, 146, 147, 148, 149). Priority and confidence come from fixed thresholds, not a learned model.","priority":1,"confidence":0.692,"evidence_ids":[141,142,143,144,145,146,147,148,149],"generator_type":"DETERMINISTIC_FALLBACK","model_name":"hotspot-rules-v1","status":"PROPOSED" ...[trimmed]
+
+### alice: POST /api/recommendations/481/decision  body={"decision": "APPROVED"}
+HTTP 403
+{"detail":{"code":"FORBIDDEN","message":"Role 'analyst' may not do this."}}
+
+### rita: POST /api/recommendations/481/decision  body={"decision": "APPROVED", "comment": "Crew assigned"}
+HTTP 200
+{"recommendation_id":481,"investigation_id":701,"summary":"Inspect pothole cluster in cell C5499_15535 (9 complaints)","rationale":"[RULE-BASED, NO LLM] Rule set hotspot-rules-v1. Db2 aggregation found 9 non-duplicate pothole complaints in geo-cell C5499_15535 between 2026-10-12T19:00:00 and 2026-11-08T21:00:00 (average severity 3.56/5; score 32.0). Evidence: the 9 most recent matching complaints (141, 142, 143, 144, 145, 146, 147, 148, 149). Priority and confidence come from fixed thresholds, not a learned model.","priority":1,"confidence":0.692,"evidence_ids":[141,142,143,144,145,146,147,148,149],"generator_type":"DETERMINISTIC_FALLBACK","model_name":"hotspot-rules-v1","status":"APPROVED", ...[trimmed]
+
+### omar: POST /api/recommendations/481/decision  body={"decision": "REJECTED", "comment": "conflicting attempt"}
+HTTP 409
+{"detail":{"code":"ALREADY_DECIDED","message":"Recommendation was already APPROVED."}}
+
+### omar: POST /api/recommendations/482/decision  body={"decision": "REJECTED", "comment": "Cluster already scheduled"}
+HTTP 200
+{"recommendation_id":482,"investigation_id":701,"summary":"Inspect water leak cluster in cell C5497_15536 (7 complaints)","rationale":"[RULE-BASED, NO LLM] Rule set hotspot-rules-v1. Db2 aggregation found 7 non-duplicate water leak complaints in geo-cell C5497_15536 between 2026-10-14T15:00:00 and 2026-10-28T15:00:00 (average severity 3.43/5; score 24.0). Evidence: the 7 most recent matching complaints (150, 151, 152, 153, 154, 155, 156). Priority and confidence come from fixed thresholds, not a learned model.","priority":2,"confidence":0.636,"evidence_ids":[150,151,152,153,154,155,156],"generator_type":"DETERMINISTIC_FALLBACK","model_name":"hotspot-rules-v1","status":"REJECTED","created_at" ...[trimmed]
+
+### alice: GET /api/investigations/701
+HTTP 200
+{"investigation_id":701,"title":"Pothole hotspots (SYNTHETIC demo data)","question":"Where should crews go first?","status":"CLOSED","created_by":"alice","created_at":"2026-11-09T09:22:00.946761","closed_at":"2026-11-09T09:22:11.192790"}
+
+### alice: GET /api/investigations/701/audit
+HTTP 200
+[{"audit_id":761,"actor_type":"USER","actor_id":"alice","action":"INVESTIGATION_CREATED","tool_name":null,"input_json":"{\"title\": \"Pothole hotspots (SYNTHETIC demo data)\"}","output_summary":"status=OPEN","success":true,"created_at":"2026-11-09T09:22:00.960573"},{"audit_id":781,"actor_type":"AGENT","actor_id":"civiclens-agent","action":"AGENT_RUN_STARTED","tool_name":null,"input_json":"{\"requested_by\": \"alice\", \"mode\": \"auto\", \"days\": 30}","output_summary":"llm_available=False","success":true,"created_at":"2026-11-09T09:22:03.259358"},{"audit_id":782,"actor_type":"AGENT","actor_id":"civiclens-agent","action":"TOOL_CALL","tool_name":"hotspot_summary","input_json":"{\"days\": 30,  ...[trimmed]
+
+### audit actions in order: ['alice:INVESTIGATION_CREATED', 'civiclens-agent:AGENT_RUN_STARTED', 'civiclens-agent:TOOL_CALL', 'civiclens-agent:TOOL_CALL', 'civiclens-agent:TOOL_CALL', 'civiclens-agent:RECOMMENDATION_PROPOSED', 'civiclens-agent:RECOMMENDATION_PROPOSED', 'civiclens-agent:AGENT_RUN_COMPLETED', 'rita:REVIEW_APPROVED', 'omar:REVIEW_REJECTED']
+
+run generator=DETERMINISTIC_FALLBACK llm_configured=False

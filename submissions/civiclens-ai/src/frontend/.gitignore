@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+*.tsbuildinfo
+.vite/
+# never commit environment files (the official validator also rejects .env, .env.local, ...)
+.env
+.env.*
+!.env.example

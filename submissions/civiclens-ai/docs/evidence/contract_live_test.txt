@@ -1,0 +1,18 @@
+# npm run test:live | 2026-11-09T17:53:00Z | the real TypeScript API client + zod schemas against the running FastAPI + IBM Db2 (no mocks) | node v22.23.4
+
+ RUN  v5.1.0 /home/user/IBM_Db2_TechX_Project_Submission/submissions/civiclens-ai/src/frontend
+
+ ✓ tests/live/contract.live.test.ts > live API contract (real backend + Db2) > identifies each caller and their capabilities 14ms
+ ✓ tests/live/contract.live.test.ts > live API contract (real backend + Db2) > 401 for a wrong token and for no token 8ms
+ ✓ tests/live/contract.live.test.ts > live API contract (real backend + Db2) > serves a schema-valid overview whose numbers are consistent with the complaint list 2236ms
+ ✓ tests/live/contract.live.test.ts > live API contract (real backend + Db2) > serves schema-valid complaints and hotspots 2312ms
+ ✓ tests/live/contract.live.test.ts > live API contract (real backend + Db2) > complaint intake: analyst only, with Db2 duplicate candidates 2282ms
+ ✓ tests/live/contract.live.test.ts > live API contract (real backend + Db2) > the full workflow: create, attach (422 then OK), run rule-based, review, and 409/403 guards 16751ms
+ ✓ tests/live/contract.live.test.ts > live API contract (real backend + Db2) > LLM-only mode is refused when no model is configured (never a silent fallback) 2684ms
+ ✓ tests/live/contract.live.test.ts > live API contract (real backend + Db2) > validation failures arrive as field errors (422) 1873ms
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  17:53:01
+   Duration  30.07s (tests 99%)
+

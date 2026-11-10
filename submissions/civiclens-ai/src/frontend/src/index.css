@@ -1,0 +1,168 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter/wght.css';
+@import 'leaflet/dist/leaflet.css';
+
+/*
+ * CivicLens design tokens. Dark charcoal surfaces, copper accent.
+ * Chart colours are NOT hand-picked: they were run through the dataviz palette validator against the
+ * panel surface (--color-ink-800). See docs/evidence/palette_validation.txt.
+ */
+@theme {
+  --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* surfaces (page plane -> raised) */
+  --color-ink-950: #0e0f12;
+  --color-ink-900: #131418;
+  --color-ink-850: #17181d;
+  --color-ink-800: #1b1d22; /* panel + chart surface */
+  --color-ink-750: #22252b;
+  --color-ink-700: #2a2e35; /* hairline borders */
+  --color-ink-600: #3a3f48;
+
+  /* ink (text) */
+  --color-fg: #eceef2;
+  --color-fg-2: #b9bfca;
+  --color-fg-3: #8e95a2;
+
+  /* copper accent */
+  --color-copper-200: #f7cfb2;
+  --color-copper-300: #f2b184;
+  --color-copper-400: #e39a62;
+  --color-copper-500: #cc7233; /* chart series 1 */
+  --color-copper-600: #b5602a;
+  --color-copper-700: #8f4c22;
+
+  /* categorical chart series (fixed order; validated all-pairs for the first three) */
+  --color-series-1: #cc7233;
+  --color-series-2: #3987e5;
+  --color-series-3: #199e70;
+  --color-series-4: #9085e9;
+
+  /* ordinal ramp for severity 1 -> 5 (validated with --ordinal) */
+  --color-sev-1: #a14f09;
+  --color-sev-2: #bb672c;
+  --color-sev-3: #d67f46;
+  --color-sev-4: #f2985f;
+  --color-sev-5: #feb98f;
+
+  /* status (fixed; always paired with an icon and a label). "Serious" is deliberately not defined: the UI only needs good / warning /
+     critical, and the amber and orange status steps are too close to tell apart (dataviz validator, docs/evidence/palette_validation.txt) */
+  --color-good: #0ca30c;
+  --color-warn: #fab219;
+  --color-critical: #d03b3b;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background: var(--color-ink-950);
+  }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--color-ink-950);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv11', 'ss03';
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-copper-300);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--color-copper-500) 45%, transparent);
+  }
+  table {
+    border-collapse: collapse;
+  }
+  /*
+   * `sr-only` is position:absolute. Inside a horizontally scrolling wrapper with no positioned ancestor its
+   * containing block is the page, so its static position (far right in a wide table) widens the whole document.
+   * Making every scroll wrapper a containing block keeps such elements inside, and clipped by, the wrapper.
+   */
+  .overflow-x-auto {
+    position: relative;
+  }
+  /* slim dark scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-600) transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---- Leaflet, restyled for the dark UI. OSM tiles are light, so the tile pane is inverted. ---- */
+.leaflet-container {
+  background: var(--color-ink-900);
+  font-family: var(--font-sans);
+  outline-offset: 0;
+}
+.cl-map .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.85) saturate(0.55);
+}
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  background: var(--color-ink-800);
+  color: var(--color-fg);
+  border-bottom-color: var(--color-ink-700);
+}
+.leaflet-bar a:hover {
+  background: var(--color-ink-750);
+}
+.leaflet-control-attribution {
+  background: color-mix(in srgb, var(--color-ink-900) 88%, transparent) !important;
+  color: var(--color-fg-2) !important;
+}
+.leaflet-control-attribution a {
+  color: var(--color-copper-300) !important;
+}
+.leaflet-tooltip {
+  background: var(--color-ink-750);
+  color: var(--color-fg);
+  border: 1px solid var(--color-ink-600);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.45);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.leaflet-tooltip-top::before {
+  border-top-color: var(--color-ink-600);
+}
+.cl-marker {
+  transition: stroke-width 120ms ease;
+}
+.cl-hotspot-label {
+  background: transparent;
+  border: 0;
+}
+.cl-hotspot-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--color-ink-900);
+  color: var(--color-copper-200);
+  border: 2px solid var(--color-copper-300);
+  font-size: 12px;
+  font-weight: 650;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  box-shadow: 0 0 0 2px rgb(14 15 18 / 0.75);
+}

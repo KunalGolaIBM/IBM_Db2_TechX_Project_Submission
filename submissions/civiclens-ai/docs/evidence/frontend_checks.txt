@@ -1,0 +1,266 @@
+# Frontend static checks and component tests | 2026-11-09T17:52:35Z | node v22.23.4 | typescript Version 5.9.3 | vitest vitest/5.1.0 linux-x64 node-v22.23.4
+
+$ npm run typecheck   (tsc --noEmit)
+(exit code 0)
+
+$ npm run lint   (eslint .)
+(exit code 0)
+
+$ npm test   (vitest run --reporter=verbose)
+
+ RUN  v5.1.0 <submission>/src/frontend
+
+ ✓ tests/views/review.test.tsx > Human review: reading the queue > lists pending recommendations, each with its actual generator 249ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: reading > shows the investigation, its question and where it is in the lifecycle 303ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: reading > shows a failed run as a stopped step 139ms
+ ✓ tests/views/complaints.test.tsx > Complaint browsing > pages through the loaded complaints, 20 at a time, newest first 521ms
+ ✓ tests/views/review.test.tsx > Human review: reading the queue > shows the explanation, provenance and only the evidence the recommendation cites 341ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: reading > lists the attached evidence with provenance markers 136ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: reading > words the stored evidence note in plain language instead of showing a raw enum 163ms
+ ✓ tests/views/review.test.tsx > Human review: reading the queue > shows a real LLM recommendation as an AI model with its provider and model, and a test double as NOT a model 212ms
+ ✓ tests/views/review.test.tsx > Human review: reading the queue > an analyst can read the queue but sees no decision controls 148ms
+ ✓ tests/views/review.test.tsx > Human review: reading the queue > shows a helpful empty state 85ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: reading > collapses a long evidence list to the first rows and expands on request 309ms
+ ✓ tests/views/complaints.test.tsx > Complaint browsing > searches titles, and finds a complaint by its ID 581ms
+ ✓ tests/views/complaints.test.tsx > Complaint browsing > a search from another page (?q=) is applied on arrival 76ms
+ ✓ tests/views/review.test.tsx > Human review: reading the queue > shows each item's decision status outside the "Awaiting review" filter 159ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: reading > does not collapse a list that is only slightly over the limit (hiding one row saves nothing) 122ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: reading > shows every recommendation with its generator, priority, confidence and evidence 150ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: reading > shows tool activity from the audit log and who issued the tool calls 171ms
+ ✓ tests/views/review.test.tsx > Human review: reading the queue > the filter requests the chosen status and shows past decisions 297ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: reading > survives truncated audit JSON (the server truncates long payloads) 71ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: reading > a bad id shows not-found; a missing investigation shows the 404 from the API 77ms
+ ✓ tests/views/complaints.test.tsx > Complaint browsing > filters by category, status, record type and sorts 515ms
+ ✓ tests/views/complaints.test.tsx > Complaint browsing > marks every synthetic record, on every row 100ms
+ ✓ tests/views/review.test.tsx > Human review: deciding > approve: asks for confirmation, then sends only the decision (the reviewer is the token, not a field) 344ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: attaching evidence > attaches by ID and refreshes the evidence list 221ms
+ ✓ tests/views/complaints.test.tsx > Complaint browsing > opens the full record in a dialog, closes with Escape, and returns focus 199ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: attaching evidence > catches malformed IDs in the browser without sending anything 162ms
+ ✓ tests/views/review.test.tsx > Human review: deciding > cancelling the confirmation sends nothing 326ms
+ ✓ tests/views/complaints.test.tsx > Complaint browsing > shows complaint text literally: markup in a title never becomes elements (XSS) 147ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: attaching evidence > 422: shows the server rejecting a complaint ID that does not exist, naming it 199ms
+ ✓ tests/views/complaints.test.tsx > Complaint browsing > reviewers can browse but not add complaints 151ms
+ ✓ tests/views/complaints.test.tsx > Reporting a complaint (analyst only) > validates in the browser first and sends nothing while invalid 117ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: attaching evidence > the picker lists complaints, marks attached ones, and attaches the selection 224ms
+ ✓ tests/views/review.test.tsx > Human review: deciding > reject requires a comment (checked before anything is sent) 348ms
+ ✓ tests/views/review.test.tsx > Human review: deciding > warns, and disables the buttons, when the reviewer created the investigation 80ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: attaching evidence > the picker filters by search text 144ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: attaching evidence > a reviewer cannot attach evidence or propose (no controls) 68ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: attaching evidence > a closed investigation accepts no new evidence or runs 64ms
+ ✓ tests/views/review.test.tsx > Human review: the result of a decision is brought into view > success: scrolls the notice into view and moves focus to it 170ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: running it > rule-based run: sends the parameters and presents the result as NOT an AI result 151ms
+ ✓ tests/views/review.test.tsx > Human review: the result of a decision is brought into view > error: the notice is scrolled into view too 143ms
+ ✓ tests/views/complaints.test.tsx > Reporting a complaint (analyst only) > creates the complaint as SYNTHETIC by default and shows Db2 duplicate candidates 593ms
+ ✓ tests/views/review.test.tsx > Human review: the result of a decision is brought into view > dismissing the notice removes the region 114ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: running it > sends the chosen look-back window, category and hotspot limit 176ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: running it > auto mode without an LLM: explains up front that the fallback will be used 77ms
+ ✓ tests/views/review.test.tsx > Human review: every error state is explained (401, 403, 409, 422, 503) > 403 self-review: names the four-eyes rule 119ms
+ ✓ tests/views/review.test.tsx > Human review: every error state is explained (401, 403, 409, 422, 503) > 403 role: says the role is not allowed 110ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: running it > LLM-only without an LLM: warns first, then shows the 409 when run (never a silent fallback) 136ms
+ ✓ tests/views/complaints.test.tsx > Reporting a complaint (analyst only) > records a real report when the synthetic box is unticked 335ms
+ ✓ tests/views/review.test.tsx > Human review: every error state is explained (401, 403, 409, 422, 503) > 409 already decided: says nothing was changed and refreshes the queue 115ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: running it > a real LLM run is labelled as an AI model, with its provider and model 102ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: running it > 409: running an investigation that is no longer runnable 109ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: running it > 502: an agent failure is reported as the agent failing 91ms
+ ✓ tests/views/review.test.tsx > Human review: every error state is explained (401, 403, 409, 422, 503) > 422 validation: lists the rejected fields 125ms
+ ✓ tests/views/complaints.test.tsx > Reporting a complaint (analyst only) > shows the server error when intake is refused (403) and keeps the form 285ms
+ ✓ tests/views/review.test.tsx > Human review: every error state is explained (401, 403, 409, 422, 503) > 503 outage: calm wording, nothing recorded as decided 128ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: running it > refuses an invalid look-back window in the browser 90ms
+ ✓ tests/views/review.test.tsx > Human review: every error state is explained (401, 403, 409, 422, 503) > 401 (token revoked while reviewing): returns to sign-in and explains 118ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: manual recommendations > needs a summary, an explanation and attached evidence before anything is sent 109ms
+ ✓ tests/views/review.test.tsx > Human review: every error state is explained (401, 403, 409, 422, 503) > an error can be dismissed 148ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: manual recommendations > submits a valid manual proposal citing attached evidence 510ms
+ ✓ tests/views/workspace.test.tsx > Investigation workspace: manual recommendations > 422: evidence that is not attached is rejected by the server and shown 454ms
+ ✓ tests/views/workspace.test.tsx > Investigations list > lists investigations with status and creator, and filters by status on the server 75ms
+ ✓ tests/views/workspace.test.tsx > Investigations list > creates an investigation (validated first) and opens it 249ms
+ ✓ tests/views/workspace.test.tsx > Investigations list > a reviewer sees the list read-only 37ms
+ ✓ tests/views/workspace.test.tsx > Investigations list > shows the error when the list cannot be loaded (503) 32ms
+ ✓ tests/views/geo.test.tsx > Geographic intelligence: filters > starts with everything shown and labels the data as synthetic 554ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > shows the figures the API returned: the same UI shows different numbers for different payloads 414ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > shows the true hotspot total, not just the number listed 108ms
+ ✓ tests/views/geo.test.tsx > Geographic intelligence: filters > the filter panel can be collapsed (phones), says how many filters are active, and keeps the count visible 264ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > explains how a hotspot is found, with the configured threshold and window 94ms
+ ✓ tests/views/geo.test.tsx > Geographic intelligence: filters > uses singular words for a single complaint or hotspot ("1 hotspots" is wrong) 115ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > labels synthetic data and says how much of it there is 135ms
+ ✓ tests/views/geo.test.tsx > Geographic intelligence: filters > category chips filter complaints and hotspots together, and show per-category counts 215ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > says "x of y" when synthetic and real records are mixed, and shows no banner without synthetic data 229ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > states that no recommendation came from a language model when none did 80ms
+ ✓ tests/views/geo.test.tsx > Geographic intelligence: filters > the record-type filter separates synthetic from real, and the legend counts what is visible 142ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > uses singular wording when there is exactly one recommendation or one complaint 96ms
+ ✓ tests/views/geo.test.tsx > Geographic intelligence: filters > the hotspot window and minimum cluster are sent to the server 155ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > does not make that claim when language-model recommendations exist 82ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > reports an unconfigured language model as a warning, with the fallback explained 98ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > reports a configured model without claiming its connectivity was tested 69ms
+ ✓ tests/views/geo.test.tsx > Geographic intelligence: filters > Reset restores the defaults and asks the map to refit 241ms
+ ✓ tests/views/geo.test.tsx > Geographic intelligence: filters > says when only the latest complaints were loaded out of a larger total 79ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > shows the database product and version reported by the live system 71ms
+ ✓ tests/views/geo.test.tsx > Geographic intelligence: browsing > lists hotspots with counts, and selecting one hands it to the map 92ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > every chart has a table twin with the same numbers 139ms
+ ✓ tests/views/geo.test.tsx > Geographic intelligence: browsing > a hotspot deep link (from the overview) preselects it 59ms
+ ✓ tests/views/geo.test.tsx > Geographic intelligence: browsing > a complaint deep link opens its details, marked synthetic 71ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > links each hotspot to the map with a deep link 73ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > is read-only information: reviewers see the same overview 97ms
+ ✓ tests/auth/auth.test.tsx > authentication flow > sends an anonymous visitor to the sign-in screen from any page 110ms
+ ✓ tests/views/geo.test.tsx > Geographic intelligence: browsing > clicking a marker selects that complaint; a real report is not badged synthetic 105ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > shows the pending-review count in the navigation 70ms
+ ✓ tests/views/geo.test.tsx > Geographic intelligence: browsing > the complaints tab lists the same records the map shows, each marked or not as synthetic 83ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > refetches on demand and shows when it was last updated 116ms
+ ✓ tests/views/geo.test.tsx > Geographic intelligence: browsing > tells the user when the basemap cannot load, while data stays plotted 105ms
+ ✓ tests/views/geo.test.tsx > Geographic intelligence: browsing > shows the error when complaints cannot be loaded 45ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > 503 database outage: explains it, offers Retry, and recovers 95ms
+ ✓ tests/views/overview.test.tsx > Intelligence overview > refuses to render a payload that does not match the contract 54ms
+ ✓ tests/auth/auth.test.tsx > authentication flow > verifies the token with the server, then stores it for this tab only 491ms
+ ✓ tests/auth/auth.test.tsx > authentication flow > rejects a wrong token (401), shows why, stores nothing and clears the field 143ms
+ ✓ tests/auth/auth.test.tsx > authentication flow > tells the user when the server has no authentication configured (503, fail closed) 89ms
+ ✓ tests/auth/auth.test.tsx > authentication flow > signs out an expired stored token and explains it 21ms
+ ✓ tests/auth/auth.test.tsx > authentication flow > returns to sign-in if the token is revoked mid-session (a later request gets 401) 186ms
+ ✓ tests/auth/auth.test.tsx > authentication flow > offers Retry (and keeps the session) when the API is unreachable at startup 112ms
+ ✓ tests/auth/auth.test.tsx > authentication flow > signing out clears the token and the cached data 96ms
+ ✓ tests/auth/auth.test.tsx > authentication flow > does not show the previous user data to the next user (cache cleared) 101ms
+ ✓ tests/charts.test.tsx > RankedBars > prints each value at the bar tip and names every bar 73ms
+ ✓ tests/charts.test.tsx > RankedBars > scales bar length to the maximum and keeps even a tiny value visible 7ms
+ ✓ tests/charts.test.tsx > RankedBars > shows a tooltip on hover with the value first, then label and share 22ms
+ ✓ tests/charts.test.tsx > RankedBars > shows the same tooltip on keyboard focus (tooltips never gate information) 32ms
+ ✓ tests/charts.test.tsx > RankedBars > renders an empty state instead of an empty plot 3ms
+ ✓ tests/charts.test.tsx > ColumnChart > labels every column with its value and names the scale 12ms
+ ✓ tests/charts.test.tsx > ColumnChart > never draws a column wider than 24px 6ms
+ ✓ tests/charts.test.tsx > ColumnChart > shows a tooltip on keyboard focus 32ms
+ ✓ tests/charts.test.tsx > SegmentedBar > draws no block for a zero part and lists only the parts that exist in the legend 40ms
+ ✓ tests/charts.test.tsx > SegmentedBar > prints a share only where the block is wide enough to hold it 6ms
+ ✓ tests/charts.test.tsx > SegmentedBar > exposes every part, count and share in the group name 13ms
+ ✓ tests/charts.test.tsx > SegmentedBar > shows an empty state when there is nothing to split 2ms
+ ✓ tests/charts.test.tsx > TrendChart > describes itself, including the peak, for screen readers 9ms
+ ✓ tests/charts.test.tsx > TrendChart > steps through days with the arrow keys and reads each one out 41ms
+ ✓ tests/charts.test.tsx > TrendChart > draws a 2px line and an end marker of at least 8px with a surface ring 9ms
+ ✓ tests/charts.test.tsx > ChartCard table twin > swaps the plot for a table with the same numbers and back again 45ms
+ ✓ tests/views/transparency.test.tsx > Agent transparency > states that no recommendation came from a language model when none did 249ms
+ ✓ tests/views/transparency.test.tsx > Agent transparency > counts real LLM recommendations separately from rule-based and manual ones 86ms
+ ✓ tests/views/transparency.test.tsx > Agent transparency > words the single-recommendation case correctly 78ms
+ ✓ tests/views/transparency.test.tsx > Agent transparency > uses "was" when exactly one recommendation came from a language model 62ms
+ ✓ tests/views/transparency.test.tsx > Agent transparency > describes each author type in its own words 128ms
+ ✓ tests/views/transparency.test.tsx > Agent transparency > shows the stored generator for every latest recommendation 61ms
+ ✓ tests/api/client.test.ts > request construction > sends the stored token as a bearer header and nothing else as credentials 50ms
+ ✓ tests/api/client.test.ts > request construction > sends no Authorization header when there is no token 11ms
+ ✓ tests/api/client.test.ts > request construction > an explicit token overrides the stored one (login checks a candidate before storing it) 26ms
+ ✓ tests/api/client.test.ts > request construction > builds query strings from defined values only 1ms
+ ✓ tests/views/transparency.test.tsx > Agent transparency > lists the guard rails and the allow-listed tools reported by the server 114ms
+ ✓ tests/api/client.test.ts > request construction > POSTs JSON with the right content type 29ms
+ ✓ tests/api/client.test.ts > error mapping (the real fetch stack, not stubs) > maps a structured 401 response to status + code 6ms
+ ✓ tests/api/client.test.ts > error mapping (the real fetch stack, not stubs) > maps a structured 403 response to status + code 5ms
+ ✓ tests/api/client.test.ts > error mapping (the real fetch stack, not stubs) > maps a structured 404 response to status + code 5ms
+ ✓ tests/api/client.test.ts > error mapping (the real fetch stack, not stubs) > maps a structured 409 response to status + code 9ms
+ ✓ tests/api/client.test.ts > error mapping (the real fetch stack, not stubs) > maps a structured 503 response to status + code 17ms
+ ✓ tests/api/client.test.ts > error mapping (the real fetch stack, not stubs) > keeps structured details such as unknown complaint ids (422) 25ms
+ ✓ tests/api/client.test.ts > error mapping (the real fetch stack, not stubs) > maps FastAPI's validation array (422) to field errors without 'body' noise 8ms
+ ✓ tests/api/client.test.ts > error mapping (the real fetch stack, not stubs) > copes with a non-JSON error body 8ms
+ ✓ tests/api/client.test.ts > error mapping (the real fetch stack, not stubs) > reports a network failure as status 0 without leaking anything 4ms
+ ✓ tests/api/client.test.ts > error mapping (the real fetch stack, not stubs) > times out slow requests 46ms
+ ✓ tests/api/client.test.ts > error mapping (the real fetch stack, not stubs) > rejects a response that does not match the schema and echoes only field paths 21ms
+ ✓ tests/api/client.test.ts > error mapping (the real fetch stack, not stubs) > validates successful responses and returns typed data 5ms
+ ✓ tests/api/client.test.ts > unauthorised handler > fires for a 401 that used the stored token 3ms
+ ✓ tests/api/client.test.ts > unauthorised handler > does not fire for a login attempt with a wrong candidate token 3ms
+ ✓ tests/api/client.test.ts > unauthorised handler > does not fire for other statuses 3ms
+ ✓ tests/views/transparency.test.tsx > Agent transparency > reports a configured model without claiming it was tested 85ms
+ ✓ tests/views/transparency.test.tsx > Agent transparency > says how tool calls are logged, so rule-based calls are not mistaken for LLM activity 91ms
+ ✓ tests/views/transparency.test.tsx > Agent transparency > shows the error when the overview cannot be loaded 35ms
+ ✓ tests/generator.test.tsx > describeGenerator: rule-based output is never described as an AI result > real LLM output is the only thing labelled as a model 4ms
+ ✓ tests/generator.test.tsx > describeGenerator: rule-based output is never described as an AI result > deterministic fallback says "no LLM" and never claims to be a model 1ms
+ ✓ tests/generator.test.tsx > describeGenerator: rule-based output is never described as an AI result > manual recommendations are analyst-written and say neither AI nor rules were involved 1ms
+ ✓ tests/generator.test.tsx > describeGenerator: rule-based output is never described as an AI result > a scripted test double stored as LLM is exposed as NOT a real model 1ms
+ ✓ tests/generator.test.tsx > describeGenerator: rule-based output is never described as an AI result > unknown origin is called unknown, not guessed 1ms
+ ✓ tests/generator.test.tsx > describeGenerator: rule-based output is never described as an AI result > only the LLM generator can ever be a real model 0ms
+ ✓ tests/generator.test.tsx > GeneratorBadge > LLM renders its own label and kind 33ms
+ ✓ tests/generator.test.tsx > GeneratorBadge > DETERMINISTIC_FALLBACK renders its own label and kind 8ms
+ ✓ tests/generator.test.tsx > GeneratorBadge > MANUAL renders its own label and kind 5ms
+ ✓ tests/generator.test.tsx > GeneratorBadge > UNKNOWN renders its own label and kind 4ms
+ ✓ tests/generator.test.tsx > GeneratorBadge > the rule-based badge never contains wording that claims AI authorship 7ms
+ ✓ tests/generator.test.tsx > GeneratorBadge > every generator badge differs in its words, not just in colour 0ms
+ ✓ tests/generator.test.tsx > GeneratorExplanation > spells out provenance in a full sentence for reviewers 17ms
+ ✓ tests/generator.test.tsx > describeEvidenceNote: the backend note is shown in plain words, never as a raw enum > rule-based citations say rule-based and "no LLM" 1ms
+ ✓ tests/generator.test.tsx > describeEvidenceNote: the backend note is shown in plain words, never as a raw enum > every generator type has wording, and none of the wordings is a raw enum value 1ms
+ ✓ tests/generator.test.tsx > describeEvidenceNote: the backend note is shown in plain words, never as a raw enum > anything else is shown exactly as written (an analyst note is never rewritten) 0ms
+ ✓ tests/security.test.ts > static security checks on the frontend source > finds source files to check 2ms
+ ✓ tests/security.test.ts > static security checks on the frontend source > has no HTML-injection or code-evaluation sinks 3ms
+ ✓ tests/security.test.ts > static security checks on the frontend source > never uses localStorage (the token lives in sessionStorage only) or cookies 2ms
+ ✓ tests/security.test.ts > static security checks on the frontend source > only the token store touches sessionStorage 2ms
+ ✓ tests/security.test.ts > static security checks on the frontend source > sends requests without ambient credentials 0ms
+ ✓ tests/security.test.ts > static security checks on the frontend source > has no secret-looking VITE_ variable anywhere (VITE_ values are baked into the public bundle) 2ms
+ ✓ tests/security.test.ts > static security checks on the frontend source > the committed env example holds only the public API address setting 0ms
+ ✓ tests/security.test.ts > static security checks on the frontend source > hardcodes no bearer token or credential in the source 2ms
+ ✓ tests/security.test.ts > static security checks on the frontend source > the production CSP blocks inline and remote scripts and only allows the tile host for images 1ms
+ ✓ tests/security.test.ts > static security checks on the frontend source > the HTML shell has no inline scripts 1ms
+ ✓ tests/security.test.ts > static security checks on the frontend source > tokens are never written into URLs or logged 2ms
+ ✓ tests/helpers.test.ts > chart scales > niceCeil rounds up to 1, 2, 5 x 10^n 3ms
+ ✓ tests/helpers.test.ts > chart scales > niceScale gives clean integer ticks containing the max 1ms
+ ✓ tests/helpers.test.ts > chart scales > linearScale maps a domain onto a range (including an inverted y range) 1ms
+ ✓ tests/helpers.test.ts > chart scales > nearestIndex snaps a pointer to the closest data position 1ms
+ ✓ tests/helpers.test.ts > chart scales > clamp and share behave at the edges 0ms
+ ✓ tests/helpers.test.ts > chart scales > readableInk picks whichever of near-black/white contrasts more 1ms
+ ✓ tests/helpers.test.ts > formatting > server timestamps are naive UTC and are parsed as UTC 0ms
+ ✓ tests/helpers.test.ts > formatting > formats relative time and dates 0ms
+ ✓ tests/helpers.test.ts > formatting > pluralises and compacts 1ms
+ ✓ tests/helpers.test.ts > geo-cells > converts a cell id back to the grid rectangle the backend aggregated 1ms
+ ✓ tests/helpers.test.ts > geo-cells > handles negative cells and rejects malformed ids 1ms
+ ✓ tests/helpers.test.ts > geo-cells > a hotspot is keyed by cell AND category 0ms
+ ✓ tests/helpers.test.ts > map tooltips treat complaint text as untrusted (XSS) > shows markup in a title literally and creates no elements from it 16ms
+ ✓ tests/helpers.test.ts > map tooltips treat complaint text as untrusted (XSS) > marks synthetic records and omits the marker for real ones 3ms
+ ✓ tests/helpers.test.ts > map tooltips treat complaint text as untrusted (XSS) > hotspot tooltip is plain text as well 2ms
+ ✓ tests/helpers.test.ts > form validation mirrors the server limits > accepts a good complaint and flags each bad field 1ms
+ ✓ tests/helpers.test.ts > form validation mirrors the server limits > investigation title and question have length limits 0ms
+ ✓ tests/helpers.test.ts > form validation mirrors the server limits > a recommendation needs summary, explanation and evidence 0ms
+ ✓ tests/helpers.test.ts > form validation mirrors the server limits > rejecting needs a comment; approving does not 0ms
+ ✓ tests/helpers.test.ts > form validation mirrors the server limits > parseIdList accepts mixed separators and reports (not drops) invalid tokens 0ms
+ ✓ tests/fixtures.test.ts > test fixtures conform to the API contract schemas > me (analyst) 3ms
+ ✓ tests/fixtures.test.ts > test fixtures conform to the API contract schemas > me (reviewer) 0ms
+ ✓ tests/fixtures.test.ts > test fixtures conform to the API contract schemas > complaint 2ms
+ ✓ tests/fixtures.test.ts > test fixtures conform to the API contract schemas > hotspot 1ms
+ ✓ tests/fixtures.test.ts > test fixtures conform to the API contract schemas > investigation 1ms
+ ✓ tests/fixtures.test.ts > test fixtures conform to the API contract schemas > evidence 1ms
+ ✓ tests/fixtures.test.ts > test fixtures conform to the API contract schemas > recommendation 1ms
+ ✓ tests/fixtures.test.ts > test fixtures conform to the API contract schemas > queue item 1ms
+ ✓ tests/fixtures.test.ts > test fixtures conform to the API contract schemas > audit entry 1ms
+ ✓ tests/fixtures.test.ts > test fixtures conform to the API contract schemas > run result 2ms
+ ✓ tests/fixtures.test.ts > test fixtures conform to the API contract schemas > overview 6ms
+ ✓ tests/fixtures.test.ts > test fixtures conform to the API contract schemas > a malformed value is rejected (the schemas are not vacuous) 1ms
+ ✓ tests/theme.test.ts > theme tokens stay in sync with the validated chart palette > categorical series are the validated set, in the validated order 2ms
+ ✓ tests/theme.test.ts > theme tokens stay in sync with the validated chart palette > the severity ramp in TypeScript equals the CSS tokens (SVG/Leaflet cannot read CSS variables) 1ms
+ ✓ tests/theme.test.ts > theme tokens stay in sync with the validated chart palette > severity ramp is monotone in lightness (more severe = lighter) 1ms
+ ✓ tests/theme.test.ts > theme tokens stay in sync with the validated chart palette > each generator keeps its own series hue everywhere (colour follows the entity) 1ms
+ ✓ tests/theme.test.ts > text and mark contrast (WCAG) > body text token fg reaches 4.5:1 on every surface 1ms
+ ✓ tests/theme.test.ts > text and mark contrast (WCAG) > body text token fg-2 reaches 4.5:1 on every surface 0ms
+ ✓ tests/theme.test.ts > text and mark contrast (WCAG) > body text token fg-3 reaches 4.5:1 on every surface 0ms
+ ✓ tests/theme.test.ts > text and mark contrast (WCAG) > copper-400 (link/accent text) reaches 4.5:1 on every surface 0ms
+ ✓ tests/theme.test.ts > text and mark contrast (WCAG) > primary buttons use dark ink on copper, which is legible (light ink would not be) 1ms
+ ✓ tests/theme.test.ts > text and mark contrast (WCAG) > categorical series and status colours reach 3:1 on the panel surface 0ms
+ ✓ tests/theme.test.ts > text and mark contrast (WCAG) > every severity step reaches the ordinal-ramp floor of 2:1 (severity is also shown by dot count, size and labels) 0ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > 401: asks the user to sign in again 3ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > 403 self-review: explains the four-eyes rule 1ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > 403 role: shows the server message 0ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > 409 already decided: reassures that nothing changed 1ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > 409 LLM not configured: warns, and says rule-based results are labelled 0ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > 409 INVESTIGATION_NOT_RUNNABLE 0ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > 409 INVESTIGATION_NOT_REVIEWABLE 0ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > 409 EVIDENCE_MISSING 0ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > 409 INVESTIGATION_CLOSED 1ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > 422 unknown ids: lists each offending complaint 0ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > 422 unattached evidence lists the ids 0ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > 422 validation lists each field 0ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > 422 validation about the whole request shows just the message, without pydantic's "Value error, " prefix 0ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > 503 database: calm, retryable wording 0ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > 503 auth not configured: says the server fails closed 0ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > agent failures (502/504) are described as the agent failing 0ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > network, timeout and contract failures have their own wording 0ms
+ ✓ tests/errorText.test.ts > describeError: every status the dashboard must handle > unknown errors never crash the UI 0ms
+ ✓ tests/auth/tokenStore.test.ts > tokenStore > keeps the token in sessionStorage only: never localStorage, never a cookie 7ms
+ ✓ tests/auth/tokenStore.test.ts > tokenStore > removing the token from storage really removes it (no hidden in-memory copy) 1ms
+ ✓ tests/auth/tokenStore.test.ts > tokenStore > clear() forgets everything 1ms
+ ✓ tests/auth/tokenStore.test.ts > tokenStore > falls back to memory only when storage is unavailable 2ms
+
+ Test Files  16 passed (16)
+      Tests  245 passed (245)
+   Start at  17:52:47
+   Duration  12.89s (tests 57%, environment 25%, setup 9%, import 8%, transform 1%)
+
+    Isolate  16 workers spawned · ~671ms startup each (spawn + environment, per file)
+             at least ~2.91s faster with isolate: false — reuses workers across files instead of one per file
+

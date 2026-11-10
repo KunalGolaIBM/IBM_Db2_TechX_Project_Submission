@@ -1,0 +1,12 @@
+# Backend static checks and unit tests in a CLEAN environment (no database, no tokens, no LLM settings) | 2026-11-09T17:55:51Z | Python 3.13.18
+
+$ ruff check .
+All checks passed!
+
+$ ruff format --check .
+71 files already formatted
+
+$ env -i pytest tests/unit
+........................................................................ [ 64%]
+.......................................                                  [100%]
+111 passed in 3.01s

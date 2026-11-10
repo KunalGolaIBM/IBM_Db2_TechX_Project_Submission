@@ -1,0 +1,31 @@
+# Local IBM Db2 Community Edition for CivicLens AI development.
+# Usage (from submissions/civiclens-ai/, with DB2_PASSWORD set in .env):
+#   docker compose -f docker-compose.db2.yml up -d
+#   docker logs -f civiclens-db2     # wait for "(*) Setup has completed."
+#
+# Security notes
+#  * The port is published on 127.0.0.1 only; Db2 is NOT reachable from other hosts.
+#  * The image is pinned by digest to the build that CivicLens was tested with
+#    (Db2 Community Edition 12.1.5). Update the digest deliberately, then re-run the
+#    live integration tests (CIVICLENS_DB2_TESTS=1 pytest).
+#  * The Db2 container requires `privileged: true` (documented IBM requirement).
+services:
+  db2:
+    image: icr.io/db2_community/db2@sha256:2de8151713c261843868c5c3411b57be6ae79d99d70a5b3022337836776bfda6
+    container_name: civiclens-db2
+    privileged: true
+    ports:
+      - "127.0.0.1:50000:50000"
+    environment:
+      LICENSE: accept
+      DB2INSTANCE: db2inst1
+      DB2INST1_PASSWORD: ${DB2_PASSWORD:?Set DB2_PASSWORD in .env}
+      DBNAME: CIVICDB
+      BLU: "false"
+      ENABLE_ORACLE_COMPATIBILITY: "false"
+      SAMPLEDB: "false"
+      PERSISTENT_HOME: "false"
+    volumes:
+      - civiclens_db2_data:/database
+volumes:
+  civiclens_db2_data:
