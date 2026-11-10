@@ -26,7 +26,9 @@ services:
     environment:
       LICENSE: accept
       DB2INSTANCE: db2inst1
-      DB2INST1_PASSWORD: ${DB2_PASSWORD:-${DB2_ADMIN_PASSWORD:?Set DB2_PASSWORD in .env before starting Db2}}
+      # No nested ${...:?}: Compose 2.40 evaluates it even when DB2_PASSWORD is set. ./quickstart.sh sets a password
+      # first; with neither name set, Db2 would start without the password AsOf expects.
+      DB2INST1_PASSWORD: ${DB2_PASSWORD:-${DB2_ADMIN_PASSWORD:-}}
       DBNAME: testdb
       SAMPLEDB: "false"
       ARCHIVE_LOGS: "false"
