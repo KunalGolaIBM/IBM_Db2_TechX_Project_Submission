@@ -50,7 +50,7 @@
     ],
     "frameworks": [
       "FastAPI",
-      "Ollama",
+      "Ollama (IBM Granite, called directly; no orchestration framework)",
       "Docker Compose",
       "pytest"
     ],
