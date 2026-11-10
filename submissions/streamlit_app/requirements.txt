@@ -1,0 +1,8 @@
+streamlit
+haystack-ai
+ibm-db
+ibm-db-sa
+ibm-db-haystack
+sentence-transformers
+python-dotenv
+pandas
