@@ -1,36 +1,38 @@
-# Bootcamp Runner AI Architecture
+# Bootcamp Runner: AI CEO Edition Architecture
 
 ## Overview
 
-The browser preserves the original lightweight runner and communicates with a FastAPI service for learner history and adaptive recommendations. The service is the only component allowed to access IBM Db2 or model credentials.
+The browser runs the complete arcade loop locally: Three.js renders the runner, obstacles, collectibles, and worlds; React owns menus, controls, progression, and LocalStorage persistence. The optional FastAPI service is the only component allowed to access IBM Db2 or watsonx credentials.
 
 ```mermaid
 graph TD
-    Browser[React + TypeScript + Three.js] -->|Quiz attempts / dashboard requests| API[FastAPI backend]
+    Browser[React + TypeScript + Three.js] -->|Profiles, sessions, scores| API[FastAPI arcade API]
+    Browser -->|Offline progression| LocalStorage[(Browser LocalStorage)]
     API -->|Parameterized ibm_db queries| Db2[(IBM Db2)]
-    API -->|History and topic context| Agent[LangChain learning agent]
-    Agent --> Tools[Restricted Db2-backed tools]
+    API -->|Player profile and score context| Agent[LangChain game assistant]
+    Agent --> Tools[Restricted profile, score, challenge tools]
     Tools --> Db2
-    Agent -->|Structured recommendation| API
-    API -->|Offline-safe JSON response| Browser
+    Agent -->|Challenge or strategy output| API
+    API -->|Offline-safe response| Browser
 ```
 
-## Components and data flow
+## Runtime flow
 
-1. The runner presents a local question pack and records the selected answer, topic, difficulty, and correctness.
-2. The browser sends an attempt to FastAPI. A failed request does not stop local scoring or gameplay.
-3. FastAPI validates the payload with Pydantic and stores attempts through parameterized repository methods.
-4. The agent retrieves history through restricted tools, calculates topic accuracy, selects a difficulty, creates targeted practice guidance, and stores the recommendation.
-5. The dashboard renders totals, topic progress, weak areas, and the latest recommendation. Flow mode can use the recommended difficulty for the next run.
+1. A delta-time animation loop moves the track, animates the character rig, and recycles obstacles and collectibles.
+2. Lane, jump, slide, collision, score, combo, and collectible events update the current run.
+3. End-of-run statistics are merged into LocalStorage with duplicate-safe achievements and unlock checks.
+4. When configured, FastAPI stores player profiles, sessions, scores, character unlocks, achievements, missions, and assistant challenges in Db2.
+5. The assistant uses restricted tools and optional watsonx.ai; it cannot execute arbitrary SQL or block offline gameplay.
 
 ## Db2 schema
 
-`backend/migrations/schema.sql` creates `learners`, `quiz_attempts`, `learning_profiles`, and `ai_recommendations`, with primary keys, foreign keys, checks, indexes, and timestamps. The repository never accepts arbitrary SQL from the client.
+`backend/migrations/schema.sql` creates `player_profiles`, `game_sessions`, `game_scores`, `character_unlocks`, `achievements`, `player_missions`, and `assistant_challenges`, with foreign keys, checks, primary keys, and indexes.
 
-## Security boundaries
+## Security and service boundaries
 
-- Db2 and watsonx credentials are server-side environment variables.
-- API request bodies are validated and bounded by Pydantic models.
-- CORS is configured from an explicit environment allow-list.
-- Agent tools expose fixed operations only; user input cannot become SQL.
-- Database outages return an explicit offline status instead of fabricated history or connection success.
+- Db2 and watsonx credentials stay in backend environment variables.
+- Pydantic validates and bounds API inputs.
+- Repository queries are parameterized.
+- CORS is controlled by an explicit allow-list.
+- Db2 failures return an explicit offline response; the frontend retains local play.
+- Character names are fictionalized game concepts and do not imply endorsement.

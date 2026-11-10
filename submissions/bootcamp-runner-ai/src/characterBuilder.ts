@@ -163,6 +163,20 @@ function build(character: Character): RunnerBuild {
     materials,
     owned,
   }
+  rig.root.name = 'runnerRoot'
+  rig.pelvis.name = 'pelvis'
+  rig.torso.name = 'torso'
+  rig.head.name = 'head'
+  rig.shoulderL.name = 'shoulderL'
+  rig.shoulderR.name = 'shoulderR'
+  rig.elbowL.name = 'elbowL'
+  rig.elbowR.name = 'elbowR'
+  rig.hipL.name = 'hipL'
+  rig.hipR.name = 'hipR'
+  rig.kneeL.name = 'kneeL'
+  rig.kneeR.name = 'kneeR'
+  rig.footL.name = 'footL'
+  rig.footR.name = 'footR'
   rig.shadow.name = 'shadow'
   rig.shadow.rotation.x = -Math.PI / 2
   rig.shadow.renderOrder = 2
@@ -253,6 +267,16 @@ function build(character: Character): RunnerBuild {
   rig.hipR = legR.hip
   rig.kneeR = legR.knee
   rig.footR = legR.foot
+  rig.shoulderL.name = 'shoulderL'
+  rig.shoulderR.name = 'shoulderR'
+  rig.elbowL.name = 'elbowL'
+  rig.elbowR.name = 'elbowR'
+  rig.hipL.name = 'hipL'
+  rig.hipR.name = 'hipR'
+  rig.kneeL.name = 'kneeL'
+  rig.kneeR.name = 'kneeR'
+  rig.footL.name = 'footL'
+  rig.footR.name = 'footR'
 
   mesh.traverse((object) => {
     if (object instanceof THREE.Mesh) owned.add(object)

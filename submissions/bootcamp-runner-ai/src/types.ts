@@ -1,16 +1,6 @@
-export type Screen = 'menu' | 'game' | 'results' | 'dashboard'
-export type Difficulty = 'Easy' | 'Normal' | 'Hard'
-export type Mode = 'Explore' | 'Flow'
-
-export interface Question {
-  id: string
-  topic: string
-  difficulty: Lowercase<Difficulty>
-  question: string
-  options: [string, string, string]
-  correctIndex: 0 | 1 | 2
-  explanation: string
-}
+export type Screen = 'menu' | 'game' | 'results' | 'dashboard' | 'characters' | 'worlds'
+export type WorldId = 'silicon-valley' | 'neon-ai-city' | 'data-center' | 'gpu-factory'
+export type PowerUpId = 'boost' | 'shield' | 'magnet' | 'dash' | 'multiplier'
 
 export interface Character {
   id: string
@@ -19,13 +9,34 @@ export interface Character {
   color: string
   accent: string
   unlocked: boolean
+  unlockCost: number
+  effect: string
 }
 
 export interface SessionStats {
   score: number
   coins: number
-  correct: number
-  answered: number
-  bestStreak: number
+  chips: number
+  combo: number
   distance: number
+  speed: number
+  powerUp: PowerUpId | null
+  powerUpTime: number
+  hits: number
+  world: WorldId
+  characterId: string
+}
+
+export interface PlayerProgress {
+  totalRuns: number
+  distance: number
+  bestScore: number
+  totalCoins: number
+  totalChips: number
+  unlockedCharacters: string[]
+  selectedCharacter: string
+  unlockedWorlds: WorldId[]
+  selectedWorld: WorldId
+  achievements: string[]
+  missions: Record<string, number>
 }

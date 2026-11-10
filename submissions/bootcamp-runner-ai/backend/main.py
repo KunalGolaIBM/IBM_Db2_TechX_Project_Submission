@@ -4,96 +4,77 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from .agent import AdaptiveAgent, build_watsonx_llm
+from .agent import GameAssistant
 from .config import Settings
 from .db import DatabaseUnavailable, Db2Client
-from .models import AdaptiveSessionIn, AttemptIn, LearningProfileIn, RecommendationIn
+from .models import *
 from .repositories import Repository
 
 settings = Settings.from_env()
 db = Db2Client(settings.db2_dsn)
 repo = Repository(db)
-agent = AdaptiveAgent(repo, build_watsonx_llm(settings))
-
+assistant = GameAssistant(repo, settings.watsonx_llm())
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    try:
-        db.connect()
-    except DatabaseUnavailable:
-        pass
+    try: db.connect()
+    except DatabaseUnavailable: pass
     yield
     db.close()
 
-
-app = FastAPI(title="Bootcamp Runner AI", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Bootcamp Runner AI CEO Edition", version="2.0.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins), allow_credentials=True,
                    allow_methods=["GET", "POST"], allow_headers=["*"])
-
 
 def offline() -> None:
     raise HTTPException(status_code=503, detail={"status": "offline", "message": "Db2 is unavailable"})
 
+def call(fn):
+    try: return fn()
+    except DatabaseUnavailable: offline()
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok" if db.connection is not None else "offline", "ai_mode": agent.mode}
+    return {"status": "ok" if db.connection is not None else "offline", "ai_mode": assistant.mode}
 
+@app.get("/players/{player_id}/profile")
+def profile(player_id: str): return call(lambda: repo.get_profile(player_id))
 
-@app.get("/dashboard/{learner_id}")
-def dashboard(learner_id: str) -> dict:
-    if not learner_id.strip():
-        raise HTTPException(422, "learner_id is required")
-    try:
-        return {"learner": repo.get_learner(learner_id), "history": repo.get_learning_history(learner_id),
-                "profile": repo.get_profile(learner_id), "recommendations": repo.get_recommendations(learner_id)}
-    except DatabaseUnavailable:
-        offline()
+@app.post("/players/profile", status_code=201)
+def save_profile(item: PlayerProfileIn): return call(lambda: repo.save_profile(item))
 
+@app.post("/game/sessions", status_code=201)
+def create_session(item: GameSessionIn): return call(lambda: repo.create_session(item))
 
-@app.post("/attempts", status_code=201)
-def create_attempt(attempt: AttemptIn) -> dict:
-    try:
-        return repo.save_attempt(attempt)
-    except DatabaseUnavailable:
-        offline()
+@app.post("/game/scores", status_code=201)
+def save_score(item: ScoreIn): return call(lambda: repo.save_score(item))
 
+@app.get("/players/{player_id}/scores")
+def scores(player_id: str, limit: int = Query(20, ge=1, le=100)): return call(lambda: {"scores": repo.list_scores(player_id, limit)})
 
-@app.get("/recommendations/{learner_id}")
-def recommendations(learner_id: str, limit: int = Query(20, ge=1, le=100)) -> dict:
-    try:
-        return {"recommendations": repo.get_recommendations(learner_id, limit)}
-    except DatabaseUnavailable:
-        offline()
+@app.post("/characters/unlock", status_code=201)
+def unlock_character(item: CharacterUnlockIn): return call(lambda: repo.unlock_character(item))
 
+@app.get("/players/{player_id}/characters")
+def characters(player_id: str): return call(lambda: {"characters": repo.list_characters(player_id)})
 
-@app.get("/attempts/{learner_id}")
-def attempts(learner_id: str, limit: int = Query(20, ge=1, le=100)) -> dict:
-    try:
-        return {"attempts": repo.get_learning_history(learner_id, limit)}
-    except DatabaseUnavailable:
-        offline()
+@app.post("/achievements", status_code=201)
+def save_achievement(item: AchievementIn): return call(lambda: repo.save_achievement(item))
 
+@app.get("/players/{player_id}/achievements")
+def achievements(player_id: str): return call(lambda: {"achievements": repo.list_achievements(player_id)})
 
-@app.post("/profiles", status_code=201)
-def create_profile(profile: LearningProfileIn) -> dict:
-    try:
-        return repo.save_profile(profile)
-    except DatabaseUnavailable:
-        offline()
+@app.post("/missions", status_code=201)
+def save_mission(item: MissionIn): return call(lambda: repo.save_mission(item))
 
+@app.get("/players/{player_id}/missions")
+def missions(player_id: str): return call(lambda: {"missions": repo.list_missions(player_id)})
 
-@app.post("/adaptive-session")
-def adaptive_session(request: AdaptiveSessionIn) -> dict:
-    try:
-        return agent.run(request.learner_id, request.topic, request.requested_difficulty)
-    except DatabaseUnavailable:
-        offline()
+@app.get("/leaderboard")
+def leaderboard(limit: int = Query(20, ge=1, le=100)): return call(lambda: {"leaderboard": repo.leaderboard(limit)})
 
+@app.post("/assistant/challenge")
+def challenge(item: AdaptiveChallengeRequest): return call(lambda: assistant.run(item))
 
-@app.post("/recommendations", status_code=201)
-def create_recommendation(recommendation: RecommendationIn) -> dict:
-    try:
-        return repo.save_recommendation(recommendation)
-    except DatabaseUnavailable:
-        offline()
+@app.post("/assistant")
+def assistant_route(item: AssistantRequest): return call(lambda: assistant.run(item))

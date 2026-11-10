@@ -1,42 +1,19 @@
-import type { Character, Difficulty, Mode, Question } from './types'
+import type { Character, WorldId } from './types'
 
 export const characters: Character[] = [
-  { id: 'nova', name: 'Nova', role: 'Signal Scout', color: '#55e6ff', accent: '#1260a5', unlocked: true },
-  { id: 'orbit', name: 'Orbit', role: 'Pattern Pilot', color: '#a98cff', accent: '#5438a8', unlocked: true },
-  { id: 'pixel', name: 'Pixel', role: 'Logic Runner', color: '#ffca6b', accent: '#a74c45', unlocked: true },
+  { id: 'sam', name: 'Sam Altman', role: 'OpenAI-inspired strategist', color: '#55e6ff', accent: '#1260a5', unlocked: true, unlockCost: 0, effect: 'Balanced runner' },
+  { id: 'jensen', name: 'Jensen Huang', role: 'GPU power specialist', color: '#8bff75', accent: '#1d7b4d', unlocked: false, unlockCost: 120, effect: 'Chip pickups score +25%' },
+  { id: 'elon', name: 'Elon Musk', role: 'High-speed unlockable', color: '#ff6f91', accent: '#8a2045', unlocked: false, unlockCost: 220, effect: 'Starts with a speed boost' },
+  { id: 'mark', name: 'Mark Zuckerberg', role: 'Metaverse runner', color: '#8e9bff', accent: '#3d42a1', unlocked: false, unlockCost: 320, effect: 'Magnet duration +2s' },
+  { id: 'satya', name: 'Satya Nadella', role: 'Cloud systems leader', color: '#ffd166', accent: '#a74c45', unlocked: false, unlockCost: 450, effect: 'One extra life per run' },
 ]
 
-export const samplePacks: { id: string; title: string; description: string; questions: Question[] }[] = [
-  {
-    id: 'web-foundations',
-    title: 'Web Foundations',
-    description: 'Fast reps on the building blocks of the web.',
-    questions: [
-      { id: 'web-1', topic: 'HTML', difficulty: 'easy', question: 'Which element is used for the largest page heading?', options: ['<h1>', '<head>', '<title>'], correctIndex: 0, explanation: 'The h1 element represents the highest-level heading in a document.' },
-      { id: 'web-2', topic: 'CSS', difficulty: 'easy', question: 'Which CSS property changes the text colour?', options: ['paint', 'color', 'ink'], correctIndex: 1, explanation: 'The color property sets the foreground colour of an element’s text.' },
-      { id: 'web-3', topic: 'JavaScript', difficulty: 'normal', question: 'What does Array.map return?', options: ['A new transformed array', 'A single boolean', 'The original array only'], correctIndex: 0, explanation: 'map creates a new array by applying a function to each item.' },
-      { id: 'web-4', topic: 'Accessibility', difficulty: 'normal', question: 'What should an icon-only button provide?', options: ['A hidden image', 'An accessible name', 'More animation'], correctIndex: 1, explanation: 'An accessible name lets assistive technology communicate the button’s purpose.' },
-    ],
-  },
-  {
-    id: 'ai-foundations',
-    title: 'AI Foundations',
-    description: 'Core concepts for curious builders.',
-    questions: [
-      { id: 'ai-1', topic: 'Embeddings', difficulty: 'easy', question: 'Which representation helps match related meanings in search?', options: ['Dense embeddings', 'Pixel coordinates', 'File sizes'], correctIndex: 0, explanation: 'Embeddings represent semantic relationships between pieces of information.' },
-      { id: 'ai-2', topic: 'Models', difficulty: 'normal', question: 'What is a model’s training data?', options: ['Only its UI', 'Examples used to learn patterns', 'A browser cache'], correctIndex: 1, explanation: 'Training data provides examples from which a model learns patterns.' },
-      { id: 'ai-3', topic: 'Safety', difficulty: 'hard', question: 'What is a useful first step before shipping AI output?', options: ['Skip review', 'Add evaluation and guardrails', 'Hide failures'], correctIndex: 1, explanation: 'Evaluation and guardrails help detect and reduce unsafe or unreliable behaviour.' },
-    ],
-  },
+export const worlds: { id: WorldId; name: string; subtitle: string; unlockCost: number; colors: [number, number, number] }[] = [
+  { id: 'silicon-valley', name: 'Silicon Valley', subtitle: 'Campus roads and digital billboards', unlockCost: 0, colors: [0x071016, 0x164456, 0x2c90a8] },
+  { id: 'neon-ai-city', name: 'Neon AI City', subtitle: 'Holograms after dark', unlockCost: 180, colors: [0x10071c, 0x6a247d, 0xf05cff] },
+  { id: 'data-center', name: 'AI Data Center', subtitle: 'Cold blue server corridors', unlockCost: 360, colors: [0x06121d, 0x176078, 0x51d5ff] },
+  { id: 'gpu-factory', name: 'GPU Factory', subtitle: 'Industrial heat and energy', unlockCost: 600, colors: [0x1a1008, 0x754112, 0xff9f43] },
 ]
 
-export const difficultySettings: Record<Difficulty, { speed: number; lives: number; multiplier: number; label: string }> = {
-  Easy: { speed: 10, lives: 5, multiplier: 1, label: 'More time to think' },
-  Normal: { speed: 13, lives: 3, multiplier: 1.25, label: 'The intended pace' },
-  Hard: { speed: 16, lives: 2, multiplier: 1.6, label: 'For high-velocity learners' },
-}
-
-export const modeSettings: Record<Mode, { obstacleRate: number; label: string }> = {
-  Explore: { obstacleRate: 0.32, label: 'Relaxed practice laps' },
-  Flow: { obstacleRate: 0.5, label: 'Fast focus sessions' },
-}
+export const achievementNames = ['First Run', 'Coin Collector', 'Speed Demon', 'Survivor', 'Million-Meter Runner', 'Full Character Collection']
+export const missionNames = ['Run 500 meters', 'Collect 100 coins', 'Reach speed 20']

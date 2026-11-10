@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "project": {
-    "title": "Bootcamp Runner AI",
+    "title": "Bootcamp Runner: AI CEO Edition",
     "slug": "bootcamp-runner-ai",
-    "short_description": "An adaptive educational endless runner that uses IBM Db2 learner history and a LangChain agent to personalize quiz practice.",
+    "short_description": "A Three.js endless runner with fictionalized CEO-inspired characters, AI-themed worlds, local progression, and Db2-backed game services.",
     "category": "AI / RAG / Data Engineering / Analytics",
     "demo_url": "",
     "video_url": "",
@@ -23,15 +23,11 @@
   "ibm_db2": {
     "edition": "Remote IBM Db2 instance configured by the operator",
     "connector": "ibm_db",
-    "features_used": [
-      "Relational Tables",
-      "Parameterized Queries",
-      "Topic Performance Indexes"
-    ]
+    "features_used": ["Relational Tables", "Parameterized Queries", "Player Scores and Leaderboard Indexes"]
   },
   "tech_stack": {
     "languages": ["Python", "TypeScript"],
     "frameworks": ["FastAPI", "React", "LangChain", "Three.js"],
-    "ai_models": ["IBM watsonx.ai when configured"]
+    "ai_models": ["IBM watsonx.ai when configured for game challenges"]
   }
 }

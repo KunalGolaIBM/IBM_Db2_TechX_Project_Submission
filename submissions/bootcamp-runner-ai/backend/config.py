@@ -31,3 +31,13 @@ class Settings:
     @property
     def llm_configured(self) -> bool:
         return all((self.watsonx_apikey, self.watsonx_project_id, self.watsonx_url, self.watsonx_model))
+
+    def watsonx_llm(self):
+        if not self.llm_configured:
+            return None
+        try:
+            from langchain_ibm import WatsonxLLM
+        except ImportError as exc:
+            raise RuntimeError("Watsonx is configured but langchain-ibm is not installed") from exc
+        return WatsonxLLM(model_id=self.watsonx_model, url=self.watsonx_url,
+                          project_id=self.watsonx_project_id, apikey=self.watsonx_apikey)

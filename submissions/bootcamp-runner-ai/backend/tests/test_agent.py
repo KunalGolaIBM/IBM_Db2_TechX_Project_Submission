@@ -1,7 +1,6 @@
-from backend.agent import analyze_topic_performance, recommend_difficulty
+from backend.agent import choose_difficulty
 
 
-def test_tools_analyze_and_recommend():
-    result = analyze_topic_performance([{"topic": "Python", "score": 55}], "python")
-    assert result["average_score"] == 55
-    assert recommend_difficulty(result["average_score"]) == "easy"
+def test_assistant_adapts_to_recent_scores():
+    assert choose_difficulty([{"score": 55}]) == "easy"
+    assert choose_difficulty([{"score": 85}]) == "hard"
