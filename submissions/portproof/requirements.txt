@@ -1,0 +1,28 @@
+# PortProof -- pinned to the versions the project was built and tested against
+# (Db2 Community Edition 12.1.5.0, Python 3.12).
+
+# --- IBM Db2 -------------------------------------------------------------
+ibm_db==3.3.0                    # the Db2 driver; every value is bound
+ibm-db-sa==0.4.4                 # SQLAlchemy dialect for Db2
+
+# --- the AI framework (Db2Hack requirement) ------------------------------
+langchain==1.4.9
+langchain-core==1.7.6
+langchain-community==0.4.2
+langchain-db2==1.0.0             # IBM's official LangChain integration: DB2VS
+langgraph==1.2.20                # the bounded repair state machine
+
+# --- translation ---------------------------------------------------------
+sqlglot==30.30.0
+db2-sqlglot-dialect==1.1.0       # IBM's Db2 dialect: the thing PortProof verifies
+
+# --- embeddings (local, CPU, no API key) ---------------------------------
+sentence-transformers==6.2.0
+
+# --- the source engine for differential testing --------------------------
+duckdb==2.0.0                    # PostgreSQL-compatible, embedded, no server
+
+# --- app and tooling -----------------------------------------------------
+streamlit==1.67.0
+python-dotenv==1.2.4
+pytest==9.2.0
