@@ -1,61 +1,76 @@
-# Voice RAG in Hindi and English: Multilingual Audio Search with Db2 Vectors
+# Multilingual Voice RAG: Cross-Lingual Audio Vector Search in IBM Db2
 
-Ask a question in Hindi or English about a spoken talk. Db2 returns the matching transcript chunks, and each result shows the audio file and the time range it came from.
+## Problem Statement
+Accessing speech recordings across multiple languages (e.g., Hindi and English) traditionally requires separate language-specific indexing or text translation pipelines, introducing latency and cross-lingual translation errors. 
 
-## How Db2 is used
-- `VECTOR(768, FLOAT32)` column and `VECTOR_DISTANCE(..., COSINE)` (Db2 12.1.2+).
-- One table holds Hindi and English chunks in the same vector space, with `language`, `source`, `start` and `end` stored as JSON metadata.
-- Connector: `ibm-db-haystack` (`IBMDb2DocumentStore`, `IBMDb2EmbeddingRetriever`) over `ibm_db`.
+**Db2 Multilingual Voice RAG** enables direct cross-lingual semantic search over transcribed audio chunks. Transcripts generated via OpenAI Whisper are indexed into IBM Db2 with multilingual vector embeddings (`paraphrase-multilingual-mpnet-base-v2`). Users can query in Hindi or English, and Db2 performs vector similarity search (`VECTOR_DISTANCE`) alongside metadata filtering (language, timestamp, audio file source) natively in SQL.
+
+---
+
+## How Db2 is Used
+- **Native Vector Support**: `VECTOR(768, FLOAT32)` column storing cross-lingual audio transcript embeddings.
+- **In-Database Vector Distance**: `VECTOR_DISTANCE(..., COSINE)` native function calculates audio chunk similarity.
+- **Metadata Filtering**: Language tags (`hi`, `en`), audio source references, start times, and end times stored in Db2 JSON metadata columns and filtered inside native queries.
+- **Connector**: Integrated via `ibm-db-haystack` (`IBMDb2DocumentStore`, `IBMDb2EmbeddingRetriever`).
+
+---
 
 ## Prerequisites
 - Python 3.10+
-- IBM Db2 12.1.2 or later, reachable over TCP/IP, with a user that can create tables
-- Ollama with `qwen2.5:7b` (not needed with `--no-llm`)
+- IBM Db2 12.1.2 or later with vector extensions.
+- ffmpeg (if running local audio transcription pipelines with Whisper).
 
-## Setup
-```bash
-cd submissions/db2-multilingual-voice-rag
-python3.11 -m venv .venv && . .venv/bin/activate
-pip install -r src/requirements.txt
-cp .env.example .env     # set DB2_HOST, DB2_PORT, DB2_DB, DB2_USERNAME, DB2_PASSWORD
-```
+---
 
-## Run
-```bash
-cd src
-python index.py                                                     # writes 16 chunks to table voice_kb
-python query.py "Which distance metrics does Db2 support?"
-python query.py "Db2 में कौन से डिस्टेंस मीट्रिक उपलब्ध हैं?"
-python query.py --no-llm "फ़िल्टर कहाँ चलता है, डेटाबेस के अंदर या बाहर?"   # retrieval only
-```
-Each result line shows the score, audio file, start and end seconds, and language.
+## Setup Instructions
 
-## Data
-- `src/audio/talk_en.mp3` and `src/audio/talk_hi.mp3`: a short talk on Db2 vector search in each language (text in `src/scripts/`).
-- `src/transcripts/*.json`: Whisper `medium` transcripts with timestamps, used by `index.py`.
+1. **Clone & Navigate:**
+   ```bash
+   git clone https://github.com/Pavan3030-pr/IBM_Db2_TechX_Project_Submission.git
+   cd IBM_Db2_TechX_Project_Submission/submissions/db2-multilingual-voice-rag
+   ```
 
-To regenerate the transcripts from the audio (needs `ffmpeg` on `PATH`):
-```bash
-pip install -r src/requirements-transcribe.txt
-cd src && python transcribe.py medium
-```
+2. **Create Virtual Environment & Install Dependencies:**
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r src/requirements.txt
+   ```
 
-## Check the data in Db2
-```sql
-SELECT id, JSON_VALUE(SYSTOOLS.BSON2JSON(meta), '$.source' RETURNING VARCHAR(100)) AS source,
-       JSON_VALUE(SYSTOOLS.BSON2JSON(meta), '$.start' RETURNING VARCHAR(20)) AS start_s
-FROM voice_kb ORDER BY id;
-```
+3. **Configure Environment Variables:**
+   ```bash
+   cp .env.example .env
+   # Populate DB2_HOST, DB2_PORT, DB2_DB, DB2_USERNAME, DB2_PASSWORD in .env
+   ```
 
-## Tests
-```bash
-pip install pytest && python -m pytest tests -q
-```
-`tests/test_retrieval.py` checks that chunks keep their audio file and time range, and that Hindi and English questions rank the matching transcript chunk in the top 3. It does not need a database.
+4. **Index Audio Transcripts into Db2:**
+   ```bash
+   python src/index.py
+   ```
 
-## Dependency licenses
-| Package / model | License |
-|---|---|
-| haystack-ai, ibm-db-haystack, ibm_db, sentence-transformers | Apache-2.0 |
-| openai-whisper | MIT |
-| intfloat/multilingual-e5-base | MIT |
+5. **Run CLI Search:**
+   ```bash
+   python src/query.py "Db2 vector search capabilities"
+   python src/query.py --lang hi "Db2 vector search kaise kaam karta hai?"
+   ```
+
+---
+
+## How to Run with Streamlit
+
+A unified interactive web interface is provided in `submissions/streamlit_app`.
+
+1. **Install Streamlit dependencies:**
+   ```bash
+   pip install -r submissions/streamlit_app/requirements.txt
+   ```
+
+2. **Launch Streamlit Application:**
+   ```bash
+   streamlit run submissions/streamlit_app/app.py
+   ```
+
+3. **Select Mode:**
+   - Choose **"Db2 Multilingual Voice RAG"** in the sidebar navigation.
+   - Filter results by language (Hindi/English).
+   - View retrieved audio transcript chunks complete with similarity scores, timestamp ranges, and original audio source metadata.
