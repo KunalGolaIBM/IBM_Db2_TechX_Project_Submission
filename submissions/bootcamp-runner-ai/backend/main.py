@@ -3,12 +3,13 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from .agent import GameAssistant
 from .config import Settings
-from .db import DatabaseUnavailable, Db2Client
+from .db import DatabaseError, DatabaseUnavailable, Db2Client
 from .models import *
-from .repositories import Repository
+from .repositories import Repository, SessionOwnershipError
 
 settings = Settings.from_env()
 db = Db2Client(settings.db2_dsn)
@@ -30,12 +31,33 @@ def offline() -> None:
     raise HTTPException(status_code=503, detail={"status": "offline", "message": "Db2 is unavailable"})
 
 def call(fn):
-    try: return fn()
+    try:
+        return fn()
+    except SessionOwnershipError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except DatabaseUnavailable: offline()
+    except DatabaseError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail={"status": "error", "message": "Database operation failed"},
+        ) from exc
 
-@app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok" if db.connection is not None else "offline", "ai_mode": assistant.mode}
+@app.get("/health", response_model=None)
+def health() -> dict[str, str] | JSONResponse:
+    ai_mode = assistant.mode
+    if db.connection is None:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "offline", "database": "unavailable", "ai_mode": ai_mode},
+        )
+    try:
+        db.execute("SELECT 1 FROM SYSIBM.SYSDUMMY1")
+    except DatabaseUnavailable:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "offline", "database": "unavailable", "ai_mode": ai_mode},
+        )
+    return {"status": "ok", "database": "connected", "ai_mode": ai_mode}
 
 @app.get("/players/{player_id}/profile")
 def profile(player_id: str): return call(lambda: repo.get_profile(player_id))

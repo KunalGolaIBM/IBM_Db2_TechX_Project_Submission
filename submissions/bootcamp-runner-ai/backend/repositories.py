@@ -8,6 +8,10 @@ from .models import (
 )
 
 
+class SessionOwnershipError(ValueError):
+    """Raised when a score references a session owned by another player."""
+
+
 class Repository:
     def __init__(self, db: Db2Client) -> None:
         self.db = db
@@ -15,7 +19,10 @@ class Repository:
     def save_profile(self, profile: PlayerProfileIn) -> dict[str, Any]:
         self.db.execute(
             "MERGE INTO player_profiles AS target USING "
-            "(VALUES (?, ?, ?, ?, ?, ?)) AS source(player_id, display_name, email, strengths, growth_areas, preferred_difficulty) "
+            "(VALUES (CAST(? AS VARCHAR(128)), CAST(? AS VARCHAR(200)), "
+            "CAST(? AS VARCHAR(320)), CAST(? AS VARCHAR(4000)), "
+            "CAST(? AS VARCHAR(4000)), CAST(? AS VARCHAR(10)))) "
+            "AS source(player_id, display_name, email, strengths, growth_areas, preferred_difficulty) "
             "ON target.player_id = source.player_id "
             "WHEN MATCHED THEN UPDATE SET display_name=source.display_name, email=source.email, strengths=source.strengths, "
             "growth_areas=source.growth_areas, preferred_difficulty=source.preferred_difficulty, updated_at=CURRENT TIMESTAMP "
@@ -33,20 +40,25 @@ class Repository:
         return rows[0] if rows else None
 
     def create_session(self, session: GameSessionIn) -> dict[str, Any]:
-        self.db.execute(
+        session_id = self.db.execute_insert_and_get_identity(
             "INSERT INTO game_sessions (player_id, mode, difficulty) VALUES (?, ?, ?)",
             (session.player_id, session.mode, session.difficulty))
-        return session.model_dump()
+        return {**session.model_dump(), "session_id": session_id}
 
     def save_score(self, score: ScoreIn) -> dict[str, Any]:
+        rows = self.db.execute(
+            "SELECT 1 AS owns_session FROM game_sessions "
+            "WHERE id = ? AND player_id = ?", (score.session_id, score.player_id))
+        if not rows:
+            raise SessionOwnershipError("Session does not belong to player")
         self.db.execute(
-            "INSERT INTO game_scores (session_id, player_id, score, points, rounds_completed) VALUES (?, ?, ?, ?, ?)",
-            (score.session_id, score.player_id, score.score, score.points, score.rounds_completed))
+            "INSERT INTO game_scores (session_id, player_id, score) VALUES (?, ?, ?)",
+            (score.session_id, score.player_id, score.score))
         return score.model_dump()
 
     def list_scores(self, player_id: str, limit: int = 20) -> list[dict[str, Any]]:
         return self.db.execute(
-            "SELECT id, session_id, score, points, rounds_completed, created_at FROM game_scores "
+            "SELECT id, session_id, score, created_at FROM game_scores "
             "WHERE player_id = ? ORDER BY created_at DESC FETCH FIRST ? ROWS ONLY", (player_id, limit))
 
     def unlock_character(self, item: CharacterUnlockIn) -> dict[str, Any]:
@@ -87,8 +99,8 @@ class Repository:
 
     def leaderboard(self, limit: int = 20) -> list[dict[str, Any]]:
         return self.db.execute(
-            "SELECT player_id, SUM(points) AS points, AVG(score) AS average_score FROM game_scores "
-            "GROUP BY player_id ORDER BY points DESC FETCH FIRST ? ROWS ONLY", (limit,))
+            "SELECT player_id, SUM(score) AS score, AVG(score) AS average_score FROM game_scores "
+            "GROUP BY player_id ORDER BY score DESC FETCH FIRST ? ROWS ONLY", (limit,))
 
     def save_assistant_output(self, player_id: str, objective: str, output: str, difficulty: str, source: str) -> dict[str, Any]:
         self.db.execute(

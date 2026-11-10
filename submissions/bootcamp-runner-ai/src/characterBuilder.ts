@@ -11,9 +11,18 @@
 //
 // Every mesh uses one of five shared materials, and geometry is cached per
 // character id so switching runners never leaks GPU memory.
+//
+// Conventions that keep the runner visible from every angle:
+//   * The model faces -Z (the direction it runs), so a camera at +Z sees the
+//     front and a camera at -Z sees the back.
+//   * The root origin sits on the ground between the feet (y = 0), so the
+//     bounding box is always [0, ~1.9] in Y and can be framed directly.
+//   * Every material is DoubleSide: thin parts (visor, chest panel, stripes)
+//     are boxes, and a single-sided material would make them vanish as the
+//     character turns.
 
 import * as THREE from 'three'
-import type { Character } from './types'
+import type { Character, CharacterHeadgear } from './types'
 
 export interface RunnerRig {
   root: THREE.Group
@@ -46,11 +55,11 @@ const cache = new Map<string, RunnerBuild>()
 
 function makeMaterials(character: Character) {
   return {
-    suit: new THREE.MeshStandardMaterial({ color: 0x131c2b, roughness: 0.62, metalness: 0.18 }),
-    accent: new THREE.MeshStandardMaterial({ color: new THREE.Color(character.color), emissive: new THREE.Color(character.accent), emissiveIntensity: 0.65, roughness: 0.35, metalness: 0.3 }),
-    skin: new THREE.MeshStandardMaterial({ color: 0xe8b98f, roughness: 0.78, metalness: 0.02 }),
-    dark: new THREE.MeshStandardMaterial({ color: 0x080d15, roughness: 0.5, metalness: 0.25 }),
-    trim: new THREE.MeshBasicMaterial({ color: new THREE.Color(character.color) }),
+    suit: new THREE.MeshStandardMaterial({ color: 0x131c2b, roughness: 0.62, metalness: 0.18, side: THREE.DoubleSide }),
+    accent: new THREE.MeshStandardMaterial({ color: new THREE.Color(character.color), emissive: new THREE.Color(character.accent), emissiveIntensity: 0.65, roughness: 0.35, metalness: 0.3, side: THREE.DoubleSide }),
+    skin: new THREE.MeshStandardMaterial({ color: 0xe8b98f, roughness: 0.78, metalness: 0.02, side: THREE.DoubleSide }),
+    dark: new THREE.MeshStandardMaterial({ color: 0x080d15, roughness: 0.5, metalness: 0.25, side: THREE.DoubleSide }),
+    trim: new THREE.MeshBasicMaterial({ color: new THREE.Color(character.color), side: THREE.DoubleSide }),
   }
 }
 
@@ -69,15 +78,34 @@ function sphere(radius: number, material: THREE.Material): THREE.Mesh {
 
 function buildArm(materials: RunnerRig['materials'], side: 1 | -1) {
   const shoulder = new THREE.Group()
-  shoulder.position.set(side * 0.34, 0.44, 0)
+  // The pivot sits at the outer edge of the chest (half width 0.28) so the
+  // arm hangs beside the torso instead of inside it.
+  shoulder.position.set(side * 0.36, 0.44, 0)
 
-  const upper = cylinder(0.085, 0.075, 0.44, materials.suit)
+  // The upper arm is skin-toned with a short accent sleeve at the shoulder:
+  // a dark sleeve tube vanished against the torso in the side views.
+  const upper = cylinder(0.085, 0.075, 0.44, materials.skin)
   upper.position.y = -0.22
   shoulder.add(upper)
 
-  const cap = sphere(0.13, materials.accent)
+  const sleeve = cylinder(0.1, 0.09, 0.2, materials.suit)
+  sleeve.position.y = -0.1
+  shoulder.add(sleeve)
+
+  const band = cylinder(0.095, 0.095, 0.05, materials.accent)
+  band.position.y = -0.2
+  shoulder.add(band)
+
+  // The shoulder cap is a rounded pad, not a ball: a full sphere read as a
+  // floating orb in the side and three-quarter views.
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.6), materials.accent)
   cap.position.y = 0.02
+  cap.scale.set(1, 0.85, 1)
   shoulder.add(cap)
+
+  // A small outward splay keeps the arms clear of the hips in every pose.
+  shoulder.userData.restZ = side * 0.1
+  shoulder.rotation.z = side * 0.1
 
   const elbow = new THREE.Group()
   elbow.position.y = -0.44
@@ -95,6 +123,11 @@ function buildArm(materials: RunnerRig['materials'], side: 1 | -1) {
   hand.position.y = -0.53
   elbow.add(hand)
 
+  // A relaxed elbow bend keeps the hands clear of the hips and gives the arm
+  // a readable silhouette from the side. The run cycle adds to this offset.
+  elbow.userData.restX = -0.3
+  elbow.rotation.x = -0.3
+
   return { shoulder, elbow }
 }
 
@@ -106,20 +139,31 @@ function buildLeg(materials: RunnerRig['materials'], side: 1 | -1) {
   thigh.position.y = -0.31
   hip.add(thigh)
 
-  const stripe = box(0.035, 0.6, 0.14, materials.trim)
-  stripe.position.set(side * 0.115, -0.31, 0.02)
+  // The stripe is a thin band wrapped around the thigh, so it reads from the
+  // front, back and both sides instead of only one face.
+  const stripe = cylinder(0.135, 0.135, 0.05, materials.trim)
+  stripe.position.y = -0.3
   hip.add(stripe)
 
   const knee = new THREE.Group()
   knee.position.y = -0.62
   hip.add(knee)
 
-  const kneeCap = sphere(0.1, materials.accent)
+  // The knee cap is a pad on the front of the joint, not a ball centred on it:
+  // a centred sphere read as a floating orb in the side views.
+  const kneeCap = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.6), materials.accent)
+  kneeCap.rotation.x = -Math.PI / 2
+  kneeCap.position.set(0, 0, -0.06)
   knee.add(kneeCap)
 
   const shin = cylinder(0.1, 0.078, 0.58, materials.suit)
   shin.position.y = -0.29
   knee.add(shin)
+
+  // Shin band: a thin accent ring so the lower leg reads from every angle.
+  const shinBand = cylinder(0.105, 0.105, 0.05, materials.accent)
+  shinBand.position.y = -0.2
+  knee.add(shinBand)
 
   const foot = new THREE.Group()
   foot.position.y = -0.58
@@ -206,17 +250,21 @@ function build(character: Character): RunnerBuild {
   beltGlow.position.set(0, 0.02, -0.28)
   rig.torso.add(beltGlow)
 
-  // shoulder yoke: makes the silhouette read as human from behind
-  const yoke = box(0.78, 0.13, 0.3, materials.accent)
+  // Shoulder yoke: a slim accent bar across the collarbones. It is narrower
+  // than the shoulders so it never reads as a plank sticking out sideways.
+  const yoke = box(0.6, 0.1, 0.26, materials.accent)
   yoke.position.y = 0.78
   rig.torso.add(yoke)
 
-  const backpack = box(0.44, 0.5, 0.24, materials.dark)
-  backpack.position.set(0, 0.5, 0.22)
+  // The pack sits behind the chest (chest back face is z = +0.16) so it never
+  // pokes through the front of the suit, and it is narrower than the chest so
+  // it does not stick out past the shoulders in the side views.
+  const backpack = box(0.4, 0.46, 0.2, materials.dark)
+  backpack.position.set(0, 0.5, 0.26)
   rig.torso.add(backpack)
 
-  const packGlow = box(0.2, 0.34, 0.04, materials.trim)
-  packGlow.position.set(0, 0.5, 0.35)
+  const packGlow = box(0.18, 0.3, 0.04, materials.trim)
+  packGlow.position.set(0, 0.5, 0.37)
   rig.torso.add(packGlow)
 
   rig.pelvis.add(rig.torso)
@@ -224,7 +272,7 @@ function build(character: Character): RunnerBuild {
 
   // --- head ----------------------------------------------------------------
   rig.head.position.y = 0.88
-    rig.torso.add(rig.head)
+  rig.torso.add(rig.head)
 
   const neck = cylinder(0.1, 0.12, 0.2, materials.skin)
   neck.position.y = -0.06
@@ -235,7 +283,9 @@ function build(character: Character): RunnerBuild {
   skull.scale.set(1, 1.12, 1.05)
   rig.head.add(skull)
 
-  const hair = sphere(0.235, materials.dark)
+  // Hair is a cap, not a second skull: a full sphere would swallow the face
+  // and make the head read as a featureless ball from the front.
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.235, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), materials.dark)
   hair.position.y = 0.19
   hair.scale.set(1.02, 0.95, 1.06)
   rig.head.add(hair)
@@ -244,9 +294,25 @@ function build(character: Character): RunnerBuild {
   visor.position.set(0, 0.18, -0.19)
   rig.head.add(visor)
 
+  // A dark band across the back of the head separates the hair cap from the
+  // neck and makes the back view read as a head rather than a ball.
+  const headBand = box(0.34, 0.07, 0.06, materials.accent)
+  headBand.position.set(0, 0.12, 0.2)
+  rig.head.add(headBand)
+
   const crest = box(0.07, 0.26, 0.24, materials.accent)
   crest.position.set(0, 0.3, 0.02)
   rig.head.add(crest)
+
+  // Per-character headgear sits on top of the shared head, so every runner
+  // keeps the same readable face while still looking distinct.
+  buildHeadgear(character.headgear ?? 'visor', materials, rig.head)
+
+  // Name the head parts so the preview can verify the face is present.
+  skull.name = 'skull'
+  visor.name = 'visor'
+  crest.name = 'crest'
+  hair.name = 'hair'
 
   // --- arms ----------------------------------------------------------------
   const armL = buildArm(materials, -1)
@@ -288,7 +354,77 @@ function build(character: Character): RunnerBuild {
   mesh.add(rig.shadow)
   owned.add(rig.shadow)
 
+  // The shadow is a ground decal, not part of the body: keep it out of the
+  // bounding box so framing never reserves space for it.
+  rig.shadow.userData.ignoreBounds = true
+
+  // Body proportions. Scaling the root keeps every joint, the run cycle and
+  // the measured bounding box consistent, so framing adapts automatically.
+  const build = character.build ?? 'runner'
+  if (build === 'heavy') mesh.scale.set(1.16, 0.97, 1.16)
+  else if (build === 'tall') mesh.scale.set(0.94, 1.1, 0.94)
+  else if (build === 'compact') mesh.scale.set(0.9, 0.9, 0.9)
+
   return { rig, mesh }
+}
+
+/** Adds the character's signature head accessory. */
+function buildHeadgear(kind: CharacterHeadgear, materials: RunnerRig['materials'], head: THREE.Group) {
+  if (kind === 'cap') {
+    const brim = box(0.42, 0.04, 0.2, materials.accent)
+    brim.position.set(0, 0.24, -0.2)
+    head.add(brim)
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.245, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), materials.accent)
+    dome.position.y = 0.2
+    head.add(dome)
+  } else if (kind === 'headset') {
+    for (const side of [-1, 1]) {
+      const cup = cylinder(0.09, 0.09, 0.07, materials.accent)
+      cup.rotation.z = Math.PI / 2
+      cup.position.set(side * 0.24, 0.16, 0)
+      head.add(cup)
+    }
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.025, 6, 16, Math.PI), materials.accent)
+    band.position.y = 0.16
+    band.rotation.z = Math.PI
+    head.add(band)
+  } else if (kind === 'crown') {
+    const ring = cylinder(0.2, 0.2, 0.06, materials.accent)
+    ring.position.y = 0.36
+    head.add(ring)
+    for (let i = 0; i < 5; i += 1) {
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.12, 6), materials.accent)
+      const angle = (i / 5) * Math.PI * 2
+      spike.position.set(Math.sin(angle) * 0.17, 0.44, Math.cos(angle) * 0.17)
+      head.add(spike)
+    }
+  } else if (kind === 'helmet') {
+    const shell = new THREE.Mesh(new THREE.SphereGeometry(0.26, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.62), materials.accent)
+    shell.position.y = 0.17
+    head.add(shell)
+    const stripe = box(0.06, 0.1, 0.5, materials.trim)
+    stripe.position.y = 0.3
+    head.add(stripe)
+  }
+}
+
+/**
+ * World-space bounding box of the runner's body (shadow excluded).
+ * Computed from the current pose, so it is valid for the idle pose, the run
+ * cycle and the slide crouch alike.
+ */
+export function measureRunner(mesh: THREE.Object3D): THREE.Box3 {
+  mesh.updateWorldMatrix(true, true)
+  const box = new THREE.Box3()
+  const child = new THREE.Box3()
+  mesh.traverse((object) => {
+    if (!(object instanceof THREE.Mesh) || object.userData.ignoreBounds) return
+    if (!object.geometry.boundingBox) object.geometry.computeBoundingBox()
+    child.copy(object.geometry.boundingBox as THREE.Box3).applyMatrix4(object.matrixWorld)
+    box.union(child)
+  })
+  if (box.isEmpty()) box.setFromObject(mesh)
+  return box
 }
 
 /** Returns a cached runner for this character (built once, reused afterwards). */

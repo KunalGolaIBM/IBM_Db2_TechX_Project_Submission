@@ -8,6 +8,11 @@ export function scoreCollectible(stats: SessionStats, value: number, combo = sta
   return { ...stats, score: stats.score + Math.round(value * combo), combo: Math.min(9, combo + 0.1) }
 }
 
+export function collectGem(stats: SessionStats, value = 100): SessionStats {
+  const scored = scoreCollectible(stats, value, stats.combo)
+  return { ...scored, gems: (stats.gems ?? 0) + 1 }
+}
+
 export function registerHit(stats: SessionStats): SessionStats {
   return { ...stats, hits: stats.hits + 1, combo: 1, score: Math.max(0, stats.score - 75) }
 }

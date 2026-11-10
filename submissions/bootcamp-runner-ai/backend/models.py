@@ -31,9 +31,7 @@ class GameSessionIn(BaseModel):
 class ScoreIn(BaseModel):
     session_id: int = Field(gt=0)
     player_id: str = Field(min_length=1, max_length=128)
-    score: float = Field(ge=0, le=100)
-    points: int = Field(ge=0)
-    rounds_completed: int = Field(ge=0)
+    score: int = Field(ge=0)
 
 
 class CharacterUnlockIn(BaseModel):

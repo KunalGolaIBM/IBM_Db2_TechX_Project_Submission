@@ -3,7 +3,7 @@ import type { PlayerProgress, SessionStats, WorldId } from './types'
 
 const key = 'bootcamp-runner-arcade-progress-v1'
 export const defaultProgress: PlayerProgress = {
-  totalRuns: 0, distance: 0, bestScore: 0, totalCoins: 0, totalChips: 0,
+  totalRuns: 0, distance: 0, bestScore: 0, totalCoins: 0, totalChips: 0, totalGems: 0,
   unlockedCharacters: ['sam'], selectedCharacter: 'sam', unlockedWorlds: ['silicon-valley'],
   selectedWorld: 'silicon-valley', achievements: [], missions: Object.fromEntries(missionNames.map((name) => [name, 0])),
 }
@@ -20,7 +20,7 @@ export function saveProgress(progress: PlayerProgress): void {
 }
 
 export function applyRun(progress: PlayerProgress, stats: SessionStats): PlayerProgress {
-  const next = { ...progress, totalRuns: progress.totalRuns + 1, distance: progress.distance + stats.distance, bestScore: Math.max(progress.bestScore, stats.score), totalCoins: progress.totalCoins + stats.coins, totalChips: progress.totalChips + stats.chips, missions: { ...progress.missions } }
+  const next = { ...progress, totalRuns: progress.totalRuns + 1, distance: progress.distance + stats.distance, bestScore: Math.max(progress.bestScore, stats.score), totalCoins: progress.totalCoins + stats.coins, totalChips: progress.totalChips + stats.chips, totalGems: (progress.totalGems ?? 0) + (stats.gems ?? 0), missions: { ...progress.missions } }
   next.missions['Run 500 meters'] = Math.max(next.missions['Run 500 meters'], Math.floor(next.distance))
   next.missions['Collect 100 coins'] = Math.max(next.missions['Collect 100 coins'], next.totalCoins)
   next.missions['Reach speed 20'] = Math.max(next.missions['Reach speed 20'], Math.floor(stats.speed))

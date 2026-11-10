@@ -1,17 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { isGameOver, laneAfterMove, registerHit, scoreCollectible } from './gameMath'
+import { collectGem, isGameOver, laneAfterMove, registerHit, scoreCollectible } from './gameMath'
 import type { SessionStats } from './types'
 
-const stats: SessionStats = { score: 0, coins: 0, chips: 0, combo: 1, distance: 0, speed: 11, powerUp: null, powerUpTime: 0, hits: 0, world: 'silicon-valley', characterId: 'sam' }
+const stats: SessionStats = { score: 0, coins: 0, chips: 0, gems: 0, combo: 1, distance: 0, speed: 11, powerUp: null, powerUpTime: 0, hits: 0, world: 'silicon-valley', characterId: 'sam' }
 
 describe('arcade runner rules', () => {
   it('keeps lane movement within the three-lane track', () => {
     expect(laneAfterMove(0, -1)).toBe(0)
     expect(laneAfterMove(1, -1)).toBe(0)
+    expect(laneAfterMove(1, 1)).toBe(2)
     expect(laneAfterMove(2, 1)).toBe(2)
   })
   it('awards collectible score using the combo', () => {
     expect(scoreCollectible(stats, 10)).toMatchObject({ score: 10, combo: 1.1 })
+  })
+  it('awards gems score and increments gem counter', () => {
+    expect(collectGem(stats, 100)).toMatchObject({ score: 100, gems: 1, combo: 1.1 })
   })
   it('resets combo and prevents negative scores on a hit', () => {
     expect(registerHit({ ...stats, score: 20, combo: 4 })).toMatchObject({ score: 0, hits: 1, combo: 1 })

@@ -5,6 +5,9 @@ from typing import Any, Callable
 from .models import Difficulty
 from .repositories import Repository
 
+ARCADE_MEDIUM_SCORE = 500
+ARCADE_HARD_SCORE = 1500
+
 
 def build_tools(repo: Repository) -> list[Callable[..., Any]]:
     """Expose only read profile/score tools and the controlled challenge writer."""
@@ -30,7 +33,7 @@ def choose_difficulty(scores: list[dict[str, Any]]) -> str:
     if not scores:
         return "easy"
     average = sum(float(item.get("score", 0)) for item in scores) / len(scores)
-    return "hard" if average >= 80 else "medium" if average >= 60 else "easy"
+    return "hard" if average >= ARCADE_HARD_SCORE else "medium" if average >= ARCADE_MEDIUM_SCORE else "easy"
 
 
 class GameAssistant:
