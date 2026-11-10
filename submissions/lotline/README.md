@@ -193,7 +193,7 @@ python scripts/validate_submission.py submissions/lotline
 
 ## Screenshots & Demo
 
-- **Demo Video:** `docs/demo/LOTLINE_DEMO_VIDEO.mp4` (Duration: 2:19, 1080p, H.264/AAC)
+- **Demo Video:** [LOTLINE_DEMO_VIDEO.mp4 (GitHub Release)](https://github.com/ankush-dev-eng/IBM_Db2_TechX_Project_Submission/releases/download/v1.0.0/LOTLINE_DEMO_VIDEO.mp4) • Also available in-tree at `docs/demo/LOTLINE_DEMO_VIDEO.mp4` (Duration: 2:19, 1080p, H.264/AAC)
 - **Verified Evidence Screenshots:** Indexed in `docs/screenshots/README.md` and packaged in `docs/screenshots/lotline_screenshots.zip`:
   1. `01-overview-desktop.png` — Operational Recall Dashboard (1920×1080)
   2. `02-overview-mobile.png` — Responsive Mobile Interface (390×844)

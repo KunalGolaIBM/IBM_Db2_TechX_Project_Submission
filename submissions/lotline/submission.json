@@ -6,7 +6,7 @@
     "short_description": "An evidence-grounded product-recall investigation and execution platform that traces raw material lots through WIP and finished goods, quantifies inventory and shipment exposure, coordinates human-reviewed actions, and maintains an auditable IBM Db2 record.",
     "category": "AI / RAG / Data Engineering / Analytics",
     "demo_url": "",
-    "video_url": "https://youtu.be/dummy-lotline-demo",
+    "video_url": "https://github.com/ankush-dev-eng/IBM_Db2_TechX_Project_Submission/releases/download/v1.0.0/LOTLINE_DEMO_VIDEO.mp4",
     "repo_url": "https://github.com/ankush-dev-eng/IBM_Db2_TechX_Project_Submission"
   },
   "team": {
