@@ -34,10 +34,12 @@
       "CHECK constraints",
       "VECTOR data type and VECTOR_DISTANCE",
       "Least-privilege authorization: read-only question-box ID on two views; SELECT+INSERT-only app ID",
-      "Row and column access control (row permission, role)",
+      "Row and column access control (row permission + column mask, AQAUDITOR role)",
       "Query timeout (SQL_ATTR_QUERY_TIMEOUT)",
       "RUNSTATS via SYSPROC.ADMIN_CMD",
-      "EXPLAIN (partition elimination evidence)"
+      "EXPLAIN (partition elimination evidence)",
+      "Materialized query table (REFRESH DEFERRED) with optimizer query rewrite",
+      "Hash-chained SHA-256 receipts verified from system-time history (SQL PL)"
     ]
   },
   "tech_stack": {
