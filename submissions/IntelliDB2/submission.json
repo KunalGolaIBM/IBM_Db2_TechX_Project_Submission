@@ -1,0 +1,9 @@
+{
+  "project_name": "IntelliDB2 – Text-to-SQL Analytics Assistant",
+  "participant_name": "Avarnika K C",
+  "github_username": "avarnikakc-design",
+  "ai_framework_used": ["LangChain"],
+  "db2_connector_used": "ibm_db_sa",
+  "project_category": "AI-powered Data Analytics / Text-to-SQL",
+  "repository_url": "https://github.com/avarnikakc-design/IBM_Db2_TechX_Project_Submission"
+}
