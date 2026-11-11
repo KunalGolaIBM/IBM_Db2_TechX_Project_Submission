@@ -320,7 +320,7 @@ In detail:
 - **The evaluation is the author's,** on a fictional corpus: four of the nine frozen splits motivated a fix and are no longer blind.
 - **Synthetic, single-node demo;** Db2 runs under emulation on Apple Silicon.
 - **About 6 s per check** on the hosted model: fine before a reply is sent, not for token streaming.
-- **`VERIFY_CHAIN` reads the whole chain:** [46 minutes at 1,000,000 decisions](docs/db2.md#verify_chain-at-1000000-decisions); receipt checks and evidence packs call it, so a large ledger needs checkpointed verification.
+- **`VERIFY_CHAIN` reads the whole chain:** [46 minutes at 1,000,000 decisions](docs/db2.md#verify_chain-at-1000000-decisions); receipt checks and evidence packs call it. `VERIFY_CHAIN_FROM_CHECKPOINT` reads only the rows since the last checkpoint, and does not re-check older ones ([chain benchmark](docs/chain_benchmark.md)).
 - **One date per check,** and policy intake reads PDFs with a text layer only (no OCR).
 - **The public demo is read-mostly:** with `ASOF_PUBLIC_DEMO=true` it replays the built-in scenarios, checks new input live only within a daily cap Db2 holds and per-visitor limits (`ASOF_DEMO_LIVE`), and refuses policy changes and sends; everything else works, with Db2 live.
 

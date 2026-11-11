@@ -109,6 +109,53 @@ def verify_chain(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> ChainS
     return ChainStatus(str(status).strip(), int(checked or 0), int(first_bad) or None, str(detail).strip() or None)
 
 
+@dataclass(frozen=True)
+class CheckpointStatus:
+    status: str
+    checked: int               # rows recomputed: the checkpoint row and every row after it
+    first_bad: int | None
+    detail: str | None
+    from_id: int               # the first row recomputed (the previous checkpoint's row, or 1)
+    checkpoint_id: int | None  # the checkpoint this run wrote; None when the chain is broken or empty
+
+
+def verify_from_checkpoint(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA, full: bool = False,
+                           requested_by: str | None = None) -> CheckpointStatus:
+    """VERIFY_CHAIN_FROM_CHECKPOINT: verify from the latest checkpoint (from the first row with full=True) and record
+    the new one. Commits. Rows before the checkpoint are not recomputed: only VERIFY_CHAIN re-checks those."""
+    db.use_schema(conn, schema)
+    cur = conn.cursor()
+    try:
+        out = cur.callproc("VERIFY_CHAIN_FROM_CHECKPOINT",
+                           (1 if full else 0, (requested_by or "")[:40], " " * 12, 0, 0, " " * 300, 0, 0))
+        conn.commit()
+    except Exception as exc:  # noqa: BLE001
+        conn.rollback()
+        raise db.wrap_error(exc, "VERIFY_CHAIN_FROM_CHECKPOINT failed") from None
+    finally:
+        cur.close()
+    status, checked, first_bad, detail, from_id, checkpoint_id = out[2:]
+    return CheckpointStatus(str(status).strip(), int(checked or 0), int(first_bad) or None, str(detail).strip() or None,
+                            int(from_id or 0), int(checkpoint_id) or None)
+
+
+SQL_CHECKPOINTS = ("SELECT CHECKPOINT_ID, LEDGER_ID, ROW_HASH, FROM_LEDGER_ID, ROWS_CHECKED, KIND, VERIFIED_AT, "
+                   "VERIFIED_BY, REQUESTED_BY FROM CHAIN_CHECKPOINT ORDER BY CHECKPOINT_ID DESC FETCH FIRST ? ROWS ONLY")
+_CHECKPOINT_KEYS = ("checkpoint_id", "ledger_id", "row_hash", "from_ledger_id", "rows_checked", "kind", "verified_at",
+                    "verified_by", "requested_by")
+
+
+def checkpoints(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA, limit: int = 20) -> list[dict[str, Any]]:
+    """The latest verified positions, newest first."""
+    db.use_schema(conn, schema)
+    out = []
+    for r in db.query(conn, SQL_CHECKPOINTS, (int(limit),)):
+        d = dict(zip(_CHECKPOINT_KEYS, r, strict=True))
+        d.update({k: d[k].strip() for k in ("row_hash", "kind", "verified_by") if isinstance(d[k], str)})
+        out.append(d)
+    return out
+
+
 SQL_ROW_HASH = "SELECT ROW_HASH FROM ANSWER_LEDGER WHERE LEDGER_ID = ?"
 
 

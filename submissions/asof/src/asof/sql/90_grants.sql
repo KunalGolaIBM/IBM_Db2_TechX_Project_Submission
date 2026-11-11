@@ -353,3 +353,12 @@ GRANT SELECT ON TABLE ASOF.V_BACKTEST_CONTRADICTIONS TO USER ASOF_APP_USER
 -- grant: ANALYST_USAGE_WL_ASOF_ANALYST
 GRANT USAGE ON WORKLOAD WL_ASOF_ANALYST TO ROLE ASOF_ANALYST
 @
+
+-- Lane c2-checkpoints (12_chain_checkpoints.sql): the runtime user verifies from the latest checkpoint and records the
+-- new one only through the procedure, and reads the checkpoints; it writes none directly.
+-- grant: APP_EXECUTE_VERIFY_CHAIN_FROM_CHECKPOINT
+GRANT EXECUTE ON PROCEDURE ASOF.VERIFY_CHAIN_FROM_CHECKPOINT TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_CHAIN_CHECKPOINT
+GRANT SELECT ON TABLE ASOF.CHAIN_CHECKPOINT TO USER ASOF_APP_USER
+@

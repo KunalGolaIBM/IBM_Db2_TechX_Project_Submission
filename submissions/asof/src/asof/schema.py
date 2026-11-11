@@ -318,7 +318,7 @@ def _drop_marts(conn: ibm_db_dbi.Connection, schema: str) -> None:
 # Backtest runs go with the ledger rows their items point at (11_backtest.sql).
 LEDGER_TABLES = ("BACKTEST_COST", "BACKTEST_ITEM", "BACKTEST_RUN",
                  "CORRECTION_NOTICE", "ESCALATION_REVIEW", "ANSWER_SUGGESTION", "CLAIM_CITATION", "ANSWER_LEDGER",
-                 "CHAIN_HEAD")
+                 "CHAIN_HEAD", "CHAIN_CHECKPOINT")  # the checkpoints describe the ledger being thrown away
 
 
 def reset_ledger(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA) -> int:
