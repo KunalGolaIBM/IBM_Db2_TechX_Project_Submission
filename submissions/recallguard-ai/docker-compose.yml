@@ -1,0 +1,48 @@
+# RecallGuard AI — IBM Db2 Community Edition + API + UI
+#   cp .env.example .env   (set DB2INST1_PASSWORD and DB2_PASSWORD to the same value)
+#   docker compose up --build
+# First Db2 start takes several minutes ("Setup has completed" in `docker compose logs db2`).
+services:
+  db2:
+    image: icr.io/db2_community/db2:latest
+    privileged: true
+    environment:
+      LICENSE: accept
+      DB2INSTANCE: db2inst1
+      DB2INST1_PASSWORD: ${DB2INST1_PASSWORD:?set DB2INST1_PASSWORD in .env}
+      DBNAME: RECALLDB
+      BLU: "false"
+      ENABLE_ORACLE_COMPATIBILITY: "false"
+      PERSISTENT_HOME: "true"
+    ports: ["50000:50000"]
+    volumes: ["db2_data:/database"]
+    healthcheck:
+      test: ["CMD-SHELL", "su - db2inst1 -c 'db2 connect to RECALLDB' > /dev/null 2>&1"]
+      interval: 30s
+      timeout: 20s
+      retries: 40
+      start_period: 240s
+
+  api:
+    build: ./src/backend
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DB_MODE: db2
+      DB2_HOST: db2
+      DB2_PORT: "50000"
+      DB2_DATABASE: RECALLDB
+    depends_on:
+      db2: { condition: service_healthy }
+    ports: ["8000:8000"]
+
+  web:
+    build: ./src/frontend
+    environment:
+      VITE_API_PROXY: http://api:8000
+    depends_on: [api]
+    ports: ["5173:5173"]
+
+volumes:
+  db2_data:

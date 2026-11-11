@@ -1,0 +1,19 @@
+{
+  "_comment": "Explainable recall-prioritisation model. Weights must sum to 100. This is a prioritisation score, NOT a probability of illness.",
+  "weights": {
+    "severity": 30,
+    "quantity": 20,
+    "locations": 15,
+    "distribution": 15,
+    "uncertainty": 10,
+    "time": 10
+  },
+  "severity_map": { "LOW": 0.2, "MEDIUM": 0.45, "HIGH": 0.75, "CRITICAL": 1.0 },
+  "category_modifier": { "MICROBIAL": 1.0, "ALLERGEN": 0.95, "CHEMICAL": 0.9, "PHYSICAL": 0.8, "OTHER": 0.7 },
+  "quantity_saturation_units": 50000,
+  "locations_saturation": 30,
+  "time_saturation_hours": 72,
+  "gap_weight": { "HIGH": 0.35, "MEDIUM": 0.15, "LOW": 0.05 },
+  "completeness_penalty": { "HIGH": 8, "MEDIUM": 4, "LOW": 1 },
+  "classes": [[75, "CRITICAL"], [50, "HIGH"], [25, "MODERATE"], [0, "LOW"]]
+}

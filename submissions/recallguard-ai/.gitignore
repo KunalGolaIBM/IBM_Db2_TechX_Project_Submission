@@ -1,0 +1,7 @@
+.env
+src/backend/data/
+src/frontend/node_modules/
+src/frontend/dist/
+__pycache__/
+*.sqlite*
+*.tsbuildinfo

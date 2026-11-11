@@ -1,0 +1,15 @@
+CERTIFICATE OF ANALYSIS (FICTIONAL - DEMO DOCUMENT)
+Issued by: Valle Rosso Tomato Cooperative - Quality Assurance
+Certificate: COA-VR-2026-1001    Date: 2026-10-01
+
+PRODUCT
+Tomato puree (28 Brix), lot TOM-2026-041, 2,400 kg in 10 aseptic drums
+
+RESULTS
+Salmonella spp.: Not detected in 25 g (n=1 composite)
+Brix: 28.2
+pH: 4.3
+Total plate count: 1.1 x 10^2 cfu/g
+
+STATEMENT
+The lot meets the agreed specification and is released for dispatch.

@@ -1,0 +1,14 @@
+QUALITY CONTROL RECORD (FICTIONAL - DEMO DOCUMENT)
+Pune Sauce Works - Process QC
+Record: QR-2026-0102    Date: 2026-10-04
+
+BATCH
+Tomato base concentrate PB-2026-1001 made from lot TOM-2026-041
+
+PASTEURISATION LOG
+Target hold temperature: >= 90 C for 10 min
+14:10-14:16 hold temperature dipped to 84.1 C for 6 min (steam valve fault)
+Operator extended hold by 4 min; deviation not escalated to QA
+
+ASSESSMENT
+Deviation outcome: inconclusive. Lethality not demonstrated for the dip period.

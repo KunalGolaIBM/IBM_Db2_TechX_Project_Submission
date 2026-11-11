@@ -1,0 +1,13 @@
+TEST REPORT (FICTIONAL - DEMO DOCUMENT)
+Deccan Analytical Services
+Report No: DAS-2026-09-0211    Issue date: 2026-09-12
+
+SAMPLE
+Red chili powder, supplier Deccan Spice Traders, lot CHI-2026-017
+
+RESULTS
+Salmonella spp.: Detected in 2 of 5 x 25 g samples (confirmed positive)
+Aflatoxin B1: 3.1 ug/kg - within limit
+
+CONCLUSION
+Lot CHI-2026-017 non-compliant for Salmonella. Recall assessment recommended.
