@@ -97,7 +97,8 @@ def install(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA,
     validate_schema(schema)
     counts = {"created": 0, "skipped": 0}
     drop_retired_permissions(conn, schema)
-    for st in load_statements(schema) if statements is None else statements:
+    todo = load_statements(schema) if statements is None else statements
+    for st in todo:
         if _exists(conn, schema, st):
             counts["skipped"] += 1
             continue
@@ -108,8 +109,32 @@ def install(conn: ibm_db_dbi.Connection, schema: str = db.SCHEMA,
             conn.rollback()
             raise db.DatabaseError(f"{st.source} {st.kind} {st.name}: {exc}", exc.sqlstate, exc.sqlcode) from None
         counts["created"] += 1
+        if st.kind == "other":  # an ALTER TABLE may have invalidated column masks: the next statement may need them
+            recreate_invalid_controls(conn, schema, todo)
     refresh_pending_mqts(conn, schema)
     return counts
+
+
+SQL_INVALID_CONTROLS = "SELECT CONTROLNAME FROM SYSCAT.CONTROLS WHERE CONTROLSCHEMA = ? AND VALID <> 'Y'"
+
+
+def recreate_invalid_controls(conn: ibm_db_dbi.Connection, schema: str, statements: list[Statement]) -> list[str]:
+    """CREATE OR REPLACE every column mask and row permission Db2 has marked invalid, from its statement.
+
+    ALTER TABLE ... ADD COLUMN on a table with column access control marks its masks invalid, and until someone
+    with SECADM creates them again, every statement that reads a masked column fails with SQL5188N, CREATE
+    PROCEDURE included. Raises if an invalid one has no statement to recreate it from."""
+    invalid = {r[0].strip() for r in db.query(conn, SQL_INVALID_CONTROLS, (validate_schema(schema),))}
+    redone = []
+    for st in statements:
+        if st.kind in ("mask", "permission") and st.name in invalid:
+            db.execute(conn, st.sql)
+            conn.commit()
+            redone.append(st.name)
+    if invalid - set(redone):
+        raise db.DatabaseError(f"invalid column masks or row permissions in {schema} that no SQL file defines: "
+                               f"{sorted(invalid - set(redone))}", "560D0")
+    return redone
 
 
 SQL_PENDING_MQTS = "SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'S' AND STATUS = 'C'"

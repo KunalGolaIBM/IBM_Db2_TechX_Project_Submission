@@ -18,6 +18,7 @@ Rules this module enforces:
 
 from __future__ import annotations
 
+import contextvars
 import logging
 import re
 import threading
@@ -51,6 +52,11 @@ _SQLMSG = re.compile(r"(SQL[0-9]{4,5}[NWC][^\n]*?)(?:\s+SQLSTATE=|$)")
 
 SQL_LOCK_TIMEOUT = "SET CURRENT LOCK TIMEOUT = ?"
 SQL_PING = "SELECT 1 FROM SYSIBM.SYSDUMMY1"
+SQL_SESSION_USER = "SELECT SESSION_USER FROM SYSIBM.SYSDUMMY1"
+
+# The Db2 authorization ID the current request runs as on a trusted pool (ConnectionPool(trusted=True)). The API
+# sets it for each authenticated request when ASOF_TRUSTED_CONTEXT is on (asof/trusted.py); None: the pool's own user.
+SESSION_USER: contextvars.ContextVar[str | None] = contextvars.ContextVar("asof_db2_session_user", default=None)
 
 
 class DatabaseError(RuntimeError):
@@ -136,15 +142,19 @@ def dsn(settings: Settings) -> str:
 _warned_plain_tcp = False
 
 
-def connect(settings: Settings, role: Role = "app", autocommit: bool = False) -> ibm_db_dbi.Connection:
+def connect(settings: Settings, role: Role = "app", autocommit: bool = False,
+            trusted: bool = False) -> ibm_db_dbi.Connection:
+    """A connection as `role`'s Db2 user. trusted=True asks Db2 for a trusted connection (asof/trusted.py), whose
+    session user ConnectionPool(trusted=True) can switch per request."""
     global _warned_plain_tcp
     if not settings.db2_ssl and not settings.db2_is_local and not _warned_plain_tcp:
         _warned_plain_tcp = True
         log.warning("connecting to Db2 at %s over plain TCP: set DB2_SSL=true for a remote database",
                     settings.db2_host)
     user, password = _credentials(settings, role)
+    options = {ibm_db.SQL_ATTR_USE_TRUSTED_CONTEXT: ibm_db.SQL_TRUE} if trusted else None
     try:
-        conn = ibm_db_dbi.connect(dsn(settings), user, password)
+        conn = ibm_db_dbi.connect(dsn(settings), user, password, conn_options=options)
     except Exception as exc:  # noqa: BLE001 - ibm_db raises plain Exception subclasses
         raise wrap_error(
             exc, f"Cannot connect to Db2 {settings.db2_host}:{settings.db2_port}/{settings.db2_database} as {user}"
@@ -209,8 +219,12 @@ class ConnectionPool:
     """
 
     def __init__(self, settings: Settings, role: Role = "app", size: int = 8, max_open: int = 16,
-                 wait_s: float | None = None):
+                 wait_s: float | None = None, trusted: bool = False):
         self._settings, self._role, self._size = settings, role, size
+        # trusted: connections are Db2 trusted connections, and each checkout runs as SESSION_USER's ID (or the
+        # role's own user when it is unset), switching the session user when the connection last ran as another.
+        self._trusted = trusted
+        self._runs_as: weakref.WeakKeyDictionary[ibm_db_dbi.Connection, str] = weakref.WeakKeyDictionary()
         self._idle: list[ibm_db_dbi.Connection] = []
         self._lock = threading.Lock()
         self._slots = threading.BoundedSemaphore(max_open)
@@ -228,18 +242,43 @@ class ConnectionPool:
                         raise DatabaseError("the connection pool is closed")
                     raw = self._idle.pop() if self._idle else None
                 if raw is None:
-                    conn = connect(self._settings, self._role)
+                    conn = (connect(self._settings, self._role, trusted=True) if self._trusted
+                            else connect(self._settings, self._role))
                     with self._lock:
                         self.opened += 1
-                    return PooledConnection(self, conn)
+                    if self._trusted:
+                        self._runs_as[conn] = self._own_user()
+                    return self._hand_out(conn)
                 try:
                     query(raw, SQL_PING)
-                    return PooledConnection(self, raw)
                 except Exception:  # noqa: BLE001 - however it failed, it is not handed out
                     _close_quietly(raw)
+                    continue
+                return self._hand_out(raw)
         except BaseException:
             self._slots.release()
             raise
+
+    def _own_user(self) -> str:
+        return ident(_credentials(self._settings, self._role)[0])
+
+    def _hand_out(self, raw: ibm_db_dbi.Connection) -> PooledConnection:
+        """On a trusted pool, make the connection run as this request's user first. Every checkout for a user
+        switches, even to the user it already runs as, so Db2 checks the context's list on every request (a disabled
+        user is refused at once); a checkout without one switches only if the connection runs as someone else. A
+        refused switch closes the connection."""
+        if self._trusted:
+            user = SESSION_USER.get()
+            want = ident(user) if user else self._own_user()
+            if user or self._runs_as.get(raw) != want:
+                try:
+                    switch_user(raw, want, self._settings)
+                except BaseException:
+                    self._runs_as.pop(raw, None)
+                    _close_quietly(raw)
+                    raise
+                self._runs_as[raw] = want
+        return PooledConnection(self, raw)
 
     def _release(self, raw: ibm_db_dbi.Connection) -> None:
         try:
@@ -262,6 +301,32 @@ class ConnectionPool:
             idle, self._idle = self._idle, []
         for raw in idle:
             _close_quietly(raw)
+
+
+def switch_user(conn: ibm_db_dbi.Connection, authid: str, settings: Settings) -> None:
+    """Switch a trusted connection's session user to `authid`, with no password: the trusted context allows it for
+    the IDs it lists, and Db2 refuses any other (SQL20361N, SQLSTATE 42517), after which the connection is unusable
+    and the caller closes it. Db2 performs the switch at the next statement; that statement asks SESSION_USER, and
+    the answer is checked. A switch resets CURRENT SCHEMA, CURRENT PATH and CURRENT LOCK TIMEOUT (to "wait
+    forever"), so the lock timeout is set again and use_schema() is made to set the schema again."""
+    authid = ident(authid)
+    conn.rollback()  # Db2 switches only between transactions
+    try:
+        ibm_db.set_option(conn.conn_handler, {ibm_db.SQL_ATTR_TRUSTED_CONTEXT_USERID: authid}, 1)
+        got = str(query(conn, SQL_SESSION_USER)[0][0]).strip()
+    except DatabaseError as exc:
+        raise DatabaseError(f"Db2 refused to switch the session user to {authid}: {exc}. Is {authid} an active API "
+                            "user, and is the trusted context's ADDRESS the one Db2 sees for this server? (python -m "
+                            "asof.setup prints it)", exc.sqlstate, exc.sqlcode) from None
+    except Exception as exc:  # noqa: BLE001 - ibm_db raises plain Exception subclasses
+        raise wrap_error(exc, f"switching the session user to {authid} failed") from None
+    if got != authid:
+        raise DatabaseError(f"Db2 reports session user {got} after a switch to {authid}", sqlstate="42517")
+    try:
+        del _bound_schema[conn]
+    except (KeyError, TypeError):
+        pass
+    execute(conn, SQL_LOCK_TIMEOUT, (settings.db2_lock_timeout_s,))
 
 
 def query(conn: ibm_db_dbi.Connection, sql: str, params: Sequence[Any] = ()) -> list[tuple[Any, ...]]:

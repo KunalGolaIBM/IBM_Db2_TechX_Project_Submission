@@ -214,7 +214,24 @@ def get_entry(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCHE
         return None
     entry = _entry(rows[0])
     entry["citations"] = [dict(zip(_CITATION_KEYS, r, strict=True)) for r in db.query(conn, SQL_CITATIONS, (ledger_id,))]
+    entry["stored_by"] = stored_by(conn, ledger_id, schema)
     return entry
+
+
+# Set by Db2 on insert (trigger ANSWER_LEDGER_SESSION_AUDIT, 13_trusted_context.sql), outside ROW_HASH.
+SQL_STORED_BY = "SELECT STORED_BY, STORED_ROLES, STORED_CONTEXT FROM ANSWER_LEDGER WHERE LEDGER_ID = ?"
+
+
+def stored_by(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCHEMA) -> dict[str, Any] | None:
+    """Who Db2 says stored a ledger row: the session user, the roles it acted under, the trusted context it came
+    through. None for a row stored before Db2 recorded this. Not covered by the row hash or VERIFY_CHAIN."""
+    db.use_schema(conn, schema)
+    rows = db.query(conn, SQL_STORED_BY, (ledger_id,))
+    if not rows or rows[0][0] is None:
+        return None
+    user, roles, context = rows[0]
+    return {"user": user.strip(), "roles": [r for r in (roles or "").split(",") if r],
+            "trusted_context": context.strip() if context else None, "in_row_hash": False}
 
 
 def replay(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCHEMA) -> dict[str, Any] | None:
@@ -286,5 +303,8 @@ def evidence(conn: ibm_db_dbi.Connection, ledger_id: int, schema: str = db.SCHEM
                   "before storage.",
                   "Clause versions are Db2 business-time periods; replay uses FOR SYSTEM_TIME AS OF the decision time.",
                   "Chain status covers the whole ledger at generation time. A matching receipt, or an anchor at or "
-                  "after this row, also rules out a ledger rebuilt consistently after the decision."],
+                  "after this row, also rules out a ledger rebuilt consistently after the decision.",
+                  "ledger_entry.stored_by is the Db2 session that stored the row (session user, roles, trusted "
+                  "context), set by a trigger on insert; it is not part of the row hash, so the chain check does "
+                  "not cover it."],
     }

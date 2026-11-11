@@ -47,6 +47,7 @@ from . import (
     review,
     router,
     rowaccess,
+    trusted,
 )
 from .anchor import AnchorLog
 from .anchor import verify as verify_anchors
@@ -355,7 +356,8 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
 
     # Runtime connections are pooled: on the dev machine opening one costs about 0.2 s and closing it
     # about 0.9 s, and a check uses three (see db.ConnectionPool).
-    pool = db.ConnectionPool(settings, "app")
+    # ASOF_TRUSTED_CONTEXT: trusted connections, each request switched to its API user's Db2 ID (asof/trusted.py).
+    pool = db.ConnectionPool(settings, "app", trusted=settings.asof_trusted_context)
     anchors = AnchorLog.from_settings(settings, schema)  # None: ASOF_ANCHOR_KEY unset, anchoring off
 
     def app_conn():
@@ -465,7 +467,13 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
             return JSONResponse({"error": "too many requests, try again in a minute"}, status_code=429)
         if demo and not costly and request.url.path.startswith("/api/") and not reads.allow(caller):
             return JSONResponse({"error": "too many requests, try again in a minute"}, status_code=429)
-        response = await call_next(request)
+        # Trusted context: everything this request does on the runtime pool runs in Db2 as its API user.
+        as_user = db.SESSION_USER.set(trusted.authid(user.name)) if user and settings.asof_trusted_context else None
+        try:
+            response = await call_next(request)
+        finally:
+            if as_user is not None:
+                db.SESSION_USER.reset(as_user)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"

@@ -148,6 +148,8 @@ python -m asof.users list
 
 Reading the policy timeline and `GET /api/whoami` need any valid token. Each decision records the user who asked in its hashed verdicts (`requested_by`), and each clause version made through the API starts its change note with the editor's name. The web UI asks for the token once per tab. Users are managed with the owner account, so `DB2_PASSWORD` must be set where you run the command; the runtime user can only read the table.
 
+With `ASOF_TRUSTED_CONTEXT=true` as well (off by default), Db2 sees each person too: the API's runtime connections are trusted connections, each request runs as the user's own Db2 ID (`API_MARIA`), the ledger's `STORED_BY` names it, and Db2 refuses what that user's roles do not allow (an auditor's append is `42501`). Re-run `python -m asof.setup` after turning it on. Details and the spike's findings: [trusted-context.md](trusted-context.md).
+
 ### TLS to Db2
 
 The documented setups connect over plain TCP to `127.0.0.1`, which never leaves the machine. A remote Db2 needs TLS, and every AsOf connection (runtime, editor, analyst, setup) goes through one function, [db.py](../src/asof/db.py) `dsn()`, so one setting covers them all:

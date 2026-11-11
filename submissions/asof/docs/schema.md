@@ -66,7 +66,7 @@ ALTER TABLE ASOF.POLICY_CLAUSE ADD VERSIONING USE HISTORY TABLE ASOF.POLICY_CLAU
 |---|---|---|
 | `POLICY_DOC` | Policy documents | PK `DOC_ID` |
 | `POLICY_CLAUSE` (+ `_HIST`) | Dated clause versions with embedding and rule parameters | `WITHOUT OVERLAPS` PK, FK to `POLICY_DOC`, JSON check, area enum |
-| `ANSWER_LEDGER` | One row per decision (`PASS`, `CORRECTED`, `ESCALATED`, or a specialist's `REVIEWED` reply): redacted question and draft, final answer, decision, reason, model, prompt version, latency, verdict JSON, `PREV_HASH`, `ROW_HASH` | gapless `LEDGER_ID >= 1`, unique `REQUEST_ID` and `ROW_HASH`, decision and channel enums, JSON check |
+| `ANSWER_LEDGER` | One row per decision (`PASS`, `CORRECTED`, `ESCALATED`, or a specialist's `REVIEWED` reply): redacted question and draft, final answer, decision, reason, model, prompt version, latency, verdict JSON, `PREV_HASH`, `ROW_HASH`; who stored it as Db2 saw the session (`STORED_BY`, `STORED_ROLES`, `STORED_CONTEXT`, set by a trigger, not hashed: [trusted-context.md](trusted-context.md#where-the-requester-is-recorded)) | gapless `LEDGER_ID >= 1`, unique `REQUEST_ID` and `ROW_HASH`, decision and channel enums, JSON check |
 | `CLAIM_CITATION` | One row per claim per check (`PASS_NO` 1 = draft, 2 = rewrite): verdict, judge verdict, rule check, clause ID, version, `BUS_START`, `SYS_START`, distance, quote | PK `(LEDGER_ID, PASS_NO, CLAIM_NO)`, FK to ledger, verdict enums, clause/date pairing check |
 | `CHAIN_HEAD` | Single row: last ledger ID and hash; locked by every append | `HEAD_ID = 1` check |
 | `PUBLISHED_ANSWER` | Help-centre answers with cited clause, version, `BUS_START` and the dates they cover | FK to `POLICY_DOC`, status enum, range check |

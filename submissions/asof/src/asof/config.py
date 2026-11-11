@@ -96,6 +96,15 @@ class Settings(BaseSettings):
     # Optional API token. When set, every /api/ request needs "Authorization: Bearer <token>"
     # (constant-time compare); /healthz and the static UI stay open. Unset: localhost binding only.
     asof_api_token: SecretStr | None = None
+    # Db2 trusted context (asof/trusted.py, docs/trusted-context.md). With ASOF_AUTH=users, the API's runtime
+    # connections become trusted connections and each request runs in Db2 as its API user (authorization ID
+    # API_<NAME>), so SESSION_USER in the ledger is the requester and Db2 checks that user's privileges. Setup creates
+    # the context when this is true and drops it when false. Off by default.
+    asof_trusted_context: bool = False
+    # The client address Db2 sees for the API's connections (the context's ADDRESS attribute). Empty: setup uses the
+    # address Db2 sees for its own connection, right when setup runs where the API does (through Docker's port
+    # mapping that is the bridge gateway, such as 172.17.0.1, not 127.0.0.1).
+    asof_trusted_context_address: str = Field("", pattern=r"^[0-9A-Fa-f.:]{0,45}$")
     # Chain-head anchors (asof/anchor.py): after each ledger append the new head is written, with an HMAC
     # under a key Db2 never holds, to a log outside Db2. The key lives in its own file, outside the project
     # folder and away from .env (which holds the owner's DB2_PASSWORD): setup generates it there. Default
@@ -213,6 +222,12 @@ class Settings(BaseSettings):
         elif self.asof_demo_live:
             raise ValueError("ASOF_DEMO_LIVE=true is for the public demo only: set ASOF_PUBLIC_DEMO=true, or use "
                              "LLM_PROVIDER=openrouter to check everything live")
+        return self
+
+    @model_validator(mode="after")
+    def _trusted_context(self) -> Settings:
+        if self.asof_trusted_context and self.asof_auth != "users":
+            raise ValueError("ASOF_TRUSTED_CONTEXT=true needs ASOF_AUTH=users: each request runs as its API user")
         return self
 
     @model_validator(mode="after")

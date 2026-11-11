@@ -33,7 +33,7 @@ import ibm_db_dbi
 from langchain_core.embeddings import Embeddings
 from pydantic import SecretStr
 
-from . import db, indb, rowaccess, schema, seed
+from . import db, indb, rowaccess, schema, seed, trusted
 from .anchor import AnchorLog
 from .config import DEFAULT_ENV_FILE, PROJECT_ROOT, ConfigError, Settings, get_settings
 from .embeddings import get_embeddings
@@ -373,6 +373,10 @@ def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False
         say(f"  {g['applied']} grants and revokes applied"
             + (f"; {g['already_revoked']} revokes found nothing to revoke (PUBLIC defaults already gone, or a "
                "fresh install)" if g["already_revoked"] else ""))
+        try:
+            say("  trusted context: " + trusted.describe(trusted.sync(conn, settings, target)))
+        except trusted.TrustedContextError as exc:
+            raise SetupError(f"trusted context: {exc}") from None
 
     say("8/9 Optimizer statistics (RUNSTATS)")
     say("  " + collect_statistics(settings, target))

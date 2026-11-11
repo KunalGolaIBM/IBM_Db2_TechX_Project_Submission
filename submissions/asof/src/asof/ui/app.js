@@ -639,6 +639,11 @@ function replayCol(title, when, row, changed) {
     ${row ? html`<div class="row wrap">${clauseRef(row.clause_id, row.version_label, row.bus_start, row.bus_end)}</div><div class="sep"></div><p>${row.clause_text}</p>`
       : html`<p class="muted">No row.</p>`}</div>`;
 }
+function storedBy(s) {
+  if (!s) return html`<dt>Stored by</dt><dd class="muted">not recorded (stored before Db2 recorded the session)</dd>`;
+  return html`<dt>Stored by</dt><dd><code>${s.user}</code>${s.trusted_context ? html` via trusted context <code>${s.trusted_context}</code>` : ""}
+    <div class="muted small">roles ${s.roles.length ? s.roles.join(", ") : "none"}; set by Db2 on insert, not part of the row hash</div></dd>`;
+}
 async function LedgerEntry(id) {
   onRoute("ledger") && mount(view, html`<div class="loading"><div class="spinner"></div>Loading entry #${id} and replaying it in Db2...</div>`);
   const [{ body: e }, { body: rp }] = await Promise.all([api(`/api/ledger/${id}`), api(`/api/ledger/${id}/replay`)]);
@@ -668,7 +673,7 @@ async function LedgerEntry(id) {
       <div class="card"><div class="eyebrow">Question (redacted)</div><div class="sep"></div><div class="answer">${e.question_redacted}</div>
         <div class="sep"></div><div class="eyebrow">Draft (redacted)</div><div class="sep"></div><div class="answer struck">${e.draft_redacted}</div></div>
       <div class="card"><div class="eyebrow">Released to the customer</div><div class="sep"></div><div class="answer final">${e.final_answer}</div>
-        <div class="sep"></div><dl class="kv"><dt>Previous hash</dt><dd class="hash">${e.prev_hash}</dd><dt>Row hash</dt><dd class="hash">${e.row_hash}</dd><dt>Reason</dt><dd>${sentence(e.reason_code)}${e.uncovered && e.uncovered.length ? `: no clause in force on ${fmtDate(e.as_of_date)} covers ${quoted(e.uncovered)}` : ""}</dd></dl></div>
+        <div class="sep"></div><dl class="kv"><dt>Previous hash</dt><dd class="hash">${e.prev_hash}</dd><dt>Row hash</dt><dd class="hash">${e.row_hash}</dd>${storedBy(e.stored_by)}<dt>Reason</dt><dd>${sentence(e.reason_code)}${e.uncovered && e.uncovered.length ? `: no clause in force on ${fmtDate(e.as_of_date)} covers ${quoted(e.uncovered)}` : ""}</dd></dl></div>
     </div>
     <div class="card"><div class="card-head"><h2>Claim citations</h2><span class="sub">CLAIM_CITATION rows, shredded from the hashed verdict JSON by JSON_TABLE</span></div>
       <table><thead><tr><th>Check</th><th>#</th><th>Claim</th><th>Verdict</th><th>Judge</th><th>Rule</th><th>Clause</th></tr></thead>

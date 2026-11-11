@@ -153,6 +153,7 @@ def test_moffatt_flow_through_the_api(settings, embeddings, test_schema, app_con
         entry = c.get(f"/api/ledger/{body['ledger_id']}").json()
         assert entry["decision"] == "CORRECTED" and entry["as_of_date"] == "2026-03-10"
         assert [(x["pass_no"], x["verdict"]) for x in entry["citations"]] == [(1, "CONTRADICTED"), (2, "SUPPORTED")]
+        assert entry["stored_by"]["user"] == settings.asof_app_user.upper()  # set by Db2, not by the app
 
         assert c.get("/api/chain/verify").json()["status"] == "OK"
         replay = c.get(f"/api/ledger/{body['ledger_id']}/replay").json()
