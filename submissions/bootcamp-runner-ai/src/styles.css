@@ -1,0 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: #080b12;
+  color: #f8fafc;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { min-width: 320px; min-height: 100%; margin: 0; }
+body { background: #080b12; }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+
+.font-gaming { font-family: 'Orbitron', sans-serif; }
+.font-mono-code { font-family: 'JetBrains Mono', monospace; }
+.clip-chamfer { clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); }
+.clip-chamfer-sm { clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); }
+.glow-cyan { box-shadow: 0 0 20px -3px rgba(0, 229, 255, .35); }
+.glow-cyan-sm { box-shadow: 0 0 10px -2px rgba(0, 229, 255, .4); }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0b1120; }
+::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #00e5ff; }
+
+/* Preserve the engine's full-viewport canvas while the new HUD sits above it. */
+.runner-engine-shell { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+.runner-engine-shell .scene { position: absolute; inset: 0; }
+.runner-engine-shell .scene canvas { display: block; width: 100%; height: 100%; }
