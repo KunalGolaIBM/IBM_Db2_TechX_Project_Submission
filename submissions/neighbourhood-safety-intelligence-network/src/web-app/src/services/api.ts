@@ -1,8 +1,7 @@
 import { 
   AuthResponse, User, TrustedContact, Incident, ChildJourney, 
   ElderCheckIn, AssistanceRequest, CommunityInsights, CommunityHazard, 
-  AIAnalysisResult 
-} from '../types';
+  AIAnalysisResult, SimilarIncident } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -137,6 +136,10 @@ class ApiService {
 
   async getIncident(id: number): Promise<Incident> {
     return this.request<Incident>(`/api/v1/incidents/${id}`);
+  }
+
+  async getSimilarIncidents(id: number): Promise<SimilarIncident[]> {
+    return this.request<SimilarIncident[]>(`/api/v1/incidents/${id}/similar`);
   }
 
   async acknowledgeIncident(id: number): Promise<Incident> {

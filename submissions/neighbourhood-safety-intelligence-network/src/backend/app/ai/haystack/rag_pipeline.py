@@ -1,14 +1,25 @@
+"""Safety-protocol retrieval: Haystack BM25, fused with Db2 vector search when available.
+
+* Keyword path: a Haystack 2 Pipeline with an InMemoryBM25Retriever over the approved protocols.
+* Semantic path: VECTOR_DISTANCE over protocol embeddings stored in IBM Db2
+  (see ai/semantic/db2_vector_store.py), active in DATABASE_MODE=db2.
+* The two rankings are merged with reciprocal rank fusion (RRF), so a protocol found by both
+  rises to the top, and either path alone still works.
+"""
 import logging
 import re
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 from haystack import Document, Pipeline
 from haystack.components.retrievers.in_memory import InMemoryBM25Retriever
 from haystack.document_stores.in_memory import InMemoryDocumentStore
 
 from backend.app.ai.haystack.documents import APPROVED_CIVIC_SAFETY_DOCUMENTS
+from backend.app.ai.semantic.db2_vector_store import vector_store
 
 logger = logging.getLogger("neighbourhood_safety.haystack")
+
+RRF_K = 60  # standard reciprocal-rank-fusion constant
 
 _STOPWORDS = {
     "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of",
@@ -23,84 +34,71 @@ def _keywords(text: str) -> set:
 
 
 class HaystackDocumentStore:
-    """
-    Retrieval over the approved civic safety protocols using Haystack:
-    an InMemoryDocumentStore indexed with BM25 and an InMemoryBM25Retriever
-    wrapped in a Haystack Pipeline, with metadata filtering by category.
-    """
+    """Haystack InMemoryDocumentStore (BM25) + InMemoryBM25Retriever in a Pipeline, with category filters."""
 
-    def __init__(self, top_k: int = 3):
+    def __init__(self):
+        self.docs_by_id: Dict[str, Dict[str, Any]] = {d["id"]: d for d in APPROVED_CIVIC_SAFETY_DOCUMENTS}
         self.document_store = InMemoryDocumentStore(bm25_algorithm="BM25Okapi")
         self.document_store.write_documents([
-            Document(
-                id=doc["id"],
-                content=f"{doc['title']}. {doc['content']}",
-                meta={
-                    "title": doc["title"],
-                    "category": doc["category"],
-                    "source": doc["source"],
-                    "body": doc["content"],
-                },
-            )
-            for doc in APPROVED_CIVIC_SAFETY_DOCUMENTS
+            Document(id=d["id"], content=f"{d['title']}. {d['content']}", meta={"category": d["category"]})
+            for d in APPROVED_CIVIC_SAFETY_DOCUMENTS
         ])
         self.pipeline = Pipeline()
-        self.pipeline.add_component(
-            "retriever", InMemoryBM25Retriever(document_store=self.document_store, top_k=top_k)
-        )
-        logger.info(
-            "Haystack BM25 store indexed %d approved civic safety documents.",
-            self.document_store.count_documents(),
-        )
+        self.pipeline.add_component("retriever", InMemoryBM25Retriever(document_store=self.document_store))
+        logger.info("Haystack BM25 store indexed %d approved civic safety documents.",
+                    self.document_store.count_documents())
+
+    def _bm25(self, query_text: str, category: Optional[str], top_k: int) -> List[Document]:
+        params: Dict[str, Any] = {"query": query_text, "top_k": top_k}
+        if category:
+            params["filters"] = {"field": "meta.category", "operator": "==", "value": category}
+        documents = self.pipeline.run({"retriever": params})["retriever"]["documents"]
+        # BM25 always ranks something; keep only documents that share real keywords with the query.
+        q_terms = _keywords(query_text)
+        return [d for d in documents if q_terms & _keywords(d.content or "")]
 
     def query(self, query_text: str, category: Optional[str] = None, top_k: int = 3) -> Dict[str, Any]:
-        """
-        Runs the Haystack retrieval pipeline and returns cited results, or an explicit
-        'not found' state when no protocol shares meaningful keywords with the query.
-        """
-        q_terms = _keywords(query_text)
-        if not q_terms:
-            return {
-                "results": [],
-                "found": False,
-                "message": "Query was empty or contained no searchable keywords.",
-            }
+        if not _keywords(query_text):
+            return {"results": [], "found": False, "retrieval_mode": "none",
+                    "message": "Query was empty or contained no searchable keywords."}
 
-        retriever_input: Dict[str, Any] = {"query": query_text, "top_k": top_k}
-        if category:
-            retriever_input["filters"] = {"field": "meta.category", "operator": "==", "value": category}
+        bm25_hits = self._bm25(query_text, category, top_k)
+        vector_hits = [h for h in vector_store.search_protocols(query_text, k=top_k)
+                       if not category or self.docs_by_id.get(h.key, {}).get("category") == category]
 
-        documents: List[Document] = self.pipeline.run({"retriever": retriever_input})["retriever"]["documents"]
+        fused: Dict[str, float] = {}
+        bm25_scores: Dict[str, float] = {}
+        distances: Dict[str, float] = {}
+        for rank, doc in enumerate(bm25_hits):
+            fused[doc.id] = fused.get(doc.id, 0.0) + 1.0 / (RRF_K + rank + 1)
+            bm25_scores[doc.id] = float(doc.score or 0.0)
+        for rank, hit in enumerate(vector_hits):
+            fused[hit.key] = fused.get(hit.key, 0.0) + 1.0 / (RRF_K + rank + 1)
+            distances[hit.key] = hit.distance
 
-        # BM25 always ranks something; only keep documents that actually share keywords with the query.
-        relevant = [d for d in documents if q_terms & _keywords(d.content or "")]
+        mode = "hybrid (Haystack BM25 + Db2 VECTOR_DISTANCE)" if vector_store.enabled else "Haystack BM25"
+        if not fused:
+            return {"results": [], "found": False, "retrieval_mode": mode, "query": query_text,
+                    "message": "No approved safety protocol matched the query. Please consult on-duty responders."}
 
-        if not relevant:
-            return {
-                "results": [],
-                "found": False,
-                "message": "No approved safety protocol matched the specific query criteria. Please consult on-duty responders.",
-                "query": query_text,
-            }
-
-        results = [
-            {
-                "document_id": d.id,
-                "title": d.meta["title"],
-                "category": d.meta["category"],
-                "excerpt": d.meta["body"],
-                "source": d.meta["source"],
-                "relevance_score": round(float(d.score or 0.0), 3),
-            }
-            for d in relevant
-        ]
-        return {
-            "results": results,
-            "found": True,
-            "count": len(results),
-            "top_source": results[0]["source"],
-            "query": query_text,
-        }
+        ranked = sorted(fused, key=lambda doc_id: fused[doc_id], reverse=True)[:top_k]
+        results = []
+        for doc_id in ranked:
+            d = self.docs_by_id[doc_id]
+            results.append({
+                "document_id": doc_id,
+                "title": d["title"],
+                "category": d["category"],
+                "excerpt": d["content"],
+                "source": d["source"],
+                "relevance_score": round(fused[doc_id] * 100, 3),
+                "matched_by": "+".join(m for m, hit in (("bm25", doc_id in bm25_scores),
+                                                        ("vector", doc_id in distances)) if hit),
+                "bm25_score": round(bm25_scores[doc_id], 3) if doc_id in bm25_scores else None,
+                "vector_distance": round(distances[doc_id], 4) if doc_id in distances else None,
+            })
+        return {"results": results, "found": True, "count": len(results), "retrieval_mode": mode,
+                "top_source": results[0]["source"], "query": query_text}
 
 
 # Global singleton document store

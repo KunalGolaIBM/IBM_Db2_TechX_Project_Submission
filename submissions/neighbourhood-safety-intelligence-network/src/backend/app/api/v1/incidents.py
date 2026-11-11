@@ -5,13 +5,14 @@ from typing import Dict, FrozenSet, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session, selectinload
 
+from backend.app.ai.semantic.db2_vector_store import vector_store
 from backend.app.api.deps import ensure_verified_staff, get_current_user, is_staff
 from backend.app.core.audit import record_audit
 from backend.app.database.base import get_db
 from backend.app.models.entities import Incident, IncidentStatusHistory, LocationEvent, User
 from backend.app.schemas.safety_schemas import (
     IncidentCreate, IncidentResponse, IncidentStatus, IncidentStatusHistoryItem, IncidentStatusUpdate,
-    IncidentType,
+    IncidentType, SimilarIncident,
 )
 
 router = APIRouter(prefix="/incidents", tags=["Incidents"])
@@ -150,6 +151,7 @@ def create_incident(
                  details={"type": incident.incident_type, "priority": incident.priority})
     db.commit()  # incident, location, first history entry and audit row commit together
 
+    vector_store.index_incident(incident.id, incident.title, incident.description)
     return _format_incident_response(_get_visible_incident(db, incident.id, current_user), current_user)
 
 
@@ -183,6 +185,31 @@ def get_incident(
     db: Session = Depends(get_db),
 ):
     return _format_incident_response(_get_visible_incident(db, incident_id, current_user), current_user)
+
+
+@router.get("/{incident_id}/similar", response_model=List[SimilarIncident])
+def similar_incidents(
+    incident_id: int,
+    limit: int = Query(5, ge=1, le=20),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Related reports found by Db2 VECTOR_DISTANCE over incident embeddings (staff only).
+    Empty when vector search is not active (non-Db2 modes)."""
+    ensure_verified_staff(current_user)
+    _get_visible_incident(db, incident_id, current_user)
+    hits = vector_store.similar_incidents(incident_id, k=limit)
+    if not hits:
+        return []
+    by_id = {i.id: i for i in db.query(Incident).filter(Incident.id.in_([int(h.key) for h in hits])).all()}
+    return [
+        SimilarIncident(
+            id=inc.id, reference_code=inc.reference_code, title=inc.title, incident_type=inc.incident_type,
+            priority=inc.priority, status=inc.status, location_address=inc.location_address,
+            created_at=inc.created_at, similarity=round(1.0 - h.distance, 4),
+        )
+        for h in hits if (inc := by_id.get(int(h.key)))
+    ]
 
 
 @router.post("/{incident_id}/acknowledge", response_model=IncidentResponse)

@@ -223,7 +223,7 @@ data class CommunityInsights(
     @Json(name = "total_incidents") val totalIncidents: Int,
     @Json(name = "active_incidents") val activeIncidents: Int,
     @Json(name = "resolved_incidents") val resolvedIncidents: Int,
-    @Json(name = "average_response_time_minutes") val averageResponseTimeMinutes: Double,
+    @Json(name = "average_response_time_minutes") val averageResponseTimeMinutes: Double? = null,
     @Json(name = "incidents_by_type") val incidentsByType: Map<String, Int> = emptyMap(),
     @Json(name = "incidents_by_priority") val incidentsByPriority: Map<String, Int> = emptyMap(),
     @Json(name = "active_hazards") val activeHazards: List<CommunityHazard> = emptyList(),

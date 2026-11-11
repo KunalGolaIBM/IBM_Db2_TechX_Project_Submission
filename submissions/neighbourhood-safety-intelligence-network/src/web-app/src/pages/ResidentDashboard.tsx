@@ -336,7 +336,7 @@ export const ResidentDashboard: React.FC = () => {
                 AI Civic Safety Advisory
               </span>
               <span className="text-xs font-bold bg-teal-500/20 px-2 py-0.5 rounded border border-teal-500/30 text-teal-300">
-                Score: {insights?.safety_health_score || 92}/100
+                Score: {insights ? `${insights.safety_health_score}/100` : '—'}
               </span>
             </div>
             <p className="text-xs text-slate-300 leading-relaxed">

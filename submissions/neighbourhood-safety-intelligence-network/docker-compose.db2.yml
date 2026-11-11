@@ -35,6 +35,7 @@ services:
       DB2_USER: db2inst1
       DB2_PASSWORD: ${DB2_PASSWORD:-change_me_db2}
       DB2_SECURITY: ""
+      ENABLE_VECTOR_SEARCH: "true"
     depends_on:
       db2:
         condition: service_healthy

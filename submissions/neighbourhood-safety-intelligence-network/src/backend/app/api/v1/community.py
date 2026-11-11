@@ -1,6 +1,8 @@
 from typing import List, Dict
 from fastapi import APIRouter, Depends, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
+from backend.app.analytics.insights import ACTIVE_STATUSES, CLOSED_STATUSES, compute_insights
 from backend.app.database.base import get_db
 from backend.app.models.entities import User, Incident, CommunityHazard
 from backend.app.schemas.safety_schemas import (
@@ -14,43 +16,35 @@ router = APIRouter(prefix="/community", tags=["Community Insights & Hazards"])
 @router.get("/insights", response_model=CommunityInsightsResponse)
 def get_community_insights(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    total = db.query(Incident).count()
-    active = db.query(Incident).filter(Incident.status.in_(["reported", "acknowledged", "responder_en_route", "on_scene", "resolving"])).count()
-    resolved = db.query(Incident).filter(Incident.status.in_(["resolved", "false_alarm"])).count()
+    by_status = dict(db.query(Incident.status, func.count(Incident.id)).group_by(Incident.status).all())
+    by_type = dict(db.query(Incident.incident_type, func.count(Incident.id)).group_by(Incident.incident_type).all())
+    by_priority = dict(db.query(Incident.priority, func.count(Incident.id)).group_by(Incident.priority).all())
+    total = sum(by_status.values())
+    active = sum(n for s, n in by_status.items() if s in ACTIVE_STATUSES)
+    resolved = sum(n for s, n in by_status.items() if s in CLOSED_STATUSES)
 
-    incidents = db.query(Incident).all()
-    type_counts: Dict[str, int] = {}
-    priority_counts: Dict[str, int] = {}
+    hazards = db.query(CommunityHazard).filter(CommunityHazard.status.in_(["active", "verified"]))         .order_by(CommunityHazard.created_at.desc()).all()
+    metrics = compute_insights(db)
 
-    for inc in incidents:
-        type_counts[inc.incident_type] = type_counts.get(inc.incident_type, 0) + 1
-        priority_counts[inc.priority] = priority_counts.get(inc.priority, 0) + 1
-
-    hazards = db.query(CommunityHazard).filter(CommunityHazard.status.in_(["active", "verified"])).all()
-
-    # Safety health index calculation (100 base minus active risks)
-    health_score = max(40, min(100, 95 - (active * 5) - (len(hazards) * 3)))
-
-    # CrewAI insights synthesis
-    ai_advisory = crew_orchestrator.insights_agent.execute(
-        total_incidents=total,
-        active_count=active,
-        hazard_count=len(hazards)
+    # Transparent heuristic: start at 100 and subtract for open incidents, hazards and missed SLAs.
+    health_score = max(0, min(100, 100 - active * 4 - len(hazards) * 3 - metrics["sla_breaches"] * 6))
+    advisory = crew_orchestrator.insights_agent.execute(
+        total_incidents=total, active_count=active, hazard_count=len(hazards),
     )
-
     return CommunityInsightsResponse(
         total_incidents=total,
         active_incidents=active,
         resolved_incidents=resolved,
-        average_response_time_minutes=4.8,  # calibrated metric from logged history
-        incidents_by_type=type_counts,
-        incidents_by_priority=priority_counts,
+        incidents_by_type=by_type,
+        incidents_by_priority=by_priority,
         active_hazards=[CommunityHazardResponse.model_validate(h) for h in hazards],
         safety_health_score=health_score,
-        ai_safety_advisory=ai_advisory
+        ai_safety_advisory=advisory,
+        **metrics,
     )
+
 
 @router.get("/hazards", response_model=List[CommunityHazardResponse])
 def list_hazards(

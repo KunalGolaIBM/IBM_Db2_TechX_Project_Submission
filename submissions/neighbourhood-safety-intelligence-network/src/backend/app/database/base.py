@@ -34,6 +34,8 @@ def get_db_status() -> dict:
         status["connected"] = check.get("connected", False)
         status["driver"] = "ibm_db"
         status["details"] = check
+        from backend.app.ai.semantic.db2_vector_store import vector_store
+        status["vector_search"] = vector_store.status()
     return status
 
 def init_db():
@@ -57,6 +59,8 @@ def init_db():
             logger.error(error_msg)
             raise ConnectionError(error_msg)
         engine, SessionLocal = db2.get_session_factory()
+        from backend.app.ai.semantic.db2_vector_store import vector_store
+        vector_store.initialise(engine)
     else:
         raise ValueError(f"Unsupported DATABASE_MODE: '{mode}'. Supported: sqlite, postgresql, db2")
 

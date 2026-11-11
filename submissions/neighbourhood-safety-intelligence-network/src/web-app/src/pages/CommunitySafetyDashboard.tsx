@@ -96,17 +96,19 @@ export const CommunitySafetyDashboard: React.FC = () => {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
           <span className="text-xs font-semibold text-slate-500 block">Avg Response Time</span>
           <span className="text-3xl font-extrabold text-teal-600 mt-1 block">
-            {insights?.average_response_time_minutes || 4.8}m
+            {insights?.average_response_time_minutes != null ? `${insights.average_response_time_minutes.toFixed(1)}m` : '—'}
           </span>
-          <span className="text-[11px] text-slate-500 font-medium">From alert to on-scene</span>
+          <span className="text-[11px] text-slate-500 font-medium">Measured: report to acknowledgement</span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
           <span className="text-xs font-semibold text-slate-500 block">Neighbourhood Health Score</span>
           <span className="text-3xl font-extrabold text-emerald-600 mt-1 block">
-            {insights?.safety_health_score || 94}/100
+            {insights ? `${insights.safety_health_score}/100` : '—'}
           </span>
-          <span className="text-[11px] text-emerald-700 font-medium">Optimal Safety Level</span>
+          <span className="text-[11px] text-emerald-700 font-medium">
+            {insights?.sla_breaches ? `${insights.sla_breaches} response target(s) missed` : 'All response targets met'}
+          </span>
         </div>
       </div>
 
@@ -124,6 +126,72 @@ export const CommunitySafetyDashboard: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* Response analytics computed in IBM Db2 */}
+      {insights && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Response Times by Priority</h2>
+                <p className="text-xs text-slate-500">Last {insights.window_days} days · report to first acknowledgement</p>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 border border-teal-200 px-2 py-1 rounded-lg">
+                {insights.analytics_engine}
+              </span>
+            </div>
+            {insights.response_times.length === 0 ? (
+              <p className="text-sm text-slate-500">No incidents in this period yet.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-slate-500 border-b border-slate-100">
+                    <th className="py-2 font-semibold">Priority</th>
+                    <th className="py-2 font-semibold text-right">Incidents</th>
+                    <th className="py-2 font-semibold text-right">Median</th>
+                    <th className="py-2 font-semibold text-right">90th pct</th>
+                    <th className="py-2 font-semibold text-right">Target</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {insights.response_times.map((r) => {
+                    const fmt = (v: number | null) => (v == null ? '—' : `${v.toFixed(1)}m`);
+                    const late = r.p90_ack_minutes != null && r.p90_ack_minutes > r.ack_target_minutes;
+                    return (
+                      <tr key={r.priority} className="border-b border-slate-50">
+                        <td className="py-2 font-mono text-xs font-bold text-slate-700">{r.priority}</td>
+                        <td className="py-2 text-right text-slate-700">{r.acknowledged}/{r.incidents}</td>
+                        <td className="py-2 text-right text-slate-900 font-semibold">{fmt(r.median_ack_minutes)}</td>
+                        <td className={`py-2 text-right font-semibold ${late ? 'text-red-600' : 'text-slate-900'}`}>{fmt(r.p90_ack_minutes)}</td>
+                        <td className="py-2 text-right text-slate-500">{fmt(r.ack_target_minutes)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900">Hotspots</h2>
+            <p className="text-xs text-slate-500 mb-3">Locations with repeated reports (RANK over 30 days)</p>
+            {insights.hotspots.length === 0 ? (
+              <p className="text-sm text-slate-500">No repeated locations yet.</p>
+            ) : (
+              <ol className="space-y-2">
+                {insights.hotspots.map((h) => (
+                  <li key={h.location} className="flex items-start justify-between gap-3 text-sm">
+                    <span className="flex items-start gap-2 text-slate-800">
+                      <span className="w-5 h-5 shrink-0 rounded-full bg-slate-900 text-white text-[11px] font-bold flex items-center justify-center">{h.rank}</span>
+                      {h.location}
+                    </span>
+                    <span className="text-xs text-slate-500 whitespace-nowrap">{h.incidents} reports{h.open_incidents ? ` · ${h.open_incidents} open` : ''}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Hazard Registry */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">

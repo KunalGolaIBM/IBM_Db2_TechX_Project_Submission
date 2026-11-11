@@ -141,6 +141,17 @@ class IncidentResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class SimilarIncident(BaseModel):
+    id: int
+    reference_code: str
+    title: str
+    incident_type: str
+    priority: str
+    status: str
+    location_address: Optional[str] = None
+    created_at: datetime.datetime
+    similarity: float  # 1 - cosine distance computed by Db2 VECTOR_DISTANCE
+
 # --- Child Safety ---
 class ChildJourneyCreate(BaseModel):
     child_name: str = Field(min_length=1, max_length=255)
@@ -247,16 +258,40 @@ class CommunityHazardResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class PriorityResponseTime(BaseModel):
+    priority: str
+    incidents: int
+    acknowledged: int
+    avg_ack_minutes: Optional[float] = None
+    median_ack_minutes: Optional[float] = None
+    p90_ack_minutes: Optional[float] = None
+    avg_resolve_minutes: Optional[float] = None
+    ack_target_minutes: float
+
+class IncidentHotspot(BaseModel):
+    rank: int
+    location: str
+    incidents: int
+    open_incidents: int
+    last_reported: datetime.datetime
+
 class CommunityInsightsResponse(BaseModel):
     total_incidents: int
     active_incidents: int
     resolved_incidents: int
-    average_response_time_minutes: float
+    # Measured time from report to first acknowledgement (None until any incident is acknowledged).
+    average_response_time_minutes: Optional[float] = None
     incidents_by_type: Dict[str, int]
     incidents_by_priority: Dict[str, int]
     active_hazards: List[CommunityHazardResponse]
     safety_health_score: int  # 0 to 100
     ai_safety_advisory: str
+    analytics_engine: str
+    window_days: int
+    response_times: List[PriorityResponseTime]
+    hotspots: List[IncidentHotspot]
+    incidents_by_hour: Dict[int, int]
+    sla_breaches: int  # open P1-P4 incidents still unacknowledged past their target time
 
 # --- AI Workflows ---
 class AIIncidentAssistanceRequest(BaseModel):

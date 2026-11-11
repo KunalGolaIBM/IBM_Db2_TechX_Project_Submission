@@ -108,7 +108,7 @@ fun CommunityAlertsScreen(
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "${insights?.safetyHealthScore ?: 92} / 100",
+                                    text = insights?.let { "${it.safetyHealthScore} / 100" } ?: "—",
                                     fontSize = 24.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color.White
@@ -122,7 +122,7 @@ fun CommunityAlertsScreen(
                                     color = Color(0xFF94A3B8)
                                 )
                                 Text(
-                                    text = "${insights?.averageResponseTimeMinutes ?: 4.8}m",
+                                    text = insights?.averageResponseTimeMinutes?.let { "%.1fm".format(it) } ?: "—",
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF34D399)

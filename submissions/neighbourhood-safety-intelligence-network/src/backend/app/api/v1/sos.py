@@ -3,6 +3,7 @@ import datetime
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
+from backend.app.ai.semantic.db2_vector_store import vector_store
 from backend.app.api.deps import get_current_user
 from backend.app.api.v1.incidents import _format_incident_response, _get_visible_incident, assign_reference_code
 from backend.app.core.audit import record_audit
@@ -70,4 +71,5 @@ def trigger_sos(
                           "has_gps": req.latitude is not None})
     db.commit()
 
+    vector_store.index_incident(incident.id, incident.title, incident.description)
     return _format_incident_response(_get_visible_incident(db, incident.id, current_user), current_user)

@@ -283,7 +283,7 @@ fun ResidentHomeScreen(
                                     color = CivicTeal
                                 )
                                 Text(
-                                    text = "Score: ${insights?.safetyHealthScore ?: 92}/100",
+                                    text = insights?.let { "Score: ${it.safetyHealthScore}/100" } ?: "Score: —",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF059669)

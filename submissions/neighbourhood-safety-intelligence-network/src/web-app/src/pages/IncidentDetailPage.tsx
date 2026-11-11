@@ -6,13 +6,14 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { Incident, IncidentStatus } from '../types';
+import { Incident, IncidentStatus, SimilarIncident } from '../types';
 
 export const IncidentDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
 
   const [incident, setIncident] = useState<Incident | null>(null);
+  const [similar, setSimilar] = useState<SimilarIncident[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +27,10 @@ export const IncidentDetailPage: React.FC = () => {
     setLoading(true);
     try {
       const data = await api.getIncident(Number(id));
+      if (user && (user.role === 'responder' || user.role === 'admin')) {
+        // Related reports found by Db2 VECTOR_DISTANCE; empty when vector search is not active.
+        api.getSimilarIncidents(Number(id)).then(setSimilar).catch(() => setSimilar([]));
+      }
       setIncident(data);
       if (data.status === 'reported') setNewStatus('acknowledged');
       else if (data.status === 'acknowledged') setNewStatus('responder_en_route');
@@ -239,6 +244,27 @@ export const IncidentDetailPage: React.FC = () => {
               </div>
             </form>
           )}
+        </div>
+      )}
+
+      {similar.length > 0 && (
+        <div className="bg-amber-50 rounded-2xl p-5 border border-amber-200 space-y-3">
+          <div>
+            <h3 className="font-bold text-slate-900 text-sm">Possibly related reports</h3>
+            <p className="text-xs text-slate-600">Matched by meaning with IBM Db2 VECTOR_DISTANCE. Check for duplicates before dispatching.</p>
+          </div>
+          <ul className="space-y-2">
+            {similar.map((s) => (
+              <li key={s.id}>
+                <Link to={`/incidents/${s.id}`} className="flex items-center justify-between gap-3 bg-white rounded-xl border border-amber-100 px-3 py-2 hover:border-amber-300">
+                  <span className="text-sm text-slate-800">
+                    <span className="font-mono text-xs text-slate-500 mr-2">{s.reference_code}</span>{s.title}
+                  </span>
+                  <span className="text-xs text-slate-600 whitespace-nowrap">{Math.round(s.similarity * 100)}% similar · {s.status.replace(/_/g, ' ')}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

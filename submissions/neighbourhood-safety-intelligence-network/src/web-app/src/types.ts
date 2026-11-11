@@ -125,16 +125,53 @@ export interface CommunityHazard {
   created_at: string;
 }
 
+export interface PriorityResponseTime {
+  priority: string;
+  incidents: number;
+  acknowledged: number;
+  avg_ack_minutes: number | null;
+  median_ack_minutes: number | null;
+  p90_ack_minutes: number | null;
+  avg_resolve_minutes: number | null;
+  ack_target_minutes: number;
+}
+
+export interface IncidentHotspot {
+  rank: number;
+  location: string;
+  incidents: number;
+  open_incidents: number;
+  last_reported: string;
+}
+
 export interface CommunityInsights {
   total_incidents: number;
   active_incidents: number;
   resolved_incidents: number;
-  average_response_time_minutes: number;
+  average_response_time_minutes: number | null;
   incidents_by_type: Record<string, number>;
   incidents_by_priority: Record<string, number>;
   active_hazards: CommunityHazard[];
   safety_health_score: number;
   ai_safety_advisory: string;
+  analytics_engine: string;
+  window_days: number;
+  response_times: PriorityResponseTime[];
+  hotspots: IncidentHotspot[];
+  incidents_by_hour: Record<string, number>;
+  sla_breaches: number;
+}
+
+export interface SimilarIncident {
+  id: number;
+  reference_code: string;
+  title: string;
+  incident_type: string;
+  priority: string;
+  status: string;
+  location_address?: string | null;
+  created_at: string;
+  similarity: number;
 }
 
 export interface AIAnalysisResult {

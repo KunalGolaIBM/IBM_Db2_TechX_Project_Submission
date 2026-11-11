@@ -63,6 +63,12 @@ class Settings:
         if origin.strip()
     ]
 
+    # Semantic search with Db2 VECTOR columns (used only when DATABASE_MODE=db2)
+    ENABLE_VECTOR_SEARCH: bool = os.getenv("ENABLE_VECTOR_SEARCH", "true").lower() in ("1", "true", "yes")
+    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
+    EMBEDDING_DIM: int = int(os.getenv("EMBEDDING_DIM", "384"))
+    EMBEDDING_CACHE_DIR: str = os.getenv("EMBEDDING_CACHE_DIR", "")
+
     # Login throttling (per client IP + email)
     LOGIN_MAX_ATTEMPTS: int = int(os.getenv("LOGIN_MAX_ATTEMPTS", "5"))
     LOGIN_WINDOW_SECONDS: int = int(os.getenv("LOGIN_WINDOW_SECONDS", "300"))
