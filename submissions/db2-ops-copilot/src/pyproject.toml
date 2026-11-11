@@ -1,0 +1,8 @@
+[tool.pytest.ini_options]
+pythonpath = ["backend"]
+testpaths = ["backend/tests", "tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]
+markers = [
+    "integration: real-service integration tests (Db2/Ollama/DB2VS) — skipped unless ADAPTER_MODE=real AND RUN_REAL_INTEGRATION=1 (see docs/INTEGRATION_TESTING.md)",
+]

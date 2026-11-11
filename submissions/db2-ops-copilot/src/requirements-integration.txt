@@ -1,0 +1,22 @@
+# REAL-SERVICE integration dependencies — NOT installed during M1.
+#
+# Install only when real Db2 / Ollama / LangChain integration work begins (M2),
+# after the operator approves infrastructure bring-up:
+#   .venv\Scripts\python -m pip install -r requirements-integration.txt
+#
+# Versions verified against PyPI on 2026-10-30 (see M0_RESEARCH_REPORT.md §3):
+#   ibm_db 3.3.0 ships a cp314 Windows wheel; langchain-db2 1.0.0 supports >=3.10,<4.0.
+
+ibm_db==3.3.0
+# SQLAlchemy dialect for Db2 (db2+ibm_db://) — installed and import/URL-checked
+# on Python 3.14 (ibm_db_sa 0.4.4 + SQLAlchemy 2.1.8); not exercised against a live Db2.
+ibm_db_sa==0.4.4
+sqlalchemy>=2.0,<2.2
+langchain==1.3.14
+langchain-community==0.4.2
+langchain-ollama==1.1.0
+langchain-db2==1.0.0
+# langchain-db2 imports numpy directly (db2vs.py vector math); range lets pip
+# select the build matching the running interpreter (Python 3.14 needs >=2.4).
+numpy>=2.3,<3
+
