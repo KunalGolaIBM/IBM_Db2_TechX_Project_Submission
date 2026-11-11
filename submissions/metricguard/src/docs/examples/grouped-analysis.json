@@ -1,0 +1,287 @@
+{
+  "request_id": "fbb5d529-1877-443a-8e8c-7b1d608dbaf0",
+  "created_at": "2026-11-07T20:36:39.135532Z",
+  "api_version": "1.1.0",
+  "status": "VERIFIED",
+  "question": "Show net revenue and order count by month for EMEA in Q1 2026.",
+  "answer": {
+    "summary": "Net Revenue for Q1 2026, EMEA totals $79,292.47 across 3 months; the highest is 2026-03 at $31,392.69.",
+    "headline": {
+      "metric": "net_revenue",
+      "label": "Net Revenue (Q1 2026, EMEA)",
+      "value": 79292.47,
+      "unit": "USD",
+      "formatted": "$79,292.47"
+    }
+  },
+  "plan": {
+    "metrics": [
+      {
+        "name": "net_revenue",
+        "version": "1.0.0"
+      },
+      {
+        "name": "order_count",
+        "version": "1.0.0"
+      }
+    ],
+    "dimensions": [
+      "order_month"
+    ],
+    "filters": [
+      {
+        "field": "region",
+        "operator": "in",
+        "values": [
+          "EMEA"
+        ]
+      }
+    ],
+    "date_range": {
+      "start_date": "2026-01-01",
+      "end_date": "2026-03-31",
+      "attribution": "order_date",
+      "source": "explicit"
+    },
+    "order_by": [],
+    "limit": null
+  },
+  "assumptions": [],
+  "metrics": [
+    {
+      "name": "net_revenue",
+      "version": "1.0.0",
+      "display_name": "Net Revenue",
+      "unit": "USD",
+      "scale": 2,
+      "definition_hash": "471c17a8d0ab04f51b24dee73de00272b26c4d91cb26d1901751c439f5d26232"
+    },
+    {
+      "name": "order_count",
+      "version": "1.0.0",
+      "display_name": "Order Count",
+      "unit": "COUNT",
+      "scale": 0,
+      "definition_hash": "c1f1986331b0122264c5be4793d30003583ca0807e16e066daf967de0ed6a364"
+    }
+  ],
+  "sql": {
+    "text": "WITH eligible_orders AS (\n    SELECT o.ORDER_ID, o.ORDER_TS, o.REGION_CODE, o.CHANNEL_CODE\n    FROM METRICGUARD.ORDERS o\n    WHERE o.STATUS IN (CAST(? AS VARCHAR(16)))\n      AND o.ORDER_TS >= CAST(? AS TIMESTAMP)\n      AND o.ORDER_TS < CAST(? AS TIMESTAMP)\n      AND o.REGION_CODE IN (CAST(? AS VARCHAR(16)))\n),\nline_refunds AS (\n    -- Pre-aggregate refunds per order line BEFORE joining (no fan-out).\n    SELECT r.ORDER_ITEM_ID, SUM(r.REFUND_AMOUNT) AS REFUND_AMOUNT\n    FROM METRICGUARD.REFUNDS r\n    JOIN eligible_orders e ON e.ORDER_ID = r.ORDER_ID\n    WHERE r.STATUS = CAST(? AS VARCHAR(12))\n    GROUP BY r.ORDER_ITEM_ID\n),\nline_facts AS (\n    SELECT e.ORDER_ID, e.ORDER_TS, e.REGION_CODE, e.CHANNEL_CODE, p.CATEGORY,\n           (i.QUANTITY * i.UNIT_PRICE) - i.DISCOUNT_AMOUNT AS LINE_REVENUE,\n           COALESCE(lr.REFUND_AMOUNT, 0) AS LINE_REFUND\n    FROM eligible_orders e\n    JOIN METRICGUARD.ORDER_ITEMS i ON i.ORDER_ID = e.ORDER_ID\n    JOIN METRICGUARD.PRODUCTS p ON p.PRODUCT_ID = i.PRODUCT_ID\n    LEFT JOIN line_refunds lr ON lr.ORDER_ITEM_ID = i.ORDER_ITEM_ID\n)\nSELECT VARCHAR_FORMAT(f.ORDER_TS, 'YYYY-MM') AS ORDER_MONTH,\n       CAST(COALESCE(SUM(f.LINE_REVENUE), 0) - COALESCE(SUM(f.LINE_REFUND), 0) AS DECIMAL(18,2)) AS NET_REVENUE,\n       COUNT(DISTINCT f.ORDER_ID) AS ORDER_COUNT\nFROM line_facts f\nGROUP BY VARCHAR_FORMAT(f.ORDER_TS, 'YYYY-MM')\nORDER BY ORDER_MONTH ASC\nFETCH FIRST 101 ROWS ONLY",
+    "dialect": "db2",
+    "parameters": [
+      {
+        "position": 1,
+        "name": "eligible_status_1",
+        "db2_type": "VARCHAR(16)",
+        "value": "COMPLETED"
+      },
+      {
+        "position": 2,
+        "name": "date_start_inclusive",
+        "db2_type": "TIMESTAMP",
+        "value": "2026-01-01 00:00:00"
+      },
+      {
+        "position": 3,
+        "name": "date_end_exclusive",
+        "db2_type": "TIMESTAMP",
+        "value": "2026-04-01 00:00:00"
+      },
+      {
+        "position": 4,
+        "name": "filter_region_1",
+        "db2_type": "VARCHAR(16)",
+        "value": "EMEA"
+      },
+      {
+        "position": 5,
+        "name": "refund_status",
+        "db2_type": "VARCHAR(12)",
+        "value": "PROCESSED"
+      }
+    ],
+    "generated_by": "metricguard-compiler",
+    "sql_hash": "862486670a4b4f555b043d7f545a1e9aebb37426f832c9809084bfa8aff6cba4",
+    "tables": [
+      "METRICGUARD.ORDERS",
+      "METRICGUARD.ORDER_ITEMS",
+      "METRICGUARD.PRODUCTS",
+      "METRICGUARD.REFUNDS"
+    ]
+  },
+  "result": {
+    "columns": [
+      {
+        "name": "order_month",
+        "label": "Order month",
+        "role": "dimension",
+        "data_type": "string",
+        "unit": null,
+        "scale": null
+      },
+      {
+        "name": "net_revenue",
+        "label": "Net Revenue",
+        "role": "metric",
+        "data_type": "decimal",
+        "unit": "USD",
+        "scale": 2
+      },
+      {
+        "name": "order_count",
+        "label": "Order Count",
+        "role": "metric",
+        "data_type": "integer",
+        "unit": "COUNT",
+        "scale": 0
+      }
+    ],
+    "rows": [
+      {
+        "order_month": "2026-01",
+        "net_revenue": 25347.46,
+        "order_count": 114
+      },
+      {
+        "order_month": "2026-02",
+        "net_revenue": 22552.32,
+        "order_count": 95
+      },
+      {
+        "order_month": "2026-03",
+        "net_revenue": 31392.69,
+        "order_count": 130
+      }
+    ],
+    "row_count": 3,
+    "truncated": false
+  },
+  "chart": {
+    "type": "line",
+    "title": "Net Revenue by Order month",
+    "x": {
+      "field": "order_month",
+      "label": "Order month"
+    },
+    "series": [
+      {
+        "key": "net_revenue",
+        "label": "Net Revenue",
+        "metric": "net_revenue",
+        "unit": "USD",
+        "points": [
+          {
+            "x": "2026-01",
+            "y": 25347.46
+          },
+          {
+            "x": "2026-02",
+            "y": 22552.32
+          },
+          {
+            "x": "2026-03",
+            "y": 31392.69
+          }
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "status": "VERIFIED",
+    "summary": "Approved metrics, governed SQL, executed on IBM Db2 and checked against independent control queries.",
+    "reasons": [
+      {
+        "code": "RECONCILED",
+        "severity": "info",
+        "message": "Group sums equal control totals (net_revenue $79,292.47; order_count 339)."
+      }
+    ],
+    "checks": [
+      {
+        "id": "V01",
+        "name": "plan_schema",
+        "status": "PASS",
+        "detail": "Plan parsed."
+      },
+      {
+        "id": "V02",
+        "name": "metric_approval",
+        "status": "PASS",
+        "detail": "net_revenue@1.0.0, order_count@1.0.0 approved."
+      },
+      {
+        "id": "V03",
+        "name": "registry_integrity",
+        "status": "PASS",
+        "detail": "Definition hashes match METRICGUARD.METRIC_DEFINITIONS."
+      },
+      {
+        "id": "V04",
+        "name": "dimension_filter_policy",
+        "status": "PASS",
+        "detail": "Dimensions, filters and sort allowed."
+      },
+      {
+        "id": "V05",
+        "name": "deterministic_sql",
+        "status": "PASS",
+        "detail": "Generated by metricguard-compiler."
+      },
+      {
+        "id": "V06",
+        "name": "sql_guard",
+        "status": "PASS",
+        "detail": "Single SELECT on 4 allow-listed tables."
+      },
+      {
+        "id": "V07",
+        "name": "parameterized",
+        "status": "PASS",
+        "detail": "5 markers, 5 parameters."
+      },
+      {
+        "id": "V08",
+        "name": "execution",
+        "status": "PASS",
+        "detail": "Db2 returned 3 rows as MGREADER."
+      },
+      {
+        "id": "V09",
+        "name": "reconciliation",
+        "status": "PASS",
+        "detail": "Group sums equal control totals (net_revenue $79,292.47; order_count 339)."
+      },
+      {
+        "id": "V10",
+        "name": "completeness",
+        "status": "PASS",
+        "detail": "3 rows, not truncated, range within coverage."
+      },
+      {
+        "id": "V11",
+        "name": "null_semantics",
+        "status": "PASS",
+        "detail": "No NULL metric values."
+      }
+    ]
+  },
+  "clarification": null,
+  "timing": {
+    "total_ms": 68.9,
+    "planning_ms": 0.1,
+    "validation_ms": 19.9,
+    "execution_ms": 17.0,
+    "verification_ms": 30.9
+  },
+  "planner": {
+    "name": "rules-demo",
+    "model": null,
+    "execution_mode": "DEMO_RULE_BASED",
+    "disclosure": "Demo mode: this plan was produced by a deterministic rule-based planner for the curated example questions, not by an LLM. SQL compilation, validation, execution and verification are unchanged."
+  },
+  "audit": {
+    "persisted": true,
+    "url": "/api/audit/fbb5d529-1877-443a-8e8c-7b1d608dbaf0"
+  },
+  "error": null
+}

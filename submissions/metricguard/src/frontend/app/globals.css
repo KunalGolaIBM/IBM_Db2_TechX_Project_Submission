@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/*
+ * MetricGuard design tokens.
+ * Light, warm-neutral workspace; dark evidence/code surface; one restrained accent.
+ * Chart hues come from a validated categorical order (blue, orange, aqua, yellow, ...).
+ */
+:root {
+  color-scheme: light;
+  --bg: #f6f5f2;
+  --surface: #ffffff;
+  --surface-sunken: #efeeea;
+  --line: #e3e1db;
+  --line-strong: #cfcdc5;
+  --ink: #14130f;
+  --ink-2: #4a4944;
+  --ink-3: #6b6a63;
+  --accent: #1f5fbf;
+  --accent-soft: #e6eefb;
+  --accent-ink: #174a96;
+
+  /* status: good / warning / info / critical / serious, each with soft bg, strong fg */
+  --ok: #0b7a4f;       --ok-soft: #e3f3ec;
+  --warn: #8a5a00;     --warn-soft: #fbf0d6;
+  --amb: #4f46a8;      --amb-soft: #ebe9fa;
+  --bad: #b3261e;      --bad-soft: #fbe8e6;
+  --fail: #a24200;     --fail-soft: #fbeadb;
+
+  /* evidence panel (dark) */
+  --ev-bg: #15171b;
+  --ev-raised: #1d2026;
+  --ev-line: #2b2f37;
+  --ev-ink: #ecebe6;
+  --ev-ink-2: #b4b3ab;
+  --ev-ink-3: #8a897f;
+  --ev-ok: #4fc08d;
+  --ev-warn: #e3b341;
+  --ev-bad: #f0746c;
+  --ev-skip: #6e6d65;
+
+  /* categorical series (light) */
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --chart-grid: #e8e6e0;
+
+  /* SQL syntax */
+  --sql-keyword: #8ab4f8; --sql-string: #8fd3a8; --sql-number: #f2b880;
+  --sql-comment: #7c7b72; --sql-param: #f0a0c0; --sql-type: #c4b5fd; --sql-func: #7fd1d9;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-sunken: var(--surface-sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-ok: var(--ok); --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn); --color-warn-soft: var(--warn-soft);
+  --color-amb: var(--amb); --color-amb-soft: var(--amb-soft);
+  --color-bad: var(--bad); --color-bad-soft: var(--bad-soft);
+  --color-fail: var(--fail); --color-fail-soft: var(--fail-soft);
+  --color-ev: var(--ev-bg);
+  --color-ev-raised: var(--ev-raised);
+  --color-ev-line: var(--ev-line);
+  --color-ev-ink: var(--ev-ink);
+  --color-ev-ink-2: var(--ev-ink-2);
+  --color-ev-ink-3: var(--ev-ink-3);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+html { background: var(--bg); }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.ev :focus-visible { outline-color: #8ab4f8; }
+
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* Thin, quiet scrollbars for code and tables */
+.scroll-quiet { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+.ev .scroll-quiet { scrollbar-color: #444a55 transparent; }
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-sunken) 25%, #f7f6f2 50%, var(--surface-sunken) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+  border-radius: 6px;
+}
+
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.rise { animation: rise 220ms ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton, .rise { animation: none; }
+  * { transition-duration: 0.01ms !important; }
+}

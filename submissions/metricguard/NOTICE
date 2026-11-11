@@ -1,0 +1,9 @@
+MetricGuard
+Copyright 2026 The MetricGuard contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It depends on, but does not redistribute, third-party software listed in
+THIRD_PARTY_NOTICES.md. IBM Db2 Community Edition is pulled from IBM's registry
+at run time and is governed by IBM's own license terms, which the operator accepts
+by setting LICENSE=accept in docker/compose.yaml.

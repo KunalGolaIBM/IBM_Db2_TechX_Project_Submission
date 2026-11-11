@@ -1,0 +1,46 @@
+{
+  "items": [
+    {
+      "request_id": "55176578-43ef-40b1-9220-ddec9f5fd003",
+      "created_at": "2026-11-07T20:36:39.384127",
+      "question": "What was net revenue by month in the first half of 2026?",
+      "status": "EXECUTION_FAILED",
+      "metric_refs": [
+        "net_revenue@1.0.0"
+      ],
+      "row_count": null,
+      "total_ms": 5011.0,
+      "planner": "rules-demo",
+      "execution_mode": "DEMO_RULE_BASED"
+    },
+    {
+      "request_id": "a10c9b8f-d676-4fce-9447-ac3a94695769",
+      "created_at": "2026-11-07T20:36:39.309406",
+      "question": "Show gross revenue by month from 2026-06-01 to 2026-08-31.",
+      "status": "EXECUTED_WITH_WARNINGS",
+      "metric_refs": [
+        "gross_revenue@1.0.0"
+      ],
+      "row_count": 1,
+      "total_ms": 46.0,
+      "planner": "rules-demo",
+      "execution_mode": "DEMO_RULE_BASED"
+    },
+    {
+      "request_id": "460d6ed2-2a3d-4eb5-b56e-6418a9993d63",
+      "created_at": "2026-11-07T20:36:39.282684",
+      "question": "What is the average order value by product category?",
+      "status": "BLOCKED",
+      "metric_refs": [
+        "average_order_value@1.0.0"
+      ],
+      "row_count": null,
+      "total_ms": 0.0,
+      "planner": "rules-demo",
+      "execution_mode": "DEMO_RULE_BASED"
+    }
+  ],
+  "total": 50,
+  "limit": 3,
+  "offset": 0
+}

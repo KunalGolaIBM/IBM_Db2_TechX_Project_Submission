@@ -1,0 +1,2596 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "MetricGuard API",
+    "description": "Trustworthy AI analytics on IBM Db2: governed metrics, inspectable SQL, verification and audit.",
+    "version": "1.2.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/metrics": {
+      "get": {
+        "summary": "Metrics",
+        "operationId": "metrics_api_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/examples": {
+      "get": {
+        "summary": "Examples",
+        "operationId": "examples_api_examples_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExamplesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analyze": {
+      "post": {
+        "summary": "Analyze",
+        "operationId": "analyze_api_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Planner unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/audit": {
+      "get": {
+        "summary": "Audit List",
+        "operationId": "audit_list_api_audit_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ValidationStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditListResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/audit/{request_id}": {
+      "get": {
+        "summary": "Audit Detail",
+        "operationId": "audit_detail_api_audit__request_id__get",
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID returned by /api/analyze",
+              "title": "Request Id"
+            },
+            "description": "UUID returned by /api/analyze"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnalyzeOptions": {
+        "properties": {
+          "max_rows": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Max Rows",
+            "description": "Maximum rows returned in result.rows",
+            "default": 100
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AnalyzeOptions"
+      },
+      "AnalyzeRequest": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 3,
+            "title": "Question",
+            "examples": [
+              "What was net revenue by month in H1 2026?"
+            ]
+          },
+          "options": {
+            "$ref": "#/components/schemas/AnalyzeOptions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "title": "AnalyzeRequest"
+      },
+      "AnalyzeResponse": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "api_version": {
+            "type": "string",
+            "title": "Api Version"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ValidationStatus"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Answer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueryPlan"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assumptions": {
+            "items": {
+              "$ref": "#/components/schemas/Assumption"
+            },
+            "type": "array",
+            "title": "Assumptions"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/MetricUsage"
+            },
+            "type": "array",
+            "title": "Metrics"
+          },
+          "sql": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SqlBlock"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResultBlock"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "chart": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChartSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "verification": {
+            "$ref": "#/components/schemas/Verification"
+          },
+          "clarification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Clarification"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "timing": {
+            "$ref": "#/components/schemas/Timing"
+          },
+          "planner": {
+            "$ref": "#/components/schemas/PlannerInfo"
+          },
+          "audit": {
+            "$ref": "#/components/schemas/AuditRef"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "created_at",
+          "api_version",
+          "status",
+          "question",
+          "answer",
+          "plan",
+          "assumptions",
+          "metrics",
+          "sql",
+          "result",
+          "chart",
+          "verification",
+          "clarification",
+          "timing",
+          "planner",
+          "audit",
+          "error"
+        ],
+        "title": "AnalyzeResponse"
+      },
+      "Answer": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "description": "One or two plain-language sentences generated from result values"
+          },
+          "headline": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Headline"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "summary"
+        ],
+        "title": "Answer"
+      },
+      "Assumption": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "examples": [
+              "DEFAULT_DATE_RANGE"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "Assumption"
+      },
+      "AuditDetail": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "api_version": {
+            "type": "string",
+            "title": "Api Version"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ValidationStatus"
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Reason"
+          },
+          "planner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planner"
+          },
+          "metric_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Metric Refs"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueryPlan"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sql": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuditSql"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "verification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Verification"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "result_preview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResultBlock"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "First 20 rows of the result"
+          },
+          "row_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Count"
+          },
+          "timing": {
+            "$ref": "#/components/schemas/AuditTiming"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "execution_mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "LLM",
+                  "DEMO_RULE_BASED"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Mode"
+          },
+          "planner_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planner Model"
+          },
+          "metric_definitions": {
+            "items": {
+              "$ref": "#/components/schemas/AuditMetricDefinition"
+            },
+            "type": "array",
+            "title": "Metric Definitions"
+          },
+          "answer_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Summary"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "created_at",
+          "api_version",
+          "question",
+          "status",
+          "status_reason",
+          "planner",
+          "metric_refs",
+          "plan",
+          "sql",
+          "verification",
+          "result_preview",
+          "row_count",
+          "timing",
+          "error"
+        ],
+        "title": "AuditDetail"
+      },
+      "AuditListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "AuditListResponse"
+      },
+      "AuditMetricDefinition": {
+        "properties": {
+          "ref": {
+            "type": "string",
+            "title": "Ref",
+            "examples": [
+              "net_revenue@1.0.0"
+            ]
+          },
+          "definition_hash": {
+            "type": "string",
+            "title": "Definition Hash"
+          },
+          "db2_hash_match": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Db2 Hash Match",
+            "description": "null when the Db2 registry was not read"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ref",
+          "definition_hash"
+        ],
+        "title": "AuditMetricDefinition"
+      },
+      "AuditRef": {
+        "properties": {
+          "persisted": {
+            "type": "boolean",
+            "title": "Persisted"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url",
+            "examples": [
+              "/api/audit/0b6f..."
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "persisted"
+        ],
+        "title": "AuditRef"
+      },
+      "AuditSql": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "parameters": {
+            "items": {
+              "$ref": "#/components/schemas/SqlParameterOut"
+            },
+            "type": "array",
+            "title": "Parameters"
+          },
+          "sql_hash": {
+            "type": "string",
+            "title": "Sql Hash"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text",
+          "parameters",
+          "sql_hash"
+        ],
+        "title": "AuditSql"
+      },
+      "AuditSummary": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ValidationStatus"
+          },
+          "metric_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Metric Refs",
+            "examples": [
+              [
+                "net_revenue@1.0.0"
+              ]
+            ]
+          },
+          "row_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Count"
+          },
+          "total_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Ms"
+          },
+          "planner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planner"
+          },
+          "execution_mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "LLM",
+                  "DEMO_RULE_BASED"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Mode",
+            "description": "null for rows written before v1.1.0"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "created_at",
+          "question",
+          "status",
+          "metric_refs",
+          "row_count",
+          "total_ms",
+          "planner"
+        ],
+        "title": "AuditSummary"
+      },
+      "AuditTiming": {
+        "properties": {
+          "total_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Ms"
+          },
+          "planning_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planning Ms"
+          },
+          "validation_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validation Ms"
+          },
+          "execution_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Ms"
+          },
+          "verification_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Ms"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "total_ms",
+          "planning_ms",
+          "validation_ms",
+          "execution_ms",
+          "verification_ms"
+        ],
+        "title": "AuditTiming"
+      },
+      "ChartAxis": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field",
+          "label"
+        ],
+        "title": "ChartAxis"
+      },
+      "ChartPoint": {
+        "properties": {
+          "x": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X"
+          },
+          "y": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Y"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "ChartPoint"
+      },
+      "ChartSeries": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "description": "Stable series id: metric name, or '<metric>:<dimension value>'"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "COUNT",
+              "RATIO"
+            ],
+            "title": "Unit"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ChartPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "metric",
+          "unit",
+          "points"
+        ],
+        "title": "ChartSeries"
+      },
+      "ChartSpec": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "kpi",
+              "line",
+              "bar",
+              "grouped_bar",
+              "table"
+            ],
+            "title": "Type"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "x": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChartAxis"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/ChartSeries"
+            },
+            "type": "array",
+            "title": "Series"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "title",
+          "x",
+          "series"
+        ],
+        "title": "ChartSpec"
+      },
+      "CheckStatus": {
+        "type": "string",
+        "enum": [
+          "PASS",
+          "WARN",
+          "FAIL",
+          "SKIPPED"
+        ],
+        "title": "CheckStatus"
+      },
+      "Clarification": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/ClarificationOption"
+            },
+            "type": "array",
+            "minItems": 2,
+            "title": "Options"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "prompt",
+          "options"
+        ],
+        "title": "Clarification"
+      },
+      "ClarificationOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "suggested_question": {
+            "type": "string",
+            "title": "Suggested Question",
+            "description": "Re-submit this text as a new question to pick the option"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "description",
+          "suggested_question"
+        ],
+        "title": "ClarificationOption"
+      },
+      "DataCoverage": {
+        "properties": {
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
+          "timezone": {
+            "type": "string",
+            "const": "UTC",
+            "title": "Timezone",
+            "default": "UTC"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "start_date",
+          "end_date"
+        ],
+        "title": "DataCoverage"
+      },
+      "DatabaseHealth": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down"
+            ],
+            "title": "Status"
+          },
+          "vendor": {
+            "type": "string",
+            "const": "IBM Db2",
+            "title": "Vendor",
+            "default": "IBM Db2"
+          },
+          "server_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Server Version",
+            "examples": [
+              "DB2/LINUXX8664 12.01.0500"
+            ]
+          },
+          "service_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service Level",
+            "examples": [
+              "DB2 v12.1.5.0"
+            ]
+          },
+          "database": {
+            "type": "string",
+            "title": "Database"
+          },
+          "schema_name": {
+            "type": "string",
+            "title": "Schema Name",
+            "examples": [
+              "METRICGUARD"
+            ]
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "tables_present": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tables Present"
+          },
+          "tables_expected": {
+            "type": "integer",
+            "title": "Tables Expected",
+            "default": 6
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "database",
+          "schema_name"
+        ],
+        "title": "DatabaseHealth"
+      },
+      "DateRange": {
+        "properties": {
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date",
+            "description": "Inclusive, UTC calendar date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date",
+            "description": "Inclusive, UTC calendar date"
+          },
+          "attribution": {
+            "type": "string",
+            "const": "order_date",
+            "title": "Attribution",
+            "default": "order_date"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "explicit",
+              "default"
+            ],
+            "title": "Source",
+            "description": "'default' means the question named no period and the registry default was used",
+            "default": "explicit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start_date",
+          "end_date"
+        ],
+        "title": "DateRange"
+      },
+      "DimensionInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "data_type": {
+            "type": "string",
+            "const": "string",
+            "title": "Data Type"
+          },
+          "allowed_values": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowed Values"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "display_name",
+          "description",
+          "data_type",
+          "allowed_values"
+        ],
+        "title": "DimensionInfo"
+      },
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Details"
+          },
+          "sqlstate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sqlstate",
+            "description": "Db2 SQLSTATE when the error came from Db2"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody"
+      },
+      "ErrorCode": {
+        "type": "string",
+        "enum": [
+          "INVALID_REQUEST",
+          "AUDIT_NOT_FOUND",
+          "DATABASE_UNAVAILABLE",
+          "PLANNER_UNAVAILABLE",
+          "QUERY_TIMEOUT",
+          "DB2_ERROR",
+          "NOT_IMPLEMENTED",
+          "INTERNAL_ERROR"
+        ],
+        "title": "ErrorCode"
+      },
+      "ErrorDetail": {
+        "properties": {
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field",
+            "description": "Request field path, e.g. 'question'"
+          },
+          "issue": {
+            "type": "string",
+            "title": "Issue"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "issue"
+        ],
+        "title": "ErrorDetail"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse"
+      },
+      "ExampleInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "trend",
+              "comparison",
+              "ranking",
+              "kpi",
+              "governance"
+            ],
+            "title": "Category"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "expected_status": {
+            "$ref": "#/components/schemas/ValidationStatus"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "question",
+          "category",
+          "description",
+          "expected_status"
+        ],
+        "title": "ExampleInfo"
+      },
+      "ExamplesResponse": {
+        "properties": {
+          "examples": {
+            "items": {
+              "$ref": "#/components/schemas/ExampleInfo"
+            },
+            "type": "array",
+            "title": "Examples"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "examples"
+        ],
+        "title": "ExamplesResponse"
+      },
+      "FilterClause": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field",
+            "examples": [
+              "region"
+            ]
+          },
+          "operator": {
+            "type": "string",
+            "const": "in",
+            "title": "Operator",
+            "default": "in"
+          },
+          "values": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Values",
+            "examples": [
+              [
+                "EMEA"
+              ]
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "field",
+          "values"
+        ],
+        "title": "FilterClause"
+      },
+      "FilterInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "operators": {
+            "items": {
+              "type": "string",
+              "const": "in"
+            },
+            "type": "array",
+            "title": "Operators"
+          },
+          "allowed_values": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allowed Values"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "display_name",
+          "operators",
+          "allowed_values"
+        ],
+        "title": "FilterInfo"
+      },
+      "Headline": {
+        "properties": {
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "COUNT",
+              "RATIO"
+            ],
+            "title": "Unit"
+          },
+          "formatted": {
+            "type": "string",
+            "title": "Formatted",
+            "examples": [
+              "$615,704.13",
+              "7.78%",
+              "2,581"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "metric",
+          "label",
+          "value",
+          "unit",
+          "formatted"
+        ],
+        "title": "Headline"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status"
+          },
+          "api_version": {
+            "type": "string",
+            "title": "Api Version"
+          },
+          "service_version": {
+            "type": "string",
+            "title": "Service Version"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Time"
+          },
+          "database": {
+            "$ref": "#/components/schemas/DatabaseHealth"
+          },
+          "registry": {
+            "$ref": "#/components/schemas/RegistryHealth"
+          },
+          "planner": {
+            "$ref": "#/components/schemas/PlannerHealth"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "api_version",
+          "service_version",
+          "time",
+          "database",
+          "registry",
+          "planner"
+        ],
+        "title": "HealthResponse"
+      },
+      "MetricInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "calculation": {
+            "type": "string",
+            "title": "Calculation"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "COUNT",
+              "RATIO"
+            ],
+            "title": "Unit"
+          },
+          "scale": {
+            "type": "integer",
+            "title": "Scale"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "BASE",
+              "DERIVED"
+            ],
+            "title": "Kind"
+          },
+          "additive": {
+            "type": "boolean",
+            "title": "Additive"
+          },
+          "eligible_order_statuses": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Eligible Order Statuses"
+          },
+          "date_attribution": {
+            "type": "string",
+            "title": "Date Attribution"
+          },
+          "null_handling": {
+            "type": "string",
+            "title": "Null Handling"
+          },
+          "refund_treatment": {
+            "type": "string",
+            "title": "Refund Treatment"
+          },
+          "discount_treatment": {
+            "type": "string",
+            "title": "Discount Treatment"
+          },
+          "allowed_dimensions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allowed Dimensions"
+          },
+          "allowed_filters": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allowed Filters"
+          },
+          "synonyms": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Synonyms"
+          },
+          "lifecycle_status": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "DRAFT",
+              "DEPRECATED"
+            ],
+            "title": "Lifecycle Status"
+          },
+          "owner": {
+            "type": "string",
+            "title": "Owner"
+          },
+          "definition_hash": {
+            "type": "string",
+            "title": "Definition Hash"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "version",
+          "display_name",
+          "description",
+          "calculation",
+          "unit",
+          "scale",
+          "kind",
+          "additive",
+          "eligible_order_statuses",
+          "date_attribution",
+          "null_handling",
+          "refund_treatment",
+          "discount_treatment",
+          "allowed_dimensions",
+          "allowed_filters",
+          "synonyms",
+          "lifecycle_status",
+          "owner",
+          "definition_hash"
+        ],
+        "title": "MetricInfo"
+      },
+      "MetricRef": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "examples": [
+              "net_revenue"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "examples": [
+              "1.0.0"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "version"
+        ],
+        "title": "MetricRef"
+      },
+      "MetricUsage": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "COUNT",
+              "RATIO"
+            ],
+            "title": "Unit"
+          },
+          "scale": {
+            "type": "integer",
+            "title": "Scale"
+          },
+          "definition_hash": {
+            "type": "string",
+            "title": "Definition Hash"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "version",
+          "display_name",
+          "unit",
+          "scale",
+          "definition_hash"
+        ],
+        "title": "MetricUsage"
+      },
+      "MetricsResponse": {
+        "properties": {
+          "registry_fingerprint": {
+            "type": "string",
+            "title": "Registry Fingerprint"
+          },
+          "data_coverage": {
+            "$ref": "#/components/schemas/DataCoverage"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/MetricInfo"
+            },
+            "type": "array",
+            "title": "Metrics"
+          },
+          "dimensions": {
+            "items": {
+              "$ref": "#/components/schemas/DimensionInfo"
+            },
+            "type": "array",
+            "title": "Dimensions"
+          },
+          "filters": {
+            "items": {
+              "$ref": "#/components/schemas/FilterInfo"
+            },
+            "type": "array",
+            "title": "Filters"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "registry_fingerprint",
+          "data_coverage",
+          "metrics",
+          "dimensions",
+          "filters"
+        ],
+        "title": "MetricsResponse"
+      },
+      "OrderBy": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field",
+            "description": "A metric name or a dimension name in this plan"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "title": "Direction",
+            "default": "asc"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field"
+        ],
+        "title": "OrderBy"
+      },
+      "PlannerHealth": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "not_configured"
+            ],
+            "title": "Status"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider",
+            "examples": [
+              "meta",
+              "anthropic",
+              "metricguard-rules"
+            ]
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "execution_mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "LLM",
+                  "DEMO_RULE_BASED"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Mode",
+            "description": "Mode POST /api/analyze will use: LLM (LangChain + a real model provider) or DEMO_RULE_BASED. null when no planner is available."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "PlannerHealth"
+      },
+      "PlannerInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "examples": [
+              "langchain-meta",
+              "langchain-anthropic",
+              "rules-demo"
+            ]
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model",
+            "description": "LLM model id; null for the rule-based demo planner"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "meta",
+                  "anthropic",
+                  "metricguard-rules"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider",
+            "description": "Who produced the plan (added in 1.2.0). 'meta' = Meta Model API, 'anthropic' = Anthropic, 'metricguard-rules' = the deterministic demo planner."
+          },
+          "execution_mode": {
+            "type": "string",
+            "enum": [
+              "LLM",
+              "DEMO_RULE_BASED"
+            ],
+            "title": "Execution Mode",
+            "description": "LLM: plan produced by LangChain + a real model provider (see `provider`). DEMO_RULE_BASED: deterministic keyword rules, not an LLM - the UI must disclose this."
+          },
+          "disclosure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disclosure",
+            "description": "User-facing disclosure text; set for DEMO_RULE_BASED"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "execution_mode"
+        ],
+        "title": "PlannerInfo"
+      },
+      "QueryPlan": {
+        "properties": {
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/MetricRef"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Metrics"
+          },
+          "dimensions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 2,
+            "title": "Dimensions"
+          },
+          "filters": {
+            "items": {
+              "$ref": "#/components/schemas/FilterClause"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Filters"
+          },
+          "date_range": {
+            "$ref": "#/components/schemas/DateRange"
+          },
+          "order_by": {
+            "items": {
+              "$ref": "#/components/schemas/OrderBy"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Order By"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit",
+            "description": "Top-N limit; null = no explicit limit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metrics",
+          "date_range"
+        ],
+        "title": "QueryPlan"
+      },
+      "Reason": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ],
+            "title": "Severity"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "severity",
+          "message"
+        ],
+        "title": "Reason"
+      },
+      "RegistryHealth": {
+        "properties": {
+          "metrics": {
+            "type": "integer",
+            "title": "Metrics"
+          },
+          "fingerprint": {
+            "type": "string",
+            "title": "Fingerprint"
+          },
+          "db_hash_match": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Db Hash Match",
+            "description": "null when Db2 is down"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "metrics",
+          "fingerprint"
+        ],
+        "title": "RegistryHealth"
+      },
+      "ResultBlock": {
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ResultColumn"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "row_count": {
+            "type": "integer",
+            "title": "Row Count"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "columns",
+          "rows",
+          "row_count",
+          "truncated"
+        ],
+        "title": "ResultBlock"
+      },
+      "ResultColumn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Key used in result.rows objects"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "dimension",
+              "metric"
+            ],
+            "title": "Role"
+          },
+          "data_type": {
+            "type": "string",
+            "enum": [
+              "string",
+              "integer",
+              "decimal"
+            ],
+            "title": "Data Type"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "USD",
+                  "COUNT",
+                  "RATIO"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "scale": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scale"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "role",
+          "data_type"
+        ],
+        "title": "ResultColumn"
+      },
+      "SqlBlock": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Exact SQL text sent to Db2 (parameter markers, not interpolated values)"
+          },
+          "dialect": {
+            "type": "string",
+            "const": "db2",
+            "title": "Dialect",
+            "default": "db2"
+          },
+          "parameters": {
+            "items": {
+              "$ref": "#/components/schemas/SqlParameterOut"
+            },
+            "type": "array",
+            "title": "Parameters"
+          },
+          "generated_by": {
+            "type": "string",
+            "const": "metricguard-compiler",
+            "title": "Generated By",
+            "default": "metricguard-compiler"
+          },
+          "sql_hash": {
+            "type": "string",
+            "title": "Sql Hash",
+            "description": "SHA-256 of text"
+          },
+          "tables": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tables"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text",
+          "parameters",
+          "sql_hash",
+          "tables"
+        ],
+        "title": "SqlBlock"
+      },
+      "SqlParameterOut": {
+        "properties": {
+          "position": {
+            "type": "integer",
+            "title": "Position",
+            "description": "1-based position of the '?' marker"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Semantic name, e.g. date_start_inclusive"
+          },
+          "db2_type": {
+            "type": "string",
+            "title": "Db2 Type",
+            "examples": [
+              "TIMESTAMP",
+              "VARCHAR(16)"
+            ]
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "position",
+          "name",
+          "db2_type",
+          "value"
+        ],
+        "title": "SqlParameterOut"
+      },
+      "Timing": {
+        "properties": {
+          "total_ms": {
+            "type": "number",
+            "title": "Total Ms"
+          },
+          "planning_ms": {
+            "type": "number",
+            "title": "Planning Ms"
+          },
+          "validation_ms": {
+            "type": "number",
+            "title": "Validation Ms"
+          },
+          "execution_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Ms"
+          },
+          "verification_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Ms"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "total_ms",
+          "planning_ms",
+          "validation_ms",
+          "execution_ms",
+          "verification_ms"
+        ],
+        "title": "Timing"
+      },
+      "ValidationStatus": {
+        "type": "string",
+        "enum": [
+          "VERIFIED",
+          "EXECUTED_WITH_WARNINGS",
+          "AMBIGUOUS",
+          "BLOCKED",
+          "EXECUTION_FAILED"
+        ],
+        "title": "ValidationStatus"
+      },
+      "Verification": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ValidationStatus"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/Reason"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/VerificationCheck"
+            },
+            "type": "array",
+            "title": "Checks"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "summary",
+          "reasons",
+          "checks"
+        ],
+        "title": "Verification"
+      },
+      "VerificationCheck": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "examples": [
+              "V09"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "examples": [
+              "reconciliation"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/CheckStatus"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "status",
+          "detail"
+        ],
+        "title": "VerificationCheck"
+      }
+    }
+  }
+}

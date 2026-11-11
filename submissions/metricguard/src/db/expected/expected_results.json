@@ -1,0 +1,387 @@
+{
+  "seed": 20260107,
+  "dataset": {
+    "products": 40,
+    "orders": 2924,
+    "order_items": 6540,
+    "refunds": 1032
+  },
+  "examples": [
+    {
+      "id": "ex-01-net-revenue-trend",
+      "question": "What was net revenue by month in the first half of 2026?",
+      "plan": {
+        "metrics": [
+          {
+            "name": "net_revenue",
+            "version": "1.0.0"
+          }
+        ],
+        "dimensions": [
+          "order_month"
+        ],
+        "filters": [],
+        "date_range": {
+          "start_date": "2026-01-01",
+          "end_date": "2026-06-30",
+          "attribution": "order_date",
+          "source": "explicit"
+        },
+        "order_by": [],
+        "limit": null
+      },
+      "expected_rows_before_order_limit": [
+        {
+          "order_month": "2026-01",
+          "net_revenue": "95931.95"
+        },
+        {
+          "order_month": "2026-02",
+          "net_revenue": "84776.81"
+        },
+        {
+          "order_month": "2026-03",
+          "net_revenue": "109725.04"
+        },
+        {
+          "order_month": "2026-04",
+          "net_revenue": "98382.98"
+        },
+        {
+          "order_month": "2026-05",
+          "net_revenue": "115794.10"
+        },
+        {
+          "order_month": "2026-06",
+          "net_revenue": "111093.25"
+        }
+      ]
+    },
+    {
+      "id": "ex-02-region-refunds-q1",
+      "question": "Compare gross revenue, refund amount and refund rate by region for Q1 2026.",
+      "plan": {
+        "metrics": [
+          {
+            "name": "gross_revenue",
+            "version": "1.0.0"
+          },
+          {
+            "name": "refund_amount",
+            "version": "1.0.0"
+          },
+          {
+            "name": "refund_rate",
+            "version": "1.0.0"
+          }
+        ],
+        "dimensions": [
+          "region"
+        ],
+        "filters": [],
+        "date_range": {
+          "start_date": "2026-01-01",
+          "end_date": "2026-03-31",
+          "attribution": "order_date",
+          "source": "explicit"
+        },
+        "order_by": [],
+        "limit": null
+      },
+      "expected_rows_before_order_limit": [
+        {
+          "region": "APAC",
+          "gross_revenue": "69291.82",
+          "refund_amount": "5040.25",
+          "refund_rate": "0.072739"
+        },
+        {
+          "region": "EMEA",
+          "gross_revenue": "85880.72",
+          "refund_amount": "6588.25",
+          "refund_rate": "0.076714"
+        },
+        {
+          "region": "LATAM",
+          "gross_revenue": "28756.06",
+          "refund_amount": "1467.35",
+          "refund_rate": "0.051028"
+        },
+        {
+          "region": "NA",
+          "gross_revenue": "126723.76",
+          "refund_amount": "7122.71",
+          "refund_rate": "0.056207"
+        }
+      ]
+    },
+    {
+      "id": "ex-03-aov-by-channel-q2",
+      "question": "What was the average order value and order count by sales channel in Q2 2026?",
+      "plan": {
+        "metrics": [
+          {
+            "name": "average_order_value",
+            "version": "1.0.0"
+          },
+          {
+            "name": "order_count",
+            "version": "1.0.0"
+          }
+        ],
+        "dimensions": [
+          "channel"
+        ],
+        "filters": [],
+        "date_range": {
+          "start_date": "2026-04-01",
+          "end_date": "2026-06-30",
+          "attribution": "order_date",
+          "source": "explicit"
+        },
+        "order_by": [],
+        "limit": null
+      },
+      "expected_rows_before_order_limit": [
+        {
+          "channel": "MARKETPLACE",
+          "average_order_value": "257.20",
+          "order_count": 140
+        },
+        {
+          "channel": "MOBILE",
+          "average_order_value": "255.82",
+          "order_count": 426
+        },
+        {
+          "channel": "STORE",
+          "average_order_value": "269.84",
+          "order_count": 207
+        },
+        {
+          "channel": "WEB",
+          "average_order_value": "249.00",
+          "order_count": 627
+        }
+      ]
+    },
+    {
+      "id": "ex-04-category-refund-rate",
+      "question": "Which product categories had the highest refund rate in H1 2026?",
+      "plan": {
+        "metrics": [
+          {
+            "name": "refund_rate",
+            "version": "1.0.0"
+          },
+          {
+            "name": "refund_amount",
+            "version": "1.0.0"
+          },
+          {
+            "name": "gross_revenue",
+            "version": "1.0.0"
+          }
+        ],
+        "dimensions": [
+          "product_category"
+        ],
+        "filters": [],
+        "date_range": {
+          "start_date": "2026-01-01",
+          "end_date": "2026-06-30",
+          "attribution": "order_date",
+          "source": "explicit"
+        },
+        "order_by": [
+          {
+            "field": "refund_rate",
+            "direction": "desc"
+          }
+        ],
+        "limit": null
+      },
+      "expected_rows_before_order_limit": [
+        {
+          "product_category": "APPAREL",
+          "refund_rate": "0.075580",
+          "refund_amount": "7664.35",
+          "gross_revenue": "101406.88"
+        },
+        {
+          "product_category": "BEAUTY",
+          "refund_rate": "0.064089",
+          "refund_amount": "4206.86",
+          "gross_revenue": "65640.72"
+        },
+        {
+          "product_category": "ELECTRONICS",
+          "refund_rate": "0.078763",
+          "refund_amount": "15492.94",
+          "gross_revenue": "196702.44"
+        },
+        {
+          "product_category": "HOME",
+          "refund_rate": "0.072883",
+          "refund_amount": "10226.96",
+          "gross_revenue": "140320.49"
+        },
+        {
+          "product_category": "SPORTS",
+          "refund_rate": "0.087599",
+          "refund_amount": "14326.92",
+          "gross_revenue": "163551.63"
+        }
+      ]
+    },
+    {
+      "id": "ex-05-emea-monthly-q1",
+      "question": "Show net revenue and order count by month for EMEA in Q1 2026.",
+      "plan": {
+        "metrics": [
+          {
+            "name": "net_revenue",
+            "version": "1.0.0"
+          },
+          {
+            "name": "order_count",
+            "version": "1.0.0"
+          }
+        ],
+        "dimensions": [
+          "order_month"
+        ],
+        "filters": [
+          {
+            "field": "region",
+            "operator": "in",
+            "values": [
+              "EMEA"
+            ]
+          }
+        ],
+        "date_range": {
+          "start_date": "2026-01-01",
+          "end_date": "2026-03-31",
+          "attribution": "order_date",
+          "source": "explicit"
+        },
+        "order_by": [],
+        "limit": null
+      },
+      "expected_rows_before_order_limit": [
+        {
+          "order_month": "2026-01",
+          "net_revenue": "25347.46",
+          "order_count": 114
+        },
+        {
+          "order_month": "2026-02",
+          "net_revenue": "22552.32",
+          "order_count": 95
+        },
+        {
+          "order_month": "2026-03",
+          "net_revenue": "31392.69",
+          "order_count": 130
+        }
+      ]
+    },
+    {
+      "id": "ex-06-march-kpis",
+      "question": "How many orders did we complete in March 2026, and what was the AOV?",
+      "plan": {
+        "metrics": [
+          {
+            "name": "order_count",
+            "version": "1.0.0"
+          },
+          {
+            "name": "average_order_value",
+            "version": "1.0.0"
+          },
+          {
+            "name": "gross_revenue",
+            "version": "1.0.0"
+          }
+        ],
+        "dimensions": [],
+        "filters": [],
+        "date_range": {
+          "start_date": "2026-03-01",
+          "end_date": "2026-03-31",
+          "attribution": "order_date",
+          "source": "explicit"
+        },
+        "order_by": [],
+        "limit": null
+      },
+      "expected_rows_before_order_limit": [
+        {
+          "order_count": 426,
+          "average_order_value": "274.83",
+          "gross_revenue": "117078.14"
+        }
+      ]
+    },
+    {
+      "id": "ex-07-top-web-categories-q2",
+      "question": "What were the top 3 product categories by net revenue on the web channel in Q2 2026?",
+      "plan": {
+        "metrics": [
+          {
+            "name": "net_revenue",
+            "version": "1.0.0"
+          }
+        ],
+        "dimensions": [
+          "product_category"
+        ],
+        "filters": [
+          {
+            "field": "channel",
+            "operator": "in",
+            "values": [
+              "WEB"
+            ]
+          }
+        ],
+        "date_range": {
+          "start_date": "2026-04-01",
+          "end_date": "2026-06-30",
+          "attribution": "order_date",
+          "source": "explicit"
+        },
+        "order_by": [
+          {
+            "field": "net_revenue",
+            "direction": "desc"
+          }
+        ],
+        "limit": 3
+      },
+      "expected_rows_before_order_limit": [
+        {
+          "product_category": "APPAREL",
+          "net_revenue": "21801.83"
+        },
+        {
+          "product_category": "BEAUTY",
+          "net_revenue": "14367.80"
+        },
+        {
+          "product_category": "ELECTRONICS",
+          "net_revenue": "38877.93"
+        },
+        {
+          "product_category": "HOME",
+          "net_revenue": "31735.53"
+        },
+        {
+          "product_category": "SPORTS",
+          "net_revenue": "34809.96"
+        }
+      ]
+    }
+  ]
+}

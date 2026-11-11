@@ -1,0 +1,29 @@
+{
+  "status": "ok",
+  "api_version": "1.1.0",
+  "service_version": "0.2.0",
+  "time": "2026-11-07T20:36:44.521113Z",
+  "database": {
+    "status": "up",
+    "vendor": "IBM Db2",
+    "server_version": "DB2/LINUXX8664 12.01.0500",
+    "service_level": "DB2 v12.1.5.0",
+    "database": "MGDB",
+    "schema_name": "METRICGUARD",
+    "latency_ms": 5.4,
+    "tables_present": 6,
+    "tables_expected": 6,
+    "error": null
+  },
+  "registry": {
+    "metrics": 6,
+    "fingerprint": "0c78f16f500bb55d516877d2d9bd0d8124bb2ae7bd3a086a1ea4fa8ed16cd362",
+    "db_hash_match": true
+  },
+  "planner": {
+    "status": "ready",
+    "provider": "metricguard-rules",
+    "model": null,
+    "execution_mode": "DEMO_RULE_BASED"
+  }
+}
