@@ -66,7 +66,7 @@ The 24 tests run offline against a recording fake connection. They cover SQLCODE
 **Verified end to end** on Db2 Community Edition 12.1.5 (Docker image `icr.io/db2_community/db2`): `ingest` loaded 41 rows into both tables, the three `ask` examples below returned the expected codes, and `stats` reported them. The screenshots show the real output.
 
 ## Screenshots & Demo
-- **Demo Video Link:** to be added
+- **Demo Video Link:** [Watch on YouTube](https://youtu.be/MOUpK0SBgk8) (2 min 50 s, captioned)
 
 | | |
 |---|---|

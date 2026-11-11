@@ -6,7 +6,7 @@
     "short_description": "Paste a Db2 error and get its cause and fix: exact SQLCODE lookup first, Db2 vector search through LangChain when the message has no code.",
     "category": "AI / RAG / Developer Tooling",
     "demo_url": "",
-    "video_url": "",
+    "video_url": "https://youtu.be/MOUpK0SBgk8",
     "repo_url": "https://github.com/Prabodh1231/IBM_Db2_TechX_Project_Submission"
   },
   "team": {
