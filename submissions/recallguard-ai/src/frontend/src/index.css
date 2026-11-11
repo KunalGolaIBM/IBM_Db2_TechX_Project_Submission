@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root { color-scheme: dark; }
+  html, body, #root { height: 100%; }
+  body {
+    @apply bg-ink-950 text-slate-200 font-sans antialiased;
+    background-image:
+      radial-gradient(1200px 600px at 85% -10%, rgba(14, 165, 233, 0.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(16, 185, 129, 0.06), transparent 60%);
+    background-attachment: fixed;
+  }
+  ::selection { background: rgba(34, 211, 238, 0.3); }
+  * { scrollbar-width: thin; scrollbar-color: #24365c transparent; }
+  :focus-visible { outline: 2px solid #22d3ee; outline-offset: 2px; border-radius: 6px; }
+}
+
+@layer components {
+  .glass {
+    @apply min-w-0 rounded-xl border border-line bg-ink-900/70 backdrop-blur-md;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  .label { @apply text-[11px] font-medium uppercase tracking-[0.08em] text-slate-400; }
+  .mono { @apply font-mono text-[12px]; }
+  .input {
+    @apply w-full rounded-lg border border-line bg-ink-950/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500
+           focus:border-cyan-500/60 focus:outline-none focus:ring-2 focus:ring-cyan-500/20;
+  }
+  .table-head { @apply px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wider text-slate-400; }
+  .table-cell { @apply px-3 py-2 text-sm text-slate-200; }
+}
+
+/* React Flow dark theme tweaks */
+.react-flow__attribution { display: none; }
+.react-flow__controls button { background: #111d35; border-color: rgba(148,163,184,.15); color: #cbd5e1; fill: #cbd5e1; }
+.react-flow__controls button:hover { background: #1a2848; }
+.react-flow__minimap { background: #0a1222 !important; border-radius: 8px; }
