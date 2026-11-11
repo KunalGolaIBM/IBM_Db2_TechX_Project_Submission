@@ -1,0 +1,9 @@
+-- Idempotent upsert from staging into the system-period temporal READING table.
+-- Changed values become new versions; the old value moves to AQ.READING_HIST automatically.
+MERGE INTO AQ.READING r
+USING (SELECT STATION_ID, PARAM, TS, VALUE, UNIT_SRC FROM AQ.STAGE_READING) s
+  ON r.STATION_ID = s.STATION_ID AND r.PARAM = s.PARAM AND r.TS = s.TS
+WHEN MATCHED AND (r.VALUE IS DISTINCT FROM s.VALUE) THEN
+  UPDATE SET VALUE = s.VALUE, UNIT_SRC = s.UNIT_SRC
+WHEN NOT MATCHED THEN
+  INSERT (STATION_ID, PARAM, TS, VALUE, UNIT_SRC) VALUES (s.STATION_ID, s.PARAM, s.TS, s.VALUE, s.UNIT_SRC)@

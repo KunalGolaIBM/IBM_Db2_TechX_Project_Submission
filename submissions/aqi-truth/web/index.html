@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AQI Truth</title>
+<meta name="description" content="Delhi's AQI, re-audited hour by hour in IBM Db2 against CPCB's own rules. IBM Granite explains and answers questions; it never decides.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='26' height='26' fill='none' stroke='%23c8102e' stroke-width='3'/%3E%3Cpath d='M7 25 25 7' stroke='%23c8102e' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="i-term" viewBox="0 0 24 24"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><path d="M8 13h8M8 17h5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-5.5 10.2-7.4 11.8a1 1 0 0 1-1.2 0C9.5 20.2 4 15 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+  </defs>
+</svg>
+
+<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="#" aria-label="AQI Truth, top of page">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="3" width="26" height="26"/><path d="M7 25 25 7"/></svg>
+      <span>AQI Truth</span>
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#audit">Audit</a><a href="#ask">Ask</a><a href="#results">Results</a><a href="#method">Method</a>
+      <a href="https://youtu.be/sq1AwgmbHcQ" class="src">Video</a> <a href="https://github.com/debi910/aqi-truth" class="src">Source</a>
+    </nav>
+    <span id="status" class="status" data-state="checking"><i></i><span>Checking server…</span></span>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap" aria-labelledby="h1">
+    <div class="hero-copy">
+      <p class="kicker">Delhi · <span id="k-stations">34</span> monitors · 1 Sep – 31 Dec 2025</p>
+      <h1 id="h1">On <span class="num red" id="h-shown">338</span> station-days, a dashboard average still printed an AQI. CPCB's own rules say there was none.</h1>
+      <p class="lede">AQI Truth re-checks every monitor-hour inside <b>IBM Db2</b>, applies the CPCB method as stored procedures, and refuses when the data can't support a number. <b>IBM Granite</b> only explains verdicts and turns questions into read-only SQL. It never decides.</p>
+      <dl class="figures" id="figures"></dl>
+    </div>
+    <figure class="specimen" id="specimen" aria-live="polite">
+      <div class="sk" style="height:260px"></div>
+    </figure>
+  </section>
+
+  <section id="audit" class="band">
+    <div class="wrap">
+      <header class="sec-head">
+        <span class="sec-n">01</span>
+        <div><h2>Audit any station-day</h2>
+        <p>Pick a monitor on the map, then a day on its strip. Red means CPCB rules give no AQI, amber means one was computed only after throwing out bad readings.</p></div>
+      </header>
+      <div class="audit">
+        <div class="mapcol">
+          <div class="mapbox"><svg id="map" role="img" aria-label="Map of Delhi with the 34 monitors"></svg><div id="maptip" class="maptip" hidden></div></div>
+          <label class="field"><span>Station</span><select id="station"></select></label>
+          <p class="credit" id="mapcredit"></p>
+        </div>
+        <div class="daycol">
+          <div class="station-head">
+            <div><h3 id="st-name">—</h3><p id="st-sub" class="sub"></p></div>
+            <label class="field date"><span>Day</span><input id="day" type="date" min="2025-09-01" max="2025-12-31" value="2025-10-23"></label>
+          </div>
+          <div class="periods" id="periods" role="group" aria-label="Period" hidden></div>
+          <div class="strip" id="strip" role="listbox" aria-label="Days, September to December 2025"></div>
+          <div class="strip-legend"><span><i class="lg V"></i>valid</span><span><i class="lg S"></i>suspect</span><span><i class="lg N"></i>no AQI computable</span><span><i class="lg x"></i>not audited</span></div>
+          <div id="verdict" class="verdict" aria-live="polite"></div>
+          <div class="tabs" role="tablist" aria-label="Verdict detail">
+            <button role="tab" aria-selected="true" data-tab="why">Why</button>
+            <button role="tab" aria-selected="false" data-tab="hours">Hour by hour</button>
+            <button role="tab" aria-selected="false" data-tab="evidence">Evidence ledger</button>
+            <button role="tab" aria-selected="false" data-tab="receipt">Receipt</button>
+          </div>
+          <div class="panels">
+            <div class="panel" data-panel="why" id="p-why"></div>
+            <div class="panel" data-panel="hours" id="p-hours" hidden>
+              <div id="grid" class="grid"></div>
+              <div class="strip-legend"><span><i class="lg V"></i>valid hour</span><span><i class="lg short"></i>too few readings</span><span><i class="lg N"></i>only impossible values</span><span><i class="lg stuck"></i>stuck sensor</span><span><i class="lg x"></i>nothing arrived</span><span><i class="lg jump"></i>impossible jump</span></div>
+              <p class="fine">CPCB needs 16 valid hours for a 24-hour average, and 6 valid hours in the best 8-hour window for O₃ and CO.</p>
+            </div>
+            <div class="panel" data-panel="evidence" id="p-evidence" hidden>
+              <p class="fine"><svg class="ic"><use href="#i-lock"/></svg> Written by the stored procedure <code>AQ.COMPUTE_AQI_AUDITED</code>. Db2 triggers reject any later edit (SQLSTATE 75001).</p>
+              <div class="tablewrap"><table id="evidence"></table></div>
+            </div>
+            <div class="panel" data-panel="receipt" id="p-receipt" hidden></div>
+          </div>
+        </div>
+      </div>
+      <details class="allcal">
+        <summary>All 34 stations × 122 days</summary>
+        <div id="cal" class="cal"></div>
+      </details>
+    </div>
+  </section>
+
+  <section id="ask" class="wrap">
+    <header class="sec-head">
+      <span class="sec-n">02</span>
+      <div><h2>Ask the audit</h2>
+      <p>Granite writes one SQL query. Code checks it. Db2 runs it as <code>AQREADER</code>, a user that can only read two audited views, so the box can't change or leak anything else.</p></div>
+    </header>
+    <div class="seg" role="tablist" aria-label="Question mode" id="seg">
+      <span class="thumb" aria-hidden="true"></span>
+      <button role="tab" aria-selected="true" data-mode="live"><i class="dot"></i>Live</button>
+      <button role="tab" aria-selected="false" data-mode="rec"><svg class="ic"><use href="#i-history"/></svg>Recorded</button>
+    </div>
+    <div class="ask-stage">
+      <div class="askpane" data-pane="live" id="pane-live">
+        <form id="askform" class="askform" autocomplete="off">
+          <svg class="ic lead"><use href="#i-term"/></svg>
+          <input id="q" maxlength="300" placeholder="Which stations had the most days with no computable AQI in October?" aria-label="Your question">
+          <button class="btn primary" id="askbtn"><span>Ask</span><svg class="ic"><use href="#i-arrow"/></svg></button>
+        </form>
+        <div class="chips" id="chips"></div>
+        <ol class="pipe" id="pipe" hidden>
+          <li data-step="guard"><b>Scope guard</b><span>forecasts, health advice, blame</span></li>
+          <li data-step="model"><b>Granite writes SQL</b><span id="pipe-model">IBM Granite 4.0 micro, CPU</span></li>
+          <li data-step="check"><b>SQL checker</b><span>one SELECT, two views only</span></li>
+          <li data-step="db2"><b>Db2 runs it</b><span>as AQREADER, read-only</span></li>
+          <li data-step="done"><b>Answer</b><span id="pipe-done">rows from the audit</span></li>
+        </ol>
+        <div class="timer" id="timer" hidden></div>
+        <div id="answer" class="answer" aria-live="polite"></div>
+        <details class="asklog" id="asklog-box" hidden><summary>Recent questions on this server</summary><div id="asklog"></div></details>
+      </div>
+      <div class="askpane" data-pane="rec" id="pane-rec" hidden>
+        <p class="fine" id="rec-note"></p>
+        <div id="rec-list" class="rec-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="results" class="band">
+    <div class="wrap">
+      <header class="sec-head">
+        <span class="sec-n">03</span>
+        <div><h2>Does it work? Measured.</h2>
+        <p>Against a plain average and a min/max threshold rule, on planted faults and on the real data. Limits are stated next to each number.</p></div>
+      </header>
+      <div id="resultsbody" class="results"></div>
+    </div>
+  </section>
+
+  <section id="method" class="wrap">
+    <header class="sec-head">
+      <span class="sec-n">04</span>
+      <div><h2>How a verdict is made</h2>
+      <p>Everything a visitor sees is computed by SQL in Db2. The model sits outside the decision path.</p></div>
+    </header>
+    <div class="flow" id="flow">
+      <div class="node"><span class="tag">Ingest</span><b>OpenAQ archive</b><p>CPCB · DPCC · IITM · IMD monitors, 15-minute rows, CC BY 4.0</p></div>
+      <div class="node db"><span class="tag"><svg class="ic"><use href="#i-db"/></svg>Db2</span><b>AQ.READING</b><p>MERGE upsert · range-partitioned by month · system-period temporal (revisions stay queryable)</p></div>
+      <div class="node db"><span class="tag"><svg class="ic"><use href="#i-db"/></svg>Db2</span><b>BUILD_HOURLY</b><p>window functions find stuck runs and impossible jumps</p></div>
+      <div class="node db"><span class="tag"><svg class="ic"><use href="#i-db"/></svg>Db2</span><b>COMPUTE_AQI_AUDITED</b><p>SQL PL: 16-hour rule, 8-hour O₃/CO, 3 pollutants incl. a PM, CPCB breakpoints</p></div>
+      <div class="node db"><span class="tag"><svg class="ic"><use href="#i-lock"/></svg>Db2</span><b>Verdict + evidence ledger</b><p>append-only, enforced by triggers · VECTOR search over rule texts</p></div>
+      <div class="node ai"><span class="tag"><svg class="ic"><use href="#i-cpu"/></svg>Granite</span><b>Explain · Ask</b><p>numbers and words checked by code · SQL run as a read-only user</p></div>
+    </div>
+    <ul class="proof">
+      <li><b>Verifiable receipts</b>Every verdict gets a SHA-256 receipt of the exact readings and rules it judged, chained to the one before. <code>AQ.VERIFY_RECEIPT</code> replays the inputs <code>FOR SYSTEM_TIME AS OF</code> the issue time.</li>
+      <li><b>Row access control</b>A row permission on <code>AQ.VERDICT</code> hides the out-of-scope monitor from every ID without the <code>AQAUDITOR</code> role.</li>
+      <li><b>Least privilege</b>The app's ID can only <code>SELECT</code> and <code>INSERT</code>, the question box's ID can read two views, and even the owner gets <code>SQLSTATE 75001</code> on an edit.</li>
+      <li><b>Checked by one command</b><code>python scripts/db2_evidence.py</code> runs 25 Db2 claims against the live database and records each answer. <a href="https://github.com/debi910/aqi-truth/blob/main/docs/DB2_VERIFICATION.md">See the results</a></li>
+    </ul>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <p>Data: OpenAQ archive of CPCB, DPCC, IITM and IMD monitoring (CC BY 4.0). AQI method: CPCB National Air Quality Index. Map outline: DataMeet India (CC BY 4.0). Icons after Lucide (ISC).</p>
+    <p>Built on IBM Db2 12.1 and IBM Granite 4.0 · <a href="https://github.com/debi910/aqi-truth">github.com/debi910/aqi-truth</a></p>
+  </div>
+</footer>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

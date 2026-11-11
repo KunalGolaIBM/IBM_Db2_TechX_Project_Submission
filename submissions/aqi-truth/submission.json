@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "AQI Truth",
+    "slug": "aqi-truth",
+    "short_description": "IBM Db2 runs India's official CPCB AQI method on real Delhi monitor data and refuses to give an AQI when the data cannot support one, with an append-only evidence ledger, IBM Granite explanations checked by code, and a read-only natural-language question box.",
+    "category": "Data Engineering / Analytics / AI",
+    "demo_url": "https://debi910.github.io/aqi-truth/",
+    "video_url": "https://youtu.be/sq1AwgmbHcQ",
+    "repo_url": "https://github.com/debi910/aqi-truth"
+  },
+  "team": {
+    "name": "AQI Truth (solo)",
+    "members": [
+      {
+        "name": "Debi Prasad Samal",
+        "github": "debi910",
+        "email": "",
+        "role": "Solo: Db2 design, backend, AI, evaluation"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1.5 (Docker)",
+    "connector": "ibm_db / ibm_db_dbi",
+    "features_used": [
+      "Range partitioning",
+      "System-period temporal tables",
+      "MERGE",
+      "SQL PL stored procedures and functions",
+      "Window functions",
+      "Declared global temporary tables",
+      "Triggers (append-only ledger)",
+      "CHECK constraints",
+      "VECTOR data type and VECTOR_DISTANCE",
+      "Least-privilege authorization: read-only question-box ID on two views; SELECT+INSERT-only app ID",
+      "Row and column access control (row permission + column mask, AQAUDITOR role)",
+      "Query timeout (SQL_ATTR_QUERY_TIMEOUT)",
+      "RUNSTATS via SYSPROC.ADMIN_CMD",
+      "EXPLAIN (partition elimination evidence)",
+      "Materialized query table (REFRESH DEFERRED) with optimizer query rewrite",
+      "Application-period temporal table (PERIOD BUSINESS_TIME, WITHOUT OVERLAPS, FOR PORTION OF): bitemporal with the system-time READING table",
+      "Db2 monitoring (MON_GET_PKG_CACHE_STMT) and EXPLAIN_FROM_SECTION for question-box queries",
+      "Hash-chained SHA-256 receipts verified from system-time history (SQL PL)"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "SQL PL",
+      "JavaScript"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "LangChain (langchain-core LCEL chain + langchain-ollama) for the question box",
+      "Ollama (serves IBM Granite locally)",
+      "Docker Compose",
+      "pytest"
+    ],
+    "ai_models": [
+      "IBM Granite 4.0 micro",
+      "IBM Granite embedding multilingual 278M"
+    ]
+  }
+}

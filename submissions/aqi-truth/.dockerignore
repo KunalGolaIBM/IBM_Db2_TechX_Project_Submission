@@ -1,0 +1,6 @@
+.git
+.env
+data/raw
+db2data
+web/data
+**/__pycache__
