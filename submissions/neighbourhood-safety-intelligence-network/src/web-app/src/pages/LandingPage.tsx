@@ -94,7 +94,7 @@ export const LandingPage: React.FC = () => {
             <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-700 font-bold flex items-center justify-center text-sm mb-3">2</div>
             <h3 className="font-semibold text-slate-900 text-base">Backend Triage</h3>
             <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-              FastAPI backend validates authorization, notifies trusted contacts, and runs CrewAI intake.
+              FastAPI backend validates authorization, notifies trusted contacts, and runs AI triage intake.
             </p>
           </div>
 
@@ -212,7 +212,7 @@ export const LandingPage: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-slate-900">AI Safety Intelligence</h3>
             <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-              Haystack RAG knowledge engine and bounded CrewAI agents providing instant preliminary triage and safety checklists.
+              Haystack BM25 knowledge retrieval and bounded triage agents providing instant preliminary triage and safety checklists.
             </p>
             <ul className="mt-4 space-y-1.5 text-xs text-slate-500">
               <li className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-teal-600" /> Official municipal SOP citations</li>

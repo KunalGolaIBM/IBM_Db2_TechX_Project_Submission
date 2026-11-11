@@ -343,7 +343,7 @@ export const ResidentDashboard: React.FC = () => {
               {insights?.ai_safety_advisory || "Community corridor verified clear by verified volunteer patrols. Safe transit mode recommended after dusk."}
             </p>
             <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
-              Assisted by Haystack RAG & CrewAI Agentic Triage
+              Assisted by Haystack BM25 retrieval & triage agents
             </div>
           </div>
 

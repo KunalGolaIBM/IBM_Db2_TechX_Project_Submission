@@ -9,8 +9,8 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    email = Column(String(255), unique=True, index=True, nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(255), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False)
     phone = Column(String(50), nullable=True)
@@ -34,7 +34,7 @@ class User(Base):
 class TrustedContact(Base):
     __tablename__ = "trusted_contacts"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     name = Column(String(255), nullable=False)
     relationship = Column(String(100), nullable=False)
@@ -49,7 +49,7 @@ class TrustedContact(Base):
 class Responder(Base):
     __tablename__ = "responders"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
     badge_number = Column(String(100), nullable=False)
     service_type = Column(String(100), default="community_patrol")  # medical, security, fire, community_patrol
@@ -65,8 +65,8 @@ class Responder(Base):
 class Incident(Base):
     __tablename__ = "incidents"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    reference_code = Column(String(50), unique=True, index=True, nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    reference_code = Column(String(50), unique=True, nullable=False)
     reporter_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=False)
@@ -90,7 +90,7 @@ class Incident(Base):
 class IncidentStatusHistory(Base):
     __tablename__ = "incident_status_history"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=False, index=True)
     status = Column(String(50), nullable=False)
     notes = Column(Text, nullable=True)
@@ -103,7 +103,7 @@ class IncidentStatusHistory(Base):
 class LocationEvent(Base):
     __tablename__ = "location_events"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     latitude = Column(Float, nullable=False)
@@ -118,7 +118,7 @@ class LocationEvent(Base):
 class ChildJourney(Base):
     __tablename__ = "child_journeys"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     guardian_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     child_name = Column(String(255), nullable=False)
     origin = Column(String(255), nullable=False)
@@ -135,7 +135,7 @@ class ChildJourney(Base):
 class ElderCheckIn(Base):
     __tablename__ = "elder_checkins"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     scheduled_time = Column(DateTime, nullable=False)
     checked_in_at = Column(DateTime, nullable=True)
@@ -149,7 +149,7 @@ class ElderCheckIn(Base):
 class AssistanceRequest(Base):
     __tablename__ = "assistance_requests"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     request_type = Column(String(100), default="grocery")  # grocery, medicine, mobility, check_in, urgent
     description = Column(Text, nullable=False)
@@ -165,7 +165,7 @@ class AssistanceRequest(Base):
 class CommunityHazard(Base):
     __tablename__ = "community_hazards"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     reported_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     title = Column(String(255), nullable=False)
     hazard_type = Column(String(100), nullable=False)  # dark_street, road_block, aggressive_animals, electrical, flooding
@@ -182,7 +182,7 @@ class CommunityHazard(Base):
 class AIAnalysisRecord(Base):
     __tablename__ = "ai_analysis_records"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=False, unique=True)
     intake_summary = Column(Text, nullable=False)
     suggested_priority = Column(String(50), nullable=False)
@@ -196,7 +196,7 @@ class AIAnalysisRecord(Base):
 class AuditEvent(Base):
     __tablename__ = "audit_events"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     action = Column(String(100), nullable=False)
     resource_type = Column(String(100), nullable=False)

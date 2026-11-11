@@ -156,7 +156,7 @@ uvicorn backend.app.main:app --reload --port 8000
 # Terminal 2: web app
 npm --prefix src/web-app run dev        # http://localhost:5173
 ```
-To point a local backend at Db2, start only the database with `docker compose -f docker-compose.db2.yml up db2`, then set `DATABASE_MODE=db2` and the `DB2_*` values in `src/backend/.env`.
+To point a local backend at Db2, start only the database with `docker compose -f docker-compose.yml -f docker-compose.db2.yml up -d db2`, then set `DATABASE_MODE=db2` and the `DB2_*` values in `src/backend/.env`.
 
 ### Android app
 Open `src/android/` in Android Studio and run the `app` configuration on an emulator. The app targets `http://10.0.2.2:8000` (the host machine's backend) by default; on a physical device, change the base URL in the app's **Settings** screen to your machine's LAN IP.
@@ -205,6 +205,8 @@ cd src/android && gradle :app:testDebugUnitTest
 ```
 
 The 8 backend tests cover health, auth and profile, trusted contacts, the full incident lifecycle across resident and responder accounts, SOS, knowledge retrieval, the agent pipeline, and persistence of triage results (including the upsert and 404 paths).
+
+The full flow (schema creation, seeding, SOS, triage persistence and the responder lifecycle) has been run end to end against Db2 Community Edition in Docker.
 
 **Verifying the Db2 integration:**
 1. Start Option A and open http://localhost:8000/health: `database.mode` is `db2`, `connected` is `true` and `server_time` comes from Db2.

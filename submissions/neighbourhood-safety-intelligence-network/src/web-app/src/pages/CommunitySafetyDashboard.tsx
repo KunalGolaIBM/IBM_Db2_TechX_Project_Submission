@@ -117,7 +117,7 @@ export const CommunitySafetyDashboard: React.FC = () => {
         </div>
         <div>
           <span className="text-xs font-bold text-teal-400 uppercase tracking-wider block">
-            CrewAI Community Intelligence Synthesis
+            Community Intelligence Synthesis
           </span>
           <p className="text-sm text-slate-200 mt-1 leading-relaxed">
             {insights?.ai_safety_advisory || "Vigilance index optimal. Patrol routes active across Sector 4. No major violent hazards detected."}

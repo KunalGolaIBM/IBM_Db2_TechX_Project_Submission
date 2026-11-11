@@ -91,7 +91,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
             <span className="text-slate-400 block text-[11px] uppercase font-bold">AI Intelligence Engine</span>
             <span className="text-base font-extrabold text-white mt-1 block">
-              Haystack RAG + CrewAI
+              Haystack BM25 + Triage Agents
             </span>
             <span className="text-[11px] text-slate-300 mt-1 block">
               Agents: Intake, Triage, Knowledge, Insights

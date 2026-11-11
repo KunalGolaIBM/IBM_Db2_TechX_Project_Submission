@@ -227,10 +227,10 @@ class ApiService {
   }
 
   // --- AI Intelligence ---
-  async getIncidentAIAssistance(raw_text: string, incident_type?: string, location?: string): Promise<AIAnalysisResult> {
+  async getIncidentAIAssistance(raw_text: string, incident_type?: string, location?: string, incident_id?: number): Promise<AIAnalysisResult> {
     return this.request<AIAnalysisResult>('/api/v1/ai/incident-assistance', {
       method: 'POST',
-      body: JSON.stringify({ raw_text, incident_type, location_address: location }),
+      body: JSON.stringify({ raw_text, incident_type, location_address: location, incident_id }),
     });
   }
 

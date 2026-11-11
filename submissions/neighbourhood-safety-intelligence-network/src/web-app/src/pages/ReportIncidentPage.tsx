@@ -60,6 +60,14 @@ export const ReportIncidentPage: React.FC = () => {
         priority,
         location_address: locationAddress || undefined,
       });
+      if (aiResult) {
+        // Persist the triage analysis against the new incident (stored in ai_analysis_records).
+        try {
+          await api.getIncidentAIAssistance(description, incidentType, locationAddress, incident.id);
+        } catch (err) {
+          console.error("Saving AI triage failed:", err);
+        }
+      }
       navigate(`/incidents/${incident.id}`);
     } catch (err: any) {
       setError(err.message || 'Failed to submit incident report.');
@@ -126,7 +134,7 @@ export const ReportIncidentPage: React.FC = () => {
                 className="text-xs text-teal-700 hover:text-teal-800 font-semibold flex items-center gap-1.5 disabled:opacity-40"
               >
                 {analyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-teal-600" />}
-                Analyze with CrewAI Triage
+                Analyze with AI Triage
               </button>
             </div>
             <textarea
@@ -189,7 +197,7 @@ export const ReportIncidentPage: React.FC = () => {
           <div className="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 shadow-md space-y-4">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-teal-400" />
-              <h3 className="font-bold text-sm">CrewAI & Haystack Triage</h3>
+              <h3 className="font-bold text-sm">AI Triage · Haystack BM25</h3>
             </div>
 
             {aiResult ? (
@@ -247,12 +255,12 @@ export const ReportIncidentPage: React.FC = () => {
             ) : (
               <div className="text-xs text-slate-400 space-y-2 py-4">
                 <p>
-                  Type your incident description and click <strong>"Analyze with CrewAI Triage"</strong> to receive real-time assistance.
+                  Type your incident description and click <strong>"Analyze with AI Triage"</strong> to receive real-time assistance.
                 </p>
                 <ul className="space-y-1.5 text-[11px]">
                   <li>• Checks for missing location details</li>
                   <li>• Recommends priority level based on risk</li>
-                  <li>• Retrieves official civic safety SOPs via Haystack RAG</li>
+                  <li>• Retrieves official civic safety SOPs via Haystack BM25 retrieval</li>
                 </ul>
               </div>
             )}

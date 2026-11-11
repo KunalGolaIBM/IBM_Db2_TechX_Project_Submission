@@ -66,7 +66,7 @@ class Db2Adapter:
                 "database": self.database,
                 "host": self.host,
                 "port": self.port,
-                "server_time": str(row) if row else "OK",
+                "server_time": str(next(iter(row.values()))) if row else "OK",
                 "status": "Verified connection to IBM Db2"
             }
         except Exception as e:

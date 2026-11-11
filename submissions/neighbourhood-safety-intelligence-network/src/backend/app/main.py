@@ -56,8 +56,8 @@ def health_check():
         "environment": settings.APP_ENV,
         "database": db_status,
         "ai_features": {
-            "haystack_rag": "active",
-            "crewai_agents": "active"
+            "haystack_bm25_retrieval": "active",
+            "triage_agents": "active"
         }
     }
 
