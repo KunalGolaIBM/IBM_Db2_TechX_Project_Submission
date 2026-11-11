@@ -1,0 +1,8 @@
+# Lower bounds only: versions could not be resolved offline while this project was assembled.
+ibm_db>=3.2.0
+streamlit>=1.37
+plotly>=5.18
+pandas>=2.0
+langchain-core>=0.2
+python-dotenv>=1.0
+# Optional local model (see README "Optional local model"): pip install langchain-ollama
