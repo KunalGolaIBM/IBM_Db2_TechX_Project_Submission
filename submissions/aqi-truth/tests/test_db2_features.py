@@ -119,14 +119,14 @@ def test_tamper_test_leaves_no_trace(conn, app_conn):
 # Db2 monitoring
 
 def test_package_cache_records_question_box_queries(conn, reader_conn):
-    """MON_GET_PKG_CACHE_STMT shows the reader's query with its executions and rows read."""
+    """MON_GET_PKG_CACHE_STMT shows the reader's query with its executions and rows returned."""
     import ask
     q = "SELECT CHECK_CODE, COUNT(*) AS N FROM AQ.V_CHECK GROUP BY CHECK_CODE"
     for _ in range(2): assert ask.run(q, reader_conn)["outcome"] == "ANSWERED"
-    n, rr = one(conn, "SELECT NUM_EXECUTIONS, ROWS_READ FROM TABLE(MON_GET_PKG_CACHE_STMT('D', NULL, NULL, -2)) "
+    n, ret = one(conn, "SELECT NUM_EXECUTIONS, ROWS_RETURNED FROM TABLE(MON_GET_PKG_CACHE_STMT('D', NULL, NULL, -2)) "
                       "WHERE STMT_TEXT LIKE ? ORDER BY NUM_EXECUTIONS DESC FETCH FIRST 1 ROW ONLY", (q + "%",))
     conn.rollback()
-    assert n >= 2 and rr > 0
+    assert n >= 2 and ret > 0     # ROWS_READ can be 0 here: on the small CI sample Db2 may answer from an index alone
 
 # Business time: CPCB rule versions (sql/10_rule_version.sql)
 
