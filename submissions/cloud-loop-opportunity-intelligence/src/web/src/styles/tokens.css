@@ -1,0 +1,57 @@
+:root {
+  /* ══════════════════════════════════════════════════════════════
+     PALETTE A (Default Brand System)
+     Midnight #0B0B0C | Pure White #FFFFFF | Lime Green #C6F432
+     ══════════════════════════════════════════════════════════════ */
+  --palette-a-bg-light: #FFFFFF;
+  --palette-a-surface-light: #F7F7F2;
+  --palette-a-text-light: #0B0B0C;
+  --palette-a-text-muted-light: #4A4A45;
+  --palette-a-border-light: #E5E5DC;
+  --palette-a-accent-light: #C6F432;
+  --palette-a-accent-contrast-light: #0B0B0C;
+
+  --palette-a-bg-dark: #0B0B0C;
+  --palette-a-surface-dark: #161618;
+  --palette-a-text-dark: #FFFFFF;
+  --palette-a-text-muted-dark: #A0A09A;
+  --palette-a-border-dark: #272729;
+  --palette-a-accent-dark: #C6F432;
+  --palette-a-accent-contrast-dark: #0B0B0C;
+
+  /* ══════════════════════════════════════════════════════════════
+     PALETTE B (Warm Editorial System)
+     Cream #F3EEE3 | Ink Black #111111 | Burnt Orange #D9541E
+     ══════════════════════════════════════════════════════════════ */
+  --palette-b-bg-light: #F3EEE3;
+  --palette-b-surface-light: #EAE3D2;
+  --palette-b-text-light: #111111;
+  --palette-b-text-muted-light: #524B42;
+  --palette-b-border-light: #DDD4C0;
+  --palette-b-accent-light: #D9541E;
+  --palette-b-accent-contrast-light: #FFFFFF;
+
+  --palette-b-bg-dark: #111111;
+  --palette-b-surface-dark: #1C1A17;
+  --palette-b-text-dark: #F3EEE3;
+  --palette-b-text-muted-dark: #A8A093;
+  --palette-b-border-dark: #2E2A24;
+  --palette-b-accent-dark: #E0632D;
+  --palette-b-accent-contrast-dark: #111111;
+}
+
+/* Accessible focus ring indicators */
+*:focus-visible {
+  outline: 2px solid var(--palette-a-accent-light);
+  outline-offset: 2px;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

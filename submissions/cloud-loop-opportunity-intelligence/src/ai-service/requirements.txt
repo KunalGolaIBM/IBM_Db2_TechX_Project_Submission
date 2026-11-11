@@ -1,0 +1,20 @@
+# IBM Db2 + Haystack AI stack
+haystack-ai==3.4.1
+ibm-db-haystack==1.0.0
+sentence-transformers==6.2.0
+sentence-transformers-haystack==2.0.0
+torch>=2.0.0
+transformers>=4.40.0
+numpy>=1.26.0
+
+# API & Web framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.8.0
+pydantic-settings>=2.4.0
+httpx>=0.27.0
+python-dotenv>=1.0.1
+SQLAlchemy>=2.0.0
+
+# Testing
+pytest>=8.0.0

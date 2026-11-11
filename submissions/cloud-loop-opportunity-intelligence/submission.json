@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Cloud Loop AI Opportunity Intelligence",
+    "slug": "cloud-loop-opportunity-intelligence",
+    "short_description": "AI-Powered Student Opportunity Discovery Platform with IBM Db2, Haystack vector search, and intelligent candidate matching.",
+    "category": "AI / RAG / Enterprise Databases",
+    "demo_url": "https://cloudloop.dev",
+    "video_url": "https://youtu.be/cloudloop-demo-2026",
+    "repo_url": "https://github.com/Ayushh-Sharmaa/Cloud-Loop"
+  },
+  "team": {
+    "name": "Cloud Loop",
+    "members": [
+      {
+        "name": "Ayush Sharma",
+        "github": "Ayushh-Sharmaa",
+        "email": "ayushsharma@users.noreply.github.com",
+        "role": "Solo Builder & Full-Stack / Db2 AI Engineer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition 12.1.2.0 / Db2 on Cloud",
+    "connector": "ibm-db-haystack 1.0.0 / ibm_db 3.3.0",
+    "schema": "CLOUDLOOP",
+    "features_used": [
+      "VECTOR",
+      "VECTOR_DISTANCE cosine",
+      "relational tables",
+      "indexes",
+      "MERGE",
+      "view",
+      "FETCH FIRST"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "TypeScript",
+      "Python",
+      "SQL"
+    ],
+    "frameworks": [
+      "Next.js 16 (App Router)",
+      "React 19",
+      "Tailwind CSS v4",
+      "FastAPI",
+      "Haystack AI 3.4.1",
+      "ibm-db-haystack 1.0.0"
+    ],
+    "ai_models": [
+      "sentence-transformers/all-MiniLM-L6-v2",
+      "Ollama llama3.2 (optional local LLM)"
+    ]
+  }
+}
