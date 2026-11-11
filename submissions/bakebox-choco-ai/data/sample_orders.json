@@ -1,0 +1,50 @@
+[
+  {
+    "order_id": 1002,
+    "user_id": 3,
+    "customer_name": "Rahul Sharma",
+    "customer_phone": "+91 9876543210",
+    "order_type": "DELIVERY",
+    "order_status": "BAKING",
+    "kitchen_location": "Bhagel Chaupal, Khatoti Kua (Mathura)",
+    "total_amount": 649.00,
+    "delivery_address": "Flat 402, Krishna Heights, Mathura, UP",
+    "special_notes": "Happy 1st Anniversary Celebration",
+    "created_at": "2026-11-05 10:15:00",
+    "items": [
+      {
+        "sku_id": "BB-RED-02-1kg",
+        "item_name": "Red Velvet Heart Love Affair",
+        "quantity": 1,
+        "unit_price": 649.00,
+        "cake_base": "Khoaa (Eggless)",
+        "cake_weight": "1.0kg",
+        "custom_message": "Happy 1st Anniversary"
+      }
+    ]
+  },
+  {
+    "order_id": 1104,
+    "user_id": 5,
+    "customer_name": "Pooja Verma",
+    "customer_phone": "+91 9811223344",
+    "order_type": "DELIVERY",
+    "order_status": "CONFIRMED",
+    "kitchen_location": "Holigate Branch (Mathura)",
+    "total_amount": 249.00,
+    "delivery_address": "Civil Lines, Mathura, UP",
+    "special_notes": "Birthday Surprise for Sister",
+    "created_at": "2026-11-05 11:30:00",
+    "items": [
+      {
+        "sku_id": "BB-BLK-01-05kg",
+        "item_name": "Black Forest Classic Cherry Gateau",
+        "quantity": 1,
+        "unit_price": 249.00,
+        "cake_base": "Pure Veg Eggless",
+        "cake_weight": "0.5kg",
+        "custom_message": "Happy Birthday Choti"
+      }
+    ]
+  }
+]

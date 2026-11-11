@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "BAKEBOX-AI: Autonomous AI Bakery Management & Customer Support (CHOCO AI)",
+    "slug": "bakebox-choco-ai",
+    "short_description": "Enterprise autonomous AI bakery platform powered by IBM Db2 12.1 — unifying native VECTOR(384, FLOAT32) search with BSON metadata pushdown (DB2LlamaVS), 3-Way Reciprocal Rank Fusion (k=60) + Hinglish CRAG + Self-RAG, Db2-hydrated session buffers, quantity-scaled Multi-Level Recursive BOM CTE, row-level concurrency locking (FOR UPDATE WITH RS + SP_RESERVE_CAKE_STOCK), SEQ_BB_ORDER_ID sequence allocation, keyed HMAC-SHA256 BB_AUDIT_LOG, and a hardened FastAPI REST API + interactive /demo playground.",
+    "category": "AI / RAG / Data Engineering / Enterprise Security",
+    "demo_url": "https://youtu.be/NLrRq6FX358?si=oZM-EGpaBt4AOSVM",
+    "video_url": "https://youtu.be/NLrRq6FX358?si=oZM-EGpaBt4AOSVM",
+    "linkedin_post": "https://lnkd.in/p/gtXgu6wq",
+    "repo_url": "https://github.com/AYUSHDHANGAR/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "BAKEBOX AI Team",
+    "members": [
+      {
+        "name": "Ayush Dhangar",
+        "github": "AYUSHDHANGAR",
+        "email": "ayushdhangar12345@gmail.com",
+        "role": "BTech CSE-AIML, 4th Year | AI Systems & Db2 Solutions Architect"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1 (Docker / VS Code Extension - IBMDB201)",
+    "connector": "ibm_db / ibm_db_dbi / llama-index-vector-stores-db2 (DB2LlamaVS)",
+    "features_used": [
+      "Native VECTOR(384, FLOAT32) Column with COSINE Similarity & SYSTOOLS.BSON2JSON Metadata Pushdown",
+      "3-Way Hybrid Reciprocal Rank Fusion (DB2LlamaVS + Okapi BM25 + TF-IDF) + Hinglish CRAG",
+      "Quantity-Scaled In-Database Multi-Level Recursive BOM CTE (UNION ALL DECIMAL(10,4) Typed Parameters)",
+      "Native Db2 SQL PL Stored Procedure (SP_RESERVE_CAKE_STOCK WHERE CURRENT OF WITH RS) & SEQ_BB_ORDER_ID Sequence",
+      "Single-UOW ACID Order Transaction (Scaled BOM -> Stock Lock -> SEQ_BB_ORDER_ID -> BB_ORDERS/ITEMS -> BB_AUDIT_LOG)",
+      "Keyed HMAC-SHA256 Hash-Chained Append-Only Audit Trail (BB_AUDIT_LOG with Sealed UTC Timestamp)",
+      "Db2-Hydrated Isolated Conversation Buffer (BB_USER_CONVERSATION_BUFFER)",
+      "Sargable Normalized Indexing (phone_last10 B-Tree Index), Masked SQL Views & IP-Partitioned 2FA Rate Limiter",
+      "Least-Privilege Db2 RBAC Roles (sql/least_privilege_setup.sql) & X-Operator-Key API Guard",
+      "Snapshot-Rollback PEP 249 MockDb2 & Cosine Simulator + Opt-In Live Db2 Integration Smoke Test"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "SQL", "HTML/JavaScript"],
+    "frameworks": ["FastAPI", "Pydantic v2", "LlamaIndex", "llama-index-vector-stores-db2", "scikit-learn", "FastEmbed"],
+    "ai_models": ["BAAI/bge-small-en-v1.5 (384-d Local Embeddings)", "Google Gemini 1.5 Flash (google-genai SDK with Offline Fallback)"]
+  }
+}
