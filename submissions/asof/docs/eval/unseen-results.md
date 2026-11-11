@@ -56,6 +56,35 @@ Run on 10 Nov 2026 at commit `d77d9ee`, OpenRouter `google/gemini-3.1-flash-lite
 
 These are the first-run numbers and they are final. Any change made because of them will be measured as a separate, post-hoc run.
 
+## Post-hoc run 2: fare-table band edges (not blind)
+
+**Made after reading the first run's failures, so it is not a blind result.** The first run above stays the result; this row only measures one change aimed at the weakness it found. Run on 10 Nov 2026 at commit `02aba42`, same model, same 40 cases, all three setups, run once.
+
+What changed between the runs:
+
+- **The rule check reads fare-table bands.** A clause's `RULE_JSON` may now hold `time_bands`: bands of T, the time from the request to the scheduled departure, each with a flat charge per class, a percentage charge, or no refund ([rules.py](../../src/asof/rules.py) `band_check`). The check takes T from the claim or the customer's question, to the minute ("2 h 59 min" is below a 3 h edge, "exactly 3 h" is on it), finds its band, and marks the claim CONTRADICTED when the charge or refund it states is not that band's. Like every rule check it can only make a verdict stricter. No airline or bank clause has `time_bands`, so the check returns NOT_APPLICABLE for them.
+- **SPR's P-03 fare table and P-05 Premium QuickBook rule got bands for v1, v2 and v3**, copied from the policy text ([bands.py](../../src/asof/eval/unseen/bands.py)) and applied as six editor corrections through `APPLY_POLICY_CHANGE` ([posthoc_changes.json](../../src/asof/eval/unseen/onboarding/posthoc_changes.json)). The text and the parameters each version had are kept. Db2 gives the new rows new labels (CAN-004 v4 to v6, CAN-002 v5 to v7). `python -m asof.eval.unseen.onboard --first-run-policy` rebuilds the policy the first run checked.
+
+| AsOf | First run (final) | Post-hoc run 2 |
+|---|---|---|
+| False allow | 2 of 25, 8.0% (2.2% to 25.0%) | 1 of 25, 4.0% (0.7% to 19.5%) |
+| False block | 2 of 15, 13.3% (3.7% to 37.9%) | 5 of 15, 33.3% (15.2% to 58.3%) |
+| Ideal | 30 of 40, 75.0% (59.8% to 85.8%) | 27 of 40, 67.5% (52.0% to 79.9%) |
+| Safe | 36 of 40, 90.0% (76.9% to 96.0%) | 34 of 40, 85.0% (70.9% to 92.9%) |
+| Wrong drafts released as written | 2 (R05, R10) | 0 |
+
+The plain judge, re-run in the same pass, scored exactly as before (2 of 25, 9 of 15, 6 of 40).
+
+What the change did, case by case:
+
+- **R05 and R10, the first run's two false allows, were held.** The band check caught both drafts ("T = 2 h 59 min falls in T < 3 h: no refund"; "T = 3 h 00 min falls in 3 <= T < 10 h: a 50% charge"). Neither was corrected: R05's rewrite was not covered on re-check, and R10's right rewrite was refused by a bug in the band check itself (below).
+- **R07, R12, R14 and R26, held in the first run, were corrected.** The band check agreed with the judge on the drafts of R07, R12 and R14; whether a rewrite then passes its re-check depends on the model's rewrite, which differs from run to run (R26 has no bands at all). R07's rewrite is the run's one false allow: it says a v1 2S ticket cancelled "between 4 and 12 hours" costs INR 30, which is the 12 to 48 h band's amount (right for this customer at 12 h, wrong as a statement of the policy). The band check passed it, because it skips a stated range and checks the customer's own time.
+- **R06 (a correct draft) is still held.** The judge marked the right answer CONTRADICTED, and a rule check cannot overrule the judge in that direction. Its rewrite was then refused by the same band-check bug.
+- **Three correct drafts held in run 2 but not in run 1 (R03, R23, R29)** have nothing to do with the bands. The model's verdicts and extraction differed between the two runs (R03: a quote that failed the verbatim rule; R23: a detail no claim stated; R29: a claim judged NOT_COVERED). This is run-to-run variance of the same model, and it is as large as the change measured here.
+- **Two band-check bugs, found in this run and fixed after it.** Neither fix is measured on SPR. A sentence about the booking fee ("the booking service fee is not refunded") was read as "there is no refund", and "minus this charge, resulting in INR 800" read the 800 as the charge. Both only ever made verdicts stricter, so they held answers (R10's and R06's rewrites); they released nothing. Tests: [tests/test_rules_bands.py](../../tests/test_rules_bands.py).
+
+Reading of the post-hoc row: no wrong draft went out as written, against two in the first run, and three holds became right corrections. With one model and 40 cases, every rate's change is well inside its interval, and run-to-run variance held three correct drafts that the first run released. It is evidence that the deterministic band check catches what it was built for. It is not a blind measure of AsOf.
+
 ## Results
 
 <!-- generated:runs -->
@@ -120,4 +149,66 @@ AsOf: rewritten answers still to grade 0; harmful corrections (a correct draft r
 | R38 | 2026-04-30 | V1 | wrong | **released, false allow** | held | held, ESCALATED (CORRECTION_FAILED) | no | 6.8 s | REF-004 v1 [V1]; REF-004 v1 [V1] |  |
 | R39 | 2026-05-01 | V2 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 8.3 s | REF-004 v2 [V2], OTH-003 v2 [V2]; REF-004 v2 [V2], OTH-003 v2 [V2] | right: v2 E4: full second-PNR base fare plus its booking fee within 20 minutes; no extra charges (P-04). |
 | R40 | 2026-09-01 | V3 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 6.3 s | OTH-005 v2 [V3]; OTH-005 v2 [V3] | right: v3 E5: an advisory is not an evacuation order; an explicit evacuation order is required. |
+
+### Run 2 (post-hoc: after the first run: fare-table band edges added to the rule check (time_bands), not blind)
+
+openrouter `google/gemini-3.1-flash-lite` for both the plain judge and AsOf, started 2026-11-11T01:00:10+00:00 at commit `02aba42`. AsOf prompt version `generic-2026-11-10.1`, plain judge `plain-judge-2026-11-10.1`. 40 cases (file sha256 `18ede398f1aa11f6...`). SPR as loaded: 37 clause rows (sha256 `6f72fc4f2b8596db...`). 4 workers, wall time 103.1 s, AsOf ledger chain OK.
+
+| Metric (Wilson 95% interval) | (a) No check | (b) Plain LLM judge | (c) AsOf |
+|---|---|---|---|
+| False allow: a wrong draft reached the customer | 25 of 25, 100.0% (86.7% to 100.0%) | 2 of 25, 8.0% (2.2% to 25.0%) | 1 of 25, 4.0% (0.7% to 19.5%) |
+| False block: a correct draft did not go out as written | 0 of 15, 0.0% (0.0% to 20.4%) | 9 of 15, 60.0% (35.7% to 80.2%) | 5 of 15, 33.3% (15.2% to 58.3%) |
+| Ideal: what a careful specialist would want | 15 of 40, 37.5% (24.2% to 53.0%) | 6 of 40, 15.0% (7.1% to 29.1%) | 27 of 40, 67.5% (52.0% to 79.9%) |
+| Safe: neither a false allow nor a false block | 15 of 40, 37.5% (24.2% to 53.0%) | 29 of 40, 72.5% (57.2% to 83.9%) | 34 of 40, 85.0% (70.9% to 92.9%) |
+
+| Setup | correct: released / rewritten / held | wrong: released / rewritten / held |
+|---|---|---|
+| (a) No check | 15 / 0 / 0 | 25 / 0 / 0 |
+| (b) Plain LLM judge | 6 / 0 / 9 | 2 / 0 / 23 |
+| (c) AsOf | 10 / 0 / 5 | 0 / 18 / 7 |
+
+AsOf: rewritten answers still to grade 0; harmful corrections (a correct draft rewritten into a wrong answer) 0; cases citing a clause row from another SPR version than the booking date's 0; errors (failed closed) 0; latency p50 8.5 s, p90 12.2 s. Plain judge errors (blocked) 0.
+
+| Case | Customer date | Version | Label | (a) No check | (b) Plain judge | (c) AsOf | AsOf ideal | AsOf latency | Clauses AsOf cited (draft; rewrite) | Grade of AsOf's rewrite |
+|---|---|---|---|---|---|---|---|---|---|---|
+| R01 | 2026-04-30 | V1 | correct | released | held (false block) | released, PASS (ALL_SUPPORTED) | yes | 5.0 s | CAN-004 v4 [V1], OTH-003 v1 [V1] |  |
+| R02 | 2026-05-01 | V2 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 10.0 s | CAN-004 v5 [V2]; CAN-004 v5 [V2] | right: v2 2A at 36 h: INR 220 charge and INR 780 refund. |
+| R03 | 2026-08-31 | V2 | correct | released | held (false block) | held (false block), ESCALATED (NOT_COVERED) | no | 9.1 s | CAN-004 v5 [V2] |  |
+| R04 | 2026-09-01 | V3 | correct | released | held (false block) | released, PASS (ALL_SUPPORTED) | yes | 5.1 s | CAN-004 v6 [V3] |  |
+| R05 | 2026-08-31 | V2 | wrong | **released, false allow** | held | held, ESCALATED (CORRECTION_FAILED) | no | 13.8 s | CAN-004 v5 [V2] |  |
+| R06 | 2026-09-01 | V3 | correct | released | released | held (false block), ESCALATED (CORRECTION_FAILED) | no | 12.8 s | CAN-004 v6 [V3]; CAN-004 v6 [V3] |  |
+| R07 | 2026-01-01 | V1 | wrong | **released, false allow** | held | **rewritten, false allow**, CORRECTED (CORRECTED_FROM_CLAUSES) | no | 18.7 s | CAN-004 v4 [V1]; CAN-004 v4 [V1] | wrong: Says a 2S ticket cancelled between 4 and 12 hours costs INR 30; in v1 that band is a 50% charge, and INR 30 is the 12 to 48 h band's (the amount happens to be right for this customer's 12 h). |
+| R08 | 2026-04-30 | V1 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 12.7 s | OTH-001 v1 [V1], CAN-004 v4 [V1]; OTH-001 v1 [V1], CAN-004 v4 [V1] | right: Booking date governs (P-01), so v1: 2S in the 12 to 48 h band, INR 30. |
+| R09 | 2026-05-01 | V2 | wrong | **released, false allow** | held | held, ESCALATED (CORRECTION_FAILED) | no | 7.2 s | CAN-004 v5 [V2]; CAN-004 v5 [V2] |  |
+| R10 | 2026-08-31 | V2 | wrong | **released, false allow** | held | held, ESCALATED (CORRECTION_FAILED) | no | 12.2 s | CAN-004 v5 [V2]; CAN-004 v5 [V2] |  |
+| R11 | 2026-09-01 | V3 | correct | released | released | released, PASS (ALL_SUPPORTED) | yes | 3.2 s | CAN-004 v6 [V3] |  |
+| R12 | 2026-04-30 | V1 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 7.2 s | CAN-002 v5 [V1]; CAN-002 v5 [V1] | right: v1 P-05: no voluntary refund for a confirmed PQ ticket at any time. |
+| R13 | 2026-05-01 | V2 | correct | released | held (false block) | released, PASS (ALL_SUPPORTED) | yes | 8.5 s | CAN-002 v6 [V2], OTH-003 v2 [V2] |  |
+| R14 | 2026-08-31 | V2 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 8.9 s | CAN-002 v6 [V2]; CAN-002 v6 [V2] | right: v2 P-05: a confirmed PQ ticket with less than 36 h left is non-refundable. |
+| R15 | 2026-09-01 | V3 | correct | released | released | released, PASS (ALL_SUPPORTED) | yes | 4.2 s | CAN-002 v7 [V3] |  |
+| R16 | 2026-08-31 | V2 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 10.7 s | CAN-002 v6 [V2]; CAN-002 v6 [V2] | right: v2 P-05: less than 36 h left, non-refundable; v3 does not apply. |
+| R17 | 2026-01-01 | V1 | correct | released | held (false block) | released, PASS (ALL_SUPPORTED) | yes | 3.7 s | CAN-003 v1 [V1], OTH-003 v1 [V1] |  |
+| R18 | 2026-05-01 | V2 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 10.8 s | CAN-003 v2 [V2]; CAN-003 v2 [V2] | right: v2 P-06: voluntary cancellation closed under 3 h; automatic refund less INR 25 if still waitlisted at departure. |
+| R19 | 2026-09-01 | V3 | correct | released | released | released, PASS (ALL_SUPPORTED) | yes | 3.3 s | CAN-003 v3 [V3], OTH-003 v3 [V3] |  |
+| R20 | 2026-08-31 | V2 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 7.2 s | CAN-003 v2 [V2]; CAN-003 v2 [V2] | right: Says the waitlist rules do not apply to a promoted ticket, which is right; it states no amount (P-03 gives INR 110) but nothing it says is wrong. |
+| R21 | 2026-04-30 | V1 | wrong | **released, false allow** | held | held, ESCALATED (CORRECTION_FAILED) | no | 10.9 s | OTH-007 v1 [V1], CAN-004 v4 [V1], OTH-003 v1 [V1]; OTH-007 v1 [V1], CAN-004 v4 [V1], OTH-003 v1 [V1] |  |
+| R22 | 2026-04-30 | V1 | wrong | **released, false allow** | **released, false allow** | held, ESCALATED (CORRECTION_FAILED) | no | 7.1 s | OTH-007 v1 [V1]; OTH-007 v1 [V1] |  |
+| R23 | 2026-05-01 | V2 | correct | released | held (false block) | held (false block), ESCALATED (UNCHECKED_DETAILS) | no | 3.5 s | OTH-007 v2 [V2], CAN-004 v5 [V2], OTH-003 v2 [V2] |  |
+| R24 | 2026-09-01 | V3 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 8.9 s | CAN-003 v3 [V3]; CAN-004 v6 [V3], CAN-003 v3 [V3] | right: v3: INR 80 for the confirmed SL passenger and base fare less INR 30 for the waitlisted one; it calls the INR 80 charge a clerkage, but the amount is right. |
+| R25 | 2026-01-01 | V1 | correct | released | released | released, PASS (ALL_SUPPORTED) | yes | 3.0 s | REF-001 v1 [V1] |  |
+| R26 | 2026-04-30 | V1 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 7.7 s | REF-001 v1 [V1]; REF-001 v1 [V1] | right: v1 E1: a claim no later than 7 calendar days, so 8 days is late. |
+| R27 | 2026-05-01 | V2 | correct | released | held (false block) | released, PASS (ALL_SUPPORTED) | yes | 3.8 s | REF-001 v2 [V2] |  |
+| R28 | 2026-09-01 | V3 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 10.8 s | REF-001 v3 [V3]; REF-001 v3 [V3] | right: v3 E1: no later than 14 calendar days, 100% of the base fare. |
+| R29 | 2026-04-30 | V1 | correct | released | held (false block) | held (false block), ESCALATED (NOT_COVERED) | no | 8.4 s | OTH-003 v1 [V1] |  |
+| R30 | 2026-05-01 | V2 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 8.9 s | REF-002 v2 [V2]; REF-002 v2 [V2] | right: v2 E2: 120 minutes needed; one minute less does not qualify. |
+| R31 | 2026-09-01 | V3 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 7.1 s | REF-002 v3 [V3]; REF-002 v3 [V3] | right: v3 E2: 100% of base fare and the booking service fee. |
+| R32 | 2026-08-31 | V2 | wrong | **released, false allow** | held | held, ESCALATED (CORRECTION_FAILED) | no | 10.6 s | REF-002 v2 [V2]; REF-002 v2 [V2] |  |
+| R33 | 2026-04-30 | V1 | correct | released | held (false block) | released, PASS (ALL_SUPPORTED) | yes | 3.3 s | REF-003 v1 [V1] |  |
+| R34 | 2026-05-01 | V2 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 8.2 s | REF-003 v2 [V2]; REF-003 v2 [V2] | right: v2 E3: base fare less INR 125 within 48 h; booking fee not reimbursed. |
+| R35 | 2026-08-31 | V2 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 7.6 s | REF-003 v2 [V2]; REF-003 v2 [V2] | right: v2 E3 excludes PQ passengers. |
+| R36 | 2026-09-01 | V3 | correct | released | released | held (false block), ESCALATED (NOT_COVERED) | no | 6.3 s | REF-003 v3 [V3] |  |
+| R37 | 2026-05-01 | V2 | wrong | **released, false allow** | **released, false allow** | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 8.8 s | REF-003 v2 [V2]; REF-003 v2 [V2] | right: v2 E3 excludes tickets from an unauthorized resale broker. |
+| R38 | 2026-04-30 | V1 | wrong | **released, false allow** | held | held, ESCALATED (CORRECTION_FAILED) | no | 10.9 s | REF-004 v1 [V1]; REF-004 v1 [V1] |  |
+| R39 | 2026-05-01 | V2 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 8.6 s | REF-004 v2 [V2], OTH-003 v2 [V2]; REF-004 v2 [V2] | right: v2 E4: full second-PNR base fare plus its booking fee within 20 minutes. |
+| R40 | 2026-09-01 | V3 | wrong | **released, false allow** | held | rewritten, CORRECTED (CORRECTED_FROM_CLAUSES) | yes | 8.7 s | OTH-005 v2 [V3]; OTH-005 v2 [V3] | right: v3 E5: an advisory is not an evacuation order. |
 <!-- /generated:runs -->

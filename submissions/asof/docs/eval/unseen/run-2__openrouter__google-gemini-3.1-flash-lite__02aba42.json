@@ -1,0 +1,1461 @@
+{
+ "run": 2,
+ "first_run": false,
+ "note": "after the first run: fare-table band edges added to the rule check (time_bands), not blind",
+ "provider": "openrouter",
+ "model": "google/gemini-3.1-flash-lite",
+ "started_at": "2026-11-11T01:00:10+00:00",
+ "git_commit": "02aba42",
+ "prompt_version": "generic-2026-11-10.1",
+ "plain_judge_version": "plain-judge-2026-11-10.1",
+ "cases_sha256": "18ede398f1aa11f6de903bdce5ac662d84998c881728ee31485407f688c114f0",
+ "schema": "ASOF_UNSEEN",
+ "policy_sha256": "6f72fc4f2b8596db05ce4df8ea53de44ef09443aa4471ae79298db36f8960b78",
+ "policy_rows": 37,
+ "workers": 4,
+ "wall_time_s": 103.1,
+ "ledger_chain": "OK",
+ "records": [
+  {
+   "id": "R01",
+   "customer_date": "2026-04-30",
+   "as_of": "2026-04-30",
+   "governing": "V1",
+   "label": "correct",
+   "decision": "PASS",
+   "reason_code": "ALL_SUPPORTED",
+   "released": true,
+   "ledger_id": 1,
+   "latency_ms": 5022,
+   "cited_pass1": [
+    "CAN-004 v4 [V1]",
+    "OTH-003 v1 [V1]"
+   ],
+   "cited_pass2": [],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-004 v4: Your base-fare refund is INR 800",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) OTH-003 v1: the INR 20 booking fee remains non-refundable"
+   ],
+   "final_answer": "Your base-fare refund is INR 800; the INR 20 booking fee remains non-refundable.\n\nPolicy references: CAN-004 v4 (in effect from 2026-01-01), OTH-003 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 2,
+   "input_tokens": 2773,
+   "output_tokens": 333,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The draft incorrectly identifies the booking fee as INR 20 when the policy states it is INR 30, and the refund calculation is wrong as the charge for 48 hours is INR 240, resulting in a refund of INR 760.",
+    "latency_ms": 1963,
+    "error": null
+   }
+  },
+  {
+   "id": "R02",
+   "customer_date": "2026-05-01",
+   "as_of": "2026-05-01",
+   "governing": "V2",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 4,
+   "latency_ms": 9952,
+   "cited_pass1": [
+    "CAN-004 v5 [V2]"
+   ],
+   "cited_pass2": [
+    "CAN-004 v5 [V2]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) CAN-004 v5: For a 2A ticket cancelled 36 hours before departure, you receive INR 800 of base fare.",
+    "p1#2 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) CAN-004 v5: For a 2A ticket cancelled 36 hours before departure, there is a INR 200 cancellation charge.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-004 v5: For a confirmed 2A ticket cancelled 36 hours or more before departure, the cancellation charge is INR 220.",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-004 v5: Your refund is calculated as the base fare minus this charge, resulting in a refund of INR 780."
+   ],
+   "final_answer": "For a confirmed 2A ticket cancelled 36 hours or more before departure, the cancellation charge is INR 220. Your refund is calculated as the base fare minus this charge, resulting in a refund of INR 780.\n\nPolicy references: CAN-004 v5 (in effect from 2026-05-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 6933,
+   "output_tokens": 778,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "For a confirmed 2A ticket cancelled at least 24 hours before departure, the policy dictates a fixed cancellation charge of INR 240, resulting in a refund of INR 760.",
+    "latency_ms": 2504,
+    "error": null
+   }
+  },
+  {
+   "id": "R03",
+   "customer_date": "2026-08-31",
+   "as_of": "2026-08-31",
+   "governing": "V2",
+   "label": "correct",
+   "decision": "ESCALATED",
+   "reason_code": "NOT_COVERED",
+   "released": true,
+   "ledger_id": 3,
+   "latency_ms": 9087,
+   "cited_pass1": [
+    "CAN-004 v5 [V2]"
+   ],
+   "cited_pass2": [],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 NOT_COVERED (llm SUPPORTED, rule NOT_APPLICABLE) -: The cancellation charge is INR 70",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-004 v5: the base-fare refund is INR 730"
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 4,
+   "input_tokens": 4225,
+   "output_tokens": 366,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "For an SL ticket cancelled 10 hours before departure, the policy specifies a flat charge of INR 80, making the refund INR 720.",
+    "latency_ms": 2153,
+    "error": null
+   }
+  },
+  {
+   "id": "R04",
+   "customer_date": "2026-09-01",
+   "as_of": "2026-09-01",
+   "governing": "V3",
+   "label": "correct",
+   "decision": "PASS",
+   "reason_code": "ALL_SUPPORTED",
+   "released": true,
+   "ledger_id": 2,
+   "latency_ms": 5115,
+   "cited_pass1": [
+    "CAN-004 v6 [V3]"
+   ],
+   "cited_pass2": [],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-004 v6: SPR deducts INR 80 for a confirmed SL base fare INR 800 booked on 1 September cancelled exactly 8 hours before departure",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-004 v6: INR 720 of base fare is refunded for a confirmed SL base fare INR 800 booked on 1 September cancelled exactly 8 hours before departure"
+   ],
+   "final_answer": "SPR deducts INR 80, so INR 720 of base fare is refunded.\n\nPolicy references: CAN-004 v6 (in effect from 2026-09-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 2,
+   "input_tokens": 2829,
+   "output_tokens": 367,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "For a confirmed Sleeper (SL) ticket, the cancellation charge for T between 2 and 8 hours is 60% of the base fare, not a flat fee of INR 80.",
+    "latency_ms": 2870,
+    "error": null
+   }
+  },
+  {
+   "id": "R05",
+   "customer_date": "2026-08-31",
+   "as_of": "2026-08-31",
+   "governing": "V2",
+   "label": "wrong",
+   "decision": "ESCALATED",
+   "reason_code": "CORRECTION_FAILED",
+   "released": true,
+   "ledger_id": 6,
+   "latency_ms": 13838,
+   "cited_pass1": [
+    "CAN-004 v5 [V2]"
+   ],
+   "cited_pass2": [],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm SUPPORTED, rule MISMATCH) CAN-004 v5: For a confirmed 1A ticket cancelled 2 hours 59 minutes before scheduled departure, a 50% charge applies.",
+    "p1#2 CONTRADICTED (llm SUPPORTED, rule MISMATCH) CAN-004 v5: For a confirmed 1A ticket cancelled 2 hours 59 minutes before scheduled departure, you get INR 1,000 back.",
+    "p2#1 NOT_COVERED (llm SUPPORTED, rule NOT_APPLICABLE) -: For a confirmed 1A ticket cancelled less than 3 hours before scheduled departure, no refund of the base fare is due."
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 8,
+   "input_tokens": 9508,
+   "output_tokens": 767,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "For a confirmed 1A ticket with 2 hours 59 minutes remaining, the policy dictates a 60% cancellation charge, not 50%.",
+    "latency_ms": 1832,
+    "error": null
+   }
+  },
+  {
+   "id": "R06",
+   "customer_date": "2026-09-01",
+   "as_of": "2026-09-01",
+   "governing": "V3",
+   "label": "correct",
+   "decision": "ESCALATED",
+   "reason_code": "CORRECTION_FAILED",
+   "released": true,
+   "ledger_id": 5,
+   "latency_ms": 12758,
+   "cited_pass1": [
+    "CAN-004 v6 [V3]"
+   ],
+   "cited_pass2": [
+    "CAN-004 v6 [V3]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MATCH) CAN-004 v6: You get INR 800 back after a 60% deduction.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-004 v6: For an AC First (1A) ticket cancelled between 2 and 8 hours before departure, the cancellation charge is 60% of the base fare.",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-004 v6: Based on your base fare of INR 2,000, the cancellation charge is INR 1,200.",
+    "p2#3 CONTRADICTED (llm SUPPORTED, rule MISMATCH) CAN-004 v6: Your refund is calculated as the base fare minus this charge, resulting in an amount of INR 800."
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 6372,
+   "output_tokens": 820,
+   "plain": {
+    "decision": "RELEASE",
+    "reason": "The calculation is correct as 60% of the INR 2,000 base fare is INR 1,200, resulting in a refund of INR 800.",
+    "latency_ms": 1989,
+    "error": null
+   }
+  },
+  {
+   "id": "R07",
+   "customer_date": "2026-01-01",
+   "as_of": "2026-01-01",
+   "governing": "V1",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 10,
+   "latency_ms": 18691,
+   "cited_pass1": [
+    "CAN-004 v4 [V1]"
+   ],
+   "cited_pass2": [
+    "CAN-004 v4 [V1]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) CAN-004 v4: The cancellation charge is INR 60 for your 2S booking.",
+    "p1#2 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) CAN-004 v4: The base-fare refund is INR 440 for your booking.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-004 v4: For a Second Sitting (2S) ticket cancelled between 4 and 12 hours before the train's departure, the cancellation charge is INR 30.",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) CAN-004 v4: Your refund amount is your base fare minus this charge."
+   ],
+   "final_answer": "For a Second Sitting (2S) ticket cancelled between 4 and 12 hours before the train's departure, the cancellation charge is INR 30. Your refund amount is your base fare minus this charge.\n\nPolicy references: CAN-004 v4 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 6358,
+   "output_tokens": 682,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "According to the policy, the cancellation charge for a 2S ticket cancelled between 8 and 24 hours before departure is INR 40, not INR 60.",
+    "latency_ms": 2506,
+    "error": null
+   }
+  },
+  {
+   "id": "R08",
+   "customer_date": "2026-04-30",
+   "as_of": "2026-04-30",
+   "governing": "V1",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 7,
+   "latency_ms": 12665,
+   "cited_pass1": [
+    "OTH-001 v1 [V1]",
+    "CAN-004 v4 [V1]"
+   ],
+   "cited_pass2": [
+    "OTH-001 v1 [V1]",
+    "CAN-004 v4 [V1]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) OTH-001 v1: The new May policy applies since you are cancelling after 1 May",
+    "p1#2 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) CAN-004 v4: the charge is INR 70",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) OTH-001 v1: The governing policy is determined by the policy in effect on the date the booking was made.",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-004 v4: For a Second Sitting (2S) ticket cancelled between 12 and 48 hours before departure, the cancellation charge is INR 30.",
+    "p2#3 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) OTH-001 v1: Because your booking was made on 30 April, the governing policy is determined by the policy in effect on that date."
+   ],
+   "final_answer": "Because your booking was made on 30 April, the governing policy is determined by the policy in effect on that date. For a Second Sitting (2S) ticket cancelled between 12 and 48 hours before departure, the cancellation charge is INR 30.\n\nPolicy references: OTH-001 v1 (in effect from 2026-01-01), CAN-004 v4 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 7395,
+   "output_tokens": 813,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The policy version is determined by the booking date, not the cancellation date, and the draft references a non-existent policy change while providing an incorrect cancellation charge.",
+    "latency_ms": 1311,
+    "error": null
+   }
+  },
+  {
+   "id": "R09",
+   "customer_date": "2026-05-01",
+   "as_of": "2026-05-01",
+   "governing": "V2",
+   "label": "wrong",
+   "decision": "ESCALATED",
+   "reason_code": "CORRECTION_FAILED",
+   "released": true,
+   "ledger_id": 9,
+   "latency_ms": 7216,
+   "cited_pass1": [
+    "CAN-004 v5 [V2]"
+   ],
+   "cited_pass2": [
+    "CAN-004 v5 [V2]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) CAN-004 v5: You owe a INR 60 cancellation charge",
+    "p1#2 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) CAN-004 v5: You get INR 440 of base fare back",
+    "p2#1 CONTRADICTED (llm CONTRADICTED, rule MATCH) CAN-004 v5: For a 2S class ticket cancelled at least 36 hours before the scheduled departure, the cancellation charge is INR 70.",
+    "p2#2 CONTRADICTED (llm CONTRADICTED, rule MATCH) CAN-004 v5: Your refund is calculated as the base fare minus this charge, resulting in a refund of INR 430."
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 6792,
+   "output_tokens": 812,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The cancellation charge for a 2S class ticket cancelled at 40 hours (T >= 24h) is INR 80 according to policy P-03, not INR 60.",
+    "latency_ms": 1347,
+    "error": null
+   }
+  },
+  {
+   "id": "R10",
+   "customer_date": "2026-08-31",
+   "as_of": "2026-08-31",
+   "governing": "V2",
+   "label": "wrong",
+   "decision": "ESCALATED",
+   "reason_code": "CORRECTION_FAILED",
+   "released": true,
+   "ledger_id": 11,
+   "latency_ms": 12172,
+   "cited_pass1": [
+    "CAN-004 v5 [V2]"
+   ],
+   "cited_pass2": [
+    "CAN-004 v5 [V2]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm SUPPORTED, rule MISMATCH) CAN-004 v5: There is no refund since the 3-hour limit is already reached.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-004 v5: For an AC Two Tier (2A) ticket with a base fare of INR 1,500 canceled 3 hours before departure, the cancellation charge is 50% of the base fare.",
+    "p2#2 CONTRADICTED (llm SUPPORTED, rule MISMATCH) CAN-004 v5: The booking service fee is not refunded."
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 8,
+   "input_tokens": 9971,
+   "output_tokens": 760,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The policy states that for a 2A class ticket cancelled between 2 and 8 hours before departure, a refund of 40 percent of the base fare is provided.",
+    "latency_ms": 1312,
+    "error": null
+   }
+  },
+  {
+   "id": "R11",
+   "customer_date": "2026-09-01",
+   "as_of": "2026-09-01",
+   "governing": "V3",
+   "label": "correct",
+   "decision": "PASS",
+   "reason_code": "ALL_SUPPORTED",
+   "released": true,
+   "ledger_id": 8,
+   "latency_ms": 3232,
+   "cited_pass1": [
+    "CAN-004 v6 [V3]"
+   ],
+   "cited_pass2": [],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-004 v6: The flat cancellation charge is INR 240 for a 2A booking on 1 September.",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-004 v6: The base-fare refund for a 2A booking on 1 September is INR 1,260."
+   ],
+   "final_answer": "The flat cancellation charge is INR 240, so the base-fare refund is INR 1,260.\n\nPolicy references: CAN-004 v6 (in effect from 2026-09-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 2,
+   "input_tokens": 2832,
+   "output_tokens": 333,
+   "plain": {
+    "decision": "RELEASE",
+    "reason": "The refund calculation is correct based on the cancellation fee for 2A class at 24 hours as specified in policy P-03.",
+    "latency_ms": 1085,
+    "error": null
+   }
+  },
+  {
+   "id": "R12",
+   "customer_date": "2026-04-30",
+   "as_of": "2026-04-30",
+   "governing": "V1",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 12,
+   "latency_ms": 7214,
+   "cited_pass1": [
+    "CAN-002 v5 [V1]"
+   ],
+   "cited_pass2": [
+    "CAN-002 v5 [V1]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) CAN-002 v5: You get INR 3,760 for your Premium QuickBook confirmed 1A cancellation 8 days before departure.",
+    "p1#2 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) CAN-002 v5: Early cancellations only cost INR 240.",
+    "p1#3 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) CAN-002 v5: You get INR 3,760 because early cancellations only cost INR 240.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-002 v5: No voluntary refund is available for a confirmed Premium QuickBook ticket at any time before or after departure."
+   ],
+   "final_answer": "No voluntary refund is available for a confirmed Premium QuickBook ticket at any time before or after departure.\n\nPolicy references: CAN-002 v5 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 6549,
+   "output_tokens": 649,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The Premium QuickBook policy requires a 35% cancellation charge (INR 1,400) for confirmed tickets, rather than the flat charge applied to standard AC First tickets.",
+    "latency_ms": 1036,
+    "error": null
+   }
+  },
+  {
+   "id": "R13",
+   "customer_date": "2026-05-01",
+   "as_of": "2026-05-01",
+   "governing": "V2",
+   "label": "correct",
+   "decision": "PASS",
+   "reason_code": "ALL_SUPPORTED",
+   "released": true,
+   "ledger_id": 15,
+   "latency_ms": 8509,
+   "cited_pass1": [
+    "CAN-002 v6 [V2]",
+    "OTH-003 v2 [V2]"
+   ],
+   "cited_pass2": [],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-002 v6: SPR returns INR 1,400 in base fare for your PQ ticket.",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) OTH-003 v2: The INR 25 PNR fee is retained."
+   ],
+   "final_answer": "SPR returns INR 1,400 in base fare; the INR 25 PNR fee is retained.\n\nPolicy references: CAN-002 v6 (in effect from 2026-05-01), OTH-003 v2 (in effect from 2026-05-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 7039,
+   "output_tokens": 760,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The draft applies the incorrect cancellation charge percentage (30% instead of 35%) and incorrectly cites the non-refundable service fee as INR 25 instead of the policy-mandated INR 30.",
+    "latency_ms": 5479,
+    "error": null
+   }
+  },
+  {
+   "id": "R14",
+   "customer_date": "2026-08-31",
+   "as_of": "2026-08-31",
+   "governing": "V2",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 13,
+   "latency_ms": 8896,
+   "cited_pass1": [
+    "CAN-002 v6 [V2]"
+   ],
+   "cited_pass2": [
+    "CAN-002 v6 [V2]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) CAN-002 v6: Because this is close to the 36-hour boundary, only a 30% premium charge is deducted.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-002 v6: For a confirmed Premium QuickBook ticket cancelled with less than 36 hours remaining before scheduled departure, the base fare is non-refundable."
+   ],
+   "final_answer": "For a confirmed Premium QuickBook ticket cancelled with less than 36 hours remaining before scheduled departure, the base fare is non-refundable.\n\nPolicy references: CAN-002 v6 (in effect from 2026-05-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 5821,
+   "output_tokens": 414,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The policy specifies a flat 35% cancellation charge for confirmed Premium QuickBook tickets cancelled at least 24 hours before departure, making the 30% claim incorrect.",
+    "latency_ms": 1228,
+    "error": null
+   }
+  },
+  {
+   "id": "R15",
+   "customer_date": "2026-09-01",
+   "as_of": "2026-09-01",
+   "governing": "V3",
+   "label": "correct",
+   "decision": "PASS",
+   "reason_code": "ALL_SUPPORTED",
+   "released": true,
+   "ledger_id": 14,
+   "latency_ms": 4200,
+   "cited_pass1": [
+    "CAN-002 v7 [V3]"
+   ],
+   "cited_pass2": [],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-002 v7: Your base-fare refund is INR 1,300",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-002 v7: there is a 35% PQ charge"
+   ],
+   "final_answer": "Your base-fare refund is INR 1,300 after a 35% PQ charge.\n\nPolicy references: CAN-002 v7 (in effect from 2026-09-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 2,
+   "input_tokens": 3053,
+   "output_tokens": 366,
+   "plain": {
+    "decision": "RELEASE",
+    "reason": "The cancellation request meets the at least 24-hour requirement for Premium QuickBook tickets, resulting in a 35% charge on the base fare.",
+    "latency_ms": 1885,
+    "error": null
+   }
+  },
+  {
+   "id": "R16",
+   "customer_date": "2026-08-31",
+   "as_of": "2026-08-31",
+   "governing": "V2",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 18,
+   "latency_ms": 10749,
+   "cited_pass1": [
+    "CAN-002 v6 [V2]"
+   ],
+   "cited_pass2": [
+    "CAN-002 v6 [V2]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) CAN-002 v6: The September premium rule gives you a 65% refund",
+    "p1#2 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) CAN-002 v6: The September premium rule gives you a INR 1,300 refund",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-002 v6: For a confirmed Premium QuickBook passenger, if the voluntary cancellation is requested with less than 36 hours remaining before scheduled departure, the base f"
+   ],
+   "final_answer": "For a confirmed Premium QuickBook passenger, if the voluntary cancellation is requested with less than 36 hours remaining before scheduled departure, the base fare is non-refundable.\n\nPolicy references: CAN-002 v6 (in effect from 2026-05-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 5908,
+   "output_tokens": 539,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The policy for confirmed Premium QuickBook tickets (P-05) specifies a 35% charge for cancellations at least 24 hours before departure, resulting in a 65% refund, but the draft incorrectly references a non-existent September rule instead of citing the official policy.",
+    "latency_ms": 970,
+    "error": null
+   }
+  },
+  {
+   "id": "R17",
+   "customer_date": "2026-01-01",
+   "as_of": "2026-01-01",
+   "governing": "V1",
+   "label": "correct",
+   "decision": "PASS",
+   "reason_code": "ALL_SUPPORTED",
+   "released": true,
+   "ledger_id": 16,
+   "latency_ms": 3667,
+   "cited_pass1": [
+    "CAN-003 v1 [V1]",
+    "OTH-003 v1 [V1]"
+   ],
+   "cited_pass2": [],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) CAN-003 v1: You receive INR 980 of base fare after INR 20 clerkage",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) OTH-003 v1: the booking fee is not returned"
+   ],
+   "final_answer": "You receive INR 980 of base fare after INR 20 clerkage, and the booking fee is not returned.\n\nPolicy references: CAN-003 v1 (in effect from 2026-01-01), OTH-003 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 2,
+   "input_tokens": 2719,
+   "output_tokens": 316,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The clerkage for a waitlisted ticket is INR 30 per policy P-06, not INR 20.",
+    "latency_ms": 978,
+    "error": null
+   }
+  },
+  {
+   "id": "R18",
+   "customer_date": "2026-05-01",
+   "as_of": "2026-05-01",
+   "governing": "V2",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 19,
+   "latency_ms": 10756,
+   "cited_pass1": [
+    "CAN-003 v2 [V2]"
+   ],
+   "cited_pass2": [
+    "CAN-003 v2 [V2]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) CAN-003 v2: You can self-cancel now",
+    "p1#2 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) CAN-003 v2: You can collect INR 875",
+    "p1#3 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) CAN-003 v2: There is a INR 25 clerkage fee",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-003 v2: For waitlisted passengers, voluntary cancellation is closed when the time until departure is less than 3 hours.",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) CAN-003 v2: If you remain waitlisted at the time of scheduled departure, you will be automatically refunded the base fare less an INR 25 clerkage fee.",
+    "p2#3 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) CAN-003 v2: Automatic refunds for waitlisted passengers do not require you to make a request."
+   ],
+   "final_answer": "For waitlisted passengers, voluntary cancellation is closed when the time until departure is less than 3 hours. If you remain waitlisted at the time of scheduled departure, you will be automatically refunded the base fare less an INR 25 clerkage fee, without needing to make a request.\n\nPolicy references: CAN-003 v2 (in effect from 2026-05-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 7686,
+   "output_tokens": 945,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The policy specifies a flat clerkage of INR 30 for waitlisted cancellations, not INR 25.",
+    "latency_ms": 1143,
+    "error": null
+   }
+  },
+  {
+   "id": "R19",
+   "customer_date": "2026-09-01",
+   "as_of": "2026-09-01",
+   "governing": "V3",
+   "label": "correct",
+   "decision": "PASS",
+   "reason_code": "ALL_SUPPORTED",
+   "released": true,
+   "ledger_id": 17,
+   "latency_ms": 3284,
+   "cited_pass1": [
+    "CAN-003 v3 [V3]",
+    "OTH-003 v3 [V3]"
+   ],
+   "cited_pass2": [],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) CAN-003 v3: The automatic base-fare refund is INR 870.",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) OTH-003 v3: The INR 30 booking fee stays non-refundable."
+   ],
+   "final_answer": "The automatic base-fare refund is INR 870 and the INR 30 booking fee stays non-refundable.\n\nPolicy references: CAN-003 v3 (in effect from 2026-09-01), OTH-003 v3 (in effect from 2026-09-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 2,
+   "input_tokens": 2702,
+   "output_tokens": 304,
+   "plain": {
+    "decision": "RELEASE",
+    "reason": "The policy for waitlisted passengers confirms an automatic refund of the base fare minus a flat INR 30 clerkage, while the booking fee remains non-refundable.",
+    "latency_ms": 1340,
+    "error": null
+   }
+  },
+  {
+   "id": "R20",
+   "customer_date": "2026-08-31",
+   "as_of": "2026-08-31",
+   "governing": "V2",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 20,
+   "latency_ms": 7190,
+   "cited_pass1": [
+    "CAN-003 v2 [V2]"
+   ],
+   "cited_pass2": [
+    "CAN-003 v2 [V2]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) CAN-003 v2: You are charged only the INR 25 waitlist clerkage, because you originally booked waitlist.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) CAN-003 v2: Waitlist-specific refund rules do not apply because your ticket was promoted to confirmed status before you requested the cancellation."
+   ],
+   "final_answer": "Because your ticket was promoted to confirmed status before you requested the cancellation, the waitlist-specific refund rules do not apply.\n\nPolicy references: CAN-003 v2 (in effect from 2026-05-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 5589,
+   "output_tokens": 422,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "Since the passenger was confirmed at the time of cancellation, the policy requires them to follow the rules for confirmed tickets (P-03) rather than waitlisted clerkage, and the draft suggests an incorrect clerkage amount.",
+    "latency_ms": 1221,
+    "error": null
+   }
+  },
+  {
+   "id": "R21",
+   "customer_date": "2026-04-30",
+   "as_of": "2026-04-30",
+   "governing": "V1",
+   "label": "wrong",
+   "decision": "ESCALATED",
+   "reason_code": "CORRECTION_FAILED",
+   "released": true,
+   "ledger_id": 23,
+   "latency_ms": 10885,
+   "cited_pass1": [
+    "OTH-007 v1 [V1]",
+    "CAN-004 v4 [V1]",
+    "OTH-003 v1 [V1]"
+   ],
+   "cited_pass2": [
+    "OTH-007 v1 [V1]",
+    "CAN-004 v4 [V1]",
+    "OTH-003 v1 [V1]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) OTH-007 v1: Partial cancellation is valid.",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) CAN-004 v4: The passenger gets INR 580 of base fare for a partial cancellation.",
+    "p1#3 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) OTH-003 v1: A new INR 20 partial-cancellation processing fee is charged.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) OTH-007 v1: You may proceed with the partial cancellation for one passenger, as your PNR contains three passengers and at least two will remain active.",
+    "p2#2 CONTRADICTED (llm SUPPORTED, rule MISMATCH) CAN-004 v4: For a confirmed Sleeper class ticket cancelled at least 48 hours before departure, the cancellation charge is INR 120.",
+    "p2#3 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-004 v4: Based on your base fare of INR 700, the refund amount is INR 580.",
+    "p2#4 CONTRADICTED (llm SUPPORTED, rule MISMATCH) CAN-004 v4: The original booking service fee of INR 20 is non-refundable.",
+    "p2#5 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) OTH-003 v1: No additional processing charges apply."
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 7266,
+   "output_tokens": 1362,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The policy defines the cancellation charge as INR 160 for Sleeper class at 55h, and there is no provision for a separate partial-cancellation processing fee.",
+    "latency_ms": 1026,
+    "error": null
+   }
+  },
+  {
+   "id": "R22",
+   "customer_date": "2026-04-30",
+   "as_of": "2026-04-30",
+   "governing": "V1",
+   "label": "wrong",
+   "decision": "ESCALATED",
+   "reason_code": "CORRECTION_FAILED",
+   "released": true,
+   "ledger_id": 22,
+   "latency_ms": 7125,
+   "cited_pass1": [
+    "OTH-007 v1 [V1]"
+   ],
+   "cited_pass2": [
+    "OTH-007 v1 [V1]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) OTH-007 v1: Partial cancellation is supported because one passenger remains on the PNR.",
+    "p2#1 CONTRADICTED (llm SUPPORTED, rule NOT_APPLICABLE) OTH-007 v1: Voluntary partial cancellation is supported only when the original PNR has at least 3 passengers",
+    "p2#2 CONTRADICTED (llm SUPPORTED, rule NOT_APPLICABLE) OTH-007 v1: Voluntary partial cancellation is supported only when at least 2 passengers remain active after the request"
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 5980,
+   "output_tokens": 583,
+   "plain": {
+    "decision": "RELEASE",
+    "reason": "The draft accurately states that the partial cancellation is supported for a PNR with two passengers where one remains active.",
+    "latency_ms": 2011,
+    "error": null
+   }
+  },
+  {
+   "id": "R23",
+   "customer_date": "2026-05-01",
+   "as_of": "2026-05-01",
+   "governing": "V2",
+   "label": "correct",
+   "decision": "ESCALATED",
+   "reason_code": "UNCHECKED_DETAILS",
+   "released": true,
+   "ledger_id": 21,
+   "latency_ms": 3532,
+   "cited_pass1": [
+    "OTH-007 v2 [V2]",
+    "CAN-004 v5 [V2]",
+    "OTH-003 v2 [V2]"
+   ],
+   "cited_pass2": [],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) OTH-007 v2: One passenger may cancel alone.",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule MATCH) CAN-004 v5: Base-fare refund INR 780 for one passenger.",
+    "p1#3 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) OTH-003 v2: The INR 25 PNR fee stays charged once."
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [
+    "780 for one passenger (in a claim, not in the answer)"
+   ],
+   "error": null,
+   "llm_calls": 2,
+   "input_tokens": 3296,
+   "output_tokens": 485,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The draft incorrectly states the booking service fee is INR 25, whereas the policy defines it as INR 30.",
+    "latency_ms": 1225,
+    "error": null
+   }
+  },
+  {
+   "id": "R24",
+   "customer_date": "2026-09-01",
+   "as_of": "2026-09-01",
+   "governing": "V3",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 25,
+   "latency_ms": 8944,
+   "cited_pass1": [
+    "CAN-003 v3 [V3]"
+   ],
+   "cited_pass2": [
+    "CAN-004 v6 [V3]",
+    "CAN-003 v3 [V3]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) CAN-003 v3: Each cancellation incurs an INR 80 SL charge",
+    "p1#2 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) CAN-003 v3: Each passenger gets INR 820 back for each cancellation",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) CAN-004 v6: For the confirmed passenger, the cancellation incurs an INR 80 clerkage.",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) CAN-003 v3: For the passenger who remains waitlisted, the cancellation performed 20 hours ahead results in a refund of the full base fare less an INR 30 clerkage."
+   ],
+   "final_answer": "For the confirmed passenger, the cancellation incurs an INR 80 clerkage. For the passenger who remains waitlisted, the cancellation performed 20 hours ahead results in a refund of the full base fare less an INR 30 clerkage.\n\nPolicy references: CAN-004 v6 (in effect from 2026-09-01), CAN-003 v3 (in effect from 2026-09-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 6115,
+   "output_tokens": 745,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The waitlisted passenger is subject to a flat INR 30 clerkage fee per P-06 rather than the SL class cancellation charge.",
+    "latency_ms": 1131,
+    "error": null
+   }
+  },
+  {
+   "id": "R25",
+   "customer_date": "2026-01-01",
+   "as_of": "2026-01-01",
+   "governing": "V1",
+   "label": "correct",
+   "decision": "PASS",
+   "reason_code": "ALL_SUPPORTED",
+   "released": true,
+   "ledger_id": 24,
+   "latency_ms": 3009,
+   "cited_pass1": [
+    "REF-001 v1 [V1]"
+   ],
+   "cited_pass2": [],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-001 v1: The full INR 2,020 is refundable under the operator-cancellation exception."
+   ],
+   "final_answer": "The full INR 2,020 is refundable under the operator-cancellation exception.\n\nPolicy references: REF-001 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 2,
+   "input_tokens": 2459,
+   "output_tokens": 213,
+   "plain": {
+    "decision": "RELEASE",
+    "reason": "The customer is entitled to a full refund of the base fare and the booking service fee under exception E1, as the claim was filed within 14 days of the scheduled departure.",
+    "latency_ms": 1663,
+    "error": null
+   }
+  },
+  {
+   "id": "R26",
+   "customer_date": "2026-04-30",
+   "as_of": "2026-04-30",
+   "governing": "V1",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 27,
+   "latency_ms": 7738,
+   "cited_pass1": [
+    "REF-001 v1 [V1]"
+   ],
+   "cited_pass2": [
+    "REF-001 v1 [V1]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) REF-001 v1: Operator cancellations have a 10-day claim period.",
+    "p1#2 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) REF-001 v1: You can still claim the full fare and fee.",
+    "p1#3 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) REF-001 v1: You can still claim the full fare and fee because operator cancellations have a 10-day claim period.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) REF-001 v1: For an operator-cancelled service, a refund claim must be filed no later than 7 calendar days after the scheduled departure to be eligible for a refund of the b"
+   ],
+   "final_answer": "For an operator-cancelled service, a refund claim must be filed no later than 7 calendar days after the scheduled departure to be eligible for a refund of the base fare and the booking service fee.\n\nPolicy references: REF-001 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 6288,
+   "output_tokens": 678,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The policy states the deadline for an E1 operator cancellation claim is 14 calendar days, not 10.",
+    "latency_ms": 1459,
+    "error": null
+   }
+  },
+  {
+   "id": "R27",
+   "customer_date": "2026-05-01",
+   "as_of": "2026-05-01",
+   "governing": "V2",
+   "label": "correct",
+   "decision": "PASS",
+   "reason_code": "ALL_SUPPORTED",
+   "released": true,
+   "ledger_id": 26,
+   "latency_ms": 3804,
+   "cited_pass1": [
+    "REF-001 v2 [V2]"
+   ],
+   "cited_pass2": [],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-001 v2: Your E1 claim is within the v2 filing limit.",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-001 v2: A full fare refund is available.",
+    "p1#3 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-001 v2: A full fare refund includes the fee if all PNR travellers were affected."
+   ],
+   "final_answer": "Your E1 claim is within the v2 filing limit and a full fare refund is available, including the fee if all PNR travellers were affected.\n\nPolicy references: REF-001 v2 (in effect from 2026-05-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 2,
+   "input_tokens": 3306,
+   "output_tokens": 445,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The draft incorrectly refers to an obsolete policy version (v2) and fails to explicitly confirm the eligibility under the current governing policy (v3).",
+    "latency_ms": 1409,
+    "error": null
+   }
+  },
+  {
+   "id": "R28",
+   "customer_date": "2026-09-01",
+   "as_of": "2026-09-01",
+   "governing": "V3",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 29,
+   "latency_ms": 10837,
+   "cited_pass1": [
+    "REF-001 v3 [V3]"
+   ],
+   "cited_pass2": [
+    "REF-001 v3 [V3]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) REF-001 v3: SPR only accepts cancellation claims for up to 10 days.",
+    "p1#2 CONTRADICTED (llm CONTRADICTED, rule MATCH) REF-001 v3: Your claim is too late because it was made 14 calendar days after scheduled departure.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) REF-001 v3: A claim filed no later than 14 calendar days after the scheduled departure qualifies for a 100% refund of your base fare if SPR cancels your scheduled train.",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule MATCH) REF-001 v3: The 100% refund of your base fare includes confirmed PQ or waitlisted status if SPR cancels your scheduled train.",
+    "p2#3 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-001 v3: The single PNR booking service fee is refunded once if all passengers on that PNR are affected by the operator cancellation.",
+    "p2#4 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-001 v3: No ordinary cancellation charge or clerkage applies if all passengers on that PNR are affected by the operator cancellation."
+   ],
+   "final_answer": "If SPR cancels your scheduled train, a claim filed no later than 14 calendar days after the scheduled departure qualifies for a 100% refund of your base fare, including confirmed PQ or waitlisted status. Additionally, the single PNR booking service fee is refunded once if all passengers on that PNR are affected by the operator cancellation, and no ordinary cancellation charge or clerkage applies.\n\nPolicy references: REF-001 v3 (in effect from 2026-09-01).",
+   "unchecked": [
+    "14 calendar days (in a claim, not in the answer)"
+   ],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 6539,
+   "output_tokens": 1122,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The policy E1 allows claims for operator-cancelled trains to be filed up to 14 calendar days after scheduled departure, so the draft's statement about a 10-day limit is incorrect.",
+    "latency_ms": 1504,
+    "error": null
+   }
+  },
+  {
+   "id": "R29",
+   "customer_date": "2026-04-30",
+   "as_of": "2026-04-30",
+   "governing": "V1",
+   "label": "correct",
+   "decision": "ESCALATED",
+   "reason_code": "NOT_COVERED",
+   "released": true,
+   "ledger_id": 28,
+   "latency_ms": 8448,
+   "cited_pass1": [
+    "OTH-003 v1 [V1]"
+   ],
+   "cited_pass2": [],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 NOT_COVERED (llm NOT_COVERED, rule NOT_APPLICABLE) -: The full INR 1,000 base fare is refundable under the major-delay exception",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) OTH-003 v1: the INR 20 booking fee is not refundable"
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 6850,
+   "output_tokens": 406,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The policy (E2) states that the booking service fee is also refunded for qualified major departure delays.",
+    "latency_ms": 1533,
+    "error": null
+   }
+  },
+  {
+   "id": "R30",
+   "customer_date": "2026-05-01",
+   "as_of": "2026-05-01",
+   "governing": "V2",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 31,
+   "latency_ms": 8865,
+   "cited_pass1": [
+    "REF-002 v2 [V2]"
+   ],
+   "cited_pass2": [
+    "REF-002 v2 [V2]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) REF-002 v2: A 119-minute delay qualifies for a full major-delay refund.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-002 v2: A delay of 120 minutes or more beyond the original scheduled departure is required to qualify for the E2 refund.",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-002 v2: A delay of one minute less than 120 minutes does not qualify for the E2 refund."
+   ],
+   "final_answer": "A delay of 120 minutes or more beyond the original scheduled departure is required to qualify for the E2 refund. A delay of one minute less than this threshold does not qualify.\n\nPolicy references: REF-002 v2 (in effect from 2026-05-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 5572,
+   "output_tokens": 542,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "Policy E2 requires a departure delay of at least 90 minutes; however, the draft claims a 119-minute delay qualifies, but the policy specifically states that E2 is for official rescheduling which is typically not triggered by delays that don't meet strict criteria, and the prompt implies a delay of 1",
+    "latency_ms": 1664,
+    "error": null
+   }
+  },
+  {
+   "id": "R31",
+   "customer_date": "2026-09-01",
+   "as_of": "2026-09-01",
+   "governing": "V3",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 30,
+   "latency_ms": 7107,
+   "cited_pass1": [
+    "REF-002 v3 [V3]"
+   ],
+   "cited_pass2": [
+    "REF-002 v3 [V3]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-002 v3: You receive INR 1,000 on delay claims",
+    "p1#2 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) REF-002 v3: the INR 30 booking fee cannot be refunded on delay claims",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) REF-002 v3: As your departure was officially delayed by 90 minutes and you submitted your E2 claim before the train's actual departure from your origin, you are entitled to"
+   ],
+   "final_answer": "As your departure was officially delayed by 90 minutes and you submitted your E2 claim before the train's actual departure from your origin, you are entitled to a refund of 100% of your base fare and the booking service fee.\n\nPolicy references: REF-002 v3 (in effect from 2026-09-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 5645,
+   "output_tokens": 627,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "According to policy E2, the booking service fee is refundable when a passenger chooses not to travel due to an official departure delay of at least 90 minutes.",
+    "latency_ms": 1037,
+    "error": null
+   }
+  },
+  {
+   "id": "R32",
+   "customer_date": "2026-08-31",
+   "as_of": "2026-08-31",
+   "governing": "V2",
+   "label": "wrong",
+   "decision": "ESCALATED",
+   "reason_code": "CORRECTION_FAILED",
+   "released": true,
+   "ledger_id": 34,
+   "latency_ms": 10575,
+   "cited_pass1": [
+    "REF-002 v2 [V2]"
+   ],
+   "cited_pass2": [
+    "REF-002 v2 [V2]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) REF-002 v2: The delay is long enough so the claim will still be paid in full.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) REF-002 v2: For a delay of at least 120 minutes, a passenger who elects not to travel is eligible for a refund of 100% of the base fare.",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule MATCH) REF-002 v2: The refund of 100% of the base fare includes confirmed PQ fares for a delay of at least 120 minutes.",
+    "p2#3 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-002 v2: The E2 claim must be submitted before the train's actual departure to be eligible for a refund.",
+    "p2#4 CONTRADICTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-002 v2: A passenger who submits the claim after the actual departure cannot claim E2."
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 6664,
+   "output_tokens": 929,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "According to E2, a passenger who submits a claim after the train's actual departure is not eligible for a refund, so the draft incorrectly promises a payment.",
+    "latency_ms": 1123,
+    "error": null
+   }
+  },
+  {
+   "id": "R33",
+   "customer_date": "2026-04-30",
+   "as_of": "2026-04-30",
+   "governing": "V1",
+   "label": "correct",
+   "decision": "PASS",
+   "reason_code": "ALL_SUPPORTED",
+   "released": true,
+   "ledger_id": 32,
+   "latency_ms": 3348,
+   "cited_pass1": [
+    "REF-003 v1 [V1]"
+   ],
+   "cited_pass2": [],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-003 v1: The v1 medical exception returns INR 800 of base fare",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-003 v1: The v1 medical exception includes a INR 100 medical deduction",
+    "p1#3 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-003 v1: The fee remains withheld for the v1 medical exception"
+   ],
+   "final_answer": "The v1 medical exception returns INR 800 of base fare after a INR 100 medical deduction; the fee remains withheld.\n\nPolicy references: REF-003 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 2,
+   "input_tokens": 2924,
+   "output_tokens": 441,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The draft applies incorrect deduction amounts under the medical emergency exception E3, which specifies a 150 INR deduction for non-PQ tickets rather than 100 INR.",
+    "latency_ms": 1519,
+    "error": null
+   }
+  },
+  {
+   "id": "R34",
+   "customer_date": "2026-05-01",
+   "as_of": "2026-05-01",
+   "governing": "V2",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 35,
+   "latency_ms": 8178,
+   "cited_pass1": [
+    "REF-003 v2 [V2]"
+   ],
+   "cited_pass2": [
+    "REF-003 v2 [V2]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) REF-003 v2: The medical refund is INR 800 after the old INR 100 flat deduction.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) REF-003 v2: For an E3 claim filed within 48 hours after scheduled departure due to a certified medical emergency, you may recover your base fare minus a flat medical deduct",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule MATCH) REF-003 v2: For an E3 claim filed within 48 hours after scheduled departure due to a certified medical emergency, you may recover your base fare minus a flat medical deduct",
+    "p2#3 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-003 v2: The booking fee is not reimbursed."
+   ],
+   "final_answer": "For an E3 claim filed within 48 hours after scheduled departure due to a certified medical emergency, you may recover your base fare minus a flat medical deduction of INR 125, provided you did not board. Please note that the booking fee is not reimbursed.\n\nPolicy references: REF-003 v2 (in effect from 2026-05-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 6495,
+   "output_tokens": 743,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The policy (E3) states the medical deduction is INR 150 for non-PQ tickets, meaning the refund should be INR 750, not INR 800.",
+    "latency_ms": 1746,
+    "error": null
+   }
+  },
+  {
+   "id": "R35",
+   "customer_date": "2026-08-31",
+   "as_of": "2026-08-31",
+   "governing": "V2",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 33,
+   "latency_ms": 7624,
+   "cited_pass1": [
+    "REF-003 v2 [V2]"
+   ],
+   "cited_pass2": [
+    "REF-003 v2 [V2]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) REF-003 v2: A doctor certificate always overrides premium non-refundability",
+    "p1#2 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) REF-003 v2: a medical deduction of INR 125 applies",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-003 v2: Premium QuickBook passengers are excluded from E3 medical emergency claims."
+   ],
+   "final_answer": "Premium QuickBook passengers are excluded from E3 medical emergency claims.\n\nPolicy references: REF-003 v2 (in effect from 2026-05-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 6141,
+   "output_tokens": 448,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The medical deduction for a Premium QuickBook passenger is INR 200, not INR 125, as specified in exception E3.",
+    "latency_ms": 1908,
+    "error": null
+   }
+  },
+  {
+   "id": "R36",
+   "customer_date": "2026-09-01",
+   "as_of": "2026-09-01",
+   "governing": "V3",
+   "label": "correct",
+   "decision": "ESCALATED",
+   "reason_code": "NOT_COVERED",
+   "released": true,
+   "ledger_id": 36,
+   "latency_ms": 6328,
+   "cited_pass1": [
+    "REF-003 v3 [V3]"
+   ],
+   "cited_pass2": [],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-003 v3: You qualify for the medical exception",
+    "p1#2 NOT_COVERED (llm SUPPORTED, rule NOT_APPLICABLE) -: you receive INR 2,800 of base fare",
+    "p1#3 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-003 v3: the INR 30 fee is retained"
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 4,
+   "input_tokens": 5107,
+   "output_tokens": 541,
+   "plain": {
+    "decision": "RELEASE",
+    "reason": "The refund amount is correctly calculated as the base fare of 3000 minus the 200 INR medical deduction for Premium QuickBook passengers under E3, with the booking fee correctly retained.",
+    "latency_ms": 1038,
+    "error": null
+   }
+  },
+  {
+   "id": "R37",
+   "customer_date": "2026-05-01",
+   "as_of": "2026-05-01",
+   "governing": "V2",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 38,
+   "latency_ms": 8780,
+   "cited_pass1": [
+    "REF-003 v2 [V2]"
+   ],
+   "cited_pass2": [
+    "REF-003 v2 [V2]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) REF-003 v2: The medical exception applies to any buyer with a valid certificate.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-003 v2: A ticket bought through an unauthorized resale broker is excluded from the E3 medical exception."
+   ],
+   "final_answer": "A ticket bought through an unauthorized resale broker is excluded from the E3 medical exception, even if you have a valid medical certificate.\n\nPolicy references: REF-003 v2 (in effect from 2026-05-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 5448,
+   "output_tokens": 349,
+   "plain": {
+    "decision": "RELEASE",
+    "reason": "The policy specifically states that there is no medical exclusion for tickets purchased through an unauthorized resale broker, so the statement is correct.",
+    "latency_ms": 1829,
+    "error": null
+   }
+  },
+  {
+   "id": "R38",
+   "customer_date": "2026-04-30",
+   "as_of": "2026-04-30",
+   "governing": "V1",
+   "label": "wrong",
+   "decision": "ESCALATED",
+   "reason_code": "CORRECTION_FAILED",
+   "released": true,
+   "ledger_id": 40,
+   "latency_ms": 10870,
+   "cited_pass1": [
+    "REF-004 v1 [V1]"
+   ],
+   "cited_pass2": [
+    "REF-004 v1 [V1]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) REF-004 v1: You can get the full second-PNR fare and its fee back",
+    "p1#2 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) REF-004 v1: the duplicate window is 20 minutes",
+    "p1#3 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) REF-004 v1: You can get the full second-PNR fare and its fee back because the duplicate window is 20 minutes.",
+    "p2#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) REF-004 v1: To receive a refund of the full base fare and the booking service fee for a second PNR, the accidental duplicate purchase must be identified within 15 minutes o",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-004 v1: To receive a refund of the full base fare and the booking service fee for a second PNR, the accidental duplicate purchase must be identified before the schedule"
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 5998,
+   "output_tokens": 810,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The draft incorrectly states the duplicate purchase identification window is 20 minutes, whereas the policy (E4) specifies 30 minutes.",
+    "latency_ms": 2521,
+    "error": null
+   }
+  },
+  {
+   "id": "R39",
+   "customer_date": "2026-05-01",
+   "as_of": "2026-05-01",
+   "governing": "V2",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 37,
+   "latency_ms": 8624,
+   "cited_pass1": [
+    "REF-004 v2 [V2]",
+    "OTH-003 v2 [V2]"
+   ],
+   "cited_pass2": [
+    "REF-004 v2 [V2]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-004 v2: The entire second-PNR base fare is refundable.",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-004 v2: The second-PNR INR 25 booking fee is refundable.",
+    "p1#3 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) OTH-003 v2: A mandatory INR 10 duplicate-verification charge is deducted.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-004 v2: For accidental duplicate purchases where the second PNR is for exactly the same passenger, train, travel date, origin, destination, and class, and is identified",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) REF-004 v2: For accidental duplicate purchases where the second PNR is for exactly the same passenger, train, travel date, origin, destination, and class, and is identified"
+   ],
+   "final_answer": "For accidental duplicate purchases where the second PNR is for exactly the same passenger, train, travel date, origin, destination, and class, and is identified within 20 minutes of purchase and before departure, SPR refunds the full base fare on the second PNR plus that PNR's booking service fee.\n\nPolicy references: REF-004 v2 (in effect from 2026-05-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 6187,
+   "output_tokens": 984,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The policy mandates a refund of the full base fare and the full booking service fee (INR 30) for accidental duplicate purchases under E4, and it does not authorize any additional deduction or verification charge.",
+    "latency_ms": 974,
+    "error": null
+   }
+  },
+  {
+   "id": "R40",
+   "customer_date": "2026-09-01",
+   "as_of": "2026-09-01",
+   "governing": "V3",
+   "label": "wrong",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "released": true,
+   "ledger_id": 39,
+   "latency_ms": 8654,
+   "cited_pass1": [
+    "OTH-005 v2 [V3]"
+   ],
+   "cited_pass2": [
+    "OTH-005 v2 [V3]"
+   ],
+   "other_version_cited": false,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) OTH-005 v2: You automatically qualify for a full fare refund under the September evacuation exception.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) OTH-005 v2: A government evacuation order must explicitly prohibit boarding at the origin station for the scheduled service to qualify for a full base fare refund.",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) OTH-005 v2: A general travel advisory does not qualify as an evacuation order."
+   ],
+   "final_answer": "A government evacuation order must explicitly prohibit boarding at the origin station for the scheduled service to qualify for a full base fare refund. A general travel advisory does not qualify as an evacuation order.\n\nPolicy references: OTH-005 v2 (in effect from 2026-09-01).",
+   "unchecked": [],
+   "error": null,
+   "llm_calls": 5,
+   "input_tokens": 5612,
+   "output_tokens": 527,
+   "plain": {
+    "decision": "BLOCK",
+    "reason": "The policy explicitly states that a general travel advisory does not constitute an evacuation order, so the passenger is ineligible for an E5 refund.",
+    "latency_ms": 912,
+    "error": null
+   }
+  }
+ ]
+}

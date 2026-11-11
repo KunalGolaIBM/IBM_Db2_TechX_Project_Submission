@@ -68,5 +68,79 @@
    "grade": "right",
    "why": "v3 E5: an advisory is not an evacuation order; an explicit evacuation order is required."
   }
+ },
+ "run-2": {
+  "R02": {
+   "grade": "right",
+   "why": "v2 2A at 36 h: INR 220 charge and INR 780 refund."
+  },
+  "R07": {
+   "grade": "wrong",
+   "why": "Says a 2S ticket cancelled between 4 and 12 hours costs INR 30; in v1 that band is a 50% charge, and INR 30 is the 12 to 48 h band's (the amount happens to be right for this customer's 12 h)."
+  },
+  "R08": {
+   "grade": "right",
+   "why": "Booking date governs (P-01), so v1: 2S in the 12 to 48 h band, INR 30."
+  },
+  "R12": {
+   "grade": "right",
+   "why": "v1 P-05: no voluntary refund for a confirmed PQ ticket at any time."
+  },
+  "R14": {
+   "grade": "right",
+   "why": "v2 P-05: a confirmed PQ ticket with less than 36 h left is non-refundable."
+  },
+  "R16": {
+   "grade": "right",
+   "why": "v2 P-05: less than 36 h left, non-refundable; v3 does not apply."
+  },
+  "R18": {
+   "grade": "right",
+   "why": "v2 P-06: voluntary cancellation closed under 3 h; automatic refund less INR 25 if still waitlisted at departure."
+  },
+  "R20": {
+   "grade": "right",
+   "why": "Says the waitlist rules do not apply to a promoted ticket, which is right; it states no amount (P-03 gives INR 110) but nothing it says is wrong."
+  },
+  "R24": {
+   "grade": "right",
+   "why": "v3: INR 80 for the confirmed SL passenger and base fare less INR 30 for the waitlisted one; it calls the INR 80 charge a clerkage, but the amount is right."
+  },
+  "R26": {
+   "grade": "right",
+   "why": "v1 E1: a claim no later than 7 calendar days, so 8 days is late."
+  },
+  "R28": {
+   "grade": "right",
+   "why": "v3 E1: no later than 14 calendar days, 100% of the base fare."
+  },
+  "R30": {
+   "grade": "right",
+   "why": "v2 E2: 120 minutes needed; one minute less does not qualify."
+  },
+  "R31": {
+   "grade": "right",
+   "why": "v3 E2: 100% of base fare and the booking service fee."
+  },
+  "R34": {
+   "grade": "right",
+   "why": "v2 E3: base fare less INR 125 within 48 h; booking fee not reimbursed."
+  },
+  "R35": {
+   "grade": "right",
+   "why": "v2 E3 excludes PQ passengers."
+  },
+  "R37": {
+   "grade": "right",
+   "why": "v2 E3 excludes tickets from an unauthorized resale broker."
+  },
+  "R39": {
+   "grade": "right",
+   "why": "v2 E4: full second-PNR base fare plus its booking fee within 20 minutes."
+  },
+  "R40": {
+   "grade": "right",
+   "why": "v3 E5: an advisory is not an evacuation order."
+  }
  }
 }
