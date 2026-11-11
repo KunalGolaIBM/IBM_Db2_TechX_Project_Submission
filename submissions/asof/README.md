@@ -3,6 +3,13 @@
 > **What did the policy say on that date, and what did your AI tell the customer?**
 > AsOf checks each policy claim in an AI assistant's answer against the policy version in force on the customer's date, stops answers that contradict it, and keeps a tamper-evident Db2 record of what was said and why.
 
+| [**1 of 121** wrong drafts released (frozen)](docs/evaluation.md#the-frozen-test-splits) | [**0 of 65** on blind sets](docs/evaluation.md#the-frozen-test-splits) | [**30/40 vs 6/40** on another AI's policy](docs/eval/unseen-results.md) | [**9 of 10** on real US DOT rules](docs/eval/real-regulation.md) | [**1,331 tests**, CI on IBM's Db2 image](https://github.com/JustJay7/asof/actions/workflows/ci.yml) | [**Live demo**, spend-capped by Db2](docs/public-demo.md) |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+
+![The Playground on a March booking: the demo assistant promised a retroactive bereavement refund; AsOf found 3 claims contradicted by BRV-002 v1, the version in force on 10 March 2026, and released a corrected answer that passed a full re-check](docs/screenshots/01a-playground-corrected.png)
+
+**[Demo video (2:58)](https://www.youtube.com/watch?v=mntehVWQn8E)** | **[Live demo](https://136-108-251-170.sslip.io)**
+
 [![CI](https://github.com/JustJay7/asof/actions/workflows/ci.yml/badge.svg)](https://github.com/JustJay7/asof/actions/workflows/ci.yml)
 
 **Try it:** [Live demo](https://136-108-251-170.sslip.io) | [Demo video (2:58)](https://www.youtube.com/watch?v=mntehVWQn8E) | `./quickstart.sh` (one command, no API key)
