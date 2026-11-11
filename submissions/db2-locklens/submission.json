@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Db2 LockLens - Explainable Database Lock & Deadlock Investigator",
+    "slug": "db2-locklens",
+    "short_description": "An IBM Db2 observability dashboard that uses native lock monitoring to identify blocking and waiting applications, explain lock contention with evidence-based diagnostics, recommend safe next steps, and persist incident history in Db2.",
+    "category": "Database Observability / Diagnostics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/GURUBAKSHYADAV-71218/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "NANDIGHOSH",
+    "members": [
+      {
+        "name": "GURUBAKSH YADAV",
+        "github": "GURUBAKSHYADAV-71218",
+        "email": "gurubakshyadav71218@gmail.com",
+        "role": "Individual participant"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker)",
+    "connector": "ibm_db",
+    "features_used": [
+      "MON_GET_LOCKS",
+      "MON_GET_APPL_LOCKWAIT",
+      "MON_GET_CONNECTION",
+      "MON_FORMAT_LOCK_NAME",
+      "Relational tables with identity column",
+      "Unique index excluding NULL keys (incident de-duplication)",
+      "Parameterized SQL",
+      "Persistent incident history in Db2"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "SQL"
+    ],
+    "frameworks": [
+      "LangChain",
+      "Streamlit",
+      "Plotly",
+      "Docker Compose"
+    ],
+    "ai_models": [
+      "None required; optional local Ollama model through LangChain"
+    ]
+  }
+}
