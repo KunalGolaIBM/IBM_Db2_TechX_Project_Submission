@@ -166,3 +166,27 @@ def test_similar_incidents_link_duplicate_reports(client, resident, responder):
     ids = [s["id"] for s in similar.json()]
     assert b["id"] in ids and unrelated["id"] not in ids
     assert client.get(f"{API}/incidents/{a['id']}/similar", headers=resident).status_code == 403
+
+
+least_privilege_only = pytest.mark.skipif(
+    settings.DATABASE_MODE != "db2" or not settings.DB2_SCHEMA or settings.DB2_SCHEMA.upper() == settings.DB2_USER.upper(),
+    reason="requires the least-privilege Db2 login (DB2_USER=nsinapp, DB2_SCHEMA=DB2INST1)",
+)
+
+
+@least_privilege_only
+@pytest.mark.parametrize("statement", [
+    "CREATE TABLE nsin_probe (id INTEGER)",
+    "DROP TABLE incidents",
+    "ALTER TABLE incidents ADD COLUMN probe INTEGER",
+    "UPDATE audit_events SET action = 'tampered'",
+    "DELETE FROM audit_events",
+])
+def test_least_privilege_login_is_denied_ddl_and_audit_tampering(statement):
+    from sqlalchemy.exc import DBAPIError
+    with db_base.engine.connect() as conn:
+        with pytest.raises(DBAPIError) as err:
+            conn.execute(text(statement))
+            conn.commit()
+        conn.rollback()
+    assert "SQL0551N" in str(err.value) or "SQL0552N" in str(err.value), str(err.value)[:300]

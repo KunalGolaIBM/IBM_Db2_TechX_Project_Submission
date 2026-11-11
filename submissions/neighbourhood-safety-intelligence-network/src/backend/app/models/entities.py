@@ -1,6 +1,6 @@
 import datetime
 from sqlalchemy import (
-    Column, Integer, String, Text, Float, Boolean, DateTime, ForeignKey, Enum
+    Column, Integer, String, Text, Float, Boolean, DateTime, ForeignKey, Index
 )
 from sqlalchemy.orm import declarative_base, relationship as sa_relationship
 
@@ -64,6 +64,12 @@ class Responder(Base):
 
 class Incident(Base):
     __tablename__ = "incidents"
+    __table_args__ = (
+        # Responder queues and dashboards filter open incidents by status, then order by priority.
+        Index("ix_incidents_status_priority", "status", "priority"),
+        # Analytics windows ("last 30 days") range-scan the creation time.
+        Index("ix_incidents_created_at", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     reference_code = Column(String(50), unique=True, nullable=False)
@@ -89,9 +95,13 @@ class Incident(Base):
 
 class IncidentStatusHistory(Base):
     __tablename__ = "incident_status_history"
+    __table_args__ = (
+        # Timeline reads and the first-acknowledgement CTE look up (incident_id, status) ordered by time.
+        Index("ix_status_history_incident_status_time", "incident_id", "status", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=False, index=True)
+    incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=False)
     status = Column(String(50), nullable=False)
     notes = Column(Text, nullable=True)
     updated_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -195,6 +205,10 @@ class AIAnalysisRecord(Base):
 
 class AuditEvent(Base):
     __tablename__ = "audit_events"
+    __table_args__ = (
+        Index("ix_audit_events_resource", "resource_type", "resource_id"),
+        Index("ix_audit_events_timestamp", "timestamp"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)

@@ -46,6 +46,7 @@ class Settings:
     DB2_USER: str = os.getenv("DB2_USER", "")
     DB2_PASSWORD: str = os.getenv("DB2_PASSWORD", "")
     DB2_SECURITY: str = os.getenv("DB2_SECURITY", "")
+    DB2_SCHEMA: str = os.getenv("DB2_SCHEMA", "")  # schema of the app tables when connecting as a least-privilege user
     
     # JWT & Auth
     JWT_SECRET: str = os.getenv("JWT_SECRET", DEV_JWT_SECRET)
