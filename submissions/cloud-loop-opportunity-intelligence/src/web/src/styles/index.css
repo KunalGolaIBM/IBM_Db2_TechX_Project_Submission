@@ -1,0 +1,10 @@
+/* NexaSphere Design Kit — Import all layers in the correct cascade order */
+
+@import './01-themes.css';
+@import './02-globals.css';
+@import './03-animations.css';
+@import './04-aurora.css';
+@import './05-motion.css';
+@import './06-material-system.css';
+@import './07-design-styles.css';
+@import './08-accessibility.css';
