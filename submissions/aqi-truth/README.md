@@ -2,7 +2,7 @@
 
 [![CI: pytest on IBM Db2 12.1.5](https://github.com/debi910/aqi-truth/actions/workflows/ci.yml/badge.svg)](https://github.com/debi910/aqi-truth/actions/workflows/ci.yml)
 
-_CI runs in the source repo [debi910/aqi-truth](https://github.com/debi910/aqi-truth/actions/workflows/ci.yml) (`.github/workflows/ci.yml`): a fresh IBM Db2 Community 12.1.5 container, the sample data loaded by the normal loader, then all 50 tests. A submission-folder copy leaves out `.github`, so the workflow file is in the source repo._
+_CI runs in the source repo [debi910/aqi-truth](https://github.com/debi910/aqi-truth/actions/workflows/ci.yml) (`.github/workflows/ci.yml`): a fresh IBM Db2 Community 12.1.5 container, the sample data loaded by the normal loader, then all 57 tests. A submission-folder copy leaves out `.github`, so the workflow file is in the source repo._
 
 > **One-Line Pitch:** Delhi's air-quality dashboards print a number even when the monitors were blank, frozen or reporting impossible values. AQI Truth puts the official CPCB method inside IBM Db2, so Db2 checks every hour and **refuses to give an AQI when the data cannot support one**, with a tamper-proof evidence ledger for each decision.
 
@@ -155,12 +155,12 @@ More detail and a diagram: [architecture.md](architecture.md).
 
 | What Granite does | What stops it going wrong | Measured |
 |---|---|---|
-| Turns a plain-English question into one Db2 `SELECT` | Scope guard before any model call; `sqlglot` must parse exactly one `SELECT` over two views, with no cross join and at most 3 view references; row cap; Db2 runs it as `AQREADER` (no table access) with a query timeout | **18/20** gold questions return the same rows as hand-written SQL (a development score; [eval](eval/ask_eval_results.md)); **8/8** attack prompts held (delete, update, `SYSCAT`, raw tables, forecasts, health advice, blame) |
+| Turns a plain-English question into one Db2 `SELECT` | Scope guard before any model call; `sqlglot` must parse exactly one `SELECT` over two views, with no cross join and at most 3 view references; row cap; Db2 runs it as `AQREADER` (no table access) with a query timeout | **19/20** gold questions return the same rows as hand-written SQL, run through the LangChain chain on 11 Nov (18/20 on 9 Nov with direct calls; a development score; [eval](eval/ask_eval_results.md)); **8/8** attack prompts held (delete, update, `SYSCAT`, raw tables, forecasts, health advice, blame) |
 | Explains a verdict Db2 already made | The prompt holds only the verdict and its failed ledger rows; rule text is retrieved inside Db2 with `VECTOR_DISTANCE` (Granite embeddings) and must include the rule the procedure cited; any number not in the facts, advice words or a wrong CPCB category reject the reply, and a template is stored instead | Guard tested in [`tests/test_db2.py`](tests/test_db2.py) (`test_explanation_guard_rejects_invented_numbers`); 18 guard and checker tests in [`tests/test_guards.py`](tests/test_guards.py) |
 | *Does not* compute an AQI, change a verdict or judge a station | The CPCB method is SQL PL in Db2; verdicts are append-only and receipted | Fault injection: **190/198** planted faults caught by the Db2 audit, against 70 for a min-max rule and 0 for a plain average ([eval](eval/fault_injection_results.md)) |
 
 Why not a bigger model or an agent: it all runs free and offline on a 4-core CPU, where a 3B-parameter Granite already takes about 30 s per question. A multi-step agent would multiply that wait for judges and add room for the model to act on its own. A shorter prompt was tried and cut accuracy from 18/20 to 10/20, so the prompt stays.
-- **Chosen AI framework: IBM Granite on Ollama, called directly (no orchestration layer).** About 200 lines of Python (`src/explain.py`, `src/ask.py`, `src/llm.py`, `src/rules.py`) call Ollama's HTTP API. Why: every step around the model is a deterministic check (scope guard, `sqlglot` parse, read-only Db2 user, citation check), and Db2 does the retrieval (`VECTOR_DISTANCE`). A framework such as LangChain would add a layer between those checks and the model without adding a capability we use. It runs offline on a CPU and needs no API key, so judges can run the whole stack with `docker compose up`.
+- **AI framework: LangChain** (`langchain-core` + `langchain-ollama`, added 11 Nov). The question box is a LangChain (LCEL) chain in [`src/chain.py`](src/chain.py): `PromptTemplate` (schema + worked examples + question) → `OllamaLLM` (IBM Granite 4.0 micro, temperature 0) → `StrOutputParser` → SQL extraction → the unchanged checks (`sqlglot`, two views only, row cap) → Db2 as `AQREADER` with a query timeout. The web app streams the same chain token by token (`chain.stream`). LangChain orchestrates the model call; the checks after it and Db2's privileges still decide what runs. Tests with a fake LLM prove the chain's output still goes through every check ([`tests/test_chain.py`](tests/test_chain.py)). The verdict explanations (`src/explain.py`) still call Ollama's HTTP API directly through `src/llm.py`.
 - **Models:** IBM **Granite 4.0 micro** (text) and IBM **Granite embedding multilingual 278M** (768-dim), both run locally in Ollama from the GGUF files published on Docker Hub (`ai/granite-4.0-micro`, `ai/granite-embedding-multilingual`). No API key, no cost.
 - **Grounded explanations:** the prompt holds only the verdict and its failed ledger rows. Db2 `VECTOR_DISTANCE` retrieves the nearest rule texts, and code checks that they include the rule the procedure cited (`VECTOR_AGREES` is stored). The reply is rejected, and a template stored instead, if it has any number not in the facts, words like "should", "safe", "health", "forecast" or "fraud", or a CPCB category that does not match.
 - **Guarded questions:** out-of-scope questions (forecasts, health, blame) are refused before any model call. Granite writes SQL; `sqlglot` must parse it as exactly one `SELECT` over `AQ.V_DAY` / `AQ.V_CHECK`; a row cap is added; Db2 runs it as `AQREADER`.
@@ -171,7 +171,7 @@ Why not a bigger model or an agent: it all runs free and offline on a 4-core CPU
 ## Tech Stack
 - **Backend / Core:** Python 3.12, FastAPI, SQL PL in Db2
 - **Database:** IBM Db2 Community Edition 12.1.5
-- **AI:** IBM Granite 4.0 micro, IBM Granite embedding (Ollama 0.12.6)
+- **AI:** IBM Granite 4.0 micro, IBM Granite embedding (Ollama 0.12.6); LangChain (`langchain-core`, `langchain-ollama`) for the question box
 - **Frontend / UI:** plain HTML/CSS/JS (IBM Plex fonts), static snapshot mode for GitHub Pages
 - **Libraries & Tools:** ibm_db, sqlglot, requests, pytest, Docker Compose, Playwright (screenshots)
 
@@ -242,7 +242,7 @@ cp .env.example .env
 ```bash
 pip install -r requirements.txt
 set -a; . ./.env; set +a; export DB2_HOST=localhost OLLAMA_URL=http://localhost:11434
-pytest tests/                      # 50 tests; the Db2 ones skip if DB2_PASSWORD is unset
+pytest tests/                      # 57 tests; the Db2 ones skip if DB2_PASSWORD is unset
 python eval/fault_injection.py     # rebuilds schema AQE and plants 198 faults
 python eval/ask_eval.py            # 20 gold questions + 8 attack prompts
 python scripts/db2_evidence.py     # proves the Db2 claims on the live database, writes docs/DB2_VERIFICATION.md

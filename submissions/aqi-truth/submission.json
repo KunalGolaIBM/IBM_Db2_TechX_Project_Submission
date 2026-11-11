@@ -50,7 +50,8 @@
     ],
     "frameworks": [
       "FastAPI",
-      "Ollama (IBM Granite, called directly; no orchestration framework)",
+      "LangChain (langchain-core LCEL chain + langchain-ollama) for the question box",
+      "Ollama (serves IBM Granite locally)",
       "Docker Compose",
       "pytest"
     ],

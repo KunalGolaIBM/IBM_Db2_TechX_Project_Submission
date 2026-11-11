@@ -5,7 +5,6 @@ import os, re, sys
 import sqlglot
 from sqlglot import exp
 sys.path.insert(0, os.path.dirname(__file__))
-from llm import generate
 import ibm_db, ibm_db_dbi
 
 ALLOWED = {"V_DAY", "V_CHECK"}
@@ -65,8 +64,10 @@ def check_sql(sql):
         sql += f" FETCH FIRST {MAX_ROWS} ROWS ONLY"
     return sql
 
+TEMPLATE = "{schema}\n\n{examples}\n\nWrite one Db2 SELECT for the question. Reply with SQL only, no explanation.\nQ: {question}\nSQL:"
+
 def prompt(question):
-    return f"{SCHEMA}\n\n{EXAMPLES}\n\nWrite one Db2 SELECT for the question. Reply with SQL only, no explanation.\nQ: {question}\nSQL:"
+    return TEMPLATE.format(schema=SCHEMA, examples=EXAMPLES, question=question)
 
 def guard(question):
     """Refuse forecasts, health advice and blame before any model call."""
@@ -108,10 +109,12 @@ def run(sql, conn=None):
         if own: ibm_db.close(h)
     return dict(refused=False, sql=sql, columns=cols, rows=data, outcome="ANSWERED")
 
-def ask(question, conn=None):
+def ask(question, conn=None, model=None):
+    """Guard, then the LangChain chain in chain.py (prompt template -> Granite -> parser -> SQL checks -> Db2 as AQREADER)."""
     g = guard(question)
     if g: return g
-    return run(extract(generate(prompt(question), max_tokens=200, system=SYSTEM)), conn)
+    from chain import answer_chain
+    return answer_chain(conn, model).invoke({"question": question})
 
 if __name__ == "__main__":
     print(ask(" ".join(sys.argv[1:])))

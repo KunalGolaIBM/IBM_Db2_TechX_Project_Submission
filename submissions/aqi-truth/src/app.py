@@ -8,6 +8,7 @@ from pydantic import BaseModel
 sys.path.insert(0, os.path.dirname(__file__))
 from db import connect_app, rows
 import explain as ex, ask as asker, llm
+from chain import sql_chain
 
 WEB = os.path.join(os.path.dirname(__file__), "..", "web")
 app = FastAPI(title="AQI Truth")
@@ -151,9 +152,20 @@ def ask_events(question, fresh):
             if gone.is_set(): pieces.put(None); return
             pieces.put({"e": "model"})
             try:
-                for piece in llm.stream(asker.prompt(question), max_tokens=200, system=asker.SYSTEM, stop=asker.sql_done):
-                    if gone.is_set(): break
-                    pieces.put(piece)
+                # The LangChain chain in chain.py (prompt template -> Granite via langchain-ollama -> parser), streamed
+                # token by token. Stop as soon as one statement is complete; closing the stream ends Ollama's generation.
+                t0, text, first = time.time(), "", None
+                it = sql_chain().stream({"question": question})
+                try:
+                    for piece in it:
+                        if gone.is_set(): break
+                        if piece and first is None: first = time.time()
+                        text += piece; pieces.put(piece)
+                        if asker.sql_done(text): break
+                finally:
+                    it.close()
+                pieces.put({"ms_total": int((time.time() - t0) * 1000), "ms_first_token": int(((first or time.time()) - t0) * 1000),
+                            "prompt_tokens": None, "text": text})
             except Exception as e:
                 pieces.put(e)
             finally:

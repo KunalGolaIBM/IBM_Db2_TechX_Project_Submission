@@ -19,7 +19,7 @@ flowchart LR
   EVID --> EXPL[explain.py]
   RT -->|VECTOR_DISTANCE| EXPL
   EXPL -->|Granite 4.0 micro<br/>checked: numbers, words, category| EXT[(AQ.EXPLANATION<br/>append-only)]
-  Q[User question] --> ASK[ask.py]
+  Q[User question] --> ASK[ask.py + LangChain chain]
   ASK -->|Granite writes SQL<br/>sqlglot checks it| RDR[Db2 user AQREADER<br/>SELECT on 2 views only]
   RDR --> VDAY
   VDAY --> API[FastAPI app.py] --> UI[web/ UI]
@@ -38,7 +38,7 @@ flowchart LR
    - **Receipts** (`sql/08_receipt.sql`): an `AFTER INSERT` trigger on `AQ.VERDICT` writes a receipt in the same transaction: SHA-256 (`HASH(…, 2)`) of the exact readings judged, of the rules in force, and of the previous receipt (a hash chain). `AQ.VERIFY_RECEIPT(station, day)` recomputes the chain, replays the inputs `FOR SYSTEM_TIME AS OF` the issue time, and compares them with the data and rules now: `MATCH`, `DATA_CHANGED` (with the old value from history), `RULES_CHANGED` or `CHAIN_BROKEN`. `AQ.TAMPER_TEST` demonstrates it safely inside a savepoint.
    - **Row access control:** a row permission on `AQ.VERDICT` hides the out-of-scope US Embassy monitor from every ID without the `AQAUDITOR` role.
 6. **Explain.** `src/explain.py` reads a verdict and its failed checks, runs a Db2 `VECTOR_DISTANCE` search over `AQ.RULE_TEXT`, and checks that the nearest rules include the rule the procedure cited. Granite 4.0 micro writes two sentences. Code rejects the text and stores a template instead if it contains a number not in the evidence, advice or prediction words, or a CPCB category that does not match the AQI.
-7. **Ask.** `src/ask.py` refuses forecasts, health advice and blame questions before any model call. Otherwise Granite writes one SQL statement; `sqlglot` must parse it as a single `SELECT` over `AQ.V_DAY` / `AQ.V_CHECK` only, and a row cap is added. Db2 then runs it as `AQREADER`, a user whose only privileges are `CONNECT` and `SELECT` on those two views (plus the catalog views every Db2 user can read through `PUBLIC`), so even a query that slipped past the parser cannot read or change any table. Joins without a join condition are refused, rows are capped at 50, and Db2 cancels a query after 10 s (`SQL_ATTR_QUERY_TIMEOUT`).
+7. **Ask.** `src/ask.py` refuses forecasts, health advice and blame questions before any model call. Otherwise a LangChain chain (`src/chain.py`: `PromptTemplate` → `OllamaLLM` with Granite → `StrOutputParser`) has Granite write one SQL statement; `sqlglot` must parse it as a single `SELECT` over `AQ.V_DAY` / `AQ.V_CHECK` only, and a row cap is added. Db2 then runs it as `AQREADER`, a user whose only privileges are `CONNECT` and `SELECT` on those two views (plus the catalog views every Db2 user can read through `PUBLIC`), so even a query that slipped past the parser cannot read or change any table. Joins without a join condition are refused, rows are capped at 50, and Db2 cancels a query after 10 s (`SQL_ATTR_QUERY_TIMEOUT`).
 
 ## Why these Db2 features
 

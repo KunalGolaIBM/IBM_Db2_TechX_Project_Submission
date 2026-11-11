@@ -4,3 +4,5 @@ uvicorn==0.54.0
 sqlglot==30.30.0
 requests==2.34.2
 pytest==9.2.0
+langchain-core==1.7.7
+langchain-ollama==1.1.0
