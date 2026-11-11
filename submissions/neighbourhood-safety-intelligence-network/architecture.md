@@ -20,25 +20,26 @@ graph TD
     subgraph Backend["FastAPI backend (Python 3.11)"]
         API["REST routers /api/v1<br/>auth · sos · incidents · contacts · children<br/>elder-care · responders · community · ai"]
         SEC["Security<br/>JWT · role checks · login throttle<br/>validation · audit"]
-        TRI["Triage agents<br/>Intake → Triage → Knowledge"]
-        HAY["Haystack Pipeline<br/>InMemoryBM25Retriever"]
-        VEC["Db2 vector store<br/>fastembed bge-small (local ONNX)"]
+        TRI["CrewAI Flow<br/>intake → assess → router → escalate / standard"]
+        HAY["Haystack hybrid pipeline<br/>BM25 + IBMDb2EmbeddingRetriever<br/>DocumentJoiner (RRF) · metadata filters"]
+        VEC["Related-incident search<br/>fastembed bge-small (local ONNX)"]
         ANA["Analytics<br/>Db2-native SQL"]
         API --> SEC
         API --> TRI
         TRI --> HAY
-        TRI --> VEC
+        API --> VEC
         API --> ANA
     end
 
     API -->|"ibm_db_sa ORM<br/>transactions"| DB2
+    HAY -->|"ibm-db-haystack<br/>VECTOR_DISTANCE · JSON_VALUE filters"| DB2
     VEC -->|"MERGE · VECTOR_DISTANCE"| DB2
     ANA -->|"MEDIAN · PERCENTILE_CONT · RANK OVER"| DB2
     SEC -->|"ibm_db health probe<br/>audit_events"| DB2
 
     subgraph DB2["IBM Db2 12.1 · database NSIN"]
         REL[("12 relational tables<br/>incidents · status history · audit · ...")]
-        VT[("safety_protocols · incident_embeddings<br/>VECTOR(384, FLOAT32)")]
+        VT[("nsin_protocol_passages · incident_embeddings<br/>VECTOR(384, FLOAT32) · BSON metadata")]
     end
 ```
 
@@ -59,8 +60,9 @@ sequenceDiagram
     A-->>R: 201 SOS-202611-00042 (P1_CRITICAL)
     R->>A: POST /ai/incident-assistance {raw_text, incident_id}
     A->>A: intake + triage rules (priority, missing info)
-    A->>D: VECTOR_DISTANCE over safety_protocols  ‖  Haystack BM25 in-process
-    A->>A: reciprocal rank fusion + category prior
+    A->>A: CrewAI Flow: intake → assess → router (P1 → escalate)
+    A->>D: IBMDb2EmbeddingRetriever (VECTOR_DISTANCE + JSON_VALUE filters)  ‖  Haystack BM25 in-process
+    A->>A: DocumentJoiner RRF + category prior → cited passage
     A->>D: MERGE ai_analysis_records + INSERT audit_events
     Q->>A: GET /incidents/{id}/similar
     A->>D: self-join on incident_embeddings ORDER BY VECTOR_DISTANCE
@@ -94,9 +96,17 @@ sequenceDiagram
    - **Fail-fast:** if `DATABASE_MODE=db2` and Db2 is unreachable, startup is refused.
 
 4. **AI / Retrieval Layer (`src/backend/app/ai`)**
-   - `crewai/agents.py`: four role/goal agents in plain Python, coordinated by `SafetyCrewOrchestrator` (`crewai` is not a dependency). Intake uses whole-word keyword rules, so "person" never matches "son". Triage escalates threats to life to P1; medical, child alerts, unresponsive seniors and intrusions to P2; and hazards and suspicious activity to P3.
-   - `haystack/rag_pipeline.py`: a Haystack 2 `Pipeline` with `InMemoryBM25Retriever`, fused with Db2 vector hits using RRF (k = 60). It adds a category prior from triage and records per result whether it matched by BM25, vector or both. Haystack telemetry is disabled.
-   - Everything is deterministic and local: no hosted LLM, resident text never leaves the deployment, and output is advisory.
+   - `crewai/agents.py`: the triage agents run as a **CrewAI Flow** with typed Pydantic state:
+     - `@start` intake → `@listen` assess → `@router` → critical (escalation) or standard branch → knowledge retrieval.
+     - The agents themselves are deterministic, whole-word keyword rules, so "person" never matches "son".
+     - CrewAI telemetry and tracing are disabled.
+   - `haystack/rag_pipeline.py`, **Haystack 2 with IBM's `ibm-db-haystack`**:
+     - **Indexing:** `DocumentSplitter` → `FastembedDocumentEmbedder` → `DocumentWriter` into `IBMDb2DocumentStore` (table `NSIN_PROTOCOL_PASSAGES`: `VECTOR(384)` plus BSON metadata).
+     - **Query:** `FastembedTextEmbedder` → `IBMDb2EmbeddingRetriever`, plus `InMemoryBM25Retriever`, with the same metadata filters on both branches (Db2 runs them as `JSON_VALUE` predicates).
+     - **Fusion:** passages collapse to protocols, then `DocumentJoiner` applies reciprocal rank fusion, with a category prior from triage.
+     - **Trust:** distance/margin gating on the vector branch, and every answer cites its passage. Without Db2 the BM25 branch runs alone.
+   - `semantic/db2_vector_store.py`: incident embeddings and the related-report self-join.
+   - Everything is local: no hosted LLM, resident text never leaves the deployment, and output is advisory.
 
 ---
 
@@ -152,12 +162,10 @@ CREATE TABLE audit_events (                            -- append-only for the ap
 );
 
 -- Semantic search inside Db2
-CREATE TABLE safety_protocols (
-    doc_id VARCHAR(40) NOT NULL PRIMARY KEY, title VARCHAR(255) NOT NULL, category VARCHAR(50) NOT NULL,
-    source VARCHAR(255), body CLOB(64K) NOT NULL,
-    embedding VECTOR(384, FLOAT32) NOT NULL, embedding_model VARCHAR(100) NOT NULL,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT TIMESTAMP
-);
+-- Protocol passages: table created and managed by IBMDb2DocumentStore (ibm-db-haystack)
+CREATE TABLE nsin_protocol_passages (
+    id VARCHAR(512) NOT NULL PRIMARY KEY, content CLOB(2M), meta BLOB /* BSON */, embedding VECTOR(384, FLOAT32)
+);  -- filters: JSON_VALUE(SYSTOOLS.BSON2JSON(meta), '$.category' RETURNING VARCHAR(1000)) = ?
 CREATE TABLE incident_embeddings (
     incident_id INTEGER NOT NULL PRIMARY KEY REFERENCES incidents(id) ON DELETE CASCADE,
     embedding VECTOR(384, FLOAT32) NOT NULL, embedding_model VARCHAR(100) NOT NULL,
@@ -223,6 +231,6 @@ ORDER BY distance FETCH FIRST 20 ROWS ONLY;
   - Unhandled errors return a generic 500 and are logged server-side.
 - **Containers and clients:**
   - The backend runs as a non-root user, with the embedding model baked in, so there are no outbound calls at runtime.
-  - Haystack telemetry is disabled.
+  - Haystack and CrewAI telemetry are disabled.
   - Android allows cleartext HTTP in debug builds only.
 - **AI safety:** no hosted LLM and no prompt surface. Resident text stays inside the deployment, and triage output is advisory.

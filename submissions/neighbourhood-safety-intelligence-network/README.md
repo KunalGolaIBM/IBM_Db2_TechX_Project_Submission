@@ -36,7 +36,8 @@
 |---|---|
 | **SOS dispatch** | Two-step confirmed SOS writes a `P1_CRITICAL` incident, its GPS point, the first status entry and an audit row in **one Db2 transaction**, and records how many trusted contacts and on-duty verified responders it reached. |
 | **Incident lifecycle** | Enforced state machine `reported → acknowledged → responder_en_route → on_scene → resolving → resolved / false_alarm`. Illegal transitions return 409, and every step is appended to `incident_status_history`. |
-| **AI triage with citations** | Classifies a free-text report, suggests a priority with reasoning, lists missing details and cites the matching safety protocol (Haystack BM25 fused with Db2 vector search). The result is saved per incident. |
+| **AI triage with citations** | A CrewAI Flow classifies a free-text report, suggests a priority with reasoning, escalates critical reports, lists missing details and cites the exact protocol passage that matched (Haystack hybrid search over IBM Db2). The result is saved per incident. |
+| **Filtered protocol search** | `GET /ai/guidance` answers safety questions with hybrid search plus metadata filters (protocol category, audience such as women, seniors or guardians). In Db2 the filters run as `JSON_VALUE` predicates. |
 | **Related-report detection** | Responders see reports with similar meaning (Db2 `VECTOR_DISTANCE`), with reports at the same address ranked first, so duplicates are spotted before dispatch. |
 | **Response analytics** | Median / p90 time-to-acknowledge per priority against SOP targets, `RANK()`-ordered hotspots and live SLA breaches, all computed in Db2 SQL. |
 | **Child safe transit** | Guardians start a journey with an expected arrival; overdue journeys are flagged `delayed` automatically. |
@@ -55,13 +56,14 @@ Web and Android share one REST API, so an SOS raised on a phone appears in the w
   - `ibm_db` (native driver) for the health probe (`SYSIBM.SYSDUMMY1`, `server_info()`) and parameterised `prepare` / `execute` with explicit commit / rollback ([`db2_adapter.py`](src/backend/app/database/db2_adapter.py)).
 - **Database Schema / Data Models:** 14 tables, 11 secondary indexes. The real DDL, exported with `db2look`, is in [`db/db2_schema.sql`](db/db2_schema.sql); the design is explained in [architecture.md](architecture.md#ibm-db2-schema--storage-design).
   - 12 relational tables: users, contacts, responders, incidents, append-only status history, location events, child journeys, elder check-ins, assistance requests, hazards, AI analyses and audit events.
-  - 2 tables with native **`VECTOR(384, FLOAT32)`** columns: `safety_protocols` and `incident_embeddings`.
+  - 2 tables with native **`VECTOR(384, FLOAT32)`** columns: `nsin_protocol_passages` (managed by IBM's Haystack integration, `ibm-db-haystack`, with metadata stored as BSON) and `incident_embeddings`.
 - **Key Queries & Operations:**
 
 | Db2 feature | Where it's used |
 |---|---|
-| `VECTOR(384, FLOAT32)` + `VECTOR_DISTANCE(..., COSINE)` | Semantic protocol retrieval and related-incident search ([`db2_vector_store.py`](src/backend/app/ai/semantic/db2_vector_store.py)) |
-| `MERGE INTO ... USING (VALUES ...)` | Idempotent upsert of protocol and incident embeddings |
+| `VECTOR(384, FLOAT32)` + `VECTOR_DISTANCE(..., COSINE)` | Protocol passages via IBM's `IBMDb2DocumentStore` / `IBMDb2EmbeddingRetriever` ([`rag_pipeline.py`](src/backend/app/ai/haystack/rag_pipeline.py)); related-incident search ([`db2_vector_store.py`](src/backend/app/ai/semantic/db2_vector_store.py)) |
+| `JSON_VALUE(SYSTOOLS.BSON2JSON(meta), ...)` | Metadata filters (category, audience) on protocol passages, translated by the IBM Haystack store |
+| `MERGE INTO ... USING (VALUES ...)` | Idempotent upsert of incident embeddings |
 | CTEs, `SECONDS_BETWEEN`, `MEDIAN`, `PERCENTILE_CONT(0.9) WITHIN GROUP` | Time-to-acknowledge statistics per priority ([`insights.py`](src/backend/app/analytics/insights.py)) |
 | `RANK() OVER (ORDER BY COUNT(*) DESC)`, `HOUR()` | Hotspot ranking and hourly distribution |
 | `SYSCAT.TABLES`, `SYSCAT.COLUMNS`, `CURRENT SCHEMA` | Catalog-driven DDL (create only what's missing) and schema tests |
@@ -75,14 +77,27 @@ Web and Android share one REST API, so an SOS raised on a phone appears in the w
 ---
 
 ## AI / LLM Architecture (if applicable)
-- **Framework:** **Haystack 2** (`haystack-ai`): an `InMemoryDocumentStore` with BM25 and an `InMemoryBM25Retriever` in a Haystack `Pipeline` ([`rag_pipeline.py`](src/backend/app/ai/haystack/rag_pipeline.py)). Haystack results are fused with **IBM Db2 vector search** by reciprocal rank fusion. A small multi-agent pipeline (Intake → Triage → Knowledge, following CrewAI's role/goal pattern in plain Python; the `crewai` package is not used) orchestrates the steps.
-- **Model Provider & Model:** No hosted LLM. Embeddings come from **BAAI/bge-small-en-v1.5** running locally with ONNX (`fastembed`, 384 dimensions), and the model is baked into the Docker image. This is deliberate for a safety product: resident reports never leave the deployment, there's no per-request cost, it works offline, and output can't be prompt-injected. Haystack telemetry is disabled.
-- **RAG / Tool Calling Workflow:**
-  1. **Intake:** whole-word rules extract category, location and missing details from the report.
-  2. **Triage:** risk signals map to `P1_CRITICAL … P4_ADVISORY` with written reasoning and an immediate checklist (10 regression cases cover tricky wording).
-  3. **Retrieve:** Haystack BM25 and Db2 `VECTOR_DISTANCE` each rank the approved protocols. The rankings are fused, with a prior for the triaged category. Vector matches are gated by a calibrated distance and top-2 margin, so off-topic questions return nothing.
-  4. **Persist:** with an `incident_id`, the analysis is upserted into `ai_analysis_records` and audited.
-  5. **Link:** each new incident is embedded into `incident_embeddings`, and `GET /incidents/{id}/similar` returns related reports for responders.
+- **Frameworks:**
+  - **Haystack 2** with IBM's **`ibm-db-haystack`** integration (`IBMDb2DocumentStore`, `IBMDb2EmbeddingRetriever`) and **`fastembed-haystack`** embedders. A `DocumentSplitter` turns the protocols into passages, and `DocumentJoiner` fuses the keyword and vector branches by reciprocal rank fusion ([`rag_pipeline.py`](src/backend/app/ai/haystack/rag_pipeline.py)).
+  - **CrewAI Flows** orchestrate the triage agents with typed state and a router (`@start` → `@listen` → `@router` → critical / standard branch) ([`agents.py`](src/backend/app/ai/crewai/agents.py)).
+- **Model Provider & Model:** No hosted LLM. Embeddings come from **BAAI/bge-small-en-v1.5**, running locally with ONNX (384 dimensions); the model is baked into the Docker image. This is deliberate for a safety product: resident reports never leave the deployment, there's no per-request cost, it works offline, and output can't be prompt-injected. CrewAI and Haystack telemetry are disabled.
+- **Pipelines:**
+  - **Indexing** (Db2 mode): `DocumentSplitter` → `FastembedDocumentEmbedder` → `DocumentWriter` into `IBMDb2DocumentStore`. Passages carry metadata (category, audience, source, updated date), stored as BSON in Db2.
+  - **Query:** `FastembedTextEmbedder` → `IBMDb2EmbeddingRetriever` (Db2 `VECTOR_DISTANCE`), alongside `InMemoryBM25Retriever`. The same metadata filters apply to both branches.
+  - **Fusion and trust:**
+    - The vector branch is gated by a calibrated distance and top-2 margin, so off-topic questions return nothing.
+    - The keyword branch needs real word overlap.
+    - Passages collapse to their protocol, `DocumentJoiner` applies RRF, and the triaged category adds a soft prior.
+    - Each answer cites the passage that matched and says which branch found it.
+  - **Triage flow (CrewAI):**
+    1. **Intake** (whole-word rules: category, location, missing details).
+    2. **Assess** (`P1_CRITICAL … P4_ADVISORY` with reasoning).
+    3. **Router:** P1 reports take the **escalation** branch, which puts the "call 112" step first.
+    4. **Knowledge:** hybrid retrieval.
+
+    With an `incident_id`, the analysis is upserted into `ai_analysis_records` and audited.
+  - **Related reports:** each new incident is embedded into `incident_embeddings`, and `GET /incidents/{id}/similar` returns related reports, same address first.
+- **Without Db2** (SQLite tests or local development), the same pipeline runs with the BM25 branch only, and `/health` reports why.
 
 Output is advisory. Humans make every dispatch decision.
 
@@ -91,9 +106,9 @@ Output is advisory. Humans make every dispatch decision.
 ## Tech Stack
 - **Backend / Core:** Python 3.11, FastAPI, SQLAlchemy 2, Pydantic 2, python-jose (JWT), bcrypt
 - **Database:** IBM Db2 12.1 (`ibm_db`, `ibm_db_sa`); SQLite for tests and local development; PostgreSQL optional
-- **AI / Retrieval:** Haystack 2 (BM25 pipeline), fastembed (local ONNX embeddings), Db2 `VECTOR`
+- **AI / Retrieval:** Haystack 2 + `ibm-db-haystack` + `fastembed-haystack`, CrewAI Flows, fastembed (local ONNX), Db2 `VECTOR`
 - **Frontend / UI:** React 19 + TypeScript + Vite + Tailwind CSS 4 (web); Kotlin + Jetpack Compose + Material 3 + Retrofit (Android)
-- **Libraries & Tools:** Docker Compose, pytest, Robolectric, ruff, oxlint, Gradle wrapper
+- **Libraries & Tools:** Docker Compose, pytest + pytest-cov, Robolectric, ruff, oxlint, Gradle wrapper
 
 ---
 
@@ -200,7 +215,7 @@ The web sign-in page has one-click buttons for each role.
 | SOS & incidents | `POST /sos`, `GET/POST /incidents`, `GET /incidents/{id}`, `GET /incidents/{id}/similar`, `POST /incidents/{id}/acknowledge`, `POST /incidents/{id}/status` |
 | Contacts, children, elders | `/trusted-contacts`, `/children/journeys`, `/elder-care/checkins`, `/elder-care/assistance-requests` |
 | Responders | `GET /responders/assignments`, `PATCH /responders/availability`, `GET /responders/roster`, `POST /responders/{user_id}/verify` (admin) |
-| Community & AI | `GET /community/insights`, `GET/POST /community/hazards`, `POST /ai/incident-assistance`, `GET /ai/guidance` |
+| Community & AI | `GET /community/insights`, `GET/POST /community/hazards`, `POST /ai/incident-assistance`, `GET /ai/guidance?query=&category=&audience=` |
 
 ---
 
@@ -208,7 +223,7 @@ The web sign-in page has one-click buttons for each role.
 
 ```bash
 # Fast suite on SQLite (Db2-only tests are skipped)
-pytest tests/ -v
+pytest tests/ -v --cov=src/backend/app
 
 # Same suite against IBM Db2 (with the stack from Option A running)
 NSIN_TEST_DB2=1 DATABASE_MODE=db2 DB2_HOST=localhost DB2_DATABASE=NSIN \
@@ -224,22 +239,23 @@ cd src/android && ./gradlew :app:testDebugUnitTest          # Android JVM tests 
 
 | Suite | Result |
 |---|---|
-| SQLite | 43 passed, 11 Db2-only skipped |
-| IBM Db2 as `nsinapp` (least privilege) | 54 passed |
+| SQLite | 57 passed, 12 Db2-only skipped · 89% line coverage |
+| IBM Db2 as `db2inst1`, fresh schema | 64 passed · **93% line coverage** |
+| IBM Db2 as `nsinapp` (least privilege) | 69 passed (everything) |
 | Android `testDebugUnitTest` | 4 passed; `assembleDebug` builds |
 | Web `npm run build` | passes (strict TypeScript) |
 
 The tests cover:
 - **Security:** admin self-registration blocked, login throttling, token tampering, private-incident isolation, privacy masking, responder verification, input limits sized to the Db2 columns, security headers.
 - **Integrity:** the incident state machine, collision-free reference codes, SOS atomicity and audit rows, overdue journeys.
-- **AI:** triage wording traps and the cited protocol for each category.
+- **AI:** triage wording traps, the CrewAI flow's critical and standard branches, the cited protocol for each category, metadata filters and passage citations.
 - **Db2:** catalog contents including the `VECTOR` columns, semantic retrieval and off-topic rejection, duplicate-report linking, native-SQL vs Python analytics parity, and DDL denied to the restricted login.
 
 **Inspect the data directly in Db2:**
 ```bash
 docker exec -it nsin_db2 su - db2inst1 -c "db2 connect to NSIN && \
   db2 \"SELECT reference_code, priority, status FROM incidents ORDER BY id DESC FETCH FIRST 5 ROWS ONLY\" && \
-  db2 \"SELECT doc_id, VECTOR_DISTANCE(embedding, (SELECT embedding FROM safety_protocols WHERE doc_id='DOC-ELDER-003'), COSINE) AS d FROM safety_protocols ORDER BY d\""
+  db2 \"SELECT JSON_VALUE(SYSTOOLS.BSON2JSON(meta), '$.category' RETURNING VARCHAR(40)) AS category, COUNT(*) AS passages FROM nsin_protocol_passages GROUP BY JSON_VALUE(SYSTOOLS.BSON2JSON(meta), '$.category' RETURNING VARCHAR(40))\""
 ```
 
 ---
@@ -269,7 +285,7 @@ docker exec -it nsin_db2 su - db2inst1 -c "db2 connect to NSIN && \
   - The login throttle is in-process (one backend instance).
 - **Next Steps:**
   - An optional watsonx.ai Granite summary step behind the existing rule-based guardrails.
-  - Chunk long protocols and add a Db2 vector index as the corpus grows.
+  - Add a Db2 vector index and more protocol sources (municipal circulars) as the corpus grows.
   - Spatial hotspot clustering, FCM push notifications and an SMS fallback for SOS.
   - Row-level access control for multi-society deployments on one Db2.
 
@@ -278,6 +294,6 @@ docker exec -it nsin_db2 su - db2inst1 -c "db2 connect to NSIN && \
 ## Team Members & Credits
 | Name | GitHub Handle | Role / Contribution |
 |---|---|---|
-| Yagnik Sharma | [@YagnikSharma](https://github.com/YagnikSharma) | Full stack: FastAPI backend, IBM Db2 integration (vectors, analytics, least privilege), retrieval and triage, React web app, Android app |
+| Yagnik Sharma | [@YagnikSharma](https://github.com/YagnikSharma) | Full stack: FastAPI backend, IBM Db2 integration (vectors, analytics, least privilege), Haystack + CrewAI pipelines, React web app, Android app |
 
-**License:** MIT (see [LICENSE](LICENSE)). Third-party components keep their own licenses: FastAPI, SQLAlchemy and React are MIT; Haystack, Retrofit, `ibm_db` and `ibm_db_sa` are Apache-2.0; the BAAI bge-small model is MIT; Db2 Community Edition is under the IBM license, accepted via `LICENSE=accept`.
+**License:** MIT (see [LICENSE](LICENSE)). Third-party components keep their own licenses: FastAPI, SQLAlchemy, React and CrewAI are MIT; Haystack, `ibm-db-haystack`, Retrofit, `ibm_db` and `ibm_db_sa` are Apache-2.0; the BAAI bge-small model is MIT; Db2 Community Edition is under the IBM license, accepted via `LICENSE=accept`.

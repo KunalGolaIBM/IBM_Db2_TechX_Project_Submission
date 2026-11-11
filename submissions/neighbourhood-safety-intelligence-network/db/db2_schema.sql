@@ -1,7 +1,7 @@
 -- IBM Db2 schema for the Neighbourhood Safety Intelligence Network, exported with db2look
 -- from a live Db2 12.1 Community Edition database after the backend created it on first start.
--- 14 tables: 12 relational tables from the SQLAlchemy models (ibm_db_sa) and 2 tables with
--- native VECTOR(384, FLOAT32) columns created by ai/semantic/db2_vector_store.py.
+-- Exported before protocol passages moved to IBM's Haystack store: the current schema replaces
+-- SAFETY_PROTOCOLS with NSIN_PROTOCOL_PASSAGES (id VARCHAR(512), content CLOB(2M), meta BLOB, embedding VECTOR(384, FLOAT32)).
 --
 -- Regenerate: docker exec nsin_db2 su - db2inst1 -c "db2look -d NSIN -e -z DB2INST1 -noview"
 
