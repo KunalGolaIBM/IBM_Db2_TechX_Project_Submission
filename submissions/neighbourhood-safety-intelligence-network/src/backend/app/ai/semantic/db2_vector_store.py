@@ -126,9 +126,11 @@ class Db2VectorStore:
             self._load_model()
             self._ensure_tables()
             self._index_protocols()
+            backfilled = self._backfill_incidents()
             self.enabled = True
             self.error = None
-            logger.info("Db2 vector search enabled (%s, %d dims).", settings.EMBEDDING_MODEL, settings.EMBEDDING_DIM)
+            logger.info("Db2 vector search enabled (%s, %d dims); embedded %d existing incident(s).",
+                        settings.EMBEDDING_MODEL, settings.EMBEDDING_DIM, backfilled)
         except Exception as exc:  # pragma: no cover - depends on environment
             self.enabled = False
             self.error = str(exc)[:300]
@@ -165,6 +167,24 @@ class Db2VectorStore:
                     "doc_id": d["id"], "title": d["title"], "category": d["category"], "source": d["source"],
                     "body": d["content"], "embedding": to_vector_literal(v), "model": settings.EMBEDDING_MODEL,
                 })
+
+    def _backfill_incidents(self, batch: int = 500) -> int:
+        """Embed incidents that have no vector yet (seed data, or rows created before vectors were enabled)."""
+        with self.engine.connect() as conn:
+            rows = conn.execute(text(
+                "SELECT i.id, i.title, i.description FROM incidents i "
+                "WHERE NOT EXISTS (SELECT 1 FROM incident_embeddings e WHERE e.incident_id = i.id) "
+                f"ORDER BY i.id FETCH FIRST {int(batch)} ROWS ONLY"
+            )).fetchall()
+        if not rows:
+            return 0
+        vectors = list(self._model.embed([f"{r[1]}. {r[2]}" for r in rows]))
+        sql = text(UPSERT_INCIDENT.format(dim=settings.EMBEDDING_DIM))
+        with self.engine.begin() as conn:
+            for r, v in zip(rows, vectors, strict=True):
+                conn.execute(sql, {"incident_id": int(r[0]), "embedding": to_vector_literal(v),
+                                   "model": settings.EMBEDDING_MODEL})
+        return len(rows)
 
     # ---- protocols -----------------------------------------------------------------------
     def search_protocols(self, query: str, k: int = 3) -> List[VectorHit]:

@@ -250,4 +250,98 @@ def seed_data(session):
     )
     session.add_all([hist1, hist2])
     session.commit()
+    inc1.reference_code = f"INC-{inc1.created_at:%Y%m}-{inc1.id:05d}"
+    session.commit()
+
+    _seed_incident_history(session, now, {
+        "priya": resident1, "maya": resident2, "ramesh": elder_user,
+        "vikram": responder_user1, "anita": responder_user2,
+    })
     logger.info("Demo seeding completed successfully.")
+
+
+# A deterministic 30-day history so analytics, hotspots and related-report search have real data
+# from the first start. Each row: days ago, hour, reporter, responder, title, description, type,
+# priority, location, minutes to acknowledge (None = still unacknowledged), minutes to resolve.
+HISTORY = [
+    (27, 21, "priya", "vikram", "Streetlight out behind the park",
+     "The streetlight on Lane 3 behind the community park is not working and the lane is completely dark at night.",
+     "hazard", "P3_MODERATE", "Lane 3, Behind Central Community Park", 22, 1440),
+    (26, 22, "maya", "vikram", "Lane 3 lamp not working",
+     "Street lamp near the park on Lane 3 is still off, the whole lane is pitch dark after sunset.",
+     "hazard", "P3_MODERATE", "Lane 3, Behind Central Community Park", 35, 1300),
+    (24, 23, "priya", "vikram", "Man following women near park lane",
+     "A man has been following women walking alone on the dark lane behind the park late at night.",
+     "suspicious_activity", "P2_HIGH", "Lane 3, Behind Central Community Park", 7, 95),
+    (22, 9, "ramesh", "anita", "Fell in the bathroom",
+     "I slipped in the bathroom and hurt my hip, I cannot get up on my own.",
+     "medical", "P1_CRITICAL", "Flat 12, Shanti Senior Residency", 1.5, 70),
+    (20, 18, "maya", "anita", "Child not back from tuition",
+     "My daughter has not returned from tuition, she is 40 minutes late and not answering her phone.",
+     "child_alert", "P2_HIGH", "Bright Minds Tuition Centre, 5th Main", 4, 55),
+    (18, 22, "priya", "vikram", "Masked men checking car doors",
+     "Two masked men were trying the door handles of parked cars in the basement.",
+     "suspicious_activity", "P2_HIGH", "Oak Ridge Apartments, Basement 2, Green Glen Layout", 9, 120),
+    (15, 7, "ramesh", "anita", "Missed medicine delivery",
+     "My blood pressure medicine delivery did not arrive and I have only one day left.",
+     "elder_welfare", "P3_MODERATE", "Flat 12, Shanti Senior Residency", 40, 300),
+    (13, 20, "maya", "vikram", "Open pit without barricade",
+     "There is an open construction pit on the corner with no barricade or light; a scooter nearly fell in.",
+     "hazard", "P2_HIGH", "Corner of 7th Cross and Outer Ring Feeder", 12, 2880),
+    (11, 23, "priya", "vikram", "Basement gate left open at night",
+     "The basement gate was left open again after midnight and strangers walked in.",
+     "suspicious_activity", "P3_MODERATE", "Oak Ridge Apartments, Basement 2, Green Glen Layout", 28, 240),
+    (9, 13, "ramesh", "anita", "Neighbour fainted in the lift",
+     "An elderly neighbour fainted in the lift and is breathing but not responding properly.",
+     "medical", "P1_CRITICAL", "Shanti Senior Residency, Block A Lift", 2, 60),
+    (6, 19, "maya", "vikram", "Waterlogging after rain",
+     "Heavy rain has flooded the underpass and two-wheelers are getting stuck.",
+     "hazard", "P3_MODERATE", "Corner of 7th Cross and Outer Ring Feeder", 50, 600),
+    (4, 22, "priya", "vikram", "Suspicious van parked for hours",
+     "A van without number plates has been parked near the basement entrance since evening.",
+     "suspicious_activity", "P3_MODERATE", "Oak Ridge Apartments, Basement 2, Green Glen Layout", 18, None),
+    (2, 8, "ramesh", "anita", "Elderly resident not answering door",
+     "My neighbour Mrs. Rao has not answered her door or phone since yesterday evening.",
+     "elder_welfare", "P2_HIGH", "Flat 14, Shanti Senior Residency", 6, 45),
+    (0, None, "maya", None, "Stray dogs chasing children",
+     "A pack of stray dogs is chasing children near the school bus stop every morning.",
+     "hazard", "P3_MODERATE", "School Bus Stop, 5th Main", None, None),
+]
+
+
+def _seed_incident_history(session, now, people):
+    for (days, hour, reporter, responder, title, description, inc_type, priority, place,
+         ack_min, resolve_min) in HISTORY:
+        created = (now - datetime.timedelta(days=days, minutes=90)) if hour is None else \
+            (now - datetime.timedelta(days=days)).replace(hour=hour, minute=15, second=0, microsecond=0)
+        status = "reported" if ack_min is None else ("resolved" if resolve_min else "acknowledged")
+        inc = Incident(
+            reference_code=f"SEED-{days}-{len(title)}-{hour}",
+            reporter_id=people[reporter].id,
+            title=title,
+            description=description,
+            incident_type=inc_type,
+            priority=priority,
+            status=status,
+            location_address=place,
+            assigned_responder_id=people[responder].id if responder and ack_min is not None else None,
+            created_at=created,
+            updated_at=created,
+        )
+        session.add(inc)
+        session.flush()
+        inc.reference_code = f"INC-{created:%Y%m}-{inc.id:05d}"
+
+        timeline = [("reported", 0, people[reporter], "Report submitted by resident.")]
+        if ack_min is not None:
+            timeline.append(("acknowledged", ack_min, people[responder], "Responder acknowledged and is coordinating."))
+        if resolve_min:
+            timeline.append(("on_scene", ack_min + max(3, resolve_min * 0.3), people[responder], "Responder on scene."))
+            timeline.append(("resolved", resolve_min, people[responder], "Resolved and verified with the resident."))
+            inc.resolved_at = created + datetime.timedelta(minutes=resolve_min)
+        for state, minutes, user, notes in timeline:
+            at = created + datetime.timedelta(minutes=minutes)
+            session.add(IncidentStatusHistory(incident_id=inc.id, status=state, notes=notes,
+                                              updated_by_id=user.id, created_at=at))
+            inc.updated_at = at
+    session.commit()
