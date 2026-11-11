@@ -276,7 +276,7 @@ python -m asof.demo          # optional: thirteen sample decisions, three of the
 ## Testing & Verification
 
 ```bash
-pytest -q                                 # 1311 tests; 9 need an opt-in flag, 3 need TLS on and 1 the watsonx.ai extra (CI provides both)
+pytest -q                                 # 1311 tests; 10 need an opt-in flag, 3 need TLS on and 1 the watsonx.ai extra (CI provides both)
 pytest -q -m "not db2"                    # unit tests only, no database needed
 python scripts/audit_deps.py && mypy      # dependency audit, type check
 python -m asof.eval --split test          # the frozen airline split (needs a model)

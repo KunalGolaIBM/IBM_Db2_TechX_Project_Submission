@@ -3,9 +3,9 @@
 What the test suite covers, types and coverage, dependency pinning and the fresh-clone check. The evaluation of the check itself is in [evaluation.md](evaluation.md); the headline results are in the [README](../README.md#testing--verification).
 
 ```bash
-pytest -q                                 # 1311 tests: 9 need an opt-in flag (live LLM, remote endpoints, the backup drill), 3 need TLS on (scripts/enable_db2_tls.sh; CI turns it on), 1 needs the watsonx extra
+pytest -q                                 # 1311 tests: 10 need an opt-in flag (live LLM, remote endpoints, the backup drill), 3 need TLS on (scripts/enable_db2_tls.sh; CI turns it on), 1 needs the watsonx extra
 pytest -q -m "not db2"                    # unit tests only, no database needed
-ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 4 live tests against the configured LLM (spends API calls)
+ASOF_RUN_LLM_TESTS=1 pytest -q -m llm     # 5 live tests against the configured LLM (spends API calls)
 ASOF_RUN_BACKUP_TESTS=1 pytest -q -m backup   # the online backup and restore drill (about a minute; creates and drops two databases)
 
 pip install -r requirements-dev.txt
