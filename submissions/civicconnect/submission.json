@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "CivicConnect – Smart Civic Complaint Management System with IBM Db2",
+    "slug": "civicconnect",
+    "short_description": "A full-stack municipal grievance platform where citizens report infrastructure issues and IBM Db2 powers complaint persistence, audit trails, analytics, and AI-assisted department routing via LangChain + IBM watsonx.ai.",
+    "category": "AI / Data Engineering / Analytics",
+    "demo_url": "https://civicconnect-ibm.vercel.app",
+    "video_url": "",
+    "repo_url": "https://github.com/kaushikarya06/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "CivicConnect",
+    "members": [
+      {
+        "name": "Kaushik Arya",
+        "github": "kaushikarya06",
+        "email": "kaushikarya87@gmail.com",
+        "role": "Full-Stack Developer & AI Integration"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition (Docker)",
+    "connector": "ibm_db / ibm_db_dbi / SQLAlchemy ibm_db_sa",
+    "features_used": [
+      "Relational Tables (COMPLAINTS, DEPARTMENTS, COMPLAINT_UPDATES, NOTIFICATIONS, CITIZEN_FEEDBACK, COMPLAINT_ANALYTICS)",
+      "CLOB Storage for complaint descriptions and AI summaries",
+      "Indexed queries on CATEGORY, STATUS, DEPARTMENT_NAME for dashboard filtering",
+      "Aggregation queries (COUNT, AVG, SUM) for analytics dashboard",
+      "TIMESTAMPDIFF for resolution time analytics",
+      "Audit trail writes on every status transition",
+      "Firestore → Db2 sync pipeline for historical data migration"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python 3.11", "TypeScript", "SQL"],
+    "frameworks": ["FastAPI", "React 19", "LangChain", "Vite"],
+    "ai_models": [
+      "IBM watsonx.ai Granite 13B Instruct (primary LLM)",
+      "granite3.3:8b via Ollama (local fallback)",
+      "LangChain JsonOutputParser + ChatPromptTemplate"
+    ]
+  }
+}
