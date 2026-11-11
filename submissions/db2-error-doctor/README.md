@@ -2,6 +2,10 @@
 
 > **One-Line Pitch:** Paste any Db2 error message and get its cause, fix and a catalog query to check — found by exact SQLCODE lookup, or by Db2 vector search when the message contains no code.
 
+[![Db2 Error Doctor demo video: click to watch on YouTube](docs/thumbnail.png)](https://youtu.be/MOUpK0SBgk8)
+
+▶ **[Watch the 2-minute demo](https://youtu.be/MOUpK0SBgk8)**: every command run live against Db2 12.1.5.
+
 ## Problem Statement
 Developers new to Db2 lose time on messages such as `SQL0668N ... reason code 7` or a bare driver exception with no code at all. Searching the web gives answers for the wrong platform or version. The target users are students and application developers working against Db2 from Python, Java or a SQL editor.
 
