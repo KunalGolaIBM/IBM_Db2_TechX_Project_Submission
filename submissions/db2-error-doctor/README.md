@@ -63,9 +63,19 @@ pytest tests/
 ```
 The 24 tests run offline against a recording fake connection. They cover SQLCODE parsing, input validation, table-name allow-listing, the exact and vector paths, and that user text is only ever passed as a bound parameter. To verify the Db2 integration, run the four commands above and inspect `DOCTOR_KB_VECTORS` and `DOCTOR_QUERY_LOG` in the VS Code extension.
 
+**Verified end to end** on Db2 Community Edition 12.1.5 (Docker image `icr.io/db2_community/db2`): `ingest` loaded 41 rows into both tables, the three `ask` examples below returned the expected codes, and `stats` reported them. The screenshots show the real output.
+
 ## Screenshots & Demo
 - **Demo Video Link:** to be added
-- Screenshots: to be added in `docs/screenshots/`
+
+| | |
+|---|---|
+| Exact lookup from a message ID | ![ask with SQL0204N](docs/screenshots/02-ask-exact-sqlcode.png) |
+| Db2 vector search from plain words | ![ask without a code](docs/screenshots/03-ask-vector-search.png) |
+| SQLCODE inside a JDBC exception | ![ask with SQLCODE=-911](docs/screenshots/04-ask-jdbc-sqlcode.png) |
+| `stats` report from the query log | ![stats](docs/screenshots/05-stats.png) |
+| The tables in Db2, including the `VECTOR(384)` column | ![Db2 tables](docs/screenshots/06-db2-tables.png) |
+| `ingest` | ![ingest](docs/screenshots/01-ingest.png) |
 
 ## Known Limitations & Future Roadmap
 - **Current Limitations:** the knowledge base covers 41 codes; reason codes are described in text, not parsed; the search is exact (no approximate index).
@@ -75,5 +85,8 @@ The 24 tests run offline against a recording fake connection. They cover SQLCODE
 | Name | GitHub Handle | Role / Contribution |
 |---|---|---|
 | Prabodh1231 | [@Prabodh1231](https://github.com/Prabodh1231) | Solo developer |
+
+## License
+This project is released under the [MIT License](LICENSE).
 
 Knowledge-base text was written for this project. Third-party libraries are used under their own licences (LangChain: MIT; sentence-transformers and ibm_db: Apache-2.0).
