@@ -7,12 +7,16 @@
   rises to the top, and either path alone still works.
 """
 import logging
+import os
 import re
 from typing import Any, Dict, List, Optional
 
-from haystack import Document, Pipeline
-from haystack.components.retrievers.in_memory import InMemoryBM25Retriever
-from haystack.document_stores.in_memory import InMemoryDocumentStore
+# Privacy: never send Haystack usage telemetry from a deployment that handles resident data.
+os.environ.setdefault("HAYSTACK_TELEMETRY_ENABLED", "False")
+
+from haystack import Document, Pipeline  # noqa: E402
+from haystack.components.retrievers.in_memory import InMemoryBM25Retriever  # noqa: E402
+from haystack.document_stores.in_memory import InMemoryDocumentStore  # noqa: E402
 
 from backend.app.ai.haystack.documents import APPROVED_CIVIC_SAFETY_DOCUMENTS
 from backend.app.ai.semantic.db2_vector_store import vector_store

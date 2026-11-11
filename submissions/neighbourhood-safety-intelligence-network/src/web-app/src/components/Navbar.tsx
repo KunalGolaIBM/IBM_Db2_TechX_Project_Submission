@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  ShieldAlert, Shield, Users, AlertTriangle, HeartHandshake, 
-  MapPin, LogOut, Menu, X, Smartphone, Activity, UserCheck
-} from 'lucide-react';
+import { ShieldAlert, Shield, LogOut, Menu, X, Smartphone, Activity, UserCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const Navbar: React.FC = () => {

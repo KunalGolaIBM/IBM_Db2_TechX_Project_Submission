@@ -1,0 +1,4 @@
+# Scoped to this submission (the repository root .gitattributes is left untouched).
+*.bat text eol=crlf
+*.jar binary
+gradlew text eol=lf

@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  ShieldAlert, Activity, CheckCircle2, MapPin, Clock, 
-  ArrowRight, RefreshCw, Power, AlertTriangle, Pill, Phone 
-} from 'lucide-react';
+import { Activity, CheckCircle2, MapPin, RefreshCw, Power, Pill } from 'lucide-react';
 import { api } from '../services/api';
 import { Incident, AssistanceRequest } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -15,16 +12,18 @@ export const ResponderDashboard: React.FC = () => {
   const [isAvailable, setIsAvailable] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(true);
   const [actionInProgress, setActionInProgress] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchAssignments = async () => {
     setLoading(true);
     try {
       const data = await api.getResponderAssignments();
+      setError(null);
       setIncidents(data.incidents || []);
       setRequests(data.assistance_requests || []);
       setIsAvailable(data.is_available);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setError(err.message || 'Could not load assignments.');
     } finally {
       setLoading(false);
     }
@@ -112,6 +111,11 @@ export const ResponderDashboard: React.FC = () => {
         
         {/* Active Incident Queue (2 Cols) */}
         <div className="lg:col-span-2 space-y-4">
+          {error && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-900 text-sm rounded-xl px-4 py-3">
+              {error}
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-slate-900">Assigned Incident Queue</h2>

@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  ShieldAlert, AlertTriangle, Users, Phone, MapPin, Clock, 
-  ArrowRight, ShieldCheck, HeartPulse, RefreshCw, Eye, CheckCircle2 
-} from 'lucide-react';
+import { ShieldAlert, AlertTriangle, Users, MapPin, ArrowRight, ShieldCheck, HeartPulse, RefreshCw, Eye, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { Incident, TrustedContact, CommunityInsights } from '../types';

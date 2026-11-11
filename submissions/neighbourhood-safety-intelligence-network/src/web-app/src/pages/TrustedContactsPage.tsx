@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Trash2, Phone, Mail, ShieldAlert, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Users, Plus, Trash2, Phone, Mail, CheckCircle2 } from 'lucide-react';
 import { api } from '../services/api';
 import { TrustedContact } from '../types';
 

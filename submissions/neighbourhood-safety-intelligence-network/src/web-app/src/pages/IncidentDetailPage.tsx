@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { 
-  Shield, MapPin, Clock, User, ArrowLeft, RefreshCw, 
-  CheckCircle2, AlertCircle, Send, MessageSquare 
-} from 'lucide-react';
+import { MapPin, Clock, ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, Send } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { Incident, IncidentStatus, SimilarIncident } from '../types';
@@ -260,7 +257,10 @@ export const IncidentDetailPage: React.FC = () => {
                   <span className="text-sm text-slate-800">
                     <span className="font-mono text-xs text-slate-500 mr-2">{s.reference_code}</span>{s.title}
                   </span>
-                  <span className="text-xs text-slate-600 whitespace-nowrap">{Math.round(s.similarity * 100)}% similar · {s.status.replace(/_/g, ' ')}</span>
+                  <span className="text-xs text-slate-600 whitespace-nowrap">
+                    {s.same_location && <strong className="text-amber-800">Same location · </strong>}
+                    {Math.round(s.similarity * 100)}% similar · {s.status.replace(/_/g, ' ')}
+                  </span>
                 </Link>
               </li>
             ))}

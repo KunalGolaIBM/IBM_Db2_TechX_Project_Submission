@@ -1,9 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  ShieldAlert, ShieldCheck, Users, Eye, Clock, 
-  HeartHandshake, ChevronRight, CheckCircle2, Lock, Cpu, Sparkles 
-} from 'lucide-react';
+import { ShieldAlert, Users, Eye, Clock, HeartHandshake, ChevronRight, CheckCircle2, Lock, Cpu, Sparkles } from 'lucide-react';
 import { AndroidDownloadSection } from '../components/AndroidDownloadSection';
 
 export const LandingPage: React.FC = () => {

@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  AlertTriangle, Shield, MapPin, Sparkles, CheckCircle2, 
-  HelpCircle, ArrowRight, Loader2, BookOpen, AlertCircle 
-} from 'lucide-react';
+import { MapPin, Sparkles, CheckCircle2, ArrowRight, Loader2, BookOpen, AlertCircle } from 'lucide-react';
 import { api } from '../services/api';
 import { AIAnalysisResult } from '../types';
 

@@ -1,9 +1,7 @@
 import logging
-from typing import Generator, Any
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from typing import Generator
+from sqlalchemy.orm import Session
 from backend.app.core.config import settings
-from backend.app.models.entities import Base
 
 logger = logging.getLogger("neighbourhood_safety.database")
 

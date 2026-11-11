@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Shield, Lock, Mail, User, Phone, MapPin, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Shield, Lock, Mail, User, Phone, MapPin, AlertCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
 

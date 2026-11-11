@@ -197,19 +197,25 @@ def similar_incidents(
     """Related reports found by Db2 VECTOR_DISTANCE over incident embeddings (staff only).
     Empty when vector search is not active (non-Db2 modes)."""
     ensure_verified_staff(current_user)
-    _get_visible_incident(db, incident_id, current_user)
-    hits = vector_store.similar_incidents(incident_id, k=limit)
+    target = _get_visible_incident(db, incident_id, current_user)
+    # Over-fetch semantic neighbours from Db2, then rank reports at the same address first:
+    # two "streetlight out" reports on different lanes are similar in meaning but not duplicates.
+    hits = vector_store.similar_incidents(incident_id, k=limit * 4)
     if not hits:
         return []
     by_id = {i.id: i for i in db.query(Incident).filter(Incident.id.in_([int(h.key) for h in hits])).all()}
-    return [
+    place = (target.location_address or "").strip().lower()
+    results = [
         SimilarIncident(
             id=inc.id, reference_code=inc.reference_code, title=inc.title, incident_type=inc.incident_type,
             priority=inc.priority, status=inc.status, location_address=inc.location_address,
             created_at=inc.created_at, similarity=round(1.0 - h.distance, 4),
+            same_location=bool(place) and (inc.location_address or "").strip().lower() == place,
         )
         for h in hits if (inc := by_id.get(int(h.key)))
     ]
+    results.sort(key=lambda r: (not r.same_location, -r.similarity))
+    return results[:limit]
 
 
 @router.post("/{incident_id}/acknowledge", response_model=IncidentResponse)

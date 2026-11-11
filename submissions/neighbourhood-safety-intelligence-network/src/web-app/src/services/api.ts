@@ -48,7 +48,11 @@ class ApiService {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.detail || `Request failed with status ${response.status}`);
+        // FastAPI validation errors (422) return a list of {loc, msg}; turn them into readable text.
+        const detail = Array.isArray(data.detail)
+          ? data.detail.map((d: any) => `${d.loc?.[d.loc.length - 1] ?? 'field'}: ${d.msg}`).join('; ')
+          : data.detail;
+        throw new Error(detail || `Request failed with status ${response.status}`);
       }
 
       return data as T;
@@ -207,6 +211,10 @@ class ApiService {
       method: 'PATCH',
       body: JSON.stringify({ is_available, current_lat: lat, current_lng: lng }),
     });
+  }
+
+  async verifyResponder(userId: number): Promise<any> {
+    return this.request(`/api/v1/responders/${userId}/verify`, { method: 'POST' });
   }
 
   async getResponderRoster(): Promise<any[]> {

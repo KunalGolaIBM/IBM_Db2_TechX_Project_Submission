@@ -65,11 +65,14 @@ def test_insights_report_measured_response_times(client, resident, responder):
 
 
 def test_hotspots_rank_repeated_locations_first(client, resident):
+    # Works on a shared, persistent database too: out-report whatever currently ranks first.
+    current = client.get(f"{API}/community/insights", headers=resident).json()["hotspots"]
+    needed = (current[0]["incidents"] if current else 0) + 1
     spot = f"Underpass {uuid.uuid4().hex[:6]}"
-    for _ in range(4):
+    for _ in range(needed):
         _create(client, resident, location_address=spot)
     hotspots = client.get(f"{API}/community/insights", headers=resident).json()["hotspots"]
-    assert hotspots[0]["location"] == spot and hotspots[0]["rank"] == 1 and hotspots[0]["incidents"] == 4
+    assert hotspots[0]["location"] == spot and hotspots[0]["rank"] == 1 and hotspots[0]["incidents"] == needed
 
 
 def test_unacknowledged_critical_incident_counts_as_sla_breach(client, resident):
@@ -154,9 +157,11 @@ def test_semantic_retrieval_rejects_off_topic_queries():
 @needs_vectors
 def test_similar_incidents_link_duplicate_reports(client, resident, responder):
     tag = uuid.uuid4().hex[:5]
-    a = _create(client, resident, title=f"Streetlight broken on Lane {tag}",
+    place = f"Lane {tag}, Green Glen"
+    a = _create(client, resident, title=f"Streetlight broken on Lane {tag}", location_address=place,
                 description="The streetlight on our lane has stopped working and the road is completely dark at night.")
     b = _create(client, auth_headers(client, "maya.sen@neighbourhood.org"), title=f"Lane {tag} lamp not working",
+                location_address=place,
                 description="Street lamp on the lane is not working, the whole road is pitch dark after sunset.")
     unrelated = _create(client, resident, incident_type="medical", title="Neighbour fainted",
                         description="An elderly neighbour fainted in the lift and needs a doctor.")
@@ -164,7 +169,8 @@ def test_similar_incidents_link_duplicate_reports(client, resident, responder):
     similar = client.get(f"{API}/incidents/{a['id']}/similar", headers=responder)
     assert similar.status_code == 200
     ids = [s["id"] for s in similar.json()]
-    assert b["id"] in ids and unrelated["id"] not in ids
+    assert ids[0] == b["id"] and similar.json()[0]["same_location"] is True   # same address ranks first
+    assert unrelated["id"] not in ids
     assert client.get(f"{API}/incidents/{a['id']}/similar", headers=resident).status_code == 403
 
 

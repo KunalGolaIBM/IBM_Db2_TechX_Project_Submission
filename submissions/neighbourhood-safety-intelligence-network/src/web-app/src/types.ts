@@ -172,6 +172,7 @@ export interface SimilarIncident {
   location_address?: string | null;
   created_at: string;
   similarity: number;
+  same_location: boolean;
 }
 
 export interface AIAnalysisResult {

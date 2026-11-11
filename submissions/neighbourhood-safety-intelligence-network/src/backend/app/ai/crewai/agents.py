@@ -6,6 +6,34 @@ from backend.app.ai.haystack.rag_pipeline import retrieve_safety_guidance
 
 logger = logging.getLogger("neighbourhood_safety.crewai")
 
+
+# Keyword rules are matched on whole words / phrases (see _mentions), in priority order.
+CATEGORY_KEYWORDS = (
+    ("sos", ("sos", "help me", "attack", "attacked", "danger", "stalk", "stalking", "stalker", "emergency",
+             "assault", "assaulted", "kidnap", "following me")),
+    ("medical", ("heart attack", "chest pain", "breathing", "breathe", "unconscious", "bleeding", "blood",
+                 "doctor", "ambulance", "fell", "fall", "fallen", "injury", "injured", "fainted", "seizure", "stroke")),
+    ("child_alert", ("child", "children", "kid", "kids", "school", "son", "daughter", "school bus",
+                     "missing child", "boy", "girl")),
+    ("elder_welfare", ("elder", "elderly", "senior", "grandfather", "grandmother", "grandpa", "grandma",
+                       "old man", "old woman", "medicine", "medicines", "wellness")),
+    ("suspicious_activity", ("prowler", "masked", "mask", "loiter", "loitering", "suspicious", "theft",
+                             "stolen", "break-in", "burglar", "burglary", "trespass", "trespassing")),
+)
+LIFE_THREAT_WORDS = ("weapon", "knife", "gun", "bleeding heavily", "severe bleeding", "fire", "smoke",
+                     "attack", "attacked", "not breathing", "unconscious")
+ELDER_RISK_WORDS = ("not answering", "no answer", "unresponsive", "not responding", "no response",
+                    "missed", "fell", "fall", "collapsed", "confused", "wandered", "missing")
+INTRUSION_WORDS = ("break-in", "breaking in", "forced entry", "forced", "stalking", "masked")
+TIME_WORDS = ("now", "just", "minutes", "minute", "hour", "hours", "pm", "am", "today", "tonight",
+              "yesterday", "morning", "evening", "since")
+
+
+def _mentions(text: str, words) -> bool:
+    """True if any keyword or phrase appears as whole words ("person" does not contain "son")."""
+    return any(re.search(r"(?<![a-z])" + re.escape(w) + r"(?![a-z])", text) for w in words)
+
+
 class IncidentIntakeAgent:
     """
     CrewAI Bounded Agent 1: Structures a resident's free-text report,
@@ -17,31 +45,25 @@ class IncidentIntakeAgent:
     def execute(self, raw_text: str, reported_category: Optional[str] = None) -> Dict[str, Any]:
         text_lower = raw_text.lower()
 
-        # 1. Category identification
+        # 1. Category identification (whole-word matching: "person" must not match "son")
         detected_category = reported_category or "hazard"
-        if any(w in text_lower for w in ["sos", "help", "attack", "danger", "stalk", "emergency", "assault"]):
-            detected_category = "sos"
-        elif any(w in text_lower for w in ["heart", "breath", "unconscious", "blood", "doctor", "ambulance", "fall", "injury"]):
-            detected_category = "medical"
-        elif any(w in text_lower for w in ["child", "kid", "school", "son", "daughter", "bus", "lost"]):
-            detected_category = "child_alert"
-        elif any(w in text_lower for w in ["elder", "senior", "grandfather", "grandmother", "medicine", "wellness"]):
-            detected_category = "elder_welfare"
-        elif any(w in text_lower for w in ["prowler", "mask", "loiter", "suspicious", "theft", "break-in", "burglar"]):
-            detected_category = "suspicious_activity"
+        for category, words in CATEGORY_KEYWORDS:
+            if _mentions(text_lower, words):
+                detected_category = category
+                break
 
         # 2. Location entity extraction
-        location_match = re.search(r'(?:at|near|behind|in front of|opposite|in|on)\s+([A-Za-z0-9\s,\.-]{4,40})', raw_text, re.IGNORECASE)
+        location_match = re.search(r'\b(?:at|near|behind|in front of|opposite|in|on)\s+([A-Za-z0-9\s,\.-]{4,40})', raw_text, re.IGNORECASE)
         extracted_location = location_match.group(1).strip() if location_match else None
 
         # 3. Missing information detection
         missing = []
         if not extracted_location:
             missing.append("Specific street, landmark, or apartment number")
-        if not any(w in text_lower for w in ["now", "just", "minutes", "pm", "am", "today", "yesterday"]):
+        if not _mentions(text_lower, TIME_WORDS):
             missing.append("Exact time or duration of incident")
-        if detected_category in ["sos", "medical"] and "alone" not in text_lower and "with" not in text_lower:
-            missing.append("Whether the victim is currently alone or accompanied")
+        if detected_category in ["sos", "medical", "elder_welfare"] and not _mentions(text_lower, ("alone", "with")):
+            missing.append("Whether the person is currently alone or accompanied")
 
         return {
             "parsed_category": detected_category,
@@ -61,43 +83,45 @@ class SafetyTriageAssistant:
     def execute(self, intake_result: Dict[str, Any], raw_text: str) -> Dict[str, Any]:
         text_lower = raw_text.lower()
         category = intake_result["parsed_category"]
+        reasoning_points: List[str] = []
 
-        # Priority calculation
-        priority = "P3_MODERATE"
-        reasoning_points = []
-        actions = []
-
-        if category == "sos" or any(w in text_lower for w in ["weapon", "knife", "gun", "bleeding", "severe", "fire", "attack"]):
+        if category == "sos" or _mentions(text_lower, LIFE_THREAT_WORDS):
             priority = "P1_CRITICAL"
             reasoning_points.append("Active or immediate physical distress / threat to life detected.")
-            reasoning_points.append("High urgency keyword detected in resident communication.")
             actions = [
                 "Move to a well-lit, crowded, or secure locked space immediately if possible.",
                 "Keep emergency phone line open; community responders alerted in <120 seconds.",
                 "Do not confront any aggressor directly."
             ]
-        elif category in ["medical", "child_alert"] or any(w in text_lower for w in ["break-in", "mask", "forced", "stalking"]):
+        elif (category in ["medical", "child_alert"]
+              or (category == "elder_welfare" and _mentions(text_lower, ELDER_RISK_WORDS))
+              or _mentions(text_lower, INTRUSION_WORDS)):
             priority = "P2_HIGH"
             reasoning_points.append(f"Significant vulnerability identified ({category.replace('_', ' ').title()}).")
             reasoning_points.append("Requires rapid volunteer / patrol dispatch within 15 minutes.")
             actions = [
                 "Verify coordinates with trusted emergency contacts.",
-                "Responder unit notified to verify corridor camera feeds and conduct patrol.",
-                "Keep child or elder phone reachable."
+                "Dispatch the nearest verified responder for an in-person check.",
+                "Keep the child's or elder's phone line reachable."
             ]
-        elif category == "hazard":
+        elif category in ["hazard", "suspicious_activity", "elder_welfare"]:
             priority = "P3_MODERATE"
-            reasoning_points.append("Environmental or infrastructure hazard reported without active violence.")
-            actions = [
-                "Warn nearby neighbours and pedestrians to take alternative detour.",
-                "Civic authority ticket created for municipal repair team."
-            ]
+            reasoning_points.append(
+                {"hazard": "Environmental or infrastructure hazard reported without active violence.",
+                 "suspicious_activity": "Suspicious activity reported without an immediate threat to life.",
+                 "elder_welfare": "Senior welfare request without signs of an emergency."}[category])
+            actions = {
+                "hazard": ["Warn nearby neighbours and pedestrians to take an alternative route.",
+                           "Civic authority ticket created for the municipal repair team."],
+                "suspicious_activity": ["Do not approach; note descriptions, vehicle numbers and direction of travel.",
+                                        "Patrol notified to verify the area on its next round."],
+                "elder_welfare": ["Schedule a wellness visit from a verified volunteer.",
+                                  "Confirm medicines and essentials are available."],
+            }[category]
         else:
             priority = "P4_ADVISORY"
             reasoning_points.append("Non-urgent community advisory or general information request.")
-            actions = [
-                "Log entry in neighbourhood safety ledger for routine monitoring."
-            ]
+            actions = ["Log entry in neighbourhood safety ledger for routine monitoring."]
 
         return {
             "suggested_priority": priority,

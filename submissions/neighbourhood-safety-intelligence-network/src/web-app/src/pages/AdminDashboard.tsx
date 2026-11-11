@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  UserCheck, Database, Server, Shield, CheckCircle2, 
-  AlertCircle, RefreshCw, Cpu, Activity 
-} from 'lucide-react';
+import { UserCheck, Database, CheckCircle2, RefreshCw, Clock } from 'lucide-react';
 import { api } from '../services/api';
 
 export const AdminDashboard: React.FC = () => {
@@ -29,6 +26,22 @@ export const AdminDashboard: React.FC = () => {
   useEffect(() => {
     fetchAdminData();
   }, []);
+
+  const [verifying, setVerifying] = useState<number | null>(null);
+  const handleVerify = async (userId: number) => {
+    setVerifying(userId);
+    try {
+      await api.verifyResponder(userId);
+      await fetchAdminData();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setVerifying(null);
+    }
+  };
+
+  const db = health?.database;
+  const vectors = db?.vector_search;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -72,7 +85,7 @@ export const AdminDashboard: React.FC = () => {
             <span className="text-xs text-slate-400">Status:</span>
             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/30">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              {health?.status?.toUpperCase() || 'HEALTHY'}
+              {health?.status?.toUpperCase() || 'CHECKING'}
             </span>
           </div>
         </div>
@@ -81,20 +94,27 @@ export const AdminDashboard: React.FC = () => {
           <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
             <span className="text-slate-400 block text-[11px] uppercase font-bold">Configured Database Mode</span>
             <span className="text-base font-extrabold text-teal-400 mt-1 block uppercase">
-              {health?.database?.mode || 'sqlite'}
+              {db?.mode || '—'}
             </span>
             <span className="text-[11px] text-slate-300 mt-1 block">
-              Driver: {health?.database?.driver || 'SQLAlchemy / sqlite3'}
+              Driver: {db?.driver || '—'}
             </span>
+            {db?.details?.server_version && (
+              <span className="text-[11px] text-slate-300 mt-1 block">
+                Server: {db.details.server_version} · schema {db.details.current_schema}
+              </span>
+            )}
           </div>
 
           <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
             <span className="text-slate-400 block text-[11px] uppercase font-bold">AI Intelligence Engine</span>
             <span className="text-base font-extrabold text-white mt-1 block">
-              Haystack BM25 + Triage Agents
+              {vectors?.enabled ? 'Haystack BM25 + Db2 VECTOR' : 'Haystack BM25 + Triage Agents'}
             </span>
             <span className="text-[11px] text-slate-300 mt-1 block">
-              Agents: Intake, Triage, Knowledge, Insights
+              {vectors?.enabled
+                ? `Embeddings: ${vectors.model} (${vectors.dimensions} dims)`
+                : 'Agents: Intake, Triage, Knowledge, Insights'}
             </span>
           </div>
 
@@ -111,9 +131,14 @@ export const AdminDashboard: React.FC = () => {
 
         <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/60 text-xs text-slate-300">
           <strong className="text-white block mb-1">IBM Db2 Integration Status:</strong>
-          {health?.database?.mode === 'db2' ? (
+          {db?.mode === 'db2' ? (
             <p className="text-teal-300">
-              ✓ Connected to live IBM Db2 instance via parameterised ibm_db client. Transactions and health checks verified.
+              {db.connected
+                ? `✓ Connected to IBM Db2 (${db.details?.database}) through ibm_db / ibm_db_sa. Server time ${db.details?.server_time}.`
+                : `✗ Db2 connection failed: ${db.details?.error ?? 'unknown error'}`}
+              {db.connected && (vectors?.enabled
+                ? ' Semantic search runs inside Db2 with VECTOR_DISTANCE.'
+                : ` Vector search inactive: ${vectors?.reason ?? 'not configured'}.`)}
             </p>
           ) : (
             <p className="text-slate-400">
@@ -127,7 +152,8 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Verified Responders Roster */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
-        <h2 className="text-lg font-bold text-slate-900">Verified Community Responders Roster</h2>
+        <h2 className="text-lg font-bold text-slate-900">Community Responders</h2>
+        <p className="text-xs text-slate-500 -mt-2">Self-registered responders cannot act on incidents until an admin verifies them.</p>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {responders.map((r) => (
@@ -149,10 +175,21 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Verified
-              </span>
+              {r.is_verified_by_admin ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Verified
+                </span>
+              ) : (
+                <button
+                  onClick={() => handleVerify(r.user_id)}
+                  disabled={verifying === r.user_id}
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-2.5 py-1 rounded-full disabled:opacity-50"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  {verifying === r.user_id ? 'Verifying…' : 'Pending · Verify'}
+                </button>
+              )}
             </div>
           ))}
         </div>

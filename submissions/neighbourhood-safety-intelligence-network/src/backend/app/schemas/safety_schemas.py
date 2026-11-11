@@ -1,5 +1,5 @@
 import datetime
-from typing import Optional, List, Dict, Any, Literal
+from typing import Optional, List, Dict, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # Allowed values, shared by request validation, the incident state machine and the clients.
@@ -151,6 +151,7 @@ class SimilarIncident(BaseModel):
     location_address: Optional[str] = None
     created_at: datetime.datetime
     similarity: float  # 1 - cosine distance computed by Db2 VECTOR_DISTANCE
+    same_location: bool = False  # reported at the same address as the incident being viewed
 
 # --- Child Safety ---
 class ChildJourneyCreate(BaseModel):

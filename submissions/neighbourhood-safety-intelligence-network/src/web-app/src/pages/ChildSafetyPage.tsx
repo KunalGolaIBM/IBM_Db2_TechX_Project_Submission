@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, Plus, MapPin, Clock, CheckCircle2, AlertTriangle, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Eye, Plus, MapPin, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { api } from '../services/api';
 import { ChildJourney } from '../types';
 

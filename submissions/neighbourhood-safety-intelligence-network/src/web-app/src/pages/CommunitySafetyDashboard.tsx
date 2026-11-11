@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ShieldCheck, AlertTriangle, MapPin, Activity, Plus, 
-  RefreshCw, CheckCircle2, AlertCircle, Sparkles, Filter 
-} from 'lucide-react';
+import { MapPin, Plus, RefreshCw, Sparkles } from 'lucide-react';
 import { api } from '../services/api';
 import { CommunityInsights, CommunityHazard } from '../types';
 

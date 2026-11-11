@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HeartPulse, CheckCircle2, Plus, Clock, ShoppingBag, Pill, AlertCircle, RefreshCw } from 'lucide-react';
+import { CheckCircle2, Plus, Clock, ShoppingBag, Pill, RefreshCw } from 'lucide-react';
 import { api } from '../services/api';
 import { ElderCheckIn, AssistanceRequest } from '../types';
 

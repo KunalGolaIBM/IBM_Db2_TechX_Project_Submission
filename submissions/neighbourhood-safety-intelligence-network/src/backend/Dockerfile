@@ -3,7 +3,9 @@ FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    EMBEDDING_CACHE_DIR=/srv/models
+    EMBEDDING_CACHE_DIR=/srv/models \
+    HAYSTACK_TELEMETRY_ENABLED=False \
+    HOME=/home/nsin
 
 WORKDIR /srv
 RUN apt-get update && apt-get install -y --no-install-recommends curl libxml2 \
@@ -17,8 +19,9 @@ RUN python -c "from fastembed import TextEmbedding; TextEmbedding('BAAI/bge-smal
 
 COPY backend/ backend/
 
-# Run as an unprivileged user.
-RUN useradd --system --uid 10001 nsin && mkdir -p /data && chown -R nsin /srv /data
+# Run as an unprivileged user (with a home directory for library caches).
+RUN useradd --system --uid 10001 --create-home --home-dir /home/nsin nsin \
+    && mkdir -p /data && chown -R nsin /srv /data
 USER nsin
 
 EXPOSE 8000

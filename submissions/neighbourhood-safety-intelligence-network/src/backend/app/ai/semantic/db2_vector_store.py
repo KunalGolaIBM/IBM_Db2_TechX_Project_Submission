@@ -160,7 +160,7 @@ class Db2VectorStore:
         vectors = list(self._model.embed([f"{d['title']}. {d['content']}" for d in docs]))
         sql = text(UPSERT_PROTOCOL.format(dim=settings.EMBEDDING_DIM))
         with self.engine.begin() as conn:
-            for d, v in zip(docs, vectors):
+            for d, v in zip(docs, vectors, strict=True):
                 conn.execute(sql, {
                     "doc_id": d["id"], "title": d["title"], "category": d["category"], "source": d["source"],
                     "body": d["content"], "embedding": to_vector_literal(v), "model": settings.EMBEDDING_MODEL,
