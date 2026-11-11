@@ -68,7 +68,9 @@
       "A secured BEFORE INSERT trigger that refuses a release unless every claim cites a clause version in force on the date (JSON_TABLE joined to FOR BUSINESS_TIME AS OF)",
       "PREVIEW_POLICY_CHANGE: apply a change, compute its impact, ROLLBACK TO SAVEPOINT inside one procedure",
       "DEMO_SPEND: a daily live-check cap enforced by a procedure that SIGNALs at the cap",
-      "Backtest runs written through procedures, with money at stake read from RULE_JSON with JSON_VALUE"
+      "Backtest runs written through procedures, with money at stake read from RULE_JSON with JSON_VALUE",
+      "Trusted context: the API switches SESSION_USER per request (optional), so Db2 records and authorizes the real requester",
+      "CHAIN_CHECKPOINT and VERIFY_CHAIN_FROM_CHECKPOINT: incremental hash-chain verification from Db2-recorded checkpoints"
     ]
   },
   "tech_stack": {
