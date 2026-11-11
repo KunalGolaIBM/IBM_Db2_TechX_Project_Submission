@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "reDB: the AI agent that tunes IBM Db2 and proves every fix",
+    "slug": "redb",
+    "short_description": "A LangGraph + Gemini agent that reads Db2's MON_GET monitoring, explains slow queries from EXPLAIN plans, proposes indexes from Db2's own advisor and guarded rewrites, proves each fix with virtual-index costs and EXCEPT ALL equivalence, applies it only after human approval, measures the real speed-up, and audits everything in a temporal table with rollback and VECTOR case memory.",
+    "category": "AI / Database Performance / Autonomous DBA Agent",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/MohamedAtiyah/reDB"
+  },
+  "team": {
+    "name": "reDB",
+    "members": [
+      {
+        "name": "Mohamed Atiyah",
+        "github": "MohamedAtiyah",
+        "email": "",
+        "role": "Solo developer: Db2 integration, LangGraph agent, UI, docs"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition 12.1.5 (Docker, icr.io/db2_community/db2)",
+    "connector": "ibm_db (Python)",
+    "features_used": [
+      "MON_GET_PKG_CACHE_STMT / MON_GET_TABLE / MON_GET_INDEX / MON_GET_BUFFERPOOL",
+      "EXPLAIN PLAN + EXPLAIN_STATEMENT / EXPLAIN_OPERATOR / EXPLAIN_STREAM",
+      "CURRENT EXPLAIN MODE RECOMMEND INDEXES + ADVISE_INDEX (virtual indexes)",
+      "CURRENT EXPLAIN MODE EVALUATE INDEXES (workload-level what-if index consolidation)",
+      "EXCEPT ALL equivalence proofs",
+      "SYSPROC.ADMIN_CMD RUNSTATS",
+      "System-period temporal tables + FOR SYSTEM_TIME",
+      "VECTOR + VECTOR_DISTANCE",
+      "SELECT FROM FINAL TABLE (INSERT)",
+      "Informational constraints (NOT ENFORCED ENABLE QUERY OPTIMIZATION)",
+      "32K bufferpool and tablespace",
+      "SYSCAT catalog views",
+      "FLUSH PACKAGE CACHE DYNAMIC",
+      "SYSPROC.SYSINSTALLOBJECTS",
+      "Recursive CTE data generation"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python"
+    ],
+    "frameworks": [
+      "LangGraph",
+      "LangChain",
+      "Streamlit",
+      "Pydantic"
+    ],
+    "ai_models": [
+      "Google Gemini (gemini-3.5-flash)",
+      "Gemini embeddings (gemini-embedding-001)"
+    ]
+  }
+}
