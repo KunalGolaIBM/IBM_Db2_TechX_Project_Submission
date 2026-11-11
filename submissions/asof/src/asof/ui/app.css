@@ -36,9 +36,10 @@
   --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color-scheme: light;
 }
+/* Light everywhere by default, whatever the visitor's system setting (the video and screenshots are light). The dark
+   palette below applies only when <html data-theme="dark"> is set; nothing sets it by default. */
 
-@media (prefers-color-scheme: dark) {
-  :root {
+:root[data-theme="dark"] {
     --bg: #161616; --surface: #262626; --surface-2: #393939; --ink: #f4f4f4; --ink-2: #e0e0e0; --muted: #c6c6c6;
     --line: #393939; --line-2: #6f6f6f; --brand: #78a9ff; --brand-2: #a6c8ff; --brand-3: #d0e2ff; --brand-soft: #001d6c;
     --brand-sel: #002d9c; --brand-sel-ink: #d0e2ff; --focus: #ffffff;
@@ -50,7 +51,6 @@
     --shadow: none; --shadow-lg: 0 2px 6px rgba(0, 0, 0, .6);
     color-scheme: dark;
   }
-}
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
@@ -85,7 +85,7 @@ p { margin: 0; }
 .brand:hover { text-decoration: none; }
 .logo svg { width: 24px; height: 24px; display: block; }
 .logo rect { fill: var(--brand); }
-@media (prefers-color-scheme: dark) { .logo rect { fill: #0f62fe; } }
+:root[data-theme="dark"] .logo rect { fill: #0f62fe; }
 .logo path { stroke: #fff; stroke-width: 2.6; fill: none; stroke-linecap: square; stroke-linejoin: miter; }
 .brand-text { display: flex; align-items: baseline; gap: 8px; line-height: 1; }
 .brand-text strong { font-size: 14px; font-weight: 600; letter-spacing: .1px; }
@@ -196,7 +196,9 @@ input[type="file"]::file-selector-button:hover { background: #0353e9; border-col
 }
 .chip:hover { background: #c6c6c6; }
 .chip.on { background: var(--brand-sel); color: var(--brand-sel-ink); border-color: #0f62fe; }
-@media (prefers-color-scheme: dark) { .chip { background: #393939; color: #f4f4f4; } .chip:hover { background: #525252; } .chip.on { color: #d0e2ff; } }
+:root[data-theme="dark"] .chip { background: #393939; color: #f4f4f4; }
+:root[data-theme="dark"] .chip:hover { background: #525252; }
+:root[data-theme="dark"] .chip.on { color: #d0e2ff; }
 
 .seg { display: inline-flex; border: 1px solid var(--ink); border-radius: 0; padding: 0; }
 .seg button { font: inherit; font-size: 14px; font-weight: 400; border: 0; background: transparent; color: var(--ink-2); padding: 8px 16px; border-radius: 0; cursor: pointer; }
@@ -313,12 +315,10 @@ mark { background: var(--mark); color: inherit; padding: 0 2px; border-radius: 0
 .tl-seg.tone2 { background: #a7f0ba; border-color: #6fdc8c; color: #044317; }
 .tl-seg.tone3 { background: #e8daff; border-color: #d4bbff; color: #491d8b; }
 .tl-seg.tone4 { background: #9ef0f0; border-color: #3ddbd9; color: #004144; }
-@media (prefers-color-scheme: dark) {
-  .tl-seg.tone1 { background: #002d9c; border-color: #0043ce; color: #d0e2ff; }
-  .tl-seg.tone2 { background: #044317; border-color: #0e6027; color: #a7f0ba; }
-  .tl-seg.tone3 { background: #491d8b; border-color: #6929c4; color: #e8daff; }
-  .tl-seg.tone4 { background: #004144; border-color: #005d5d; color: #9ef0f0; }
-}
+:root[data-theme="dark"] .tl-seg.tone1 { background: #002d9c; border-color: #0043ce; color: #d0e2ff; }
+:root[data-theme="dark"] .tl-seg.tone2 { background: #044317; border-color: #0e6027; color: #a7f0ba; }
+:root[data-theme="dark"] .tl-seg.tone3 { background: #491d8b; border-color: #6929c4; color: #e8daff; }
+:root[data-theme="dark"] .tl-seg.tone4 { background: #004144; border-color: #005d5d; color: #9ef0f0; }
 .tl-seg.selected { outline: 2px solid var(--ink); outline-offset: 1px; }
 .tl-seg .open { opacity: .7; }
 .tl-marker { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--hold); opacity: .45; z-index: 4; pointer-events: none; }
@@ -346,11 +346,11 @@ pre.sql .cm { color: var(--muted); }
 /* ---- tables ---- */
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th { text-align: left; font-size: 14px; font-weight: 600; letter-spacing: .16px; color: var(--ink); padding: 12px 16px; border-bottom: 0; background: #e0e0e0; }
-@media (prefers-color-scheme: dark) { th { background: #393939; } }
+:root[data-theme="dark"] th { background: #393939; }
 td { padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
 tr.click { cursor: pointer; }
 tr.click:hover td { background: #e8e8e8; }
-@media (prefers-color-scheme: dark) { tr.click:hover td { background: #333333; } }
+:root[data-theme="dark"] tr.click:hover td { background: #333333; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .trunc { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

@@ -22,7 +22,7 @@
 | **Db2 does the work** | `FOR BUSINESS_TIME AS OF` with `VECTOR_DISTANCE` in one statement, a hash-chained ledger in SQL PL, `JSON_TABLE`, column masks, in-database embeddings, partitions and MQTs measured at 1,000,000 decisions; `python -m asof.db2check` runs 34 feature checks. |
 | **Tamper evidence** | Triggers stop even the owner; `VERIFY_CHAIN` finds an edited row; receipts and anchors kept outside Db2 catch a rebuilt ledger. |
 | **People where the check stops** | Held answers go to a specialist inbox, and Db2 records a reply only if it passes the same check; customers told a rule that later changed get a checked correction notice a specialist approves. |
-| **Engineering** | A LangGraph check with fixed edges that fails closed, five least-privilege Db2 users, 1308 tests (80% line coverage), mypy, and three CI jobs including IBM's stock Db2 image. |
+| **Engineering** | A LangGraph check with fixed edges that fails closed, five least-privilege Db2 users, 1311 tests (80% line coverage), mypy, and three CI jobs including IBM's stock Db2 image. |
 
 > **Fictional data.** "Aurelia Air", "Fernhollow Bank" and every policy, fee schedule, FAQ and help-centre answer in this repository are invented for the demo. The airline is modelled on the kind of policy at issue in *Moffatt v. Air Canada*; neither describes a real company.
 
@@ -173,6 +173,16 @@ With `LLM_PROVIDER=replay` (what `./quickstart.sh` sets when there is no key), e
 - **Data and orchestration (each in its own environment):** dbt with `ibm-dbt-db2`, Apache Airflow with the IBM Db2 provider, Langflow's `lfx` with `lfx-ibm`
 - **Libraries & Tools:** Docker Compose, pytest, ruff, mypy, pip-audit, GitHub Actions
 
+**Core vs optional.** The product is the first three rows; everything below the line is an optional integration, each in its own folder with its own requirements, and nothing in the core imports it.
+
+| Part | Folders | Non-blank lines | Needed to run AsOf? |
+|---|---|---|---|
+| Application: check, ledger, API, agents, evaluation | `src/asof` | about 14,400 Python, 2,500 UI | yes |
+| Db2 schema: tables, procedures, triggers, permissions, workloads | `src/asof/sql` | about 3,400 SQL | yes |
+| Tests | `tests` | about 9,700 | for development |
+| dbt marts, Airflow nightly audit, Langflow component | `dbt`, `airflow`, `langflow` | about 600 together | no |
+| MCP server, cookbook recipe notebook | `mcp_server`, `cookbook` | about 930 together | no |
+
 ---
 
 ## Prerequisites
@@ -266,7 +276,7 @@ python -m asof.demo          # optional: thirteen sample decisions, three of the
 ## Testing & Verification
 
 ```bash
-pytest -q                                 # 1308 tests; 9 need an opt-in flag, 3 need TLS on and 1 the watsonx.ai extra (CI provides both)
+pytest -q                                 # 1311 tests; 9 need an opt-in flag, 3 need TLS on and 1 the watsonx.ai extra (CI provides both)
 pytest -q -m "not db2"                    # unit tests only, no database needed
 python scripts/audit_deps.py && mypy      # dependency audit, type check
 python -m asof.eval --split test          # the frozen airline split (needs a model)

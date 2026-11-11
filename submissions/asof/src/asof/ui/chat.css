@@ -16,8 +16,9 @@
   --shadow-lg: 0 24px 60px rgba(9, 40, 52, .16), 0 2px 6px rgba(9, 40, 52, .06);
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
+/* Light everywhere by default, whatever the visitor's system setting (the video and screenshots are light). The dark
+   palette below applies only when <html data-theme="dark"> is set; nothing sets it by default. */
+:root[data-theme="dark"] {
     --bg: #0b1418; --surface: #111e23; --surface-2: #16262c; --ink: #e5eef1; --ink-2: #c3d2d8; --muted: #8aa0a8;
     --line: #20333a; --line-2: #2b4249; --sea: #5ec3d8; --sea-2: #7dd3e5; --sea-soft: #12313a; --sun: #f2c26a;
     --pass: #4fd18b; --pass-bg: #10291c; --pass-line: #1f5236; --fix: #f0b55a; --fix-bg: #2d2210; --fix-line: #5c4419;
@@ -25,7 +26,6 @@
     --shadow-lg: 0 24px 60px rgba(0, 0, 0, .5);
     color-scheme: dark;
   }
-}
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { font: 15px/1.5 var(--sans); letter-spacing: .16px; color: var(--ink); background: var(--bg); min-height: 100vh; }
