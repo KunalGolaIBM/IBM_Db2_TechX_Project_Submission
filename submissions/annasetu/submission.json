@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "AnnaSetu: Intelligent IBM Db2-Powered Food Rescue Network",
+    "slug": "annasetu",
+    "short_description": "A Db2-first food rescue MVP for evidence-based batch screening, time-aware logistics, transactional NGO capacity allocation and verified distribution.",
+    "category": "AI / RAG / Data Engineering",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/rajatrajput2402/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "AnnaSetu",
+    "members": [
+      {
+        "name": "Rajat",
+        "github": "rajatrajput2402",
+        "email": "",
+        "role": "Project lead and full-stack / Db2 integration"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition 12.1.5.0 (Docker)",
+    "connector": "ibm_db / ibm_db_dbi; LangChain langchain-db2 DB2VS",
+    "features_used": [
+      "Transactional operational relational tables",
+      "Constraints, indexes, triggers, and aggregate queries",
+      "Append-only SHA-256 hash-chained audit history",
+      "LangChain Db2 vector retrieval (DB2VS)"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "JavaScript", "CSS", "SQL"],
+    "frameworks": ["FastAPI", "React", "Vite", "LangChain Core", "langchain-db2"],
+    "ai_models": []
+  }
+}
