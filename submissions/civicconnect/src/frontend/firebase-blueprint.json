@@ -1,0 +1,132 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with role-based access information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "enum": ["citizen", "admin", "staff"] },
+        "departmentId": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "name", "email", "role"]
+    },
+    "Complaint": {
+      "title": "Civic Complaint",
+      "description": "A public complaint regarding civic infrastructure or sanitation",
+      "type": "object",
+      "properties": {
+        "complaintId": { "type": "string", "maxLength": 64 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "citizenName": { "type": "string", "maxLength": 100 },
+        "citizenEmail": { "type": "string", "maxLength": 150 },
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "category": { "type": "string", "maxLength": 100 },
+        "departmentId": { "type": "string", "maxLength": 100 },
+        "departmentName": { "type": "string", "maxLength": 100 },
+        "location": { "type": "string", "maxLength": 255 },
+        "landmark": { "type": "string", "maxLength": 255 },
+        "imageUrl": { "type": "string", "maxLength": 500000 },
+        "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
+        "status": {
+          "type": "string",
+          "enum": ["Submitted", "Under Review", "Assigned", "In Progress", "Resolved", "Rejected", "Reopened"]
+        },
+        "rejectionReason": { "type": "string", "maxLength": 1000 },
+        "reopenReason": { "type": "string", "maxLength": 1000 },
+        "resolutionProofUrl": { "type": "string", "maxLength": 500000 },
+        "resolutionNotes": { "type": "string", "maxLength": 2000 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "resolvedAt": { "type": "string" }
+      },
+      "required": ["complaintId", "userId", "title", "description", "category", "location", "status", "priority", "createdAt"]
+    },
+    "ComplaintUpdate": {
+      "title": "Complaint Status Update History",
+      "description": "Audit record of status progression and staff notes",
+      "type": "object",
+      "properties": {
+        "complaintId": { "type": "string", "maxLength": 64 },
+        "previousStatus": { "type": "string", "maxLength": 50 },
+        "newStatus": { "type": "string", "maxLength": 50 },
+        "updatedBy": { "type": "string", "maxLength": 100 },
+        "updatedByUid": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "maxLength": 50 },
+        "note": { "type": "string", "maxLength": 2000 },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["complaintId", "newStatus", "updatedBy", "updatedByUid", "timestamp"]
+    },
+    "Department": {
+      "title": "Municipal Department",
+      "description": "Civic department responsible for resolving specific categories of issues",
+      "type": "object",
+      "properties": {
+        "departmentId": { "type": "string", "maxLength": 64 },
+        "name": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 500 },
+        "active": { "type": "boolean" },
+        "suggestedCategories": { "type": "array" }
+      },
+      "required": ["departmentId", "name", "active"]
+    },
+    "Notification": {
+      "title": "User Notification",
+      "description": "In-app alert for status updates and complaint activities",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 150 },
+        "message": { "type": "string", "maxLength": 1000 },
+        "complaintId": { "type": "string", "maxLength": 64 },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "title", "message", "read", "createdAt"]
+    },
+    "Feedback": {
+      "title": "Citizen Feedback",
+      "description": "Feedback and satisfaction rating submitted after complaint resolution",
+      "type": "object",
+      "properties": {
+        "complaintId": { "type": "string", "maxLength": 64 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "rating": { "type": "number" },
+        "comment": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["complaintId", "userId", "rating", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and role assignments"
+    },
+    "/complaints/{complaintDocId}": {
+      "schema": "Complaint",
+      "description": "Primary complaint repository"
+    },
+    "/complaintUpdates/{updateDocId}": {
+      "schema": "ComplaintUpdate",
+      "description": "Audit trail of status transitions"
+    },
+    "/departments/{departmentDocId}": {
+      "schema": "Department",
+      "description": "List of municipal departments"
+    },
+    "/notifications/{notificationDocId}": {
+      "schema": "Notification",
+      "description": "User notification messages"
+    },
+    "/feedback/{feedbackDocId}": {
+      "schema": "Feedback",
+      "description": "Citizen post-resolution satisfaction ratings"
+    }
+  }
+}
