@@ -94,8 +94,8 @@ test("grouped question draws a chart from backend series and offers a table view
 
 test("scenario 2: ranked question headlines the top region; ambiguous question offers verbatim clarifications", async ({ page }) => {
   await page.goto("/");
-  // Stage 4: replaces "Show our best-performing region." (a real model answers it AMBIGUOUS or BLOCKED, see
-  // docs/STAGE_4_HANDOFF.md). Both planners group by region, sort desc, limit 1; the seed data is deterministic.
+  // Replaces "Show our best-performing region." (a real model answers it AMBIGUOUS or BLOCKED, see
+  // docs/AI_PROVIDER_CONFIGURATION.md). Both planners group by region, sort desc, limit 1; the seed data is deterministic.
   await runDemo(page, "ranked");
   await expect(page.getByTestId("analysis-view")).toHaveAttribute("data-status", "VERIFIED");
   await expect(page.getByTestId("analysis-view")).toContainText("Top region: NA · Net Revenue (Q2 2026)");

@@ -1,4 +1,4 @@
-"""Deterministic presentation of ranked answers (Stage 4 fix)."""
+"""Deterministic presentation of ranked answers."""
 
 from datetime import date
 from decimal import Decimal

@@ -1,7 +1,7 @@
-"""Idempotent, non-destructive schema migrations and least-privilege grants (Stage 2).
+"""Idempotent, non-destructive schema migrations and least-privilege grants.
 
 `metricguard db migrate` applies these to an existing database without dropping or
-reloading anything. `metricguard db init` applies them after creating the Stage 1 schema.
+reloading anything. `metricguard db init` applies them after creating the base schema.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from metricguard.db import Db2Client
 SCHEMA = "METRICGUARD"
 Log = Callable[[str], None]
 
-# Stage 2 audit columns (all nullable: adding them needs no REORG and keeps existing rows valid).
+# Audit columns (all nullable: adding them needs no REORG and keeps existing rows valid).
 AUDIT_COLUMNS: list[tuple[str, str]] = [
     ("EXECUTION_MODE", "VARCHAR(24)"),     # LLM | DEMO_RULE_BASED
     ("PLANNER_MODEL", "VARCHAR(80)"),      # e.g. claude-sonnet-5-5; NULL for the rule planner

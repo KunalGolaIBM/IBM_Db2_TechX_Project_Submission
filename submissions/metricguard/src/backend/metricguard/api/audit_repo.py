@@ -1,6 +1,6 @@
 """Read/write access to METRICGUARD.QUERY_AUDIT_LOG.
 
-Stage 2: the API reads and writes this table through the least-privilege audit account
+The API reads and writes this table through the least-privilege audit account
 (DB2_AUDIT_USER: INSERT + SELECT on this table only). All values travel as parameter markers.
 """
 

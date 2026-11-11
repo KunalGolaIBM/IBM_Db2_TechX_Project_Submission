@@ -1,4 +1,4 @@
-"""Capture real API responses into docs/examples/ for the frontend handoff.
+"""Capture real API responses into docs/examples/ for the frontend.
 
     env -u PYTHONHOME .venv/bin/python scripts/capture_api_examples.py [--llm]
 

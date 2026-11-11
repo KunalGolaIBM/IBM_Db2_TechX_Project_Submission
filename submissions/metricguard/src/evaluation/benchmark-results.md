@@ -4,8 +4,8 @@ Two independent result sets live here. **They measure different things and must 
 
 | Set | Planner | Cases | Raw output |
 |---|---|---|---|
-| A. Stage 3.5 live | **Meta Muse Spark 1.3 via LangChain (real inference)** | 37 (25 Stage 2 + 12 unseen) | [`benchmark-meta.json`](benchmark-meta.json) (default reasoning), [`benchmark-meta-low-effort.json`](benchmark-meta-low-effort.json) (`META_REASONING_EFFORT=low`) |
-| B. Stage 2 | `DEMO_RULE_BASED` rule planner (no AI) | 25 | [`benchmark-demo.json`](benchmark-demo.json), details below |
+| A. Live | **Meta Muse Spark 1.3 via LangChain (real inference)** | 37 (25 original + 12 unseen) | [`benchmark-meta.json`](benchmark-meta.json) (default reasoning), [`benchmark-meta-low-effort.json`](benchmark-meta-low-effort.json) (`META_REASONING_EFFORT=low`) |
+| B. Rule planner | `DEMO_RULE_BASED` rule planner (no AI) | 25 | [`benchmark-demo.json`](benchmark-demo.json), details below |
 
 The rule planner's 25 / 25 says the governed pipeline behaves correctly; it is **not** evidence about any model. Set A is the model evidence.
 
@@ -27,7 +27,7 @@ Reproduce: `make eval-llm` (needs `AI_PROVIDER=meta` and `MODEL_API_KEY`; costs 
 | All-case latency (median / p90 / max) | 4.2 s / 10.0 s / 23.0 s | 2.4 s / 5.0 s / 13.0 s |
 | Wall time | 216 s | 117 s |
 
-The 12 **unseen** prompts (`u-01 … u-12` in `evaluation.py`) were written after the Stage 2 rule planner and system prompt were finished and were not used to tune either: refunds in total, gross by channel, a two-region comparison, channel ranking, a filtered count, monthly AOV with a region filter, two metrics by category, an arbitrary date span, an unknown metric (customer lifetime value), "how are sales doing this month", a DBA-style purge request and a "developer mode" injection. All 12 passed. 8 of them are executable and matched their reference plans and the oracle.
+The 12 **unseen** prompts (`u-01 … u-12` in `evaluation.py`) were written after the rule planner and system prompt were finished and were not used to tune either: refunds in total, gross by channel, a two-region comparison, channel ranking, a filtered count, monthly AOV with a region filter, two metrics by category, an arbitrary date span, an unknown metric (customer lifetime value), "how are sales doing this month", a DBA-style purge request and a "developer mode" injection. All 12 passed. 8 of them are executable and matched their reference plans and the oracle.
 
 ### What the model did versus the deterministic layers
 
@@ -47,9 +47,9 @@ For those two, the deterministic layers decided the final result: an unknown met
 - Malformed output, refusals, truncation, 401/403/404/429/5xx, timeout and unreachable provider are **not** live-tested (a real provider will not produce them on demand). They are covered with a mock provider in `tests/test_meta_provider.py` (41 tests).
 - The two runs differ only in `META_REASONING_EFFORT`; the second run is a configuration check, not repeated scoring of the same setting.
 
-## A2. Stage 4 bounded live checks (2026-11-07)
+## A2. Bounded live checks (2026-11-07)
 
-Not a benchmark rerun: the planner prompt, schema, metrics and compiler did not change, so Set A stands. Raw data: [`stage4/live-e2e.json`](stage4/live-e2e.json), [`stage4/audit-probe.json`](stage4/audit-probe.json).
+Not a benchmark rerun: the planner prompt, schema, metrics and compiler did not change, so Set A stands. Raw data: [`live-checks/live-e2e.json`](live-checks/live-e2e.json), [`live-checks/audit-probe.json`](live-checks/audit-probe.json).
 
 | Check | Result |
 |---|---|
@@ -60,15 +60,15 @@ Not a benchmark rerun: the planner prompt, schema, metrics and compiler did not 
 | Audit endpoints, 60 sequential + 40 concurrent GETs | 100 / 100 HTTP 200, median 25 ms |
 | Demo planner benchmark after the rule change | 25 / 25 (`benchmark-demo.json` regenerated) |
 
-## B. Stage 2 rule planner (`DEMO_RULE_BASED`)
+## B. Rule planner (`DEMO_RULE_BASED`)
 
 Run on 2026-11-07 against live IBM Db2 12.1.5.0 (MGDB, Colima + QEMU). Raw output: [`benchmark-demo.json`](benchmark-demo.json). Reproduce with `make eval` (demo planner). Set A above is the real-LLM run (`make eval-llm`).
 
-### Read this first (Stage 2 context)
+### Read this first (rule-planner context)
 
 | Execution path | Status |
 |---|---|
-| **Real LLM**: LangChain + Meta `muse-spark-1.3` + Db2 | **Run in Stage 3.5: see Set A above** (37 / 37). |
+| **Real LLM**: LangChain + Meta `muse-spark-1.3` + Db2 | **Run live: see Set A above** (37 / 37). |
 | **Real LLM**: LangChain + Anthropic | **Not run.** No Anthropic key. Optional adapter, mock-tested only. |
 | **DEMO_RULE_BASED** planner + real FastAPI + real Db2 + real audit writer | Run: 25 / 25 cases pass. |
 | LangChain + `langchain-anthropic` + `anthropic` SDK against a **local fake Anthropic server** (mocked provider) | Run in `tests/test_planner.py`: parsing, malformed output, refusal, truncation, HTTP 401/403/404/429/500/529, timeout and unreachable host. |

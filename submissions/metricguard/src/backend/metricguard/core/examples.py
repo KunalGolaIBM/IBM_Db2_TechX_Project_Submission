@@ -1,7 +1,7 @@
 """Curated example questions with their reference plans and expected governance outcome.
 
 Served by GET /api/examples, used by `metricguard db verify` (executable ones are compared
-with the independent oracle), and used in Stage 2 as the planner evaluation set.
+with the independent oracle), and used as the planner evaluation set.
 """
 
 from __future__ import annotations

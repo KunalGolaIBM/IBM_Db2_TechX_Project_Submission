@@ -1,4 +1,4 @@
-"""Stage 4 bounded live verification: real Meta Model API + LangChain + IBM Db2 (costs a few API requests).
+"""Bounded live verification: real Meta Model API + LangChain + IBM Db2 (costs a few API requests).
 
 Part A (in-process, no audit rows): N planner calls for one vague question. A wire hook records, for each request to
 the Meta API, the path, whether `reasoning_effort` was in the JSON body and its value, the HTTP status, latency and
@@ -7,7 +7,7 @@ the Meta API, the path, whether `reasoning_effort` was in the JSON body and its 
 Part B (over HTTP against the running API, writes normal audit rows): four questions, each checked for structured
 plan, compiler-generated SQL, guard checks, Db2 execution, oracle equality, audit read-back and planner labelling.
 
-    .venv/bin/python scripts/stage4_live_e2e.py --runs 3 --out evaluation/stage4/live-e2e.json
+    .venv/bin/python scripts/live_e2e.py --runs 3 --out evaluation/live-checks/live-e2e.json
 """
 from __future__ import annotations
 

@@ -62,25 +62,25 @@ Not sent: `temperature`, `top_p`, tools, tool choice. The planner does not need 
 
 Meta documents `reasoning_effort` as a top-level Chat Completions parameter for Muse Spark 1.3 (<https://dev.meta.ai/docs/reasoning>, read 2026-11-07): `minimal`, `low`, `medium`, `high`, `xhigh`, `max`. `none` returns HTTP 400 for Muse Spark, so the setting rejects it at startup. If the parameter is omitted, the model picks its own level. Reasoning tokens count toward the output budget and are reported in `usage.completion_tokens_details.reasoning_tokens`.
 
-How it is wired and verified (Stage 4):
+How it is wired and verified:
 
 | Check | Evidence |
 |---|---|
 | Env → setting | `Settings.meta_reasoning_effort` accepts the six documented values; empty means unset; `none` and unknown values fail validation (`tests/test_meta_provider.py`) |
 | LangChain forwards it | `ChatOpenAI(reasoning_effort=…)` puts it top-level in the Chat Completions payload (unit test over `_get_request_payload` for all six values; mock-server test asserts it on the wire) |
-| Meta accepts it | Live wire capture, `scripts/stage4_live_e2e.py`: 3/3 requests carried `"reasoning_effort": "low"`, HTTP 200, `strict` JSON Schema, 1,016–1,518 reasoning tokens ([`evaluation/stage4/live-e2e.json`](../src/evaluation/stage4/live-e2e.json)) |
+| Meta accepts it | Live wire capture, `scripts/live_e2e.py`: 3/3 requests carried `"reasoning_effort": "low"`, HTTP 200, `strict` JSON Schema, 1,016–1,518 reasoning tokens ([`evaluation/live-checks/live-e2e.json`](../src/evaluation/live-checks/live-e2e.json)) |
 
-Why `low`: on the same 37-case benchmark (Stage 3.5) `low` gave the same 37/37 result as the default and about half the latency (executed median 2.3 s vs 4.1 s, all-case p90 5.0 s vs 10.0 s). On one ambiguous prompt the default used 4,699 reasoning tokens (34.2 s) against 687 (5.3 s) for `low`. To change it, edit `.env` and restart the API; no code change is needed.
+Why `low`: on the same 37-case benchmark `low` gave the same 37/37 result as the default and about half the latency (executed median 2.3 s vs 4.1 s, all-case p90 5.0 s vs 10.0 s). On one ambiguous prompt the default used 4,699 reasoning tokens (34.2 s) against 687 (5.3 s) for `low`. To change it, edit `.env` and restart the API; no code change is needed.
 
 ### Timeouts and the request budget
 
-`PLANNER_TIMEOUT_SECONDS` is per attempt, and the OpenAI and Anthropic SDKs retry a timed-out attempt (`PLANNER_MAX_RETRIES`, default 1). Stage 3.5 used 45 s, so a slow model call could hold a request for about 91 s, longer than the browser's 90 s limit for `POST /api/analyze`. That is the likely source of the one UI request that waited over 60 s (first attempt timed out at 45 s, the retry then succeeded). Stage 4 sets the default to 30 s: the worst case is about 61 s, below the browser limit, so the UI always shows the API's own result or its `503 PLANNER_UNAVAILABLE`. A unit test keeps `timeout × (retries + 1) + 8 s < 90 s`. With `low`, the slowest planning call observed was 14.5 s.
+`PLANNER_TIMEOUT_SECONDS` is per attempt, and the OpenAI and Anthropic SDKs retry a timed-out attempt (`PLANNER_MAX_RETRIES`, default 1). The earlier default was 45 s, so a slow model call could hold a request for about 91 s, longer than the browser's 90 s limit for `POST /api/analyze`. That is the likely source of the one UI request that waited over 60 s (first attempt timed out at 45 s, the retry then succeeded). The default is now 30 s: the worst case is about 61 s, below the browser limit, so the UI always shows the API's own result or its `503 PLANNER_UNAVAILABLE`. A unit test keeps `timeout × (retries + 1) + 8 s < 90 s`. With `low`, the slowest planning call observed was 14.5 s.
 
 ### Observed behavior and limits
 
-- Latency without `low` varied from 2 s to 34 s per planning call; one UI run exceeded 60 s (see "Timeouts" above). With `low`: executed requests median 2.3 s, max 3.8 s; vague classification questions 9–15 s (Stage 4 probe).
-- Same prompt, different outcomes: "Show our best-performing region." returns AMBIGUOUS or BLOCKED (`OUT_OF_SCOPE`). The Stage 4 probe found the cause: the model classified it `ambiguous` 3/3 times, but only once named candidate metrics. With candidates the pipeline offers a clarification (AMBIGUOUS); without candidates it has nothing safe to offer and blocks. Both outcomes are non-executing. The guided demo no longer uses this question; for a deterministic ambiguity demo use "What was our revenue last quarter?" (the policy screen forces AMBIGUOUS regardless of the model).
-- Quota and billing could not be queried (no documented endpoint). Stage 3.5 used roughly 200 small requests; see the handoff.
+- Latency without `low` varied from 2 s to 34 s per planning call; one UI run exceeded 60 s (see "Timeouts" above). With `low`: executed requests median 2.3 s, max 3.8 s; vague classification questions 9–15 s (audit probe).
+- Same prompt, different outcomes: "Show our best-performing region." returns AMBIGUOUS or BLOCKED (`OUT_OF_SCOPE`). The audit probe found the cause: the model classified it `ambiguous` 3/3 times, but only once named candidate metrics. With candidates the pipeline offers a clarification (AMBIGUOUS); without candidates it has nothing safe to offer and blocks. Both outcomes are non-executing. The guided demo no longer uses this question; for a deterministic ambiguity demo use "What was our revenue last quarter?" (the policy screen forces AMBIGUOUS regardless of the model).
+- Quota and billing could not be queried (no documented endpoint). The benchmark runs used roughly 200 small requests.
 
 ## Optional Anthropic adapter
 
@@ -96,7 +96,7 @@ Why `low`: on the same 37-case benchmark (Stage 3.5) `low` gave the same 37/37 r
 | Anthropic | `langchain-anthropic` | `anthropic` | e.g. `claude-sonnet-5-5` | `LLM` | `null` |
 | Demo | `rules-demo` | `metricguard-rules` | `null` | `DEMO_RULE_BASED` | non-empty |
 
-The UI shows "AI planner · Meta Model API · muse-spark-1.3" only when `execution_mode` is `LLM`; the demo banner only for `DEMO_RULE_BASED`. Audit rows store the planner name (`langchain-meta`) and model; rows written before Stage 3.5 say `langchain-structured` or `rules-demo`.
+The UI shows "AI planner · Meta Model API · muse-spark-1.3" only when `execution_mode` is `LLM`; the demo banner only for `DEMO_RULE_BASED`. Audit rows store the planner name (`langchain-meta`) and model; rows written before provider selection was added say `langchain-structured` or `rules-demo`.
 
 ## Tests by kind
 

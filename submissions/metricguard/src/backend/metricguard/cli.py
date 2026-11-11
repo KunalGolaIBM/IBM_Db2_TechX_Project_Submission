@@ -42,7 +42,7 @@ def cmd_db_init(args: argparse.Namespace) -> int:
 
 
 def cmd_db_migrate(_: argparse.Namespace) -> int:
-    """Non-destructive Stage 2 migration: audit columns + least-privilege audit grants. No data is dropped."""
+    """Non-destructive migration: audit columns + least-privilege audit grants. No data is dropped."""
     from metricguard.seed.migrations import grant_audit_writer, migrate_audit_table, privileges
 
     settings = get_settings()
@@ -116,7 +116,7 @@ def main(argv: list[str] | None = None) -> int:
     init.add_argument("--reset", action="store_true", help="drop the METRICGUARD schema first")
     init.set_defaults(func=cmd_db_init)
     db.add_parser("verify", help="run verification suite and write evidence/").set_defaults(func=cmd_db_verify)
-    db.add_parser("migrate", help="non-destructive Stage 2 migration (audit columns, audit grants)").set_defaults(
+    db.add_parser("migrate", help="non-destructive migration (audit columns, audit grants)").set_defaults(
         func=cmd_db_migrate)
     exp = db.add_parser("expected", help="write oracle expected results (no Db2 needed)")
     exp.add_argument("--out", default="db/expected/expected_results.json")
@@ -126,7 +126,7 @@ def main(argv: list[str] | None = None) -> int:
     ev.add_argument("--planner", choices=["demo", "llm"], default="demo",
                     help="llm = the real provider selected by AI_PROVIDER (meta | anthropic); never demo")
     ev.add_argument("--suite", choices=["core", "unseen", "all"], default="core",
-                    help="core = the 25 Stage 2 cases; unseen = 12 new prompts (LLM only); all = both")
+                    help="core = the 25 original cases; unseen = 12 new prompts (LLM only); all = both")
     ev.add_argument("--out", default="evaluation/benchmark-results.json")
     ev.set_defaults(func=cmd_eval)
 

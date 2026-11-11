@@ -1,4 +1,4 @@
-# MetricGuard — Trustworthy AI Analytics on IBM Db2
+# MetricGuard: Trustworthy AI Analytics on IBM Db2
 
 > **Don't just trust the number. Verify the evidence.**
 > Ask a business question in plain English. A Meta Muse Spark model turns it into a typed plan, deterministic code compiles read-only Db2 SQL from approved metric definitions, and the result is reconciled and written to an audit log in Db2.

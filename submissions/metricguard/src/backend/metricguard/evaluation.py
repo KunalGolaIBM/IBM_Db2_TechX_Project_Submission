@@ -109,7 +109,7 @@ CASES: list[Case] = [
 ]
 
 
-# Prompts that were NOT used to design or tune the Stage 2 rule planner or prompt. Used for live LLM evaluation only
+# Prompts that were NOT used to design or tune the rule planner or prompt. Used for live LLM evaluation only
 # (the rule planner is not expected to handle them). Reference plans are written by hand from the question text;
 # the expected numbers always come from the independent oracle for the plan that actually ran.
 UNSEEN_CASES: list[Case] = [

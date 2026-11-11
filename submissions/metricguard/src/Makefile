@@ -46,7 +46,7 @@ db-reader: ## Create the SELECT-only OS user used for analytical queries (local 
 db-audit-user: ## Create the append-only audit OS user (INSERT+SELECT on QUERY_AUDIT_LOG; local container only)
 	bash scripts/create_reader_user.sh audit
 
-db-migrate: ## Non-destructive Stage 2 migration on an existing database (audit columns + audit grants)
+db-migrate: ## Non-destructive migration on an existing database (audit columns + audit grants)
 	$(MG) db migrate
 
 db-init: ## Create schema, seed deterministic data, register metrics, RUNSTATS, grants

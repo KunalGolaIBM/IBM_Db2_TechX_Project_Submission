@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     query_timeout_seconds: int = Field(default=15, ge=1, le=300)
     max_result_rows: int = Field(default=500, ge=1, le=10000)
 
-    # --- AI planner (Stage 2; provider selection added in Stage 3.5) ---
+    # --- AI planner ---
     # AI_PROVIDER (preferred) selects the planner. See docs/AI_PROVIDER_CONFIGURATION.md for the precedence rules.
     #   meta       LangChain -> Meta Model API (real inference). 503 PLANNER_UNAVAILABLE if MODEL_API_KEY is missing.
     #   anthropic  LangChain -> Anthropic (optional legacy adapter). 503 without ANTHROPIC_API_KEY.

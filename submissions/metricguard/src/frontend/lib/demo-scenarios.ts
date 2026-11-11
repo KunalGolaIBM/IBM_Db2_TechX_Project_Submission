@@ -1,7 +1,7 @@
 /**
  * Guided-demo questions. These are only *inputs*; every result shown comes from POST /api/analyze.
- * Each one has a stable, documented outcome in both Meta (LLM) and DEMO_RULE_BASED mode (docs/STAGE_4_HANDOFF.md § Demo
- * script). "Show our best-performing region." was removed in Stage 4: the model answers it AMBIGUOUS or BLOCKED.
+ * Each one has a stable, documented outcome in both Meta (LLM) and DEMO_RULE_BASED mode (see README, demo section).
+ * "Show our best-performing region." is not offered: the model answers it AMBIGUOUS or BLOCKED.
  */
 export interface DemoScenario { id: string; step: string; label: string; question: string }
 

@@ -1,9 +1,9 @@
-"""Bounded reproduction probe for the intermittent GET /api/audit 503 (Stage 4).
+"""Bounded reproduction probe for the intermittent GET /api/audit 503.
 
 Read-only: only GET requests against a running API. Small by design (default 60 sequential + 5 rounds x 8
 concurrent requests); it is not a load test. Writes nothing to Db2.
 
-    .venv/bin/python scripts/audit_probe.py --base http://localhost:8000 --out evaluation/stage4/audit-probe.json
+    .venv/bin/python scripts/audit_probe.py --base http://localhost:8000 --out evaluation/live-checks/audit-probe.json
 """
 from __future__ import annotations
 

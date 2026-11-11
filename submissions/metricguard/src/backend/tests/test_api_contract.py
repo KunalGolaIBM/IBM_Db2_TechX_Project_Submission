@@ -38,8 +38,8 @@ def test_analyze_rejects_unknown_fields():
     assert r.status_code == 422
 
 
-def test_analyze_is_implemented_since_stage_2():
-    # Stage 1 asserted 501 here. Stage 2 implements the endpoint; a policy-blocked question needs no Db2.
+def test_analyze_policy_blocked_needs_no_db2():
+    # A policy-blocked question needs no Db2.
     from metricguard.analysis.pipeline import AnalysisService
     from metricguard.api.app import get_analysis_service, get_audit_writer
     from metricguard.config import get_settings
@@ -67,7 +67,7 @@ def test_openapi_lists_all_contract_paths():
 
 
 def test_db2_failure_on_audit_read_is_a_sanitized_503_and_is_logged(monkeypatch, caplog):
-    # Stage 4 diagnostic for the intermittent audit 503: the response stays generic, the log names the route and
+    # Diagnostic for the intermittent audit 503: the response stays generic, the log names the route and
     # SQLSTATE so the next occurrence can be classified. No database needed: the reader is replaced by a failing one.
     import logging
 

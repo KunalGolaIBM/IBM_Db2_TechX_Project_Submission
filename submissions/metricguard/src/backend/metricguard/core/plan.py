@@ -1,6 +1,6 @@
 """Structured query plan: the only thing an LLM planner is allowed to produce.
 
-The planner (Stage 2, LangChain) maps a question to a QueryPlan. Everything after that
+The planner (LangChain) maps a question to a QueryPlan. Everything after that
 (validation, SQL generation, execution, verification) is deterministic code.
 """
 

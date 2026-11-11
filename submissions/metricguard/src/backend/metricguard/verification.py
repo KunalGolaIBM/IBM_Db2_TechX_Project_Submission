@@ -291,7 +291,7 @@ def verify(settings: Settings, *, log=print) -> dict[str, Any]:
             report["least_privilege"] = priv
             log(f"[least privilege] {priv['status']}: {priv['detail']}")
 
-        # 10. audit writer (Stage 2): append-only, no business data --------------------
+        # 10. audit writer: append-only, no business data --------------------
         if settings.audit_configured:
             audit_checks = []
             try:

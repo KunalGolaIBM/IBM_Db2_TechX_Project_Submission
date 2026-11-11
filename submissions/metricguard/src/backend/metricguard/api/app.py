@@ -107,8 +107,8 @@ async def _internal_handler(_: Request, exc: Exception) -> JSONResponse:
 
 @app.exception_handler(Db2Error)
 async def _db2_handler(request: Request, exc: Db2Error) -> JSONResponse:
-    # Stage 4: an intermittent 503 on GET /api/audit was seen once and never reproduced. Log enough to tell a
-    # connection failure from a query failure next time. Db2Error text is already sanitized (no PWD); the
+    # An intermittent 503 on GET /api/audit was seen once and never reproduced. Log enough to tell a
+    # connection failure from a query failure. Db2Error text is already sanitized (no PWD); the
     # response body stays generic.
     log.warning("Db2 error -> 503 on %s %s (SQLSTATE %s, SQLCODE %s): %s", request.method, request.url.path,
                 exc.sqlstate, exc.sqlcode, str(exc)[:300])

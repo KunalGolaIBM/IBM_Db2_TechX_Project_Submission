@@ -1,4 +1,4 @@
-# MetricGuard API Contract — v1.2.0
+# MetricGuard API Contract, v1.2.0
 
 Pydantic source of truth: [`backend/metricguard/api/schemas.py`](../src/backend/metricguard/api/schemas.py) · Machine-readable: [`docs/openapi.json`](../src/docs/openapi.json) (`make openapi`). The JSON examples below use real values from the seeded Db2 dataset.
 
@@ -8,17 +8,17 @@ The frontend must not depend on any field that is not listed here. Adding an **o
 
 ### Changelog
 
-**1.2.0, Stage 4 clarifications (2026-11-07)**: no schema change, `api_version` stays `1.2.0`.
+**1.2.0, clarifications (2026-11-07)**: no schema change, `api_version` stays `1.2.0`.
 - `answer.headline` for a ranked plan (dimensions + `order_by` on a metric + `limit`) is now the first-ranked row, labelled e.g. `"Top region: NA · Net Revenue (Q2 2026)"`. Before, it was the all-groups control total, which answered "Which region had the highest net revenue?" with a number that is not any region's value. Unranked grouped plans keep the control total.
 - `PLANNER_TIMEOUT_SECONDS` default 45 → 30 s per attempt (see §6.6).
 
-**1.2.0 (Stage 3.5, 2026-11-07)** — additive only; no field was removed, renamed or re-typed.
+**1.2.0 (2026-11-07)**: additive only; no field was removed, renamed or re-typed.
 - `planner.provider` (`"meta"` | `"anthropic"` | `"metricguard-rules"`, optional) on every analyze response. See §6.7.
 - `GET /api/health` → `planner.provider` may now be `"meta"`.
 - `planner.name` is provider-specific for real models: `"langchain-meta"`, `"langchain-anthropic"` (was `"langchain-structured"` in 1.1.0, which never served a live request). `"rules-demo"` is unchanged. Audit `planner` stores this name.
 - `503 PLANNER_UNAVAILABLE` message now names `AI_PROVIDER`; behavior is unchanged: no silent switch to the demo planner.
 
-**1.1.0 (Stage 2, 2026-11-07)** — additive only; no field was removed, renamed or re-typed.
+**1.1.0 (2026-11-07)**: additive only; no field was removed, renamed or re-typed.
 - `POST /api/analyze` is implemented (no more `501`).
 - `planner.execution_mode` (`"LLM"` | `"DEMO_RULE_BASED"`) and `planner.disclosure` on every analyze response. See §6.7.
 - `GET /api/health`: `planner.execution_mode`; `planner.provider` is `"meta"`, `"anthropic"` or `"metricguard-rules"` (`"meta"` added in 1.2.0).
@@ -27,7 +27,7 @@ The frontend must not depend on any field that is not listed here. Adding an **o
 - `503 PLANNER_UNAVAILABLE` also covers LLM provider failures (auth, unknown model, rate limit, 5xx, timeout).
 - V09 also recomputes ratio metrics (AOV, refund rate) from their components for single-row KPI plans.
 
-**1.0.0 (Stage 1)** — initial frozen contract.
+**1.0.0**: initial frozen contract.
 
 ---
 
@@ -580,4 +580,4 @@ In this section only, `"…"` stands for objects whose shape is identical to §6
 | AMBIGUOUS | Clarification prompt with one button per option; clicking one re-submits its `suggested_question`. |
 | BLOCKED | The `error` reasons in plain language and the allowed alternatives (from `GET /api/metrics`). No numbers. |
 | EXECUTION_FAILED | Error message and SQLSTATE, plus a retry button. SQL is still shown for transparency. |
-| any, `planner.execution_mode = DEMO_RULE_BASED` | A persistent, visible "Demo mode — rule-based planner, not AI" label using `planner.disclosure`. |
+| any, `planner.execution_mode = DEMO_RULE_BASED` | A persistent, visible "Demo mode: rule-based planner, not AI" label using `planner.disclosure`. |
