@@ -1,0 +1,27 @@
+# Local IBM Db2 Community Edition for LockLens development.
+# First run:  copy db2.env.example .env.db2   (set the password; or run scripts\setup_windows.ps1)
+#             docker compose up -d
+# The first start takes several minutes. Check progress with:  docker logs -f db2server
+# (wait for "Setup has completed") or let LockLens wait:
+#             python locklens_cli.py test-connection --wait 900
+services:
+  db2:
+    image: icr.io/db2_community/db2:latest
+    container_name: db2server
+    privileged: true            # required by IBM's Db2 container image
+    restart: unless-stopped
+    ports:
+      - "50000:50000"
+    env_file:
+      - .env.db2                # created from db2.env.example; never commit it
+    volumes:
+      - db2_data:/database      # named volume (bind-mounting Windows folders is unreliable for Db2)
+    healthcheck:                # informational: "docker ps" shows (healthy) once the database accepts connections
+      test: ["CMD-SHELL", 'su - db2inst1 -c "db2 connect to $$DBNAME" > /dev/null 2>&1']
+      interval: 30s
+      timeout: 30s
+      retries: 60
+      start_period: 120s
+
+volumes:
+  db2_data:

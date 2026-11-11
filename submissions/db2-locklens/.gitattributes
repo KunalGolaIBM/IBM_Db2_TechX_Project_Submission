@@ -1,0 +1,4 @@
+# Keep scripts that run inside the Linux Db2 container on LF line endings, even on Windows.
+*.sql text eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
