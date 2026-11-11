@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shipsafe-ai"
+version = "1.1.0"
+description = "Pre-PR production-readiness gate with IBM Db2 persistence and Db2 vector policy retrieval"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [{name = "Devanshu Sharma", email = "devanshusharma2005@gmail.com"}]
+keywords = ["ibm-db2", "langchain", "vector-search", "mcp", "devsecops", "pre-pr", "sast"]
+dependencies = [
+  "ibm-db>=3.2.0",
+  "langchain-db2>=1.0.0",
+  "langchain-core>=0.3",
+  "langchain-community>=0.3",
+  "langchain-text-splitters>=0.3",
+]
+
+[project.optional-dependencies]
+huggingface = ["langchain-huggingface>=0.1", "sentence-transformers>=2.2"]
+
+[project.scripts]
+shipsafe = "shipsafe.cli:main"
+shipsafe-mcp = "shipsafe.mcp_server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
