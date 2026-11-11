@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "SplitSync AI",
+    "slug": "splitsync-ai",
+    "short_description": "AI-assisted group payment, contribution tracking, expense reconciliation and settlement application with IBM Db2 persistence and LangChain-powered financial insights.",
+    "category": "AI / FinTech / Data Engineering",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": ""
+  },
+  "team": {
+    "name": "SplitSync",
+    "members": [
+      {
+        "name": "Developer",
+        "github": "vks-sharma",
+        "email": "",
+        "role": "Full Stack Developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker)",
+    "connector": "ibm_db",
+    "features_used": [
+      "Relational Tables",
+      "Foreign Keys & Indexing",
+      "Transactions",
+      "Prepared Statements",
+      "Parameterized Queries",
+      "Financial Ledger",
+      "Audit Trail"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "TypeScript"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "Next.js",
+      "React",
+      "Tailwind CSS",
+      "LangChain"
+    ],
+    "ai_models": [
+      "Configurable (OpenAI / Gemini / Ollama)"
+    ]
+  }
+}
