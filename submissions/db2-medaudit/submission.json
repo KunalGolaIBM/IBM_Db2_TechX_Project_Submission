@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "DB2 MedAudit — AI Clinical Test Verification & Lab Kickback Detection",
+    "slug": "db2-medaudit",
+    "short_description": "An intelligent medical prescription audit platform powered by IBM Db2 and LangChain/Gemini that detects unnecessary diagnostic tests and exposes doctor-lab kickback agreements, protecting patients from financial exploitation and medical overtreatment.",
+    "category": "AI / Healthcare Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/aradhyaawasthi2006-hue/MedAudit"
+  },
+  "team": {
+    "name": "MedAudit",
+    "members": [
+      {
+        "name": "Aradhya Awasthi",
+        "github": "aradhyaawasthi2006-hue",
+        "email": "aradhyaawasthi2006@example.com",
+        "role": "Full-Stack Developer / IBM Db2 Integration / AI Agent"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 11.5.8 (Docker ibmcom/db2)",
+    "connector": "ibm_db / ibm_db_sa / SQLAlchemy / LangChain SQLDatabase",
+    "features_used": [
+      "Relational Tables",
+      "Custom Tablespace & Buffer Pool",
+      "Indexing (DESC indexes on suspicion score and savings)",
+      "CLOBs for clinical guideline text",
+      "Foreign Key Constraints with CASCADE",
+      "Transactional Audit Logging"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["TypeScript", "Python", "SQL"],
+    "frameworks": ["React 19", "Express", "Vite", "TailwindCSS 4", "LangChain", "SQLAlchemy"],
+    "ai_models": ["Google Gemini 1.5 Pro"]
+  }
+}
