@@ -1,0 +1,13 @@
+CONTAMINATION NOTICE (FICTIONAL - DEMO DOCUMENT)
+Hosur Dairy & Bakery - QA alert
+Date: 2026-11-02
+
+SUBJECT
+Skimmed milk powder lot MLK-2026-233 from Sahyadri Dairy Farms
+
+FINDINGS
+Presumptive Cronobacter spp. on enrichment from one retained sample.
+Confirmation by PCR is pending at the external laboratory.
+
+ACTION
+Lot placed on hold. Batches PB-2026-1020 and PB-2026-1021 used this lot.
