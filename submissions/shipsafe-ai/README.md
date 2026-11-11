@@ -184,7 +184,20 @@ SELECT COUNT(*) FROM POLICY_VECTORS;
 ## Screenshots & Demo
 - **Demo video:** linked in the pull request description
 - **Sample report:** [`docs/sample-report.md`](docs/sample-report.md), generated from a real run on the vulnerable fixture
-- Terminal screenshots: [`docs/screenshots/`](docs/screenshots/)
+
+The screenshots below show real output against IBM Db2 12.1.5.
+
+**1. A risky service is blocked, and each finding cites the policy retrieved from Db2**
+![Scan blocked](docs/screenshots/scan-blocked.png)
+
+**2. After the fixes: the gate passes and the regression diff stored in Db2 shows 6 resolved**
+![Fixed and diff](docs/screenshots/scan-fixed-and-diff.png)
+
+**3. Queried directly with the Db2 CLP: risk trend view (`LAG()` delta), findings and policy vectors**
+![Db2 CLP](docs/screenshots/db2-risk-trend-clp.png)
+
+**4. Policy question answered by `VECTOR_DISTANCE` in Db2 via langchain-db2**
+![Vector search](docs/screenshots/db2-vector-policy-search.png)
 
 ## Known Limitations & Future Roadmap
 - **Limitations:**
