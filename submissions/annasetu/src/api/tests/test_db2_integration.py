@@ -96,7 +96,7 @@ def create_synthetic_ngo_owner():
 
     user_id = str(uuid4())
     email = f"synthetic-qa-{uuid4().hex[:12]}@annasetu.local"
-    password = uuid4().hex
+    password = f"{uuid4().hex}A1!"
     db.execute("INSERT INTO USERS (USER_ID,EMAIL,DISPLAY_NAME,ROLE,PASSWORD_HASH) VALUES (?,?,?,?,?)",
                (user_id, email, "SYNTHETIC QA NGO Owner", "ngo", password_hash(password)))
     return {"user_id": user_id, "email": email, "display_name": "SYNTHETIC QA NGO Owner",
@@ -114,8 +114,8 @@ def test_real_db2_food_allocation_otp_rag_and_audit(client):
     assert health.json()["database"] == "IBM Db2"
     listed_accounts = client.get("/api/auth/demo-accounts")
     assert listed_accounts.status_code == 200
-    assert {row["email"] for row in listed_accounts.json()} == set(DEMO_USERS)
-    assert all("password" not in row and "password_hash" not in row for row in listed_accounts.json())
+    assert {row["role"] for row in listed_accounts.json()} == {role for _, role in DEMO_USERS.values()}
+    assert all(set(row) == {"role"} for row in listed_accounts.json())
     for email, (_, expected_role) in DEMO_USERS.items():
         stored_user = db.row("SELECT ROLE,PASSWORD_HASH FROM USERS WHERE LOWER(EMAIL)=LOWER(?)", (email,))
         assert stored_user is not None
@@ -124,16 +124,27 @@ def test_real_db2_food_allocation_otp_rag_and_audit(client):
         login_response = client.post("/api/auth/login", json={"email": email, "password": settings.demo_password})
         assert login_response.status_code == 200, f"Demo login failed for role {expected_role}."
         assert login_response.json()["user"]["role"] == expected_role
+        role_login = client.post("/api/auth/demo-login", json={"role": expected_role, "password": settings.demo_password})
+        assert role_login.status_code == 200, f"Role-only demo login failed for {expected_role}."
+        assert role_login.json()["user"]["role"] == expected_role
+        assert role_login.json()["user"]["email"] == ""
+        role_me = client.get("/api/me", headers={"Authorization": f"Bearer {role_login.json()['access_token']}"})
+        assert role_me.status_code == 200 and role_me.json()["role"] == expected_role
+        assert role_me.json()["email"] == ""
+        bad_role_login = client.post("/api/auth/demo-login", json={
+            "role": expected_role, "password": "known-incorrect-qa-password1!"
+        })
+        assert bad_role_login.status_code == 401
     bad_password = client.post("/api/auth/login", json={
-        "email": "admin@annasetu.local", "password": "known-incorrect-qa-password"
+        "email": "admin@annasetu.local", "password": "known-incorrect-qa-password1!"
     })
     assert bad_password.status_code == 401
     unknown_user = client.post("/api/auth/login", json={
-        "email": "unknown-qa-account@annasetu.local", "password": "known-incorrect-qa-password"
+        "email": "unknown-qa-account@annasetu.local", "password": "known-incorrect-qa-password1!"
     })
     assert unknown_user.status_code == 401
     requested_email_exists = db.row(
-        "SELECT COUNT(*) AS N FROM USERS WHERE LOWER(EMAIL)=LOWER(?)", ("synthetic-qa-lookup@annasetu.local",)
+        "SELECT COUNT(*) AS N FROM USERS WHERE LOWER(EMAIL)=LOWER(?)", ("tournamentgaming09@gmail.com",)
     )
     # Only print a boolean diagnostic; never disclose user data from Db2.
     print(f"requested email exists: {bool(requested_email_exists and requested_email_exists['n'])}")
@@ -462,3 +473,155 @@ def test_db2_insert_select_update_transaction_rollback(client):
     finally:
         conn.close()
     assert int(db.row("SELECT COUNT(*) AS N FROM POLICY_DOCUMENTS WHERE DOCUMENT_ID=?", (document_id,))["n"]) == 0
+
+
+def test_real_db2_auth_signup_and_single_use_password_reset(client, monkeypatch):
+    import hashlib
+    import secrets
+    from api.app import db
+    from api.app import main
+    from api.app.config import settings
+    from api.app.security import password_matches
+
+    invalid_password = "weakpass"
+    validation = client.post("/api/auth/login", json={"email": "synthetic-qa@example.org", "password": invalid_password})
+    assert validation.status_code == 422
+    assert invalid_password not in validation.text and "input" not in validation.text
+
+    roles = [
+        {"role": "donor"},
+        {"role": "volunteer", "service_area": "SYNTHETIC QA service area"},
+        {"role": "ngo", "ngo_profile": {
+            "name": f"SYNTHETIC QA receiver {uuid4().hex[:8]}", "available_kg": 0,
+            "accepted_categories": ["prepared meals"], "storage_capabilities": ["cold"],
+            "latitude": 12.9716, "longitude": 77.5946, "receiving_hours": "SYNTHETIC QA hours",
+        }},
+    ]
+    created = []
+    for fields in roles:
+        email = f"synthetic-qa-auth-{uuid4().hex[:12]}@example.org"
+        password = "Synthetic9!qa"
+        payload = {"email": email.upper(), "display_name": "SYNTHETIC QA Auth User",
+                   "password": password, "confirm_password": password, **fields}
+        signup = client.post("/api/auth/signup", json=payload)
+        assert signup.status_code == 201, signup.text
+        account = signup.json()
+        assert account["user"]["email"] == email
+        assert account["user"]["role"] == fields["role"]
+        assert "password" not in account and "password_hash" not in account
+        stored = db.row("SELECT USER_ID,ROLE,PASSWORD_HASH FROM USERS WHERE EMAIL=?", (email,))
+        assert stored is not None and stored["role"] == fields["role"]
+        assert password not in stored["password_hash"]
+        assert password_matches(password, stored["password_hash"])
+        created.append({"email": email, "password": password, "user_id": stored["user_id"].strip(), "role": fields["role"]})
+
+        duplicate = client.post("/api/auth/signup", json=payload)
+        assert duplicate.status_code == 409, duplicate.text
+        login = client.post("/api/auth/login", json={"email": email.swapcase(), "password": password})
+        assert login.status_code == 200, login.text
+        assert login.json()["user"]["role"] == fields["role"]
+        wrong = client.post("/api/auth/login", json={"email": email, "password": "Wrong9!password"})
+        assert wrong.status_code == 401
+
+        if fields["role"] == "volunteer":
+            assert db.row("SELECT USER_ID FROM VOLUNTEERS WHERE USER_ID=?", (stored["user_id"],))
+        if fields["role"] == "ngo":
+            profile = db.row("SELECT NGO_ID,VERIFIED,AVAILABLE_KG FROM NGOS WHERE OWNER_USER_ID=?", (stored["user_id"],))
+            assert profile is not None and profile["verified"] == 0 and float(profile["available_kg"]) == 0
+            owner_headers = {"Authorization": f"Bearer {account['access_token']}"}
+            forbidden_review = client.patch(f"/api/ngos/{profile['ngo_id'].strip()}/verification",
+                                            headers=owner_headers, json={"verified": True, "notes": "SYNTHETIC QA self-review attempt."})
+            assert forbidden_review.status_code == 403
+            admin_headers = {"Authorization": f"Bearer {access_token(client, 'admin@annasetu.local')}"}
+            reviewed = client.patch(f"/api/ngos/{profile['ngo_id'].strip()}/verification", headers=admin_headers,
+                                    json={"verified": True, "notes": "SYNTHETIC QA administrator review."})
+            assert reviewed.status_code == 200 and reviewed.json()["verified"] is True
+            assert db.row("SELECT VERIFIED FROM NGOS WHERE NGO_ID=?", (profile["ngo_id"],))["verified"] == 1
+
+    demo_accounts = client.get("/api/auth/demo-accounts")
+    assert demo_accounts.status_code == 200
+    assert {item["role"] for item in demo_accounts.json()} == {"admin", "donor", "ngo", "volunteer"}
+    assert all("name" not in item and "display_name" not in item for item in demo_accounts.json())
+
+    # Public requests never reveal whether the account exists and never issue
+    # a code. A signed-in admin approves the identity check and receives the
+    # one-time code; no email delivery code exists in this MVP.
+    monkeypatch.setattr(settings, "environment", "development")
+    known_request = client.post("/api/auth/password-reset", json={"email": created[0]["email"]})
+    unknown_request = client.post("/api/auth/password-reset", json={"email": f"missing-{uuid4().hex[:8]}@example.org"})
+    assert known_request.status_code == unknown_request.status_code == 202
+    public_response = known_request.json()
+    assert public_response == unknown_request.json()
+    assert public_response["recovery_mode"] == "local_admin_approval"
+    assert "administrator to verify your identity" in public_response["message"].lower()
+    assert "recovery_code" not in public_response
+    assert int(db.row("SELECT COUNT(*) AS N FROM PASSWORD_RESET_TOKENS WHERE USER_ID=? AND USED_AT IS NULL",
+                      (created[0]["user_id"],))["n"]) == 0
+
+    donor_login = client.post("/api/auth/login", json={"email": created[0]["email"], "password": created[0]["password"]})
+    donor_headers = {"Authorization": f"Bearer {donor_login.json()['access_token']}"}
+    denied_issue = client.post("/api/auth/password-reset/admin-issue", headers=donor_headers,
+                               json={"email": created[0]["email"]})
+    assert denied_issue.status_code == 403
+
+    admin_headers = {"Authorization": f"Bearer {access_token(client, 'admin@annasetu.local')}"}
+    issued = client.post("/api/auth/password-reset/admin-issue", headers=admin_headers,
+                         json={"email": created[0]["email"]})
+    assert issued.status_code == 201, issued.text
+    first_code = issued.json()["recovery_code"]
+    assert issued.json()["expires_in_seconds"] == 300
+    assert "verified" in issued.json()["message"].lower()
+    stored_code = db.row("SELECT TOKEN_HASH,EXPIRES_AT FROM PASSWORD_RESET_TOKENS WHERE USER_ID=? AND USED_AT IS NULL",
+                         (created[0]["user_id"],))
+    assert stored_code["token_hash"].strip() == main._hash_reset_token(first_code)
+    assert stored_code["token_hash"].strip() != hashlib.sha256(first_code.encode("ascii")).hexdigest()
+    assert stored_code["expires_at"] > datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # Issuing a second code invalidates the first and records only a new hash.
+    second_response = client.post("/api/auth/password-reset/admin-issue", headers=admin_headers,
+                                  json={"email": created[0]["email"]})
+    assert second_response.status_code == 201
+    local_code = second_response.json()["recovery_code"]
+    assert client.post("/api/auth/password-reset/verify", json={"token": first_code}).status_code == 400
+    assert client.post("/api/auth/password-reset/verify", json={"token": "000000" if local_code != "000000" else "000001"}).status_code == 400
+
+    # Verify the code, update the hash, and enforce single use through live Db2.
+    verified = client.post("/api/auth/password-reset/verify", json={"token": local_code})
+    assert verified.status_code == 200 and verified.json() == {"valid": True}
+    new_password = "Updated9!qa"
+    reset = client.post("/api/auth/password-reset/confirm", json={
+        "token": local_code, "password": new_password, "confirm_password": new_password,
+    })
+    assert reset.status_code == 200, reset.text
+    used = db.row("SELECT TOKEN_HASH,USED_AT FROM PASSWORD_RESET_TOKENS WHERE TOKEN_HASH=?",
+                  (main._hash_reset_token(local_code),))
+    assert used is not None and used["used_at"] is not None
+    updated_user = db.row("SELECT PASSWORD_HASH FROM USERS WHERE USER_ID=?", (created[0]["user_id"],))
+    assert new_password not in updated_user["password_hash"]
+    assert password_matches(new_password, updated_user["password_hash"])
+    assert client.post("/api/auth/password-reset/verify", json={"token": local_code}).status_code == 400
+    assert client.post("/api/auth/password-reset/confirm", json={
+        "token": local_code, "password": new_password, "confirm_password": new_password,
+    }).status_code == 400
+    assert client.post("/api/auth/login", json={"email": created[0]["email"], "password": new_password}).status_code == 200
+
+    expired_token = f"{secrets.randbelow(1_000_000):06d}"
+    expired_hash = main._hash_reset_token(expired_token)
+    conn = db.connect()
+    try:
+        db.execute("INSERT INTO PASSWORD_RESET_TOKENS (RESET_ID,USER_ID,TOKEN_HASH,EXPIRES_AT) VALUES (?,?,?,?)",
+                   (str(uuid4()), created[0]["user_id"], expired_hash,
+                    datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=1)), conn)
+        conn.commit()
+    finally:
+        conn.close()
+    assert client.post("/api/auth/password-reset/verify", json={"token": expired_token}).status_code == 400
+    assert client.post("/api/auth/password-reset/confirm", json={
+        "token": expired_token, "password": "Expired9!qa", "confirm_password": "Expired9!qa",
+    }).status_code == 400
+    expired_record = db.row("SELECT USED_AT FROM PASSWORD_RESET_TOKENS WHERE TOKEN_HASH=?", (expired_hash,))
+    assert expired_record is not None and expired_record["used_at"] is not None
+
+    assert client.get("/api/audit/verify", headers={
+        "Authorization": f"Bearer {access_token(client, 'admin@annasetu.local')}"
+    }).json()["valid"] is True

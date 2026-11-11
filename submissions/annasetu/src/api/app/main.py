@@ -1,29 +1,96 @@
 import hashlib
+import hmac
 import json
 import logging
 import secrets
+import threading
+import time
+from collections import deque
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import jwt
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.responses import JSONResponse
 
 from . import db
 from .audit import record_event, verify_chain
 from .config import settings
-from .models import CapacityUpdate, EvidenceUpdate, FoodCreate, LoginInput, NgoCreate, PolicyQuestion, RescueFailure, VerifyInput, VerifyStage
+from .models import (CapacityUpdate, DemoLoginInput, EvidenceUpdate, FoodCreate, LoginInput, NgoCreate,
+                     NgoVerification, PasswordResetConfirm, PasswordResetRequest,
+                     PasswordResetToken, PolicyQuestion, RescueFailure, SignupInput,
+                     VerifyInput, VerifyStage)
 from .rag import ask_policy, ensure_policy_index, vector_status
 from .schema import initialize_schema
-from .security import decode_token, issue_token, password_matches
+from .security import decode_token, issue_token, password_hash, password_matches
 from .seed import DEMO_USERS, seed_database
 from .services.safety import SafetyEvidence, estimate_distance_km, estimate_transit_minutes, evaluate_safety
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("annasetu")
 bearer = HTTPBearer(auto_error=True)
+_RESET_WINDOW_SECONDS = 15 * 60
+_RESET_CODE_TTL_SECONDS = 5 * 60
+_reset_attempts: dict[str, deque[float]] = {}
+_reset_verify_attempts: dict[str, deque[float]] = {}
+_reset_attempts_lock = threading.Lock()
+
+
+def _reset_request_allowed(client_ip: str, email: str) -> bool:
+    now = time.monotonic()
+    email_key = hashlib.sha256(f"{settings.jwt_secret}:{email}".encode()).hexdigest()
+    limits = ((f"ip:{client_ip}", 12), (f"email:{email_key}", 5))
+    with _reset_attempts_lock:
+        active: dict[str, deque[float]] = {}
+        for key, limit in limits:
+            events = _reset_attempts.setdefault(key, deque())
+            while events and events[0] <= now - _RESET_WINDOW_SECONDS:
+                events.popleft()
+            active[key] = events
+            if len(events) >= limit:
+                return False
+        for events in active.values():
+            events.append(now)
+    return True
+
+
+def _reset_token_attempt_allowed(client_ip: str) -> bool:
+    """Limit reset-code and link guesses per client address."""
+    now = time.monotonic()
+    key = f"verify-ip:{client_ip}"
+    with _reset_attempts_lock:
+        attempts = _reset_verify_attempts.setdefault(key, deque())
+        while attempts and attempts[0] <= now - _RESET_WINDOW_SECONDS:
+            attempts.popleft()
+        if len(attempts) >= 10:
+            return False
+        attempts.append(now)
+    return True
+
+
+def _hash_reset_token(token: str) -> str:
+    """Use a keyed digest so low-entropy local recovery codes are not guessable from Db2."""
+    secret = settings.jwt_secret.encode("utf-8")
+    return hmac.new(secret, b"annasetu-local-recovery:" + token.encode("ascii"), hashlib.sha256).hexdigest()
+
+
+def _local_recovery_origin_allowed(request: Request) -> bool:
+    if settings.environment != "development":
+        return False
+    origin = request.headers.get("origin")
+    return not origin or origin in settings.allowed_origins
+
+
+def _invalidate_expired_reset_token(token_hash: str) -> None:
+    db.execute(
+        """UPDATE PASSWORD_RESET_TOKENS SET USED_AT=CURRENT TIMESTAMP
+           WHERE TOKEN_HASH=? AND USED_AT IS NULL AND EXPIRES_AT<=CURRENT TIMESTAMP""",
+        (token_hash,),
+    )
 
 
 @asynccontextmanager
@@ -51,13 +118,23 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(RequestValidationError)
+def request_validation_error_handler(_: Request, exc: RequestValidationError):
+    # FastAPI's default validation body includes the submitted input value. Omit
+    # inputs for all fields so passwords, reset tokens, and email addresses are
+    # never echoed back to the browser on validation failures.
+    safe_errors = [{"loc": error.get("loc", ()), "msg": error.get("msg", "Invalid value."),
+                    "type": error.get("type", "value_error")} for error in exc.errors()]
+    return JSONResponse(status_code=422, content={"detail": safe_errors})
+
+
 def current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer)) -> dict:
     try:
         payload = decode_token(credentials.credentials)
     except jwt.PyJWTError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired. Sign in again.") from exc
     return {
-        "user_id": payload["sub"], "email": payload["email"],
+        "user_id": payload["sub"], "email": payload.get("email", ""),
         "display_name": payload["name"], "role": payload["role"],
     }
 
@@ -187,24 +264,229 @@ def health():
 @app.post("/api/auth/login")
 def login(payload: LoginInput):
     user = _dict("SELECT USER_ID,EMAIL,DISPLAY_NAME,ROLE,PASSWORD_HASH FROM USERS WHERE LOWER(EMAIL)=LOWER(?)",
-                 (payload.email.strip(),))
+                 (payload.email,))
     if not user or not password_matches(payload.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Email or password is incorrect.")
     profile = {key: user[key] for key in ("user_id", "email", "display_name", "role")}
     return {"access_token": issue_token(profile), "token_type": "bearer", "user": profile}
 
 
+@app.post("/api/auth/demo-login")
+def demo_login(payload: DemoLoginInput):
+    if settings.environment != "development":
+        raise HTTPException(status_code=404, detail="Not found.")
+    email = next((address for address, (_, role) in DEMO_USERS.items() if role == payload.role), None)
+    if email is None:
+        raise HTTPException(status_code=401, detail="Email or password is incorrect.")
+    user = _dict(
+        "SELECT USER_ID,ROLE,PASSWORD_HASH FROM USERS WHERE LOWER(EMAIL)=LOWER(?) AND ROLE=?",
+        (email, payload.role),
+    )
+    if not user or not password_matches(payload.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Email or password is incorrect.")
+    # Keep the real reserved demo identity inside Db2; do not send its internal
+    # .local email or personal/organization display name to the public session.
+    profile = {
+        "user_id": user["user_id"],
+        "email": "",
+        "display_name": f"{payload.role.upper()} Demo",
+        "role": payload.role,
+    }
+    return {"access_token": issue_token(profile), "token_type": "bearer", "user": profile}
+
+
+@app.post("/api/auth/signup", status_code=201)
+def signup(payload: SignupInput):
+    user_id = str(uuid4())
+    conn = db.connect()
+    try:
+        existing = db.row("SELECT USER_ID FROM USERS WHERE LOWER(EMAIL)=LOWER(?)", (payload.email,), conn)
+        if existing:
+            raise HTTPException(status_code=409, detail="An account with this email already exists.")
+        db.execute(
+            "INSERT INTO USERS (USER_ID,EMAIL,DISPLAY_NAME,ROLE,PASSWORD_HASH) VALUES (?,?,?,?,?)",
+            (user_id, payload.email, payload.display_name.strip(), payload.role, password_hash(payload.password)), conn,
+        )
+        if payload.role == "volunteer":
+            db.execute(
+                "INSERT INTO VOLUNTEERS (VOLUNTEER_ID,USER_ID,SERVICE_AREA) VALUES (?,?,?)",
+                (str(uuid4()), user_id, payload.service_area.strip()), conn,
+            )
+        elif payload.role == "ngo" and payload.ngo_profile:
+            profile = payload.ngo_profile
+            db.execute(
+                """INSERT INTO NGOS (NGO_ID,OWNER_USER_ID,NAME,AVAILABLE_KG,ACCEPTED_CATEGORIES,
+                   STORAGE_CAPABILITIES,LATITUDE,LONGITUDE,RECEIVING_HOURS)
+                   VALUES (?,?,?,?,?,?,?,?,?)""",
+                (str(uuid4()), user_id, profile.name.strip(), profile.available_kg,
+                 json.dumps([item.strip() for item in profile.accepted_categories]),
+                 ",".join(item.strip() for item in profile.storage_capabilities),
+                 profile.latitude, profile.longitude, profile.receiving_hours.strip()), conn,
+            )
+        if not db.row("SELECT HEAD_ID FROM AUDIT_HEAD WHERE HEAD_ID=1", conn=conn):
+            db.execute("INSERT INTO AUDIT_HEAD (HEAD_ID,LAST_EVENT_ID,LAST_HASH) VALUES (1,NULL,?)", ("0" * 64,), conn)
+        record_event(conn, "user", user_id, "ACCOUNT_REGISTERED", user_id, {"role": payload.role})
+        conn.commit()
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as exc:
+        conn.rollback()
+        message = str(exc)
+        if "23505" in message or "-803" in message:
+            raise HTTPException(status_code=409, detail="An account with this email already exists.") from None
+        logger.exception("Account registration failed during the Db2 transaction.")
+        raise HTTPException(status_code=503, detail="Account registration is temporarily unavailable.") from None
+    finally:
+        conn.close()
+    profile = {"user_id": user_id, "email": payload.email, "display_name": payload.display_name.strip(), "role": payload.role}
+    return {"access_token": issue_token(profile), "token_type": "bearer", "user": profile}
+
+
+@app.post("/api/auth/password-reset", status_code=202)
+def request_password_reset(payload: PasswordResetRequest, request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    if not _reset_request_allowed(client_ip, payload.email):
+        raise HTTPException(status_code=429, detail="Too many password reset requests. Try again later.")
+
+    if not _local_recovery_origin_allowed(request):
+        return {
+            "message": "Password recovery is available only in the local development app. No email, SMS, or code was generated.",
+            "recovery_mode": "unavailable",
+        }
+    return {
+        "message": "If the address belongs to an account, ask a local administrator to verify your identity and issue a five-minute recovery code. No email, SMS, or external service is used.",
+        "recovery_mode": "local_admin_approval",
+    }
+
+
+@app.post("/api/auth/password-reset/admin-issue", status_code=201)
+def issue_local_password_reset_code(
+    payload: PasswordResetRequest,
+    request: Request,
+    admin: dict = Depends(require_roles("admin")),
+):
+    """Issue a short-lived local code only after an authenticated admin approves recovery."""
+    if not _local_recovery_origin_allowed(request):
+        raise HTTPException(status_code=404, detail="Not found.")
+    client_ip = request.client.host if request.client else "unknown"
+    if not _reset_request_allowed(client_ip, payload.email):
+        raise HTTPException(status_code=429, detail="Too many password recovery requests. Try again later.")
+    target = _dict("SELECT USER_ID FROM USERS WHERE LOWER(EMAIL)=LOWER(?)", (payload.email,))
+    if not target:
+        raise HTTPException(status_code=404, detail="No account was found for that email address.")
+
+    user_id = target["user_id"].strip()
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    token_hash = _hash_reset_token(code)
+    conn = db.connect()
+    try:
+        db.execute(
+            "UPDATE PASSWORD_RESET_TOKENS SET USED_AT=CURRENT TIMESTAMP WHERE USER_ID=? AND USED_AT IS NULL",
+            (user_id,), conn,
+        )
+        db.execute(
+            """INSERT INTO PASSWORD_RESET_TOKENS (RESET_ID,USER_ID,TOKEN_HASH,EXPIRES_AT)
+               VALUES (?,?,?,?)""",
+            (str(uuid4()), user_id, token_hash,
+             datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(seconds=_RESET_CODE_TTL_SECONDS)), conn,
+        )
+        record_event(conn, "user", user_id, "PASSWORD_RESET_CODE_ISSUED", admin["user_id"],
+                     {"method": "local_admin_approval"})
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        logger.exception("Admin-approved local recovery code could not be stored in IBM Db2.")
+        raise HTTPException(status_code=503, detail="Password recovery is temporarily unavailable.") from None
+    finally:
+        conn.close()
+    return {
+        "message": "Local administrator approved recovery. Share this code only with the person whose identity you verified; it expires in five minutes.",
+        "recovery_mode": "local_admin_approval",
+        "recovery_code": code,
+        "expires_in_seconds": _RESET_CODE_TTL_SECONDS,
+    }
+
+
+@app.post("/api/auth/password-reset/verify")
+def verify_password_reset_token(payload: PasswordResetToken, request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    if not _reset_token_attempt_allowed(client_ip):
+        raise HTTPException(status_code=429, detail="Too many recovery code attempts. Request a new code later.")
+    token_hash = _hash_reset_token(payload.token)
+    token = _dict(
+        """SELECT RESET_ID FROM PASSWORD_RESET_TOKENS
+           WHERE TOKEN_HASH=? AND USED_AT IS NULL AND EXPIRES_AT>CURRENT TIMESTAMP""",
+        (token_hash,),
+    )
+    if not token:
+        _invalidate_expired_reset_token(token_hash)
+        raise HTTPException(status_code=400, detail="This reset link is invalid or expired.")
+    return {"valid": True}
+
+
+@app.post("/api/auth/password-reset/confirm")
+def confirm_password_reset(payload: PasswordResetConfirm, request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    if not _reset_token_attempt_allowed(client_ip):
+        raise HTTPException(status_code=429, detail="Too many recovery code attempts. Request a new code later.")
+    token_hash = _hash_reset_token(payload.token)
+    conn = db.connect()
+    try:
+        reset = db.row(
+            """SELECT RESET_ID,USER_ID FROM PASSWORD_RESET_TOKENS
+               WHERE TOKEN_HASH=? AND USED_AT IS NULL AND EXPIRES_AT>CURRENT TIMESTAMP""",
+            (token_hash,), conn,
+        )
+        if not reset:
+            conn.rollback()
+            _invalidate_expired_reset_token(token_hash)
+            raise HTTPException(status_code=400, detail="This reset link is invalid or expired.")
+        consumed = db.execute(
+            """UPDATE PASSWORD_RESET_TOKENS SET USED_AT=CURRENT TIMESTAMP
+               WHERE RESET_ID=? AND USED_AT IS NULL AND EXPIRES_AT>CURRENT TIMESTAMP""",
+            (reset["reset_id"].strip(),), conn,
+        )
+        if consumed != 1:
+            raise HTTPException(status_code=400, detail="This reset link is invalid or expired.")
+        user_id = reset["user_id"].strip()
+        changed = db.execute("UPDATE USERS SET PASSWORD_HASH=? WHERE USER_ID=?",
+                             (password_hash(payload.password), user_id), conn)
+        if changed != 1:
+            raise HTTPException(status_code=400, detail="This reset link is invalid or expired.")
+        db.execute(
+            "UPDATE PASSWORD_RESET_TOKENS SET USED_AT=CURRENT TIMESTAMP WHERE USER_ID=? AND USED_AT IS NULL",
+            (user_id,), conn,
+        )
+        record_event(conn, "user", user_id, "PASSWORD_RESET", user_id, {"method": "local_admin_approval"})
+        conn.commit()
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception:
+        conn.rollback()
+        logger.exception("Password reset could not be completed in IBM Db2.")
+        raise HTTPException(status_code=503, detail="Password recovery is temporarily unavailable.") from None
+    finally:
+        conn.close()
+    return {"message": "Password reset completed. Please sign in."}
+
+
 @app.get("/api/auth/demo-accounts")
 def demo_accounts():
     if settings.environment != "development":
         raise HTTPException(status_code=404, detail="Not found.")
-    records = db.rows(
-        "SELECT LOWER(EMAIL) AS EMAIL,DISPLAY_NAME,ROLE FROM USERS WHERE LOWER(EMAIL) IN (?,?,?,?)",
-        tuple(email.lower() for email in DEMO_USERS),
-    )
+    try:
+        records = db.rows(
+            "SELECT LOWER(EMAIL) AS EMAIL,ROLE FROM USERS WHERE LOWER(EMAIL) IN (?,?,?,?)",
+            tuple(email.lower() for email in DEMO_USERS),
+        )
+    except db.DatabaseConnectionError:
+        logger.exception("Demo role lookup failed because IBM Db2 is unavailable.")
+        raise HTTPException(status_code=503, detail="IBM Db2 is unavailable.") from None
     accounts = {row["email"].strip().lower(): row for row in records}
     return [
-        {"email": email, "name": accounts[email]["display_name"], "role": accounts[email]["role"]}
+        {"role": accounts[email]["role"]}
         for email, (_, expected_role) in DEMO_USERS.items()
         if email in accounts and accounts[email]["role"] == expected_role
     ]
@@ -584,6 +866,29 @@ def create_ngo(payload: NgoCreate, user: dict = Depends(require_roles("ngo", "ad
         ",".join(payload.storage_capabilities),payload.latitude,payload.longitude,payload.receiving_hours))
     return {"ngo_id":ngo_id,"name":payload.name,"verified":False,"available_kg":payload.available_kg,
             "message":"Profile saved. An administrator must verify it before allocation."}
+
+
+@app.patch("/api/ngos/{ngo_id}/verification")
+def review_ngo(ngo_id: str, payload: NgoVerification, user: dict = Depends(require_roles("admin"))):
+    conn = db.connect()
+    try:
+        ngo = db.row("SELECT NGO_ID FROM NGOS WHERE NGO_ID=?", (ngo_id,), conn)
+        if not ngo:
+            raise HTTPException(status_code=404, detail="NGO profile not found.")
+        db.execute("UPDATE NGOS SET VERIFIED=? WHERE NGO_ID=?", (int(payload.verified), ngo_id), conn)
+        record_event(conn, "ngo", ngo_id, "NGO_VERIFICATION_UPDATED", user["user_id"],
+                     {"verified": payload.verified, "notes": payload.notes})
+        conn.commit()
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception:
+        conn.rollback()
+        logger.exception("NGO verification review failed in IBM Db2.")
+        raise HTTPException(status_code=503, detail="NGO verification is temporarily unavailable.") from None
+    finally:
+        conn.close()
+    return {"ngo_id": ngo_id, "verified": payload.verified}
 
 
 @app.patch("/api/ngos/{ngo_id}/capacity")

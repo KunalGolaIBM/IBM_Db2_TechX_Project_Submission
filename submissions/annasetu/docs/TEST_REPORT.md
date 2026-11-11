@@ -1,50 +1,60 @@
-# AnnaSetu Test Report
+# AnnaSetu Final MVP Verification Report
 
-## Scope and evidence dates
+Run date: 2026-11-11. All live QA writes in this report were confined to IBM Db2 `ANNATEST`. No test targeted operational database `ANNASETU`; existing records were preserved.
 
-This report separates the packaging checks run on 2026-11-10 from the most recent live Db2/browser verification already recorded for the unchanged application on 2026-11-09. Package source is a filtered copy of that application; no app logic was changed for submission packaging. The live database workflow results below are historical execution evidence, not a claim that a new browser session or production database audit was run during packaging.
+## Runtime and database evidence
 
-## Checks run during packaging (2026-11-10)
+| Component | Verified result |
+|---|---|
+| Docker / Db2 | Existing `annasetu-db2` container is healthy. Engine reports IBM Db2 `12.1.5.0`, fix pack 0. |
+| Direct Db2 connection | Python `ibm_db_dbi` connection reports `CURRENT SERVER=ANNATEST`, `CURRENT SCHEMA=DB2INST1`; the eight checked operational tables are present. |
+| FastAPI | Running at `127.0.0.1:8010`. `/api/health` returned HTTP 200, `database=IBM Db2`, `database_name=ANNATEST`, and LangChain Db2 vector `ready=true`. |
+| React / Vite | Running at `127.0.0.1:5175`. The page, React entry module, and SVG favicon returned HTTP 200; the page includes the React root. |
+| CORS | An OPTIONS preflight from `http://127.0.0.1:5175` returned 200 and the exact allowed origin. |
 
-| Check | Result | Evidence |
-|---|---|---|
-| Official repository submission validator | **Passed** | `python scripts/validate_submission.py submissions/annasetu` reported all checks passed (run with UTF-8 console output on Windows). |
-| Backend default suite on packaged source | **21 passed, 0 failed, 7 skipped** | `python -m pytest api\tests -q -rs -p no:cacheprovider`; all seven skips explicitly say live Db2 test is opt-in. One Starlette/AnyIO `BlockingPortal` deprecation warning. |
-| React/Vite production build | **Passed** | Vite 7.3.7 transformed 26 modules and emitted index HTML, CSS and JS bundles. Eight packaged frontend source/manifest files matched the source tree by SHA-256. |
-| `git diff --cached --check` | **Passed** | All 41 staged AnnaSetu files; no whitespace errors. |
+The API was restarted with the latest recovery code, `DB2_NAME=ANNATEST`, development mode, seeding disabled, and CORS limited to the local 5175 frontend. The frontend process was already serving 5175 and remained running.
 
-The first validator invocation encountered a Python Windows console `cp1252` encoding exception while emitting the validator's checkmark. It did not reveal a validation error. Rerunning with `PYTHONIOENCODING=utf-8` completed successfully.
+## Automated test results
 
-The package-only `npm ci --offline` probe could not install because one public npm tarball was not present in the local offline cache. The production build was run with the installed project's Vite dependencies against the packaged, SHA-256-matched frontend source. This offline cache limitation is not presented as a successful fresh dependency installation.
+| Run | Passed | Failed | Skipped | Result |
+|---|---:|---:|---:|---|
+| Default backend suite: `python -m pytest -q api/tests` | 58 | 0 | 8 | Passed; the eight live Db2 cases are opt-in and were skipped in this run. |
+| Live Db2 integration: `ANNASETU_INTEGRATION=1`, `DB2_NAME=ANNATEST` | 8 | 0 | 0 | Passed against the running IBM Db2 QA database; synthetic QA records remain labelled in `ANNATEST`. |
+| Frontend production build: `npm run build` from `frontend/` | — | 0 | — | Passed with Vite 7.3.7; 26 modules transformed and production assets generated. |
+| Live API role/auth checks | Passed | 0 | 0 | Health, generic role list, four role logins, invalid credentials, role denial, and non-enumerating reset response all passed. |
+| Local HTTP/CORS checks | 4 checks | 0 | 0 | Passed: CORS preflight, Vite page/root, React entry module, and favicon. |
 
-## Prior live Db2 and browser verification (2026-11-09)
+The default suite reported one Starlette/AnyIO `BlockingPortal` deprecation warning. Skipped tests are not counted as passed; all eight were separately executed in the live Db2 suite.
 
-The unchanged local project report records a live run against IBM Db2 Community Edition 12.1.5.0. It reports the `annasetu-db2` container healthy, direct FastAPI connectivity to `ANNATEST` for QA and `ANNASETU` for operations, and successful LangChain `DB2VS` retrieval. The run was performed against the isolated QA database for synthetic test writes; operational records were preserved.
+## Authentication and recovery
 
-- **Live backend and Db2 integration suite:** 28 passed, 0 failed, 0 skipped. The suite used `ANNATEST` and tested actual Db2 insert/select/update/rollback, batch/passport creation, missing-evidence `HOLD`, verification, feasibility, partial multi-NGO allocation, capacity bounds/release, assigned volunteer and OTP stage permissions, pickup/delivery/distribution, actual distributed kilograms, audit-chain integrity and vector retrieval with citations.
-- **Browser and authentication:** the report records Edge rendering, all four reserved role logins on the relevant databases, rejection of incorrect/unknown credentials, and a 403 for donor access to an admin-only route.
-- **Operational dashboard:** the report records direct-SQL agreement for donated 395 kg, collected 264 kg, delivered 264 kg, distributed 228 kg, and one HOLD batch.
-- **Vector retrieval:** the production API returned three cited Db2 vector sources and the operational audit chain verified.
+- The four reserved demo logins in `ANNATEST` accepted the private local QA `DEMO_PASSWORD`; each `/api/me` response returned the matching `admin`, `donor`, `ngo`, or `volunteer` role. Passwords and internal demo emails are not printed here.
+- The public role selector returned only generic role labels. Wrong password and unknown email both returned HTTP 401. Donor, NGO, and volunteer tokens received HTTP 403 for the admin-only audit route.
+- Live Db2 integration verified signup for donor, NGO, and volunteer QA users, duplicate rejection, password policy and confirmation, role/profile persistence, PBKDF2-SHA256 hashes, and subsequent login. These generated QA users are labelled and reside only in `ANNATEST`.
+- Public recovery returned the same generic response for known and unknown accounts and did not reveal or issue a code. In the live Db2 integration test, a non-admin issuance attempt was rejected; an authenticated Admin issued a five-minute, single-use code after identity review. Db2 stored a keyed HMAC digest, and the test verified expiry, invalidation of an older code, single use, password hash update, and successful login with the new password.
+- Recovery is an explicitly local development flow. It uses no SMTP, email, SMS, or external provider. A signed-in administrator must verify the requester and hand the code to them directly. Local recovery is disabled outside development; an administrator locked out of the only admin account needs an operator-assisted recovery procedure.
 
-These are the results captured in the project's prior live test report. They were not rerun against a live Db2 instance as part of this packaging validation.
+## Db2 workflows and retrieval
 
-## Skipped tests
+The eight live integration tests exercised Db2 schema readiness, reserved demo-account seeding, SQL insert/select/update/rollback, authenticated signup and reset, NGO verification authorization, missing-evidence safety HOLD, human verification, feasibility and expiry rejection, partial capacity allocation, reservation release after failed rescue, audit/evidence mutation rejection, dashboard aggregates, and LangChain `DB2VS` policy retrieval with citations. Audit-chain integrity and the vector index were verified through the application against `ANNATEST`.
 
-The seven integration test cases are gated by `ANNASETU_INTEGRATION=1` so ordinary unit tests do not make network/database writes. They are environment-dependent and require IBM Db2, schema initialization, credentials, and `DB2_NAME=ANNATEST`. They are **skipped**, not passed, in the default packaging run. Run them only with an isolated QA database using the guard and instructions in [DB2_SETUP.md](DB2_SETUP.md); the test fixture refuses an operational `ANNASETU` target.
+The direct read-only Db2 probe reported `CURRENT SERVER=ANNATEST`, `CURRENT SCHEMA=DB2INST1`, Db2 service level `DB2 v12.1.5.0`, and all eight queried core tables. API health independently reported the same active database and vector readiness.
 
-## Known warning and limitations
+## Browser verification and limitations
 
-- Starlette reports a deprecation warning for its AnyIO `BlockingPortal` alias; tests pass, and it is not an application runtime failure.
-- ETA is an estimate, not live route/traffic data. Safety screening is not official certification. OTP relay is manual. Policy answers use cited retrieval with no generative model configured.
-- An npm offline-cache miss prevented a fresh offline dependency installation during packaging. A production build did succeed against the packaged source.
+Interactive browser verification could not be completed in this run: the Computer Use system reported that it had been stopped by a physical Escape key and instructed this session not to issue further computer-control calls. Therefore this report does **not** claim a fresh browser sign-in, dashboard interaction, or browser-console check against the latest recovery UI. Loopback HTTP checks confirmed that Vite and its React entry module are served, and live API tests verified the corresponding authentication and Db2 operations.
 
-## Reproduction commands
+Other MVP limitations: ETA is a straight-line logistics estimate, not live routing or traffic; safety decisions are evidence-based screening, not official certification; handoff and local recovery codes are relayed manually; the policy copilot retrieves and cites Db2 passages but has no generative model configured.
 
-From `submissions\annasetu\src` in PowerShell, after installing dependencies and configuring local `.env`:
+## Reproduction commands (PowerShell)
+
+From `C:\Users\mr.rajat\Desktop\AnnaSetu`:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest api\tests -q -rs
-npm --prefix frontend run build
+python -m pytest -q api\tests
+Set-Location frontend
+npm run build
+Set-Location ..
 ```
 
-For a live integration run, use `ANNATEST` only and follow [DB2_SETUP.md](DB2_SETUP.md).
+Run the live suite only against `ANNATEST`, with the private QA `DEMO_PASSWORD` loaded from ignored `.env.qa`, and set `ANNASETU_INTEGRATION=1`. The test module refuses a database name other than `ANNATEST`.

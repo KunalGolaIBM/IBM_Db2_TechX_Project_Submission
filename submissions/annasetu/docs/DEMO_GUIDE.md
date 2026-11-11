@@ -6,7 +6,7 @@ Use a dedicated local `ANNATEST` database or another explicitly designated QA da
 
 1. Start Db2, FastAPI and Vite using the commands in the README and [Db2 setup](db2-setup.md).
 2. Confirm `/api/health` reports IBM Db2 and vector readiness.
-3. Use a dedicated QA database with demo seed accounts and a verified NGO profile. In a fresh seeded database, the NGO demo account owns Nayi Disha Foundation.
+3. Use a dedicated QA database with demo seed accounts and a verified NGO profile. Sign in through the generic NGO role button; the public login page does not expose reserved account emails or organization names.
 4. Prepare a QA batch with valid cold temperature/allergen evidence and future use-by time. For a negative safety example, use a separate QA batch with missing temperature or unconfirmed allergens.
 
 ## Live sequence (about five minutes)

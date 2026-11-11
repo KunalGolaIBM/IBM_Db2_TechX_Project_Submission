@@ -1,83 +1,103 @@
-# IBM Db2 Setup (Windows)
+# IBM Db2 setup
 
-AnnaSetu uses IBM Db2 as the only operational database. FastAPI connects directly using IBM's `ibm-db` / `ibm_db_dbi`; there is no SQLite fallback. LangChain's Db2 vector store uses the same Db2 service.
+AnnaSetu uses IBM Db2 as its only operational database. FastAPI connects through IBM's `ibm-db` driver; there is no SQLite fallback. Run the API from the project root so it reads the root `.env` file.
 
-## Prerequisites
+## Local requirements
 
-- Windows 11, Docker Desktop with WSL 2 Linux engine, Docker Compose v2.
-- 64-bit Python 3.11 or 3.12 and Node.js 20.19+ or 22.12+ with npm.
-- At least 8 GB of memory available to Db2.
+- Windows 11 with Docker Desktop using the WSL 2 Linux engine.
+- Docker Compose v2.
+- Python 3.11 or 3.12 (64-bit) and Node.js 20.19+ or 22.12+.
+- 8 GB RAM available to the Db2 Community container; first startup can take several minutes.
 
-## Configure
+## Configure and start Db2
 
-From the repository root:
+From `C:\Users\mr.rajat\Desktop\AnnaSetu` in PowerShell:
 
 ```powershell
-Set-Location submissions\annasetu\src
-Copy-Item ..\.env.example .env
-notepad .env
+Copy-Item .env.example .env
 ```
 
-Set a private `DB2_PASSWORD`, a random `JWT_SECRET` of at least 32 characters and a private `DEMO_PASSWORD`. Set `DB2_NAME=ANNASETU` for the operational demo database. The example file contains placeholders only. Never commit `src\.env`, paste secret values in issue comments, or place credentials in `VITE_*` frontend variables.
+Edit `.env` locally. Set `DB2_PASSWORD` to the local Db2 instance password, `JWT_SECRET` to a random value of at least 32 characters, and a private `DEMO_PASSWORD` for the local ANNASETU demo accounts. Use a separate password in ignored `.env.qa` for ANNATEST. Existing production accounts are not reset on ordinary startup; if the private password changes, update only the reserved demo hashes through an explicitly authorized maintenance action. Do not commit local environment files or copy their values into logs or screenshots.
 
-## Start Db2 and install dependencies
-
-From `submissions\annasetu\src`:
+Start the existing Db2 service and wait for its health check:
 
 ```powershell
 docker compose up -d db2
 docker compose ps
+docker compose logs -f db2
+```
+
+The Compose service uses IBM Db2 Community Edition 12.1.5.0, publishes port 50000, and persists database files in the `annasetu-db2-data` volume. Do not use `docker compose down -v` if the local database should be retained; `-v` removes the persistent database volume.
+
+To check the active database from the container without printing a password:
+
+```powershell
+docker exec annasetu-db2 su - db2inst1 -c 'db2 connect to ANNASETU'
+docker exec annasetu-db2 su - db2inst1 -c 'db2 "values current server"'
+```
+
+Set `DB2_NAME` in `.env` if the API should target a different database. The database name configured for the API must already exist in the container.
+
+## Start FastAPI and the frontend
+
+Install backend packages once:
+
+```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -r api\requirements.txt
-npm ci --prefix frontend
 ```
 
-Wait until container `annasetu-db2` is healthy. First startup can take several minutes. Compose creates/reuses the `ANNASETU` database and keeps files in Docker volume `annasetu-db2-data`. The API initializes missing schema objects; it does not drop or reset the database. Do not use `docker compose down -v` when retaining the Db2 data is important.
-
-## Start and verify the application
+Start the existing Db2 container, FastAPI, and Vite together from the project root:
 
 ```powershell
 .\start-annasetu.ps1
 ```
 
-The launcher targets `ANNASETU`, starts FastAPI at `127.0.0.1:8010` and Vite at `127.0.0.1:5175`, and writes logs to `src\logs\`. Open `http://127.0.0.1:5175`. The health endpoint executes a database query and returns the actual active Db2 database name and vector readiness:
+The launcher targets operational `ANNASETU`, reuses `annasetu-db2`, starts FastAPI at `127.0.0.1:8010` and Vite at `127.0.0.1:5175`, and writes logs to `logs\`. It will not stop an unverified process occupying a required port. The API creates missing tables, indexes, and append-only triggers without dropping tables or resetting rows. A fresh database receives its configured sample dataset. An existing `ANNATEST` repairs only the four reserved demo identities; existing non-QA user rows and operational records are left unchanged. Vector readiness is reported separately.
+
+Check the active Db2 database and vector readiness at `http://127.0.0.1:8010/api/health`; API docs are at `http://127.0.0.1:8010/docs`. Open the dashboard at `http://127.0.0.1:5175`.
+
+For manual development startup only, from the project root:
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8010/api/health
-Invoke-RestMethod http://127.0.0.1:8010/api/policy/status
+python -m uvicorn api.app.main:app --host 127.0.0.1 --port 8010
 ```
 
-OpenAPI docs: `http://127.0.0.1:8010/docs`.
+From `frontend`, run `npm run dev -- --host 127.0.0.1 --port 5175`. Vite defaults to `http://127.0.0.1:8010/api`; never put credentials in a Vite variable because frontend variables are included in the browser bundle.
 
-## Isolated live integration tests
+## Isolated integration-test database
 
-Use a dedicated Db2 database called `ANNATEST`, not `ANNASETU`. The current project report records a live run on `ANNATEST`; on a new installation create that QA database only after verifying it is absent. Preserve a private local QA `DEMO_PASSWORD`. To run tests, temporarily set `DB2_NAME=ANNATEST` in `src\.env`, then:
+The live integration suite refuses to run unless `DB2_NAME=ANNATEST`. `ANNATEST` already exists in this workspace; create it only on a new Db2 installation where the database catalog confirms it is absent:
 
 ```powershell
-Set-Location submissions\annasetu\src
+docker exec annasetu-db2 su - db2inst1 -c 'db2 create database ANNATEST'
+$qa = @{}
+Get-Content .env.qa | ForEach-Object { if ($_ -match '^(DB2_NAME|DEMO_PASSWORD)=(.*)$') { $qa[$Matches[1]] = $Matches[2] } }
+$env:DB2_NAME = $qa['DB2_NAME']
+$env:DEMO_PASSWORD = $qa['DEMO_PASSWORD']
 $env:ANNASETU_INTEGRATION = '1'
 .\.venv\Scripts\python.exe -m pytest api\tests -q -rs
-Remove-Item Env:ANNASETU_INTEGRATION
+Remove-Item Env:DB2_NAME,Env:DEMO_PASSWORD,Env:ANNASETU_INTEGRATION
+Remove-Variable qa
 ```
 
-The suite checks that its configured target is exactly `ANNATEST` and refuses to run against operational `ANNASETU`. It uses `SYNTHETIC QA |` batch labels and synthetic partner data. It appends test rows to ANNATEST and does not delete records; for repeatable runs, use a dedicated disposable QA database. Restore `DB2_NAME=ANNASETU` before using `start-annasetu.ps1`.
+Integration cases use `SYNTHETIC QA` food and NGO names. They never point at `ANNASETU` and never delete records. They leave QA rows in `ANNATEST`; run against a dedicated disposable test database when a clean baseline is needed. Do not put a real donation or beneficiary record in a test run.
 
 ## Environment variables
 
-| Variable | Purpose |
-|---|---|
-| `DB2_HOST`, `DB2_PORT` | Db2 address; local Compose uses `127.0.0.1:50000`. |
-| `DB2_NAME` | Database name, normally `ANNASETU`; integration test target must be `ANNATEST`. |
-| `DB2_USER`, `DB2_PASSWORD` | Db2 account and private local password. |
-| `JWT_SECRET`, `JWT_EXPIRE_MINUTES` | Token signing key (32+ random characters recommended) and token lifetime. |
-| `DEMO_PASSWORD` | Private local password for reserved demo identities on a fresh seed. |
-| `ENVIRONMENT` | Runtime mode; development enables the restricted demo-account selector. |
-| `SEED_DEMO_DATA` | Whether the API seeds sample data on a fresh database. |
-| `CORS_ORIGINS` | Explicit local frontend origins allowed by FastAPI. |
-| `VITE_API_BASE` | Optional browser API base URL; contains no credentials. |
+| Variable | Purpose | Example in `.env.example` |
+|---|---|---|
+| `DB2_HOST`, `DB2_PORT` | Db2 host and DRDA port | `127.0.0.1`, `50000` |
+| `DB2_NAME` | Active database | `ANNASETU` |
+| `DB2_USER`, `DB2_PASSWORD` | Db2 instance user and local password | `db2inst1`, placeholder only |
+| `JWT_SECRET` | Signs API bearer tokens; use a unique 32+ character random value | placeholder only |
+| `DEMO_PASSWORD` | Private local demo password; QA uses a separate value from ignored `.env.qa` | local secret |
+| `JWT_EXPIRE_MINUTES` | Token lifetime | `720` |
+| `ENVIRONMENT` | Enables development-only demo-account listing | `development` |
+| `SEED_DEMO_DATA` | Seeds a full sample dataset on an empty database; ensures only the reserved demo users on an existing `ANNATEST` | `true` |
+| `CORS_ORIGINS` | Explicit browser origins allowed by FastAPI | localhost and 127.0.0.1 Vite origins |
+| `VITE_API_BASE` | Optional frontend API root; never store credentials here | `http://127.0.0.1:8010/api` |
 
-## Database scope and limitations
-
-`ANNASETU` and `ANNATEST` are database names, not schemas. Select the database before starting FastAPI and verify it in `/api/health`. The checked-in Compose configuration persists Db2 data. Keep backups outside this submission package. Db2 Community Edition and the single-node local setup are for development and demonstration, not a high-availability deployment.
+The checked-in `.env.example` is the environment-variable source of truth for the backend. Keep generated secrets and live values local.

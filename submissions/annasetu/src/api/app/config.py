@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 720
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     seed_demo_data: bool = True
+    app_public_url: str = "http://127.0.0.1:5175"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -28,6 +29,5 @@ class Settings(BaseSettings):
     @property
     def allowed_origins(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
-
 
 settings = Settings()

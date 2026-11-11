@@ -25,12 +25,12 @@ def test_demo_account_seed_repairs_only_reserved_accounts_and_is_idempotent(monk
             "user_id": "donor-id", "display_name": "Old demo name", "role": "donor",
             "password_hash": password_hash("stale-password-for-test"),
         },
-        "synthetic-qa-unrelated@annasetu.local": {
+        "tournamentgaming09@gmail.com": {
             "user_id": "unrelated-user-id", "display_name": "Unrelated QA user", "role": "donor",
             "password_hash": password_hash("unrelated-test-password"),
         },
     }
-    unrelated_before = dict(existing["synthetic-qa-unrelated@annasetu.local"])
+    unrelated_before = dict(existing["tournamentgaming09@gmail.com"])
     operations = []
 
     def fake_row(sql, params=(), conn=None):
@@ -64,4 +64,4 @@ def test_demo_account_seed_repairs_only_reserved_accounts_and_is_idempotent(monk
     second_ids = seed._ensure_demo_accounts(object())
     assert second_ids == first_ids
     assert len(operations) == operation_count
-    assert existing["synthetic-qa-unrelated@annasetu.local"] == unrelated_before
+    assert existing["tournamentgaming09@gmail.com"] == unrelated_before

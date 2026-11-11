@@ -19,7 +19,13 @@ Checkpoint confirmation is stage-specific: `pickup` is recorded by the batch's d
 |---|---|---|
 | `GET /api/health` | Public | Runs a query on `SYSIBM.SYSDUMMY1`; reports the active Db2 server/database name, server time, and vector readiness. Db2 unavailable returns `503`. |
 | `POST /api/auth/login` | Public | Body: `{"email":"…","password":"…"}`. Returns bearer token and profile; invalid credentials return `401`. |
-| `GET /api/auth/demo-accounts` | Public, development only | Returns only reserved demo accounts actually present in Db2, with names/emails/roles and never passwords or password hashes. Returns `404` outside development. |
+| `POST /api/auth/demo-login` | Public, development only | Body: `{"role":"admin|donor|ngo|volunteer","password":"…"}`. Authenticates only that reserved role's Db2 demo identity; returns a role-only profile without its internal email or display name. Invalid credentials return `401`; returns `404` outside development. |
+| `GET /api/auth/demo-accounts` | Public, development only | Returns only generic roles for reserved accounts actually present in Db2. It does not expose email addresses, names or password data. Returns `404` outside development. |
+| `POST /api/auth/signup` | Public | Registers donor, NGO or volunteer. Body includes normalized email, name, password, confirmation and role-specific details. Returns a signed-in profile (`201`); duplicate email returns `409`; admin self-registration is not allowed. |
+| `POST /api/auth/password-reset` | Public | Body: `{"email":"…"}`. Rate-limited and returns the same response for known and unknown accounts. In `development`, directs the requester to an administrator; no token is issued. Outside development, returns `recovery_mode: "unavailable"`. No email, SMS, SMTP, or external service is used. |
+| `POST /api/auth/password-reset/admin-issue` | Admin | Body: `{"email":"…"}`. In development only, an authenticated Admin issues a six-digit code after verifying the person’s identity. The code is returned only to the admin UI, expires in five minutes, is rate-limited, stored as a keyed HMAC in Db2, and appended to the audit trail. |
+| `POST /api/auth/password-reset/verify` | Public | Body: `{"token":"123456"}`. Checks the admin-approved code’s HMAC, expiry, unused state and rate limits in Db2. Only six-digit local codes are accepted. |
+| `POST /api/auth/password-reset/confirm` | Public | Body: code, new password and confirmation. Atomically consumes the valid credential, changes the PBKDF2 password hash and appends an audit event. Used and expired codes cannot be reused. Local recovery is disabled outside development. |
 | `GET /api/me` | Any signed-in user | Returns the token profile. |
 | `GET /api/dashboard` | Any signed-in user | Db2 aggregates for donations, rescue stages, NGO performance, geography and 30-day trends. |
 | `GET /api/food` | Any signed-in user | Lists food records scoped to the signed-in donor/NGO/volunteer where applicable. |
@@ -47,5 +53,5 @@ Pydantic models validate body fields, enumerations, ranges, timestamp ordering, 
 
 - SQL uses bound parameters through `ibm_db_dbi`; operational records live in Db2.
 - Allocation changes NGO capacity, creates rescue rows, and records audit events in one transaction. A failure rolls back the reservation.
-- OTP codes are returned only on allocation and stored in Db2 only as SHA-256 digests. Relay a code to its designated stage actor; do not save it in logs or documentation.
+- Food handoff OTPs are stored as SHA-256 digests and shown only to the allocation flow's designated actors. Password-recovery OTPs are returned only in development mode, stored as keyed HMAC digests, and never emailed or logged by that flow.
 - Policy responses are assembled from retrieved Db2 passages. No generative model is configured; the cited passages are not official interpretation or food-safety certification.

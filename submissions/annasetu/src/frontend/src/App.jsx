@@ -25,43 +25,217 @@ const formatAuditEvent = (value) => {
   catch { return String(value || 'Audit payload unavailable'); }
 };
 const statusClass = (value = '') => value.toLowerCase().replaceAll('_', '-');
+const ROLE_LABELS = { admin: 'ADMIN', donor: 'DONOR', ngo: 'NGO', volunteer: 'VOLUNTEER' };
+const ROLE_ORDER = ['admin', 'donor', 'ngo', 'volunteer'];
+const EMAIL_LOCAL_ATOM = "[A-Z0-9!#$%&'*+/=?^_`{|}~-]+";
+const EMAIL_LABEL = '[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?';
+const EMAIL_PATTERN = new RegExp(`^${EMAIL_LOCAL_ATOM}(?:\\.${EMAIL_LOCAL_ATOM})*@${EMAIL_LABEL}(?:\\.${EMAIL_LABEL})+$`, 'i');
+function validEmail(value) {
+  const email = value.trim().toLowerCase();
+  if (email.length > 254 || !EMAIL_PATTERN.test(email)) return false;
+  const [local, domain] = email.split('@');
+  const labels = domain.split('.');
+  return local.length <= 64 && domain.length <= 253 && labels.every(label => label.length <= 63)
+    && (/^[a-z]{2,}$/i.test(labels.at(-1)) || /^xn--[a-z0-9-]{2,}$/i.test(labels.at(-1)));
+}
+function passwordIssue(value) {
+  if (value.length < 6 || value.length > 128) return 'Use 6–128 characters.';
+  if (!/[A-Za-z]/.test(value)) return 'Add at least one letter.';
+  if (!/[0-9]/.test(value)) return 'Add at least one number.';
+  if (!/[^A-Za-z0-9\s]/.test(value)) return 'Add at least one special character.';
+  return '';
+}
+const commaSeparated = value => value.split(',').map(item => item.trim()).filter(Boolean);
 
 function Icon({ children, className = '' }) { return <span className={`icon ${className}`} aria-hidden="true">{children}</span>; }
 function Button({ children, variant = 'primary', className = '', ...props }) { return <button className={`button button-${variant} ${className}`} {...props}>{children}</button>; }
 function Pill({ children, tone = 'neutral' }) { return <span className={`pill pill-${tone}`}>{children}</span>; }
 
-function Login({ onLogin, notice = '' }) {
-  const [email, setEmail] = useState('admin@annasetu.local');
+function PasswordField({ label, value, onChange, autoComplete, name, minLength = 6, invalid = false }) {
+  const [visible, setVisible] = useState(false);
+  return <label>{label}<span className="password-field"><input type={visible ? 'text' : 'password'} name={name} autoComplete={autoComplete} value={value} onChange={onChange} required minLength={minLength} maxLength="128" aria-invalid={invalid} /><button type="button" className="password-toggle" aria-label={visible ? 'Hide password' : 'Show password'} onClick={() => setVisible(show => !show)}>{visible ? 'Hide' : 'Show'}</button></span></label>;
+}
+
+function Login({ onLogin, onSignup, onResetRequest, onResetVerify, onResetConfirm, notice = '' }) {
+  const queryToken = new URLSearchParams(window.location.search).get('reset_token') || '';
+  const [mode, setMode] = useState(queryToken ? 'reset' : 'login');
+  const [resetToken, setResetToken] = useState(queryToken);
+  const [recoveryEntry, setRecoveryEntry] = useState('');
+  const [recoveryMode, setRecoveryMode] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [role, setRole] = useState('');
+  const [serviceArea, setServiceArea] = useState('');
+  const [ngoProfile, setNgoProfile] = useState({ name: '', available_kg: '', accepted_categories: 'prepared meals', storage_capabilities: 'cold', latitude: '', longitude: '', receiving_hours: 'Daily · 08:00–20:00' });
   const [demoAccounts, setDemoAccounts] = useState([]);
+  const [demoRole, setDemoRole] = useState('');
+  const [emailLogin, setEmailLogin] = useState(false);
+  const [db2Status, setDb2Status] = useState('Checking API and IBM Db2…');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [resetVerified, setResetVerified] = useState(false);
   useEffect(() => {
     let active = true;
     api('/auth/demo-accounts').then(accounts => {
       if (active && Array.isArray(accounts)) setDemoAccounts(accounts);
     }).catch(() => { if (active) setDemoAccounts([]); });
+    api('/health').then(health => {
+      if (active && health.status === 'ok' && health.database === 'IBM Db2') setDb2Status(`Connected to IBM Db2 · ${health.database_name}`);
+      else if (active) setDb2Status('API or Db2 health check failed');
+    }).catch(() => { if (active) setDb2Status('FastAPI or IBM Db2 is unavailable'); });
     return () => { active = false; };
   }, []);
-  async function submit(event) {
-    event.preventDefault(); setBusy(true); setError('');
-    try { await onLogin(email, password); } catch (issue) { setError(issue.message); }
+  useEffect(() => {
+    if (mode !== 'reset') return undefined;
+    if (!resetToken) { setError('This reset link or recovery code is invalid or expired.'); return undefined; }
+    let active = true;
+    onResetVerify(resetToken).then(() => { if (active) { setResetVerified(true); setError(''); } })
+      .catch(issue => { if (active) setError(issue.message); });
+    return () => { active = false; };
+  }, [mode, resetToken, onResetVerify]);
+  function changeMode(next) {
+    setMode(next); setError(''); setMessage(''); setPassword(''); setConfirmPassword(''); setDemoRole(''); setEmailLogin(false);
+    setResetToken(''); setRecoveryEntry(''); setRecoveryMode(''); setResetVerified(false);
+  }
+  function normalizedEmail() {
+    const value = email.trim().toLowerCase();
+    if (!validEmail(value)) throw new Error('Enter a valid email address.');
+    return value;
+  }
+  async function submitLogin(event) {
+    event.preventDefault(); setBusy(true); setError(''); setMessage('');
+    try {
+      const issue = passwordIssue(password);
+      if (issue) throw new Error(`Password is invalid. ${issue}`);
+      if (demoRole) await onLogin(demoRole, password, true);
+      else if (emailLogin) await onLogin(normalizedEmail(), password, false);
+      else throw new Error('Select a demo role or choose email sign-in.');
+    } catch (problem) { setError(problem.message); }
     finally { setBusy(false); }
   }
+  async function submitSignup(event) {
+    event.preventDefault(); if (!event.currentTarget.reportValidity()) return; setBusy(true); setError(''); setMessage('');
+    try {
+      const normalized = normalizedEmail();
+      const issue = passwordIssue(password);
+      if (issue) throw new Error(`Password is invalid. ${issue}`);
+      if (password !== confirmPassword) throw new Error('Password confirmation does not match.');
+      const payload = { email: normalized, display_name: displayName.trim(), password, confirm_password: confirmPassword, role };
+      if (role === 'volunteer') payload.service_area = serviceArea.trim();
+      if (role === 'ngo') payload.ngo_profile = {
+        name: ngoProfile.name.trim(), available_kg: Number(ngoProfile.available_kg),
+        accepted_categories: commaSeparated(ngoProfile.accepted_categories),
+        storage_capabilities: commaSeparated(ngoProfile.storage_capabilities),
+        latitude: Number(ngoProfile.latitude), longitude: Number(ngoProfile.longitude),
+        receiving_hours: ngoProfile.receiving_hours.trim(),
+      };
+      await onSignup(payload);
+    } catch (problem) { setError(problem.message); }
+    finally { setBusy(false); }
+  }
+  async function submitResetRequest(event) {
+    event.preventDefault(); if (!event.currentTarget.reportValidity()) return; setBusy(true); setError(''); setMessage('');
+    try {
+      const result = await onResetRequest(normalizedEmail());
+      setRecoveryMode(result.recovery_mode || 'email'); setMessage(result.message);
+      if (result.recovery_mode === 'local_admin_approval') {
+        setRecoveryEntry(''); setMode('local_code');
+      }
+    }
+    catch (problem) { setError(problem.message); }
+    finally { setBusy(false); }
+  }
+  function submitLocalRecoveryCode(event) {
+    event.preventDefault();
+    const code = recoveryEntry.trim();
+    if (!/^\d{6}$/.test(code)) { setError('Enter the six-digit local recovery code.'); return; }
+    setResetToken(code); setResetVerified(false); setError(''); setMessage(''); setMode('reset');
+  }
+  async function submitReset(event) {
+    event.preventDefault(); if (!event.currentTarget.reportValidity()) return; setBusy(true); setError(''); setMessage('');
+    try {
+      const issue = passwordIssue(password);
+      if (issue) throw new Error(`Password is invalid. ${issue}`);
+      if (password !== confirmPassword) throw new Error('Password confirmation does not match.');
+      const result = await onResetConfirm({ token: resetToken, password, confirm_password: confirmPassword });
+      setMessage(result.message); setPassword(''); setConfirmPassword(''); setResetVerified(false);
+      window.history.replaceState({}, '', window.location.pathname);
+      setResetToken(''); setRecoveryEntry(''); setRecoveryMode('');
+      setMode('login');
+    } catch (problem) { setError(problem.message); }
+    finally { setBusy(false); }
+  }
+  const demoRoles = ROLE_ORDER.map(roleName => demoAccounts.find(account => account.role === roleName)).filter(Boolean);
+  const heading = mode === 'signup' ? 'Create an account' : mode === 'forgot' ? 'Reset your password' : mode === 'local_code' ? 'Verify recovery code' : mode === 'reset' ? 'Choose a new password' : 'Welcome back';
+  const description = mode === 'signup' ? 'Join the rescue network with a role-based account.' : mode === 'forgot' ? 'Request a reset for a local administrator to approve.' : mode === 'local_code' ? 'Enter the code issued by an administrator after identity review.' : mode === 'reset' ? 'Set a new password for your account.' : 'Sign in to your rescue network workspace.';
   return <main className="login-shell">
     <div className="login-art"><div className="brand-mark large"><span>अ</span></div><p className="eyebrow light">GOOD FOOD. SHARED WELL.</p>
       <h1>Every surplus has<br />a place at the table.</h1><p className="login-copy">A trusted local network that moves good food quickly, carefully and with a clear record at every handoff.</p>
       <div className="orbit orbit-one"/><div className="orbit orbit-two"/><div className="orbit orbit-three"/><div className="login-foot">A community logistics network · Bengaluru</div>
     </div>
-    <section className="login-panel"><div className="login-form-wrap"><p className="eyebrow">ANNASETU OPERATIONS</p><h2>Welcome back</h2><p className="muted">Sign in to your rescue network workspace.</p>
-      <form onSubmit={submit} className="form-stack"><label>Email address<input type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} required /></label>
-        <label>Password<input type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required minLength="8" maxLength="128" /></label>
-        {(error || notice) && <div className="inline-error">{error || notice}</div>}<Button className="full-width" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'} <span>→</span></Button>
-      </form>
-      <div className="demo-login"><div className="demo-title"><span>DEMO ACCESS</span><span className="demo-dot"/> Local accounts · password required</div>
-        <div className="demo-users">{demoAccounts.length ? demoAccounts.map(account => <button type="button" className={`demo-user ${email === account.email ? 'selected' : ''}`} key={account.email} onClick={() => { setEmail(account.email); setPassword(''); setError(''); }}><span className="avatar tiny">{account.name.slice(0, 1)}</span><span><b>{account.name}</b><small>{account.role}</small></span></button>) : <small className="muted">No seeded demo accounts are available for this database.</small>}</div>
-      </div>
-      <div className="login-note"><span>●</span> Connected operationally to IBM Db2</div>
+    <section className="login-panel"><div className="login-form-wrap auth-form-wrap"><p className="eyebrow">ANNASETU OPERATIONS</p><h2>{heading}</h2><p className="muted">{description}</p>
+      {mode === 'login' && <>
+        <form onSubmit={submitLogin} className="form-stack" noValidate autoComplete="off">
+          {demoRole ? <div className="demo-selected-role"><span>Signing in as {ROLE_LABELS[demoRole]}</span><button type="button" className="auth-link" onClick={() => { setDemoRole(''); setEmail(''); setEmailLogin(true); setPassword(''); setError(''); }}>Use email instead</button></div> : emailLogin ? <label>Email address<input type="text" inputMode="email" name="annasetu-account-input" autoComplete="off" value={email} onChange={e => { setEmail(e.target.value); setError(''); }} onBlur={() => setEmail(value => value.trim().toLowerCase())} required maxLength="254" /></label> : <div className="demo-selected-role"><span>Select a demo role below</span><button type="button" className="auth-link" onClick={() => { setEmail(''); setEmailLogin(true); setDemoRole(''); }}>Sign in with email</button></div>}
+          <PasswordField label="Password" name="annasetu-signin-secret" autoComplete="new-password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }} />
+          <button type="button" className="auth-link auth-forgot" onClick={() => changeMode('forgot')}>Forgot password?</button>
+          {(error || notice) && <div className="inline-error" role="alert">{error || notice}</div>}
+          <Button className="full-width" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'} <span>→</span></Button>
+        </form>
+        <div className="auth-mode-switch"><span>New to the network?</span><button type="button" className="auth-link" onClick={() => changeMode('signup')}>Create account</button></div>
+        <div className="demo-login"><div className="demo-title"><span>DEMO ACCESS</span><span className="demo-dot"/> Local accounts · password required</div>
+          <div className="demo-users">{demoRoles.length ? demoRoles.map(account => <button type="button" aria-label={`Select ${ROLE_LABELS[account.role]} demo account`} className={`demo-user ${demoRole === account.role ? 'selected' : ''}`} key={account.role} onClick={() => { setDemoRole(account.role); setEmailLogin(false); setEmail(''); setPassword(''); setError(''); }}><span className="avatar tiny">{ROLE_LABELS[account.role][0]}</span><span><b>{ROLE_LABELS[account.role]}</b></span></button>) : <small className="muted">No seeded demo roles are available for this database.</small>}</div>
+        </div>
+        <div className="login-note"><span>●</span> {db2Status}</div>
+      </>}
+      {mode === 'signup' && <form onSubmit={submitSignup} className="form-stack auth-scroll-form" noValidate>
+        <label>Your name<input name="annasetu-signup-name" value={displayName} onChange={e => setDisplayName(e.target.value)} required minLength="2" maxLength="120" autoComplete="off" /></label>
+        <label>Email address<input type="text" inputMode="email" name="annasetu-signup-contact" autoComplete="off" value={email} onChange={e => { setEmail(e.target.value); setError(''); }} onBlur={() => setEmail(value => value.trim().toLowerCase())} required maxLength="254" /></label>
+        <label>Role<select value={role} required onChange={e => { setRole(e.target.value); setError(''); }}><option value="" disabled>Select a role</option><option value="donor">DONOR</option><option value="ngo">NGO</option><option value="volunteer">VOLUNTEER</option></select></label>
+        {role === 'volunteer' && <label>Service area<input value={serviceArea} onChange={e => setServiceArea(e.target.value)} required minLength="2" maxLength="160" placeholder="Area you can serve" /></label>}
+        {role === 'ngo' && <div className="ngo-signup-fields"><p className="auth-field-hint">NGO receiving profile · unverified until admin review</p>
+          <label>Organization name<input value={ngoProfile.name} onChange={e => setNgoProfile({...ngoProfile,name:e.target.value})} required minLength="3" maxLength="160" /></label>
+          <label>Available capacity (kg)<input type="number" value={ngoProfile.available_kg} onChange={e => setNgoProfile({...ngoProfile,available_kg:e.target.value})} required min="0" max="100000" step="0.01" /></label>
+          <label>Accepted food categories<input value={ngoProfile.accepted_categories} onChange={e => setNgoProfile({...ngoProfile,accepted_categories:e.target.value})} required placeholder="prepared meals, produce" /></label>
+          <label>Storage capabilities<input value={ngoProfile.storage_capabilities} onChange={e => setNgoProfile({...ngoProfile,storage_capabilities:e.target.value})} required placeholder="cold, hot" /></label>
+          <div className="auth-two-fields"><label>Latitude<input type="number" value={ngoProfile.latitude} onChange={e => setNgoProfile({...ngoProfile,latitude:e.target.value})} required min="-90" max="90" step="any" /></label><label>Longitude<input type="number" value={ngoProfile.longitude} onChange={e => setNgoProfile({...ngoProfile,longitude:e.target.value})} required min="-180" max="180" step="any" /></label></div>
+          <label>Receiving hours<input value={ngoProfile.receiving_hours} onChange={e => setNgoProfile({...ngoProfile,receiving_hours:e.target.value})} required minLength="3" maxLength="160" /></label>
+        </div>}
+        <PasswordField label="Password" name="annasetu-signup-secret" autoComplete="new-password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }} />
+        <small className="password-hint">6–128 characters with a letter, number and special character.</small>
+        <PasswordField label="Confirm password" name="annasetu-signup-secret-confirm" autoComplete="new-password" value={confirmPassword} onChange={e => { setConfirmPassword(e.target.value); setError(''); }} invalid={!!confirmPassword && confirmPassword !== password} />
+        {error && <div className="inline-error" role="alert">{error}</div>}
+        <Button className="full-width" disabled={busy}>{busy ? 'Creating account…' : 'Create account'} <span>→</span></Button>
+        <div className="auth-mode-switch"><span>Already registered?</span><button type="button" className="auth-link" onClick={() => changeMode('login')}>Sign in</button></div>
+      </form>}
+      {mode === 'forgot' && <form onSubmit={submitResetRequest} className="form-stack" noValidate>
+        <label>Email address<input type="text" inputMode="email" name="annasetu-recovery-contact" autoComplete="off" value={email} onChange={e => { setEmail(e.target.value); setError(''); setMessage(''); }} onBlur={() => setEmail(value => value.trim().toLowerCase())} required maxLength="254" /></label>
+        {error && <div className="inline-error" role="alert">{error}</div>}{message && <div className="inline-success" role="status">{message}</div>}
+        <Button className="full-width" disabled={busy}>{busy ? 'Requesting approval…' : 'Request local admin approval'} <span>→</span></Button>
+        <div className="auth-mode-switch"><button type="button" className="auth-link" onClick={() => changeMode('login')}>Back to sign in</button></div>
+      </form>}
+      {mode === 'local_code' && <form onSubmit={submitLocalRecoveryCode} className="form-stack" noValidate>
+        <section className="local-recovery-panel" aria-live="polite">
+          <p className="eyebrow">LOCAL ADMIN APPROVAL</p>
+          <strong>The code is issued only in the signed-in administrator workspace.</strong>
+          <p>Ask a local administrator to verify your identity and provide the five-minute code.</p>
+          <small>No email, SMS, or external verification service is used. Recovery is available only in development.</small>
+        </section>
+        <label>Admin-approved six-digit code<input name="annasetu-local-recovery-code" type="text" inputMode="numeric" autoComplete="off" pattern="[0-9]{6}" minLength="6" maxLength="6" value={recoveryEntry} onChange={e => { setRecoveryEntry(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(''); }} required /></label>
+        {error && <div className="inline-error" role="alert">{error}</div>}
+        <Button className="full-width" disabled={busy}>Verify code <span>→</span></Button>
+        <div className="auth-mode-switch"><button type="button" className="auth-link" onClick={() => changeMode('forgot')}>Request another code</button></div>
+      </form>}
+      {mode === 'reset' && <form onSubmit={submitReset} className="form-stack" noValidate>
+        {resetVerified ? <><PasswordField label="New password" name="annasetu-reset-secret" autoComplete="new-password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }} /><small className="password-hint">6–128 characters with a letter, number and special character.</small><PasswordField label="Confirm new password" name="annasetu-reset-secret-confirm" autoComplete="new-password" value={confirmPassword} onChange={e => { setConfirmPassword(e.target.value); setError(''); }} invalid={!!confirmPassword && confirmPassword !== password} /></> : !error && <div className="inline-success" role="status">Verifying local administrator recovery code…</div>}
+        {error && <div className="inline-error" role="alert">{error}</div>}{message && <div className="inline-success" role="status">{message}</div>}
+        {resetVerified && <Button className="full-width" disabled={busy}>{busy ? 'Updating password…' : 'Set new password'} <span>→</span></Button>}
+        {recoveryMode === 'local_admin_approval' && <div className="auth-mode-switch"><button type="button" className="auth-link" onClick={() => changeMode('forgot')}>Request another admin approval</button></div>}
+        <div className="auth-mode-switch"><button type="button" className="auth-link" onClick={() => changeMode('login')}>Back to sign in</button></div>
+      </form>}
     </div></section>
   </main>;
 }
@@ -88,7 +262,41 @@ function MetricCard({ label, value, note, icon, accent, trend }) {
   return <article className={`metric-card ${accent || ''}`}><div className="metric-top"><span>{label}</span><span className="metric-icon">{icon}</span></div><div className="metric-value">{value}</div><div className="metric-foot"><span className={trend ? 'metric-trend' : ''}>{trend || '↗'} <b>{note}</b></span><small>this month</small></div></article>;
 }
 
-function Overview({ dashboard, batches, rescues, user, onNavigate, onRefresh, onAudit }) {
+function AdminRecoveryPanel({ onIssue }) {
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [issuedAt, setIssuedAt] = useState(0);
+  useEffect(() => {
+    if (!issuedAt) return undefined;
+    const timer = window.setTimeout(() => { setCode(''); setMessage('Recovery code expired and was cleared.'); setIssuedAt(0); }, 5 * 60 * 1000);
+    return () => window.clearTimeout(timer);
+  }, [issuedAt]);
+  async function submit(event) {
+    event.preventDefault();
+    if (!event.currentTarget.reportValidity()) return;
+    setBusy(true); setError(''); setMessage(''); setCode('');
+    try {
+      const result = await onIssue(email.trim().toLowerCase());
+      setCode(result.recovery_code); setMessage(result.message); setIssuedAt(Date.now());
+    } catch (problem) { setError(problem.message); }
+    finally { setBusy(false); }
+  }
+  return <section className="card admin-recovery-card">
+    <div className="card-heading"><div><p className="eyebrow">LOCAL PASSWORD RECOVERY</p><h3>Issue an approved recovery code</h3><p>Verify the requester in person before issuing a code. It expires after five minutes.</p></div></div>
+    <form className="admin-recovery-form" onSubmit={submit} noValidate>
+      <label>Account email<input type="text" inputMode="email" name="annasetu-admin-recovery-contact" autoComplete="off" required maxLength="254" value={email} onChange={event => { setEmail(event.target.value); setError(''); setCode(''); }} onBlur={() => setEmail(value => value.trim().toLowerCase())} /></label>
+      <Button disabled={busy || !email.trim()}>{busy ? 'Issuing code…' : 'Issue recovery code'} <span>→</span></Button>
+    </form>
+    {error && <div className="inline-error" role="alert">{error}</div>}
+    {message && <div className="inline-success" role="status">{message}</div>}
+    {code && <div className="local-recovery-panel admin-issued-recovery"><p className="eyebrow">SHARE ONLY AFTER IDENTITY CHECK</p><output className="local-recovery-code" aria-label="Admin-approved recovery code">{code}</output><small>This code is visible only in the signed-in admin view and will be cleared here after five minutes.</small></div>}
+  </section>;
+}
+
+function Overview({ dashboard, batches, rescues, user, onNavigate, onRefresh, onAudit, onIssuePasswordReset }) {
   const m = dashboard?.metrics || {};
   const trend = dashboard?.trend || [];
   const maxTrend = Math.max(1, ...trend.map(item => Number(item.donated_kg) || 0));
@@ -121,6 +329,7 @@ function Overview({ dashboard, batches, rescues, user, onNavigate, onRefresh, on
       <div className="attention-item"><div className="attention-icon blue">↗</div><div><b>{rescues.filter(r => ['allocated','picked_up','delivered'].includes(r.status)).length} handoffs in progress</b><small>Pickup, delivery and distribution checks</small></div><button onClick={() => onNavigate('rescues')}>→</button></div>
       {user.role==='admin'?<button className="audit-link" onClick={onAudit}><span>◈</span> Audit records are append-only and tamper-evident · verify hash chain</button>:<div className="audit-link audit-static"><span>◈</span> Audit records are append-only and tamper-evident</div>}
     </section></div>
+    {user.role === 'admin' && <AdminRecoveryPanel onIssue={onIssuePasswordReset} />}
   </div>;
 }
 
@@ -202,8 +411,9 @@ function RescuesPage({ rescues, user, refresh, notify, oneTimeCodes }) {
 function NgoPage({ ngos, dashboard, user, refresh, notify }) {
   const [editing,setEditing]=useState(null);const [capacity,setCapacity]=useState('');const [active,setActive]=useState(true);
   async function save(){const amount=Number(capacity);if(!capacity.trim()||!Number.isFinite(amount)||amount<0||amount>100000){notify('Available capacity must be between 0 and 100,000 kg.','error');return;}try{await patch(`/ngos/${editing.ngo_id}/capacity`,{available_kg:amount,active});notify('Receiving capacity updated.');setEditing(null);await refresh();}catch(e){notify(e.message,'error');}}
+  async function reviewProfile(ngo){try{await patch(`/ngos/${ngo.ngo_id}/verification`,{verified:!ngo.verified,notes:ngo.verified?'Administrator review revoked profile verification.':'Administrator reviewed the receiving profile.'});notify(ngo.verified?'NGO profile verification revoked.':'NGO profile verified.');await refresh();}catch(e){notify(e.message,'error');}}
   return <div className="page-content"><PageHeading eyebrow="DYNAMIC CAPACITY INTELLIGENCE" title="NGO capacity" description="See who can receive food now, what they can safely handle, and how the network is performing." action={<div className="capacity-live"><span className="online-pulse"/> Capacity updated live</div>}/><div className="ngo-network-banner"><div><span className="eyebrow">VERIFIED RECEIVING NETWORK</span><h2>A little surplus. A lot of good.</h2><p>Allocations reserve capacity in Db2 transactions and can split one batch across multiple partners.</p></div><div className="ngo-network-stats"><div><b>{ngos.filter(n=>n.verified).length.toString().padStart(2,'0')}</b><small>verified partners</small></div><div><b>{fmtKg(ngos.reduce((sum,n)=>sum+Number(n.available_kg||0),0))}</b><small>available capacity</small></div></div></div>
-    <div className="ngo-grid">{ngos.map((ngo,index)=>{const canEdit=user.role==='admin'||ngo.owner_user_id===user.user_id;return <article className="ngo-card" key={ngo.ngo_id}><div className="ngo-card-top"><div className={`ngo-monogram ngo-${index}`}>{ngo.name.slice(0,1)}</div><div className="ngo-card-title"><b>{ngo.name}</b><small><span className="verified-check">✓</span> {ngo.verified?'Verified partner':'Pending verification'}</small></div><button className="more-button">•••</button></div><div className="ngo-location"><span>⌖</span> Central Bengaluru <i>·</i> Receiving {ngo.receiving_hours}</div><div className="ngo-capacity"><div className="ngo-capacity-header"><span>AVAILABLE RECEIVING CAPACITY</span><b>{fmtKg(ngo.available_kg)}</b></div><div className="capacity-meter large"><i style={{width:`${Math.max(5,Math.min(100,Number(ngo.available_kg)/1.5))}%`}}/></div><small>Can receive {ngo.storage_capabilities.join(' · ')} storage</small></div><div className="ngo-categories"><span>ACCEPTS</span><div>{ngo.accepted_categories.map(category=><Pill key={category}>{category}</Pill>)}</div></div><div className="ngo-card-footer"><div><small>COMMUNITY DISTRIBUTED</small><b>{fmtKg(ngo.distributed_kg||0)}</b></div><Button variant="outline" disabled={!canEdit} title={!canEdit?'Only the profile owner or administrator can change capacity':''} onClick={()=>{setEditing(ngo);setCapacity(String(ngo.available_kg));setActive(ngo.active);}}>{canEdit?'Update capacity':'Capacity visible'} {canEdit&&<span>↗</span>}</Button></div></article>;})}</div>
+    <div className="ngo-grid">{ngos.map((ngo,index)=>{const canEdit=user.role==='admin'||ngo.owner_user_id===user.user_id;return <article className="ngo-card" key={ngo.ngo_id}><div className="ngo-card-top"><div className={`ngo-monogram ngo-${index}`}>{ngo.name.slice(0,1)}</div><div className="ngo-card-title"><b>{ngo.name}</b><small><span className="verified-check">✓</span> {ngo.verified?'Verified partner':'Pending verification'}</small></div><button className="more-button">•••</button></div><div className="ngo-location"><span>⌖</span> Central Bengaluru <i>·</i> Receiving {ngo.receiving_hours}</div><div className="ngo-capacity"><div className="ngo-capacity-header"><span>AVAILABLE RECEIVING CAPACITY</span><b>{fmtKg(ngo.available_kg)}</b></div><div className="capacity-meter large"><i style={{width:`${Math.max(5,Math.min(100,Number(ngo.available_kg)/1.5))}%`}}/></div><small>Can receive {ngo.storage_capabilities.join(' · ')} storage</small></div><div className="ngo-categories"><span>ACCEPTS</span><div>{ngo.accepted_categories.map(category=><Pill key={category}>{category}</Pill>)}</div></div><div className="ngo-card-footer"><div><small>COMMUNITY DISTRIBUTED</small><b>{fmtKg(ngo.distributed_kg||0)}</b></div><Button variant="outline" disabled={!canEdit} title={!canEdit?'Only the profile owner or administrator can change capacity':''} onClick={()=>{setEditing(ngo);setCapacity(String(ngo.available_kg));setActive(ngo.active);}}>{canEdit?'Update capacity':'Capacity visible'} {canEdit&&<span>↗</span>}</Button></div>{user.role==='admin'&&<Button variant="soft" className="ngo-review-button" onClick={()=>reviewProfile(ngo)}>{ngo.verified?'Revoke verification':'Verify receiving profile'}</Button>}</article>;})}</div>
     <section className="geo-analysis"><div className="geo-analysis-head"><div><span className="eyebrow">GEOGRAPHIC SUPPLY & DEMAND</span><h3>Where the network can reach</h3><p>Capacity and open allocations by receiving location</p></div><span className="geo-zone">⌖ Central Bengaluru</span></div><div className="geo-legend"><span><i className="geo-supply"/> Available supply</span><span><i className="geo-demand"/> Open demand</span></div><div className="geo-rows">{(dashboard?.geography||[]).map((area,index)=>{const supply=Number(area.available_kg)||0;const demand=Number(area.open_demand_kg)||0;const max=Math.max(1,...(dashboard?.geography||[]).flatMap(row=>[Number(row.available_kg)||0,Number(row.open_demand_kg)||0]));return <div className="geo-row" key={area.name}><div className={`geo-dot geo-dot-${index%3}`}/><div className="geo-place"><b>{area.name}</b><small>Verified receiving point</small></div><div className="geo-bars"><div><i className="geo-supply" style={{width:`${Math.max(supply?3:0,supply/max*100)}%`}}/></div><div><i className="geo-demand" style={{width:`${Math.max(demand?3:0,demand/max*100)}%`}}/></div></div><div className="geo-values"><b>{fmtKg(supply)}</b><small>{fmtKg(demand)} open</small></div></div>;})}</div></section>
     <div className="ngo-info"><span>ⓘ</span><div><b>Capacity is reserved only when the whole allocation transaction commits.</b><small>If any part of an allocation fails, capacity and rescue records roll back together.</small></div></div>
     {editing&&<div className="modal-backdrop"><section className="confirm-modal"><button className="modal-close" onClick={()=>setEditing(null)}>×</button><p className="eyebrow">RECEIVING PROFILE</p><h2>Update capacity</h2><p className="muted">{editing.name} · Available capacity is reserved as allocations are made.</p><label>Available now (kg)<input type="number" required min="0" max="100000" step="0.01" value={capacity} onChange={e=>setCapacity(e.target.value)}/></label><label className="checkbox-label compact-check"><input type="checkbox" checked={active} onChange={e=>setActive(e.target.checked)}/><span>Accepting rescue offers right now</span></label><div className="confirm-modal-actions"><Button variant="ghost" onClick={()=>setEditing(null)}>Cancel</Button><Button onClick={save} disabled={!capacity.trim()||!Number.isFinite(Number(capacity))||Number(capacity)<0||Number(capacity)>100000}>Save capacity →</Button></div></section></div>}
@@ -229,11 +439,16 @@ export default function App() {
   const notify=useCallback((message,type='success')=>{setToast({message,type});window.setTimeout(()=>setToast(null),4500);},[]);
   const refresh=useCallback(async()=>{if(!token())return;const [nextDashboard,nextBatches,nextRescues,nextNgos]=await Promise.all([api('/dashboard'),api('/food'),api('/rescues'),api('/ngos')]);setDashboard(nextDashboard);setBatches(nextBatches);setRescues(nextRescues);setNgos(nextNgos);},[]);
   useEffect(()=>{let alive=true;async function boot(){const saved=token();if(!saved){setLoading(false);return;}try{const profile=await api('/me');await refresh();if(alive){setUser(profile);setBootError('');}}catch(issue){if(!alive)return;if(issue.status===401||issue.status===403){localStorage.removeItem('annasetu_token');setBootError('Your session expired. Sign in again.');}else{setBootError(issue.message||'AnnaSetu could not load data from FastAPI and IBM Db2.');}}finally{if(alive)setLoading(false);}}boot();return()=>{alive=false;};},[refresh,bootAttempt]);
-  async function doLogin(email,password){const result=await post('/auth/login',{email,password});localStorage.setItem('annasetu_token',result.access_token);try{await refresh();setBootError('');setUser(result.user);}catch(issue){localStorage.removeItem('annasetu_token');throw issue;}}
+  async function doLogin(emailOrRole,password,isDemo=false){const result=await post(isDemo?'/auth/demo-login':'/auth/login',isDemo?{role:emailOrRole,password}:{email:emailOrRole,password});localStorage.setItem('annasetu_token',result.access_token);try{await refresh();setBootError('');setUser(result.user);}catch(issue){localStorage.removeItem('annasetu_token');throw issue;}}
+  async function doSignup(payload){const result=await post('/auth/signup',payload);localStorage.setItem('annasetu_token',result.access_token);try{await refresh();setBootError('');setUser(result.user);}catch(issue){localStorage.removeItem('annasetu_token');throw new Error(`Account created, but the workspace could not load: ${issue.message}`);}}
+  async function requestPasswordReset(email){return post('/auth/password-reset',{email});}
+  async function issueLocalPasswordReset(email){return post('/auth/password-reset/admin-issue',{email});}
+  async function verifyPasswordReset(resetToken){return post('/auth/password-reset/verify',{token:resetToken});}
+  async function confirmPasswordReset(payload){return post('/auth/password-reset/confirm',payload);}
   async function checkAudit(){try{const result=await api('/audit/verify');notify(result.valid?`Audit chain verified · ${result.checked_events} events checked.`:`Audit integrity issue near event ${result.broken_event_id}.`,result.valid?'success':'error');}catch(e){notify(e.message,'error');}}
   function logout(){localStorage.removeItem('annasetu_token');setUser(null);setPage('overview');setOneTimeCodes([]);}
   if(loading)return <div className="loading-screen"><div className="brand-mark"><span>अ</span></div><span className="loading-orbit"/>Connecting to the network…</div>;
   if(!user&&bootError&&token())return <main className="loading-screen connection-error"><div className="brand-mark"><span>अ</span></div><h2>AnnaSetu is temporarily unavailable</h2><p>{bootError}</p><Button variant="soft" onClick={()=>{setLoading(true);setBootError('');setBootAttempt(value=>value+1);}}>Retry connection</Button><Button variant="ghost" onClick={()=>{localStorage.removeItem('annasetu_token');setBootError('');}}>Sign in instead</Button></main>;
-  if(!user)return <><Login onLogin={doLogin} notice={bootError}/><Toast toast={toast}/></>;
-  return <Shell user={user} page={page} setPage={setPage} onLogout={logout}><div className="content-scroll">{page==='overview'&&<Overview dashboard={dashboard} batches={batches} rescues={rescues} user={user} onNavigate={setPage} onAudit={checkAudit} onRefresh={()=>refresh().then(()=>notify('Dashboard refreshed from Db2.')).catch(e=>notify(e.message,'error'))}/ >}{page==='food'&&<FoodPage batches={batches} user={user} refresh={refresh} notify={notify} rememberCodes={setOneTimeCodes}/ >}{page==='rescues'&&<RescuesPage rescues={rescues} user={user} refresh={refresh} notify={notify} oneTimeCodes={oneTimeCodes}/ >}{page==='ngos'&&<NgoPage ngos={ngos} dashboard={dashboard} user={user} refresh={refresh} notify={notify}/ >}{page==='policy'&&<PolicyPage notify={notify}/ >}</div><Toast toast={toast}/></Shell>;
+  if(!user)return <><Login onLogin={doLogin} onSignup={doSignup} onResetRequest={requestPasswordReset} onResetVerify={verifyPasswordReset} onResetConfirm={confirmPasswordReset} notice={bootError}/><Toast toast={toast}/></>;
+  return <Shell user={user} page={page} setPage={setPage} onLogout={logout}><div className="content-scroll">{page==='overview'&&<Overview dashboard={dashboard} batches={batches} rescues={rescues} user={user} onNavigate={setPage} onAudit={checkAudit} onIssuePasswordReset={issueLocalPasswordReset} onRefresh={()=>refresh().then(()=>notify('Dashboard refreshed from Db2.')).catch(e=>notify(e.message,'error'))}/ >}{page==='food'&&<FoodPage batches={batches} user={user} refresh={refresh} notify={notify} rememberCodes={setOneTimeCodes}/ >}{page==='rescues'&&<RescuesPage rescues={rescues} user={user} refresh={refresh} notify={notify} oneTimeCodes={oneTimeCodes}/ >}{page==='ngos'&&<NgoPage ngos={ngos} dashboard={dashboard} user={user} refresh={refresh} notify={notify}/ >}{page==='policy'&&<PolicyPage notify={notify}/ >}</div><Toast toast={toast}/></Shell>;
 }

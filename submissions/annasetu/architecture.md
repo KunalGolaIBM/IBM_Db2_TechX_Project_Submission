@@ -1,69 +1,72 @@
-# AnnaSetu Architecture
+# AnnaSetu architecture
 
-## Overview
-AnnaSetu is a React + Vite client backed by a FastAPI application. The API directly connects to IBM Db2 with the IBM `ibm_db` / `ibm_db_dbi` driver for all operational reads and writes. LangChain's `langchain-db2` package uses the same Db2 server for vector retrieval. There is no SQLite operational fallback.
+## Runtime and source of truth
 
-## Architecture Diagram
+The React/Vite client talks to a Python/FastAPI API. The API reads and writes only to IBM Db2. There is no SQLite, PostgreSQL, MySQL, file-backed, or in-memory operational fallback. If Db2 is unavailable, the API fails its startup rather than accepting food or rescue records that cannot be committed to the system of record.
+
+The local profile pins the IBM Db2 Community Edition 12.1.5.0 image from IBM Container Registry. The image exposes port 50000 and keeps its database files in the named `annasetu-db2-data` volume. Community Edition is intended for non-production use.
 
 ```mermaid
 flowchart LR
-    Browser[React + Vite client] -->|JSON / bearer token| API[FastAPI routes and validation]
-    API -->|ibm_db_dbi parameterized SQL| Ops[(IBM Db2 operational database)]
-    API -->|LangChain DB2VS similarity search| Vectors[(Db2 vector table)]
-    Vectors -->|policy passages and source metadata| API
-    Ops -->|transactional rows and aggregates| API
-    API -->|JSON, decisions, citations| Browser
-    API -->|append event and advance chain head| Audit[(Db2 append-only audit tables)]
+  Browser[React + Vite] -->|JSON + bearer token| API[FastAPI]
+  API -->|ibm_db_dbi / SQL| Db2[(IBM Db2)]
+  API -->|LangChain DB2VS query| Vector[(ANNA_POLICY_VECTOR in Db2)]
+  Policy[POLICY_DOCUMENTS in Db2] -->|indexed passages| Vector
+  Vector -->|ranked excerpts + source URLs| API
 ```
 
-## Component Breakdown
+`ANNA_POLICY_VECTOR` is a Db2 vector table, not a second operational store. The local feature-hash embedding implementation makes retrieval deterministic and offline; there is no remote generative model.
 
-1. **Frontend:** `src/frontend` contains the React application, forms, role-aware dashboard, API client and responsive styles. It holds no database credentials and calls the configured FastAPI base URL.
-2. **API:** `src/api/app/main.py` defines authentication, food/passport, NGO, rescue, policy, dashboard and audit endpoints. Pydantic validates request shapes; role and ownership checks are applied before state transitions.
-3. **Db2 access and schema:** `db.py` opens direct IBM Db2 connections and executes parameterized SQL. `schema.py` creates missing tables, indexes and append-only triggers without dropping existing data. Db2 stores users, food evidence, human reviews, NGO capacity, rescues, audit records and policy source documents.
-4. **Safety and feasibility:** safety decisions use declared evidence and deterministic rules. Logistics estimation compares remaining time with expiry, storage/category constraints, straight-line distance and a stated transit/handoff allowance. Policy retrieval does not override these decisions.
-5. **LangChain Db2 vector retrieval:** `rag.py` creates a LangChain `DB2VS` store using the Db2 client connection and `ANNA_POLICY_VECTOR` table. A deterministic local feature-hash embedder supports offline retrieval without external model credentials. Search returns cited policy passages; no generative model is configured.
-6. **Deployment:** `src/compose.yaml` defines the local Db2 Community Edition container and persistent volume. The Windows PowerShell launcher reuses Db2 and starts the API and Vite services locally.
+## Connected modules
 
-## Food Safety and Rescue Workflow
+1. **Food safety passport** — `FOOD_BATCHES`, `SAFETY_OBSERVATIONS`, and `HUMAN_VERIFICATIONS` carry the batch identity, donor, declared ingredients and allergens, storage observations, use-by time, and named human review.
+2. **Rescue feasibility** — `services/safety.py` evaluates human verification, allergen declaration, storage mode and measurement, use-by time, and estimated transit. Missing or unreliable evidence returns `HOLD`. Past use-by or an estimated arrival after use-by returns `INFEASIBLE`. `FEASIBLE` means the recorded checks and estimated logistics fit; it is not a safety certification.
+3. **NGO capacity** — `NGOS` stores verification, receiving categories and storage capabilities, hours, location, availability, and the remaining capacity reserved by open allocations. Allocation can split a batch across multiple eligible receivers.
+4. **Rescue verification** — `RESCUES` stores volunteer assignment, allocated amount, one-time OTP hashes, state, and stage timestamps. Pickup, delivery, and distribution must be confirmed in order. The NGO supplies actual distributed kg at the final checkpoint; the value is stored in the immutable distribution audit event, so the current Db2 schema is unchanged. Reservation and rescue writes share one Db2 transaction.
+5. **Intelligence dashboard** — totals, failures, receiver performance, and open supply/demand are queried from operational Db2 tables.
+6. **Policy retrieval** — policy passages and source links are seeded to `POLICY_DOCUMENTS`. LangChain's `langchain-db2` `DB2VS` stores and searches vectors in Db2. A deterministic, local feature-hash embedding keeps the demonstration offline and avoids sending policy questions to a third party. Retrieved source passages are shown verbatim with their source URL. No LLM is configured, and retrieval never approves a batch.
 
-```mermaid
-sequenceDiagram
-    actor Donor
-    actor Reviewer as Verified NGO or admin
-    participant UI as React
-    participant API as FastAPI
-    participant DB as IBM Db2
-    Donor->>UI: Register batch and evidence
-    UI->>API: POST /api/food
-    API->>DB: Insert food, first observation, audit event (transaction)
-    Reviewer->>API: Record human review
-    API->>DB: Append immutable review; update current review state
-    UI->>API: GET /api/food/{id}/evaluate
-    API->>DB: Read evidence, expiry, NGO capacity
-    API-->>UI: HOLD / FEASIBLE / INFEASIBLE with reasons and ETA estimate
-    UI->>API: POST /api/food/{id}/allocate
-    API->>DB: Reserve capacities, create rescues, append audit events (transaction)
-```
+## Data integrity and access
 
-Missing required evidence produces `HOLD`. Expired food, infeasible time/distance or logistics constraints produce `INFEASIBLE`. `FEASIBLE` is a screening result, not certification. Allocation requires the applicable human verification and eligible capacity. Capacity reservation uses conditional Db2 updates in the same transaction as rescue creation and rolls back on failure. Partial allocation across multiple eligible NGOs is supported; available capacity is not allowed to go below zero.
+- Foreign keys link donors, verifiers, NGOs, volunteers, food, and rescue records.
+- Database checks constrain roles, lifecycle values, positive quantities, capacity, temperature mode, and use-by ordering.
+- Application queries use `?` parameter markers through `ibm_db_dbi`.
+- JWT sessions carry one of `donor`, `ngo`, `volunteer`, or `admin`; write endpoints enforce role and ownership checks.
+- Audit events are separate from mutable batch and rescue records. Each event stores a canonical payload, previous SHA-256 hash, and current hash. A single locked audit-head row serializes writers, and the administrator verification endpoint recomputes the chain.
+- Db2 triggers reject `UPDATE` and `DELETE` statements on audit events, safety observations, and human verification records; new evidence is appended instead.
+- OTP values are generated randomly and persisted only as SHA-256 digests. Allocation returns each code once to the caller for sharing with the receiving person.
+- Checkpoint actors are enforced in both FastAPI and the React operations view: the donor confirms pickup, the assigned volunteer confirms delivery/handoff, and the receiving NGO confirms distribution. An administrator can override. Every non-admin actor must own or be assigned to the relevant batch/rescue.
 
-## Handoffs and Audit
-Each rescue proceeds through ordered pickup, delivery/handoff and distribution. The donor, assigned volunteer and receiving NGO are authorized for their respective checkpoints; admin has an operational override. The API verifies ownership/assignment, stage order, OTP digest and distribution quantity. Checkpoint timestamps and actual distributed kilograms are persisted with the audit event. Audit writes serialize through `AUDIT_HEAD`, hash the previous event and append a new SHA-256 event. Db2 triggers reject `UPDATE` and `DELETE` on the audit-event, safety-observation and human-verification tables. Admin can verify chain integrity through the API.
+## ETA and policy boundaries
 
-## Database and Transaction Boundaries
+For the MVP, route time is an estimate: straight-line geographic distance at 20 km/h plus a 15-minute handoff allowance. The UI labels this assumption and asks the volunteer to confirm actual conditions. No live route provider is used.
 
-- **Identity and access:** Db2 `USERS`, `NGOS` and `VOLUNTEERS`; salted password hashes and role-scoped API operations.
-- **Passport:** `FOOD_BATCHES`, `SAFETY_OBSERVATIONS`, `HUMAN_VERIFICATIONS`.
-- **Rescue:** `RESCUES` and NGO `AVAILABLE_KG` reservations.
-- **Audit:** `AUDIT_HEAD`, append-only `AUDIT_EVENTS`.
-- **Policy:** `POLICY_DOCUMENTS` and LangChain-managed `ANNA_POLICY_VECTOR` in Db2.
-- **Transactions:** batch + initial evidence + audit; new evidence + review reset + audit; review + batch state + audit; capacity + rescue + audit; checkpoint/failure + status + audit.
+Evaluation returns the declared minutes remaining to use-by alongside candidate distance, estimated transit, capacity and decision reasons. Expired food is `INFEASIBLE`, including when there is no matching receiver. Missing safety evidence or absent eligible receiving capability yields `HOLD` with an explicit reason.
 
-Dashboard counts and kilogram totals use Db2 aggregate queries, including actual distribution quantities from distribution audit records. The recorded test report compares those values against direct SQL aggregates.
+Cold `≤5°C`, hot `≥60°C`, and frozen `≤−18°C` are screening thresholds based on FSSAI public food-safety guidance. They are intentionally conservative app rules, not a substitute for a qualified food-safety person, current regulations, cold-chain records, hazard controls, or a certified FSSAI Food Safety Management System. Batches without complete evidence stay on `HOLD`.
 
-## Security and Privacy
-Credentials are loaded from local environment variables; only placeholders are supplied in `.env.example`. Passwords and OTP plaintext are not returned in API profiles; OTPs are stored as hashes. SQL uses bound parameters. The frontend must not contain DB2 credentials, JWT signing keys or demo passwords. Demo accounts are for local demonstration and must be disabled or replaced before external deployment. Synthetic QA records belong in the isolated `ANNATEST` database.
+## Main database tables
 
-## Setup and Interface
-See [README.md](README.md), [Db2 setup](docs/DB2_SETUP.md) and [API reference](docs/API_REFERENCE.md) for commands, environment variables and endpoint permissions. `/api/health` performs a Db2 query; vector readiness is reported independently. The complete schema and constraints are in [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md).
+| Table | Purpose |
+|---|---|
+| `USERS` | Account identity, role, and password hash |
+| `NGOS` | Verified receiving profile and capacity |
+| `VOLUNTEERS` | Active volunteers and service area |
+| `FOOD_BATCHES` | Operational batch record and current state |
+| `SAFETY_OBSERVATIONS` | Append-only temperature and storage observations |
+| `HUMAN_VERIFICATIONS` | Human review decisions |
+| `RESCUES` | Capacity reservation and OTP-backed handoffs |
+| `AUDIT_EVENTS`, `AUDIT_HEAD` | Tamper-evident append-only audit chain |
+| `POLICY_DOCUMENTS`, `ANNA_POLICY_VECTOR` | Grounded policy source text and Db2 vector index |
+
+## API map
+
+- `POST /api/auth/login`, `GET /api/me`
+- `GET /api/health`, `GET /api/dashboard`
+- `GET|POST /api/food`, `GET /api/food/{id}/passport`, `PATCH /api/food/{id}/evidence`, `POST /api/food/{id}/verify`, `GET /api/food/{id}/evaluate`, `POST /api/food/{id}/allocate`
+- `GET /api/rescues`, `POST /api/rescues/{id}/confirm`, `POST /api/rescues/{id}/fail`
+- `GET|POST /api/ngos`, `PATCH /api/ngos/{id}/capacity`
+- `GET /api/policy/status`, `POST /api/policy/ask`
+- `GET /api/audit/verify` (administrator)
+
+See [API reference](api.md), [Db2 schema](database-schema.md), [Db2 setup](db2-setup.md), [judge demo sequence](demo.md), and the [release testing report](testing.md) for operational detail.
