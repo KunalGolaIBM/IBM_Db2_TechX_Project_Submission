@@ -16,7 +16,7 @@ graph TD
         API["REST routers /api/v1<br/>auth · sos · incidents · contacts<br/>children · elder-care · responders · community · ai"]
         RBAC["JWT auth + role checks<br/>(api/deps.py)"]
         Crew["Triage pipeline<br/>Intake → Triage → Knowledge"]
-        KB["BM25 knowledge base<br/>curated civic safety SOPs"]
+        KB["Haystack Pipeline<br/>InMemoryBM25Retriever<br/>curated civic safety SOPs"]
         DAL["Database layer<br/>DATABASE_MODE = db2 | sqlite | postgresql"]
         API --> RBAC
         API --> Crew
@@ -85,7 +85,7 @@ sequenceDiagram
      - `SafetyTriageAssistant`: risk signals mapped to `P1_CRITICAL … P4_ADVISORY`, with written reasoning and an immediate checklist.
      - `KnowledgeAssistant`: category-filtered retrieval of protocols.
      - `CommunityInsightsAgent`: neighbourhood-level summary for the admin and community views.
-   - `haystack/rag_pipeline.py`: an in-memory BM25 index over curated SOP documents (`documents.py`) with a relevance threshold and a "not found" fallback.
+   - `haystack/rag_pipeline.py`: a Haystack 2 `Pipeline` with an `InMemoryBM25Retriever` over an `InMemoryDocumentStore` of curated SOP documents (`documents.py`). It filters on `meta.category` and returns an explicit "not found" result when no document shares keywords with the query.
    - Deterministic by design: there are no outbound LLM calls, so resident-written text can't hijack the output and the system works offline. Every response carries an advisory notice, and dispatch decisions stay with human responders.
 
 ---
@@ -94,7 +94,7 @@ sequenceDiagram
 
 1. **Input Ingestion**: a resident triggers SOS or files a report from either client. Pydantic validates the payload and the JWT identifies the reporter and role.
 2. **Context Retrieval**: the backend reads the reporter's profile and medical notes, trusted contacts, on-duty responders and open incidents from Db2 through indexed lookups (`users.email`, `incidents.reporter_id`, `incidents.reference_code`, `trusted_contacts.user_id`).
-3. **Augmentation & Inference**: on request, the triage pipeline structures the free text, assigns a priority and retrieves cited SOP excerpts from the BM25 knowledge base.
+3. **Augmentation & Inference**: on request, the triage pipeline structures the free text, assigns a priority and retrieves cited SOP excerpts through the Haystack BM25 pipeline.
 4. **State Persistence**: the incident, its status history and location pings are written in one transaction. Triage output is upserted into `ai_analysis_records`, and an `audit_events` row records who did what.
 5. **Response Delivery**: JSON goes back to the caller. Responder and resident dashboards poll (refresh) the same Db2-backed endpoints, so both sides see the same timeline.
 

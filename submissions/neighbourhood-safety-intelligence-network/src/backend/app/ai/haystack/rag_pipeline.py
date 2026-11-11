@@ -1,117 +1,111 @@
 import logging
 import re
-import math
 from typing import List, Dict, Any, Optional
+
+from haystack import Document, Pipeline
+from haystack.components.retrievers.in_memory import InMemoryBM25Retriever
+from haystack.document_stores.in_memory import InMemoryDocumentStore
+
 from backend.app.ai.haystack.documents import APPROVED_CIVIC_SAFETY_DOCUMENTS
-from backend.app.core.config import settings
 
 logger = logging.getLogger("neighbourhood_safety.haystack")
 
+_STOPWORDS = {
+    "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of",
+    "with", "by", "from", "up", "about", "into", "over", "after", "is", "are",
+    "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did",
+    "what", "how", "should", "when", "where", "who", "which", "can", "my", "i",
+}
+
+
+def _keywords(text: str) -> set:
+    return {w for w in re.findall(r"\b[a-zA-Z0-9_-]{2,}\b", text.lower()) if w not in _STOPWORDS}
+
+
 class HaystackDocumentStore:
     """
-    RAG Document Store implementation providing indexed storage,
-    metadata filtering, and text retrieval for approved safety protocols.
-    Supports SQLite, PostgreSQL, and IBM Db2 backend adapters.
+    Retrieval over the approved civic safety protocols using Haystack:
+    an InMemoryDocumentStore indexed with BM25 and an InMemoryBM25Retriever
+    wrapped in a Haystack Pipeline, with metadata filtering by category.
     """
 
-    def __init__(self):
-        self.documents: List[Dict[str, Any]] = []
-        self._initialize_index()
+    def __init__(self, top_k: int = 3):
+        self.document_store = InMemoryDocumentStore(bm25_algorithm="BM25Okapi")
+        self.document_store.write_documents([
+            Document(
+                id=doc["id"],
+                content=f"{doc['title']}. {doc['content']}",
+                meta={
+                    "title": doc["title"],
+                    "category": doc["category"],
+                    "source": doc["source"],
+                    "body": doc["content"],
+                },
+            )
+            for doc in APPROVED_CIVIC_SAFETY_DOCUMENTS
+        ])
+        self.pipeline = Pipeline()
+        self.pipeline.add_component(
+            "retriever", InMemoryBM25Retriever(document_store=self.document_store, top_k=top_k)
+        )
+        logger.info(
+            "Haystack BM25 store indexed %d approved civic safety documents.",
+            self.document_store.count_documents(),
+        )
 
-    def _initialize_index(self):
-        """Indexes all verified civic safety documents into the memory/db store."""
-        for doc in APPROVED_CIVIC_SAFETY_DOCUMENTS:
-            tokens = self._tokenize(doc["title"] + " " + doc["content"])
-            doc_copy = doc.copy()
-            doc_copy["tokens"] = tokens
-            self.documents.append(doc_copy)
-        logger.info(f"Haystack DocumentStore indexed {len(self.documents)} approved civic safety documents.")
-
-    @staticmethod
-    def _tokenize(text: str) -> List[str]:
-        words = re.findall(r'\b[a-zA-Z0-9_-]{2,}\b', text.lower())
-        stopwords = {
-            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of",
-            "with", "by", "from", "up", "about", "into", "over", "after", "is", "are",
-            "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did"
-        }
-        return [w for w in words if w not in stopwords]
-
-    def query(
-        self,
-        query_text: str,
-        category: Optional[str] = None,
-        top_k: int = 3,
-        threshold: float = 0.10
-    ) -> Dict[str, Any]:
+    def query(self, query_text: str, category: Optional[str] = None, top_k: int = 3) -> Dict[str, Any]:
         """
-        Executes genuine retrieval with scoring, metadata filtering, and source citations.
-        Returns clear structured results or an honest 'no relevant document found' state.
+        Runs the Haystack retrieval pipeline and returns cited results, or an explicit
+        'not found' state when no protocol shares meaningful keywords with the query.
         """
-        q_tokens = self._tokenize(query_text)
-        if not q_tokens:
+        q_terms = _keywords(query_text)
+        if not q_terms:
             return {
                 "results": [],
                 "found": False,
-                "message": "Query was empty or contained no searchable keywords."
+                "message": "Query was empty or contained no searchable keywords.",
             }
 
-        candidates = self.documents
+        retriever_input: Dict[str, Any] = {"query": query_text, "top_k": top_k}
         if category:
-            candidates = [d for d in candidates if d.get("category") == category]
+            retriever_input["filters"] = {"field": "meta.category", "operator": "==", "value": category}
 
-        scored_docs = []
-        for doc in candidates:
-            doc_tokens = doc["tokens"]
-            doc_token_set = set(doc_tokens)
-            
-            # Compute TF match
-            matches = [t for t in q_tokens if t in doc_token_set]
-            if not matches:
-                continue
-            
-            # Simple BM25-like relevance metric
-            score = len(matches) / math.sqrt(len(q_tokens) * (len(doc_tokens) + 10))
-            # Boost exact title match
-            for t in q_tokens:
-                if t in doc["title"].lower():
-                    score += 0.25
+        documents: List[Document] = self.pipeline.run({"retriever": retriever_input})["retriever"]["documents"]
 
-            if score >= threshold:
-                scored_docs.append((score, doc))
+        # BM25 always ranks something; only keep documents that actually share keywords with the query.
+        relevant = [d for d in documents if q_terms & _keywords(d.content or "")]
 
-        scored_docs.sort(key=lambda x: x[0], reverse=True)
-        top_results = scored_docs[:top_k]
-
-        if not top_results:
+        if not relevant:
             return {
                 "results": [],
                 "found": False,
                 "message": "No approved safety protocol matched the specific query criteria. Please consult on-duty responders.",
-                "query": query_text
+                "query": query_text,
             }
 
-        results = []
-        for score, doc in top_results:
-            results.append({
-                "document_id": doc["id"],
-                "title": doc["title"],
-                "category": doc["category"],
-                "excerpt": doc["content"],
-                "source": doc["source"],
-                "relevance_score": round(score, 3)
-            })
-
+        results = [
+            {
+                "document_id": d.id,
+                "title": d.meta["title"],
+                "category": d.meta["category"],
+                "excerpt": d.meta["body"],
+                "source": d.meta["source"],
+                "relevance_score": round(float(d.score or 0.0), 3),
+            }
+            for d in relevant
+        ]
         return {
             "results": results,
             "found": True,
             "count": len(results),
             "top_source": results[0]["source"],
-            "query": query_text
+            "query": query_text,
         }
+
 
 # Global singleton document store
 haystack_store = HaystackDocumentStore()
+
 
 def retrieve_safety_guidance(query: str, category: Optional[str] = None) -> Dict[str, Any]:
     return haystack_store.query(query_text=query, category=category)

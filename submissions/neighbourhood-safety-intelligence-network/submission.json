@@ -36,8 +36,25 @@
     ]
   },
   "tech_stack": {
-    "languages": ["Python", "TypeScript", "Kotlin", "SQL"],
-    "frameworks": ["FastAPI", "SQLAlchemy", "Pydantic", "React", "Vite", "Tailwind CSS", "Jetpack Compose", "Retrofit"],
-    "ai_models": ["None (deterministic multi-agent triage pipeline with BM25 retrieval, no external LLM)"]
+    "languages": [
+      "Python",
+      "TypeScript",
+      "Kotlin",
+      "SQL"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "SQLAlchemy",
+      "Pydantic",
+      "Haystack 2 (haystack-ai)",
+      "React",
+      "Vite",
+      "Tailwind CSS",
+      "Jetpack Compose",
+      "Retrofit"
+    ],
+    "ai_models": [
+      "None: deterministic multi-agent triage with Haystack BM25 retrieval, no external LLM"
+    ]
   }
 }

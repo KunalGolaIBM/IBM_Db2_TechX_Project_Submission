@@ -63,12 +63,12 @@ NSIN is one backend with two clients (a React web app and a native Android app),
 ---
 
 ## AI / LLM Architecture (if applicable)
-- **Framework:** A custom agent pipeline following CrewAI's role/goal/task pattern (`IncidentIntakeAgent → SafetyTriageAssistant → KnowledgeAssistant`, coordinated by `SafetyCrewOrchestrator`). Retrieval uses a BM25 document store modelled on Haystack's retriever interface. Both are implemented in plain Python ([`src/backend/app/ai/`](src/backend/app/ai/)); the `crewai` and `haystack-ai` packages are not dependencies.
+- **Framework:** A custom agent pipeline following CrewAI's role/goal/task pattern (`IncidentIntakeAgent → SafetyTriageAssistant → KnowledgeAssistant`, coordinated by `SafetyCrewOrchestrator`). Retrieval uses **Haystack 2** (`haystack-ai`): an `InMemoryDocumentStore` indexed with BM25 and an `InMemoryBM25Retriever` inside a Haystack `Pipeline`, filtered by category metadata ([`rag_pipeline.py`](src/backend/app/ai/haystack/rag_pipeline.py)). The agent orchestration is plain Python; the `crewai` package is not a dependency.
 - **Model Provider & Model:** None. The agents are deterministic (keyword and entity rules plus BM25 ranking) and do not call an LLM. This is deliberate for a safety product: output is predictable, works offline, costs nothing per request and can't be prompt-injected by the free-text report. Every response carries an advisory notice, and humans make all dispatch decisions.
 - **RAG / Tool-Calling Workflow:**
   1. **Intake:** extract category, location and missing critical details from the resident's free-text report.
   2. **Triage:** score risk signals (weapons, injuries, children, elders, time of day) into `P1_CRITICAL … P4_ADVISORY` with written reasoning and an immediate safety checklist.
-  3. **Knowledge:** BM25 retrieval over a curated set of civic safety SOPs, filtered by category, returning cited excerpts (with a "not found" fallback below the relevance threshold).
+  3. **Knowledge:** a Haystack BM25 pipeline over a curated set of civic safety SOPs, filtered by category, returning cited excerpts with scores (and an explicit "not found" result when no protocol shares keywords with the report).
   4. **Persist:** when an `incident_id` is passed, the full analysis is written to Db2 (`ai_analysis_records`) and audited (`audit_events`).
 
 ---
@@ -77,6 +77,7 @@ NSIN is one backend with two clients (a React web app and a native Android app),
 - **Backend / Core:** Python 3.11, FastAPI, Uvicorn, SQLAlchemy 2, Pydantic 2, python-jose (JWT), passlib/bcrypt
 - **Database:** IBM Db2 (`ibm_db`, `ibm_db_sa`). SQLite for local development and tests; PostgreSQL optional.
 - **Frontend / UI:** React 19 + TypeScript + Vite + Tailwind CSS 4 (web); Kotlin + Jetpack Compose + Material 3 + Retrofit (Android, MVVM)
+- **AI / Retrieval:** Haystack 2 (`haystack-ai`): BM25 document store, retriever and pipeline
 - **Libraries & Tools:** Docker / Docker Compose, Pytest, Robolectric, oxlint
 
 ---
@@ -245,7 +246,7 @@ The 8 backend tests cover health, auth and profile, trusted contacts, the full i
   - No Gradle wrapper JAR is committed; use Android Studio or a local Gradle install.
 - **Next Steps:**
   - Optional LLM step (IBM watsonx.ai Granite) for report summarisation, behind the existing rule-based guardrails.
-  - Store protocol embeddings in Db2's `VECTOR` type and use `VECTOR_DISTANCE` for hybrid BM25 + semantic retrieval.
+  - Move the Haystack document store into Db2: store protocol embeddings in Db2's `VECTOR` type and use `VECTOR_DISTANCE` for hybrid BM25 + semantic retrieval.
   - Db2 temporal tables for incident history, and row-level access control for multi-society deployments.
   - Push notifications (FCM) and SMS fallback for SOS.
 
