@@ -24,6 +24,17 @@ from backend.app.ai.semantic.db2_vector_store import vector_store
 logger = logging.getLogger("neighbourhood_safety.haystack")
 
 RRF_K = 60  # standard reciprocal-rank-fusion constant
+# Triage category -> protocol category. When the triage agent already knows the incident type,
+# protocols for that type get a prior in the fused ranking (worth half of a first-place vote).
+INCIDENT_TO_PROTOCOL_CATEGORY = {
+    "sos": "emergency_response",
+    "medical": "emergency_response",
+    "child_alert": "child_safety",
+    "elder_welfare": "elder_care",
+    "hazard": "hazard_mitigation",
+    "suspicious_activity": "transit_safety",
+}
+CATEGORY_PRIOR = 0.5 / (RRF_K + 1)
 
 _STOPWORDS = {
     "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of",
@@ -61,7 +72,8 @@ class HaystackDocumentStore:
         q_terms = _keywords(query_text)
         return [d for d in documents if q_terms & _keywords(d.content or "")]
 
-    def query(self, query_text: str, category: Optional[str] = None, top_k: int = 3) -> Dict[str, Any]:
+    def query(self, query_text: str, category: Optional[str] = None, top_k: int = 3,
+              prefer_category: Optional[str] = None) -> Dict[str, Any]:
         if not _keywords(query_text):
             return {"results": [], "found": False, "retrieval_mode": "none",
                     "message": "Query was empty or contained no searchable keywords."}
@@ -79,6 +91,11 @@ class HaystackDocumentStore:
         for rank, hit in enumerate(vector_hits):
             fused[hit.key] = fused.get(hit.key, 0.0) + 1.0 / (RRF_K + rank + 1)
             distances[hit.key] = hit.distance
+
+        if prefer_category:
+            for doc_id in fused:
+                if self.docs_by_id[doc_id]["category"] == prefer_category:
+                    fused[doc_id] += CATEGORY_PRIOR
 
         mode = "hybrid (Haystack BM25 + Db2 VECTOR_DISTANCE)" if vector_store.enabled else "Haystack BM25"
         if not fused:
@@ -109,5 +126,8 @@ class HaystackDocumentStore:
 haystack_store = HaystackDocumentStore()
 
 
-def retrieve_safety_guidance(query: str, category: Optional[str] = None) -> Dict[str, Any]:
-    return haystack_store.query(query_text=query, category=category)
+def retrieve_safety_guidance(query: str, category: Optional[str] = None,
+                             incident_type: Optional[str] = None) -> Dict[str, Any]:
+    """Retrieve protocols for a query. ``incident_type`` (from triage) adds a category prior."""
+    return haystack_store.query(query_text=query, category=category,
+                                prefer_category=INCIDENT_TO_PROTOCOL_CATEGORY.get(incident_type or ""))

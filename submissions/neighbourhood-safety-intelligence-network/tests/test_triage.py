@@ -25,3 +25,21 @@ def triage(text):
 ])
 def test_triage_classification(text, category, priority):
     assert triage(text) == (category, priority)
+
+
+@pytest.mark.parametrize("text, expected_protocol", [
+    ("My elderly neighbour has not answered her door or phone since last night. She lives alone.",
+     "DOC-ELDER-003"),
+    ("My son has not reached home from school and is not answering his phone", "DOC-CHILD-002"),
+    ("The streetlight on our lane has been broken for a week", "DOC-HAZARD-004"),
+])
+def test_cited_protocol_matches_the_triaged_category(text, expected_protocol):
+    from backend.app.ai.haystack.documents import APPROVED_CIVIC_SAFETY_DOCUMENTS
+    titles = {d["id"]: d["title"] for d in APPROVED_CIVIC_SAFETY_DOCUMENTS}
+    out = crew_orchestrator.run_incident_assistance_workflow(text)
+    assert out["retrieved_civic_protocols"], "a protocol should be cited"
+    assert out["retrieved_civic_protocols"][0]["title"] == titles[expected_protocol]
+
+
+def test_unanswered_door_escalates_elder_welfare():
+    assert triage("My elderly neighbour has not answered her door since last night") == ("elder_welfare", "P2_HIGH")

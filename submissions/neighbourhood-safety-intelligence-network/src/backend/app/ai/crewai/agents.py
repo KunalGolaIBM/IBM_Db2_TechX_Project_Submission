@@ -22,7 +22,8 @@ CATEGORY_KEYWORDS = (
 )
 LIFE_THREAT_WORDS = ("weapon", "knife", "gun", "bleeding heavily", "severe bleeding", "fire", "smoke",
                      "attack", "attacked", "not breathing", "unconscious")
-ELDER_RISK_WORDS = ("not answering", "no answer", "unresponsive", "not responding", "no response",
+ELDER_RISK_WORDS = ("not answering", "not answered", "hasn't answered", "has not answered", "no answer",
+                    "not picking up", "not responding", "unresponsive", "no response", "no reply",
                     "missed", "fell", "fall", "collapsed", "confused", "wandered", "missing")
 INTRUSION_WORDS = ("break-in", "breaking in", "forced entry", "forced", "stalking", "masked")
 TIME_WORDS = ("now", "just", "minutes", "minute", "hour", "hours", "pm", "am", "today", "tonight",
@@ -138,7 +139,7 @@ class KnowledgeAssistant:
     goal = "Provide verified municipal SOPs and emergency resources relevant to the incident."
 
     def execute(self, category: str, query_hint: str) -> List[Dict[str, str]]:
-        haystack_res = retrieve_safety_guidance(query_hint)
+        haystack_res = retrieve_safety_guidance(query_hint, incident_type=category)
         protocols = []
         for r in haystack_res.get("results", []):
             protocols.append({
@@ -198,7 +199,7 @@ class SafetyCrewOrchestrator:
         triage_out = self.triage_agent.execute(intake_out, raw_text)
 
         # Step 3: Knowledge via Haystack
-        search_query = f"{intake_out['parsed_category']} {raw_text}"
+        search_query = f"{intake_out['parsed_category'].replace('_', ' ')} {raw_text}"
         knowledge_out = self.knowledge_agent.execute(intake_out["parsed_category"], search_query)
 
         execution_duration = round(time.time() - start_time, 3)
