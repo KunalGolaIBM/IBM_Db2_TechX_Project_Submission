@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Neighbourhood Safety Intelligence Network (NSIN)",
+    "slug": "neighbourhood-safety-intelligence-network",
+    "short_description": "A neighbourhood emergency and safety platform with web and Android clients on a shared FastAPI backend. Residents raise SOS alerts, report incidents, track a child's commute and run elder wellness check-ins, while responders triage and resolve incidents. Every incident, status transition, triage result and audit event is stored in IBM Db2.",
+    "category": "Civic Safety / AI Triage / Full-Stack (Web + Android)",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/KunalGolaIBM/IBM_Db2_TechX_Project_Submission/tree/main/submissions/neighbourhood-safety-intelligence-network"
+  },
+  "team": {
+    "name": "Yagnik Sharma",
+    "members": [
+      {
+        "name": "Yagnik Sharma",
+        "github": "YagnikSharma",
+        "email": "yagniksharma47@gmail.com",
+        "role": "Full stack: backend, IBM Db2 integration, triage pipeline, web and Android"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker, icr.io/db2_community/db2); compatible with Db2 on IBM Cloud over SSL",
+    "connector": "ibm_db_sa (SQLAlchemy dialect) + ibm_db (native driver)",
+    "features_used": [
+      "Relational Tables (12) with Primary/Foreign Keys",
+      "Unique Constraints and Secondary Indexes",
+      "Identity Columns",
+      "CLOB storage for free text and JSON payloads",
+      "ACID Transactions with explicit commit/rollback",
+      "Prepared, parameterised statements (ibm_db.prepare / execute)",
+      "Schema auto-provisioning and seed data via ibm_db_sa",
+      "Health probe via SYSIBM.SYSDUMMY1",
+      "Append-only status history and audit tables"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "TypeScript", "Kotlin", "SQL"],
+    "frameworks": ["FastAPI", "SQLAlchemy", "Pydantic", "React", "Vite", "Tailwind CSS", "Jetpack Compose", "Retrofit"],
+    "ai_models": ["None (deterministic multi-agent triage pipeline with BM25 retrieval, no external LLM)"]
+  }
+}

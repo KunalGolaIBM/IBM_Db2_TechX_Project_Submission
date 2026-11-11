@@ -1,0 +1,40 @@
+# Default stack: FastAPI backend (SQLite, auto-seeded) + React web app.
+#   docker compose up --build
+# IBM Db2 stack: adds Db2 Community Edition and switches the backend to Db2.
+#   docker compose -f docker-compose.yml -f docker-compose.db2.yml up --build
+
+services:
+  backend:
+    build:
+      context: ./src
+      dockerfile: backend/Dockerfile
+    container_name: nsin_backend
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: development
+      DATABASE_MODE: sqlite
+      DATABASE_URL: sqlite:////data/neighbourhood_safety.db
+      JWT_SECRET: ${JWT_SECRET:-local_dev_only_change_me}
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+    volumes:
+      - backend-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  web-app:
+    build:
+      context: ./src/web-app
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
+    container_name: nsin_webapp
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  backend-data:
