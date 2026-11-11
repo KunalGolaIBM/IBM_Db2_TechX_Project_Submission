@@ -1,0 +1,117 @@
+{
+ "uploads": [
+  {
+   "upload": 1,
+   "version": 1,
+   "items": {
+    "1": "REF-001"
+   },
+   "accept": [
+    1
+   ],
+   "notes": {
+    "1": "Accepted: 259.5(b)(5) word for word (it ends with the regulation's own semicolon, hence intake's warning that it may be cut short)."
+   },
+   "changes": []
+  },
+  {
+   "upload": 2,
+   "version": 2,
+   "items": {
+    "1": "REF-001"
+   },
+   "accept": [
+    1
+   ],
+   "notes": {
+    "1": "Accepted: 259.5(b)(5) as amended on 2024-06-25, word for word, as a new version of REF-001. Its one parameter, optional_service_fee_refund_required = false, is wrong (fee refunds are still due, now under part 260); corrected below."
+   },
+   "changes": [
+    {
+     "clause_id": "REF-001",
+     "effective_from": "2024-06-25",
+     "effective_to": null,
+     "version_label": "v3",
+     "clause_text": "Providing prompt refunds in the original form of payment (i.e., money is returned to an individual using whatever payment method the individual used to make the original payment, such as a check, credit card, debit card, cash, or airline miles) when ticket or ancillary service fee refunds, including checked bag fee refunds, are due pursuant to 14 CFR part 260 unless the consumer agrees to receive the refunds in a different form of payment that is a cash equivalent payment as defined in 14 CFR 260.2. Carriers may not retain a processing fee for issuing refunds that are due;",
+     "rule": {
+      "processing_fee_allowed": false
+     },
+     "change_note": "259.5(b)(5) as amended: parameter corrected by the editor (no processing fee; fee refunds still due)",
+     "why": "Same text. The proposal's optional_service_fee_refund_required = false says the opposite of the text, which still makes ticket and ancillary fee refunds due (under part 260); replaced with processing_fee_allowed = false ('Carriers may not retain a processing fee for issuing refunds that are due'). Neither key has a rule-checker cue, so no check changes; the data is right. Db2 labels the corrected row v3."
+    }
+   ]
+  },
+  {
+   "upload": 3,
+   "version": 3,
+   "items": {
+    "1": "REF-002",
+    "2": "REF-003",
+    "3": "REF-004",
+    "4": "REF-005",
+    "5": "REF-006",
+    "6": "REF-007",
+    "7": "REF-008",
+    "8": "REF-001"
+   },
+   "accept": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "notes": {
+    "1": "Not accepted: 259.5(b)(5) proposed as a new clause, while REF-001 already holds it, with the same text since 2024-06-25.",
+    "2": "Accepted: 260.6(a)(1) with (i) and (ii), word for word.",
+    "3": "Accepted: 260.6(a)(2) with (i) to (iii), word for word.",
+    "4": "Accepted: 260.6(b), whole.",
+    "5": "Accepted: 260.6(c), whole (min_years_validity = 5 has no unit the checker reads).",
+    "6": "Accepted: 260.6(d), whole.",
+    "7": "Accepted: 260.6(e), whole.",
+    "8": "Not accepted: wrong clause. It is 260.10 (prompt refunds) filed as a new version of REF-001, which holds 259.5(b)(5)."
+   },
+   "changes": []
+  },
+  {
+   "upload": 4,
+   "version": 3,
+   "items": {
+    "1": "REF-003",
+    "2": "REF-003",
+    "3": "REF-004",
+    "4": "REF-005",
+    "5": "REF-009",
+    "6": "REF-010",
+    "7": "REF-011",
+    "8": "REF-006",
+    "9": "REF-006",
+    "10": "REF-012",
+    "11": "REF-013",
+    "12": "REF-007",
+    "13": "REF-008",
+    "14": "REF-001"
+   },
+   "accept": [],
+   "notes": {
+    "1": "Not accepted: wrong clause. A piece of 259.5(b)(5) filed as a new version of REF-003, which holds 260.6(a)(1).",
+    "2": "Not accepted: a piece of 260.6(a) other than the one REF-003 holds, filed as a new version of REF-003.",
+    "3": "Restates a clause in force word for word; nothing to apply.",
+    "4": "Not accepted: a piece of 260.6(b) filed as a new version of REF-005, which already holds the whole paragraph.",
+    "5": "Not accepted: a piece of 260.6(b) as a new clause, while that paragraph is already in force whole.",
+    "6": "Not accepted: a piece of 260.6(b) as a new clause, while that paragraph is already in force whole.",
+    "7": "Not accepted: a piece of 260.6(b) as a new clause, while that paragraph is already in force whole.",
+    "8": "Not accepted: a piece of 260.6(c) filed as a new version of REF-006, which already holds the whole paragraph.",
+    "9": "Not accepted: a piece of 260.6(c) filed as a new version of REF-006, which already holds the whole paragraph.",
+    "10": "Not accepted: a piece of 260.6(c) as a new clause, while that paragraph is already in force whole.",
+    "11": "Not accepted: a piece of 260.6(c) as a new clause, while that paragraph is already in force whole.",
+    "12": "Restates a clause in force word for word; nothing to apply.",
+    "13": "Restates a clause in force word for word; nothing to apply.",
+    "14": "Not accepted: wrong clause. 260.10 filed as a new version of REF-001, which holds 259.5(b)(5)."
+   },
+   "changes": [],
+   "missing_after": "260.10 (prompt refunds) is not in force: both v3 uploads filed it under REF-001, and the editor uploads each version at most twice. REF-001, 259.5(b)(5) as amended, states the same two rules: refunds in the original form of payment, and no processing fee."
+  }
+ ]
+}

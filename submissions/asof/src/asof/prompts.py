@@ -522,3 +522,14 @@ _RESTATED = "- Include sections that the document restates without change.\n"
 SPR_INTAKE_SYSTEM = LONG_INTAKE_SYSTEM.replace(_RESTATED, _RESTATED + SPR_INTAKE_RULES + "\n")
 if SPR_INTAKE_SYSTEM == LONG_INTAKE_SYSTEM:
     raise RuntimeError("INTAKE_SYSTEM no longer has the restated-sections rule; update SPR_INTAKE_SYSTEM")
+
+
+# The US DOT refund rules (a demonstration on real regulation, asof/eval/real): the shipped intake prompt plus two
+# rules written from the excerpt's layout. Nothing else changes.
+REAL_INTAKE_RULES = """\
+- This document is an excerpt of a regulation. Make one proposal for each lettered paragraph of a section \
+((a), (b), ...), and one for paragraph (b)(5) of 259.5, copied complete with its label and subparagraphs. Leave \
+out the document's first two lines, which only name the excerpt and its dates.
+- effective_to: null for every proposal. Each version of this document is loaded in turn, and loading the next \
+version is what ends this one."""
+REAL_INTAKE_SYSTEM = LONG_INTAKE_SYSTEM.replace(_RESTATED, _RESTATED + REAL_INTAKE_RULES + "\n")  # cap 16

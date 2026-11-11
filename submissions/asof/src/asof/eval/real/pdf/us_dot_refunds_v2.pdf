@@ -1,0 +1,49 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 966 >>
+stream
+BT /F1 8.5 Tf 11 TL 45 800 Td
+(US DOT airline refund rules, version 2: 14 CFR 259.5\(b\)\(5\).) Tj T*
+(Loaded into AsOf as in force from 2024-06-25. The eCFR shows this text from 2024-06-25; fetched) Tj T*
+(as of 2024-07-01. A demonstration; not legal advice.) Tj T*
+() Tj T*
+(§ 259.5 Customer Service Plan.) Tj T*
+(\(b\)\(5\) Providing prompt refunds in the original form of payment \(i.e., money is returned to an) Tj T*
+(individual using whatever payment method the individual used to make the original payment, such) Tj T*
+(as a check, credit card, debit card, cash, or airline miles\) when ticket or ancillary service) Tj T*
+(fee refunds, including checked bag fee refunds, are due pursuant to 14 CFR part 260 unless the) Tj T*
+(consumer agrees to receive the refunds in a different form of payment that is a cash equivalent) Tj T*
+(payment as defined in 14 CFR 260.2. Carriers may not retain a processing fee for issuing refunds) Tj T*
+(that are due;) Tj T*
+ET
+endstream
+endobj
+6 0 obj
+<< /Title (US DOT refund rules v2) /Producer (asof.eval.unseen.pdfs) >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000210 00000 n 
+0000000336 00000 n 
+0000001353 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R /Info 6 0 R >>
+startxref
+1440
+%%EOF

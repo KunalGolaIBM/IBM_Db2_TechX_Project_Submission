@@ -1,0 +1,47 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 750 >>
+stream
+BT /F1 8.5 Tf 11 TL 45 800 Td
+(US DOT airline refund rules, version 1: 14 CFR 259.5\(b\)\(5\).) Tj T*
+(Loaded into AsOf as in force from 2020-01-01. The eCFR shows this text from 2016-12-05; fetched) Tj T*
+(as of 2023-01-03. A demonstration; not legal advice.) Tj T*
+() Tj T*
+(§ 259.5 Customer Service Plan.) Tj T*
+(\(b\)\(5\) Where ticket refunds are due, providing prompt refunds, as required by 14 CFR 374.3 and) Tj T*
+(12 CFR part 226 for credit card purchases, and within 20 days after receiving a complete refund) Tj T*
+(request for cash and check purchases, including refunding fees charged to a passenger for) Tj T*
+(optional services that the passenger was unable to use due to an oversale situation or flight) Tj T*
+(cancellation;) Tj T*
+ET
+endstream
+endobj
+6 0 obj
+<< /Title (US DOT refund rules v1) /Producer (asof.eval.unseen.pdfs) >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000210 00000 n 
+0000000336 00000 n 
+0000001137 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R /Info 6 0 R >>
+startxref
+1224
+%%EOF

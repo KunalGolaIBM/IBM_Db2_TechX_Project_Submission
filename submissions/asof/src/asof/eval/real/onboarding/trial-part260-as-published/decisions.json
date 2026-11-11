@@ -1,0 +1,103 @@
+{
+ "uploads": [
+  {
+   "upload": 1,
+   "version": 1,
+   "items": {
+    "1": "REF-001"
+   },
+   "accept": [
+    1
+   ],
+   "notes": {
+    "1": "Accepted: 259.5(b)(5) word for word (it ends with the regulation's own semicolon, hence intake's warning). max_days_cash_check_refund = 20 is stated; the yes/no parameter checks nothing."
+   },
+   "changes": []
+  },
+  {
+   "upload": 2,
+   "version": 2,
+   "items": {
+    "1": "REF-001",
+    "2": "REF-002",
+    "3": "REF-003",
+    "4": "REF-004",
+    "5": "REF-005",
+    "6": "REF-006",
+    "7": "REF-007",
+    "8": "REF-008",
+    "9": "OTH-001",
+    "10": "OTH-002",
+    "11": "REF-009",
+    "12": "REF-001"
+   },
+   "accept": [
+    1,
+    2,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11
+   ],
+   "notes": {
+    "1": "Accepted: 259.5(b)(5) as amended, word for word without its label; a new version of REF-001.",
+    "2": "Accepted: 260.6(a) without its label.",
+    "3": "Not accepted: blocked, 260.6(b) is not word for word.",
+    "4": "Not accepted: blocked, 260.6(c) is not word for word.",
+    "5": "Accepted: the opening of 260.6(d), a complete sentence group of the regulation.",
+    "6": "Accepted: 260.6(d)(1), word for word; its 7 business days and 20 days are stated.",
+    "7": "Accepted: 260.6(d)(2).",
+    "8": "Accepted: 260.6(d)(3); the yes/no parameter checks nothing.",
+    "9": "Accepted: 260.6(e)(1).",
+    "10": "Accepted: 260.6(e)(2).",
+    "11": "Accepted: 260.6(f), whole.",
+    "12": "Not accepted: wrong clause. It is 260.9 (prompt refunds) filed as a second new version of REF-001, which holds 259.5(b)(5)."
+   },
+   "changes": []
+  },
+  {
+   "upload": 3,
+   "version": 2,
+   "items": {
+    "1": "REF-001",
+    "2": "REF-002",
+    "3": "REF-010",
+    "4": "REF-011",
+    "5": "REF-012",
+    "6": "REF-013",
+    "7": "REF-005",
+    "8": "REF-014",
+    "9": "REF-006",
+    "10": "REF-007",
+    "11": "REF-008",
+    "12": "OTH-001"
+   },
+   "accept": [
+    3,
+    4,
+    5,
+    6,
+    8
+   ],
+   "notes": {
+    "1": "Restates REF-001 word for word; nothing to apply.",
+    "2": "Not accepted: 260.6(a) without its opening words, as a new version of REF-002, which already holds the whole paragraph.",
+    "3": "Accepted: 260.6(b)(1), word for word.",
+    "4": "Accepted: 260.6(b)(2).",
+    "5": "Accepted: 260.6(b)(3).",
+    "6": "Accepted: 260.6(b)(4).",
+    "7": "Not accepted: wrong clause. 260.6(b)(5) filed as a new version of REF-005, which holds the opening of 260.6(d).",
+    "8": "Accepted: 260.6(b)(6).",
+    "9": "Not accepted: 260.6(d)(1) without its label, as a new version of REF-006, which already holds it.",
+    "10": "Not accepted: the same for 260.6(d)(2) (REF-007).",
+    "11": "Not accepted: the same for 260.6(d)(3) (REF-008).",
+    "12": "Not accepted: the same for 260.6(e)(1) (OTH-001)."
+   },
+   "changes": [],
+   "missing_after": "260.6(b)'s opening sentence and (b)(5), 260.6(c) and 260.9 are not in force for v2: both uploads reached the 12-proposal cap before them (the model splits paragraphs into subparagraphs), and the editor uploads each version at most twice. 259.5(b)(5) as amended, which is in force, states the original form of payment and the processing-fee rule that 260.9 repeats."
+  }
+ ]
+}

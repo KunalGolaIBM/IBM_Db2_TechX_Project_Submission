@@ -39,7 +39,7 @@ dependencies = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-asof = ["data/*.json", "data/samples/*", "sql/*.sql", "eval/*.jsonl", "eval/intake/*", "eval/unseen/*", "eval/unseen/pdf/*", "eval/unseen/onboarding/*", "ui/*", "ui/fonts/*"]
+asof = ["data/*.json", "data/samples/*", "sql/*.sql", "eval/*.jsonl", "eval/intake/*", "eval/unseen/*", "eval/unseen/pdf/*", "eval/unseen/onboarding/*", "eval/real/*", "eval/real/ecfr/*", "eval/real/pdf/*", "eval/real/onboarding/*", "ui/*", "ui/fonts/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

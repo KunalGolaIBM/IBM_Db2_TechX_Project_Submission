@@ -1,0 +1,175 @@
+{
+ "started_at": "2026-11-11T03:24:05+00:00",
+ "git_commit": "767c892",
+ "provider": "openrouter",
+ "model": "google/gemini-3.1-flash-lite",
+ "schema": "ASOF_REAL",
+ "ledger_chain": "OK",
+ "records": [
+  {
+   "id": "D1a",
+   "as_of": "2023-03-15",
+   "question": "The airline cancelled my flight and I turned down the rebooking it offered. Do I get my money back automatically, without asking?",
+   "draft": "Yes. Because the airline cancelled your flight and you rejected the alternative it offered, a full refund of the airfare is due to you automatically.",
+   "reading": "Not stated: 259.5(b)(5) only says refunds that are due must be prompt; it does not say when a refund is due.",
+   "decision": "ESCALATED",
+   "reason_code": "CORRECTION_FAILED",
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "cited": [
+    "REF-001 v1 (from 2020-01-01): Refund timelines and scope"
+   ],
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE): A full refund of the airfare is due to you automatically because the airline cancelled your flight and you rejected the alternative it offered.",
+    "p2#1 NOT_COVERED (llm NOT_COVERED, rule NOT_APPLICABLE): If your flight is cancelled and you decline the rebooking offered, you are eligible for a refund of the airfare and any fees for optional services you were unab",
+    "p2#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE): To receive this refund, you must submit a complete refund request."
+   ],
+   "latency_ms": 7662
+  },
+  {
+   "id": "D1b",
+   "as_of": "2025-02-10",
+   "question": "The airline cancelled my flight and I turned down the rebooking it offered. Do I get my money back automatically, without asking?",
+   "draft": "Yes. Because the airline cancelled your flight and you rejected the alternative it offered, a full refund of the airfare is due to you automatically.",
+   "reading": "260.6(a)(2)(ii): a full refund is due when the consumer rejects the significantly changed flight or the rebooking.",
+   "decision": "ESCALATED",
+   "reason_code": "NOT_COVERED",
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "cited": [],
+   "claims": [
+    "p1#1 NOT_COVERED (llm SUPPORTED, rule NOT_APPLICABLE): A full refund of the airfare is due to you automatically because the airline cancelled your flight and you rejected the alternative it offered."
+   ],
+   "latency_ms": 3620
+  },
+  {
+   "id": "D2a",
+   "as_of": "2023-03-15",
+   "question": "I paid cash for my ticket and sent the airline a complete refund request. How long does it have to refund me?",
+   "draft": "The airline must refund you within 20 days after it receives your complete refund request.",
+   "reading": "259.5(b)(5): within 20 days after receiving a complete refund request, for cash and check purchases.",
+   "decision": "PASS",
+   "reason_code": "ALL_SUPPORTED",
+   "final_answer": "The airline must refund you within 20 days after it receives your complete refund request.",
+   "cited": [
+    "REF-001 v1 (from 2020-01-01): Refund timelines and scope"
+   ],
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH): The airline must refund you within 20 days after it receives your complete refund request."
+   ],
+   "latency_ms": 2099
+  },
+  {
+   "id": "D2b",
+   "as_of": "2025-02-10",
+   "question": "I paid cash for my ticket and sent the airline a complete refund request. How long does it have to refund me?",
+   "draft": "The airline must refund you within 20 days after it receives your complete refund request.",
+   "reading": "Not stated in the excerpt: 259.5(b)(5) as amended says prompt refunds in the original form of payment; the day counts are in 260.2's definitions, which were not loaded.",
+   "decision": "ESCALATED",
+   "reason_code": "NOT_COVERED",
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "cited": [],
+   "claims": [
+    "p1#1 NOT_COVERED (llm NOT_COVERED, rule NOT_APPLICABLE): The airline must refund you within 20 days after it receives your complete refund request."
+   ],
+   "latency_ms": 4652
+  },
+  {
+   "id": "D3a",
+   "as_of": "2023-03-15",
+   "question": "Can the airline keep a processing fee out of the refund it owes me?",
+   "draft": "Yes. The airline may keep a small processing fee from the refund.",
+   "reading": "Not stated: 259.5(b)(5) says nothing about processing fees.",
+   "decision": "ESCALATED",
+   "reason_code": "NOT_COVERED",
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "cited": [],
+   "claims": [
+    "p1#1 NOT_COVERED (llm NOT_COVERED, rule NOT_APPLICABLE): The airline may keep a small processing fee from the refund."
+   ],
+   "latency_ms": 3676
+  },
+  {
+   "id": "D3b",
+   "as_of": "2025-02-10",
+   "question": "Can the airline keep a processing fee out of the refund it owes me?",
+   "draft": "Yes. The airline may keep a small processing fee from the refund.",
+   "reading": "259.5(b)(5) as amended: carriers may not retain a processing fee for issuing refunds that are due.",
+   "decision": "CORRECTED",
+   "reason_code": "CORRECTED_FROM_CLAUSES",
+   "final_answer": "Carriers may not retain a processing fee for issuing refunds that are due.",
+   "cited": [
+    "REF-001 v3 (from 2024-06-25): Refund timelines and scope"
+   ],
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE): The airline may keep a small processing fee from the refund.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE): Carriers may not retain a processing fee for issuing refunds that are due."
+   ],
+   "latency_ms": 5530
+  },
+  {
+   "id": "D4a",
+   "as_of": "2023-03-15",
+   "question": "Instead of a refund for my cancelled flight, the airline offered me a travel voucher. How long must the voucher stay valid?",
+   "draft": "A voucher offered instead of the refund must stay valid for at least five years from the date it is issued.",
+   "reading": "Not stated: there is no voucher rule before part 260.",
+   "decision": "ESCALATED",
+   "reason_code": "NOT_COVERED",
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "cited": [],
+   "claims": [
+    "p1#1 NOT_COVERED (llm NOT_COVERED, rule NOT_APPLICABLE): A voucher offered instead of the refund must stay valid for at least five years from the date it is issued."
+   ],
+   "latency_ms": 4038
+  },
+  {
+   "id": "D4b",
+   "as_of": "2025-02-10",
+   "question": "Instead of a refund for my cancelled flight, the airline offered me a travel voucher. How long must the voucher stay valid?",
+   "draft": "A voucher offered instead of the refund must stay valid for at least five years from the date it is issued.",
+   "reading": "260.6(c)(2): valid and redeemable for at least five years from issuance.",
+   "decision": "PASS",
+   "reason_code": "ALL_SUPPORTED",
+   "final_answer": "A voucher offered instead of the refund must stay valid for at least five years from the date it is issued.",
+   "cited": [
+    "REF-006 v1 (from 2024-08-12): Refund alternatives"
+   ],
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE): A voucher offered instead of the refund must stay valid for at least five years from the date it is issued."
+   ],
+   "latency_ms": 1971
+  },
+  {
+   "id": "D5a",
+   "as_of": "2023-03-15",
+   "question": "I paid by credit card. Can the airline give me my refund in airline miles instead?",
+   "draft": "Not unless you agree. The refund must go back in your original form of payment, unless you accept a different form that is a cash equivalent.",
+   "reading": "Not stated: 259.5(b)(5) before the rule says nothing about the form of payment.",
+   "decision": "ESCALATED",
+   "reason_code": "NOT_COVERED",
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "cited": [],
+   "claims": [
+    "p1#1 NOT_COVERED (llm NOT_COVERED, rule NOT_APPLICABLE): The refund must go back in your original form of payment.",
+    "p1#2 NOT_COVERED (llm NOT_COVERED, rule NOT_APPLICABLE): The refund can be provided in a different form if you accept a form that is a cash equivalent."
+   ],
+   "latency_ms": 4406
+  },
+  {
+   "id": "D5b",
+   "as_of": "2024-07-15",
+   "question": "I paid by credit card. Can the airline give me my refund in airline miles instead?",
+   "draft": "Not unless you agree. The refund must go back in your original form of payment, unless you accept a different form that is a cash equivalent.",
+   "reading": "259.5(b)(5) as amended on 2024-06-25: the original form of payment, unless the consumer agrees to a cash-equivalent payment.",
+   "decision": "PASS",
+   "reason_code": "ALL_SUPPORTED",
+   "final_answer": "Not unless you agree. The refund must go back in your original form of payment, unless you accept a different form that is a cash equivalent.",
+   "cited": [
+    "REF-001 v3 (from 2024-06-25): Refund timelines and scope"
+   ],
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE): The refund must go back in your original form of payment.",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE): The airline can issue a refund in a different form if you accept a different form that is a cash equivalent."
+   ],
+   "latency_ms": 2419
+  }
+ ]
+}

@@ -60,7 +60,13 @@ RAIL = Domain("rail", "Suryapath Railways", "SPR-REFUNDS", prompts.GENERIC_EXTRA
               prompts.GENERIC_REWRITE_SYSTEM, prompts.GENERIC_INVESTIGATE_SYSTEM, prompts.GENERIC_IMPACT_SYSTEM,
               prompts.GENERIC_PROMPT_VERSION, RailExtractionResult, prompts.GENERIC_NOTICE_SYSTEM, RailIntakeResult,
               prompts.SPR_INTAKE_SYSTEM, prompts.LONG_INTAKE_MAX_ITEMS)
-EVAL_DOMAINS = {RAIL.doc_id: RAIL}
+# A demonstration on real public-domain regulation (asof/eval/real): the US DOT airline refund rules. Same standing as
+# RAIL: checked by doc_id, never offered by the API or the router. Its areas are RAIL's (cancellation, refund, ...).
+DOT = Domain("dot", "US DOT refund rules", "US-DOT-REFUNDS", prompts.GENERIC_EXTRACT_SYSTEM, prompts.GENERIC_JUDGE_SYSTEM,
+             prompts.GENERIC_REWRITE_SYSTEM, prompts.GENERIC_INVESTIGATE_SYSTEM, prompts.GENERIC_IMPACT_SYSTEM,
+             prompts.GENERIC_PROMPT_VERSION, RailExtractionResult, prompts.GENERIC_NOTICE_SYSTEM, RailIntakeResult,
+             prompts.REAL_INTAKE_SYSTEM, prompts.LONG_INTAKE_MAX_ITEMS)
+EVAL_DOMAINS = {RAIL.doc_id: RAIL, DOT.doc_id: DOT}
 ALL_DOMAINS = {**DOMAINS, **EVAL_DOMAINS}
 
 
