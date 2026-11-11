@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "RecallGuard AI — IBM Db2 Powered Intelligent Food Recall Platform",
+    "slug": "recallguard-ai",
+    "short_description": "Traces a contaminated ingredient lot through production and distribution with IBM Db2 recursive SQL, scores risk transparently, and uses five CrewAI agents to produce a verified, evidence-backed, targeted recall plan for human approval.",
+    "category": "AI Agents / Supply-Chain Traceability / Food Safety",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/KunalGolaIBM/IBM_Db2_TechX_Project_Submission/tree/main/submissions/recallguard-ai"
+  },
+  "team": {
+    "name": "RecallGuard",
+    "members": [
+      {
+        "name": "Sameeksha",
+        "github": "sam3117n",
+        "email": "sameekshasahani2005@gmail.com",
+        "role": "Lead / Full-stack & Db2"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker) or Db2 on Cloud; Db2 12.1.2+ for VECTOR retrieval",
+    "connector": "ibm_db / ibm_db_dbi; langchain-db2 (DB2VS); CrewAI tools over ibm_db",
+    "features_used": [
+      "Relational Tables with PK/FK/UNIQUE/CHECK constraints",
+      "Recursive Common Table Expressions (genealogy + distribution)",
+      "Indexing",
+      "Views",
+      "CLOB JSON storage of agent outputs",
+      "VECTOR type / VECTOR_DISTANCE via langchain-db2 (when available)",
+      "Transactions & audit logging"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "TypeScript",
+      "SQL"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "Pydantic",
+      "React",
+      "Vite",
+      "Tailwind CSS",
+      "React Flow",
+      "Recharts",
+      "TanStack Query",
+      "CrewAI",
+      "LangChain (langchain-db2)"
+    ],
+    "ai_models": [
+      "Configurable via CrewAI: OpenAI / Anthropic / Gemini / watsonx.ai Granite / Ollama",
+      "Deterministic fallback (no LLM) — clearly labelled"
+    ]
+  }
+}
