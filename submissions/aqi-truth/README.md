@@ -2,9 +2,11 @@
 
 [![CI: pytest on IBM Db2 12.1.5](https://github.com/debi910/aqi-truth/actions/workflows/ci.yml/badge.svg)](https://github.com/debi910/aqi-truth/actions/workflows/ci.yml)
 
-_CI runs in the source repo [debi910/aqi-truth](https://github.com/debi910/aqi-truth/actions/workflows/ci.yml) (`.github/workflows/ci.yml`): a fresh IBM Db2 Community 12.1.5 container, the sample data loaded by the normal loader, then all 57 tests. A submission-folder copy leaves out `.github`, so the workflow file is in the source repo._
+_CI runs in the source repo [debi910/aqi-truth](https://github.com/debi910/aqi-truth/actions/workflows/ci.yml) (`.github/workflows/ci.yml`): a fresh IBM Db2 Community 12.1.5 container, the sample data loaded by the normal loader, then all 61 tests. A submission-folder copy leaves out `.github`, so the workflow file is in the source repo._
 
 > **One-Line Pitch:** Delhi's air-quality dashboards print a number even when the monitors were blank, frozen or reporting impossible values. AQI Truth puts the official CPCB method inside IBM Db2, so Db2 checks every hour and **refuses to give an AQI when the data cannot support one**, with a tamper-proof evidence ledger for each decision.
+
+> **What only AQI Truth does:** it runs on **real public government data** (1.87 million readings from 34 Delhi monitors, nothing simulated except a labelled tamper demo), behind a **live engine judges can query** (IBM Db2 + IBM Granite through LangChain), and every Db2 claim is **re-proved by one command against that same live database** ([30/30](docs/DB2_VERIFICATION.md)).
 
 - **Live demo:** https://debi910.github.io/aqi-truth/ (calls the hosted Db2 + Granite server when it is up; otherwise shows a clearly labelled export of the same run)
 - **Demo video:** https://youtu.be/sq1AwgmbHcQ (2:59, captions included)
@@ -13,20 +15,20 @@ _CI runs in the source repo [debi910/aqi-truth](https://github.com/debi910/aqi-t
 ![Verdict card: a plain average shows 175, Db2 says no AQI is computable](docs/screenshots/verdict.png)
 
 ### Judge quick-start (5 minutes)
-1. **Open the live demo:** https://debi910.github.io/aqi-truth/ . The engine is live from 10 Nov 2:30 PM IST to 11 Nov 10 AM IST (green "Live" pill). Outside that window the page says it is showing a recorded export.
+1. **Open the live demo:** https://debi910.github.io/aqi-truth/ . The engine is live until 11 Nov 6 PM IST and again on 12 Nov (green "Live" pill). Outside that window the page says it is showing a recorded export.
 2. **Pick a day Db2 refused.** Choose *CRRI Mathura Road*, then 20 Oct 2025 (Diwali) on its strip. A plain average prints 500 (Severe). Db2 says no AQI is computable, and the hour-by-hour grid shows why. Open the **Receipt** tab and press **Try to tamper**: Db2 replays its own history, catches the edit, then rolls it back.
 3. **Ask three questions in the box** (Granite writes one SQL query, code checks it, Db2 runs it as a read-only user that sees two views):
    - *How many station-days were suspect in December 2025?* (name the year: the data now also covers Oct–Nov 2026)
    - *Which 5 stations had the most days with no computable AQI?*
    - *Delete all verdicts*: refused before it reaches Db2. Even if it got through, the read-only user and the append-only triggers stop it.
-4. **Check every Db2 claim with one command:** `python scripts/db2_evidence.py`. It runs 27 checks as real SQL against the database and writes [`docs/DB2_VERIFICATION.md`](docs/DB2_VERIFICATION.md). The checks cover temporal `AS OF`, append-only triggers, RCAC, the column mask, MQT query rewrite and partition elimination.
+4. **Check every Db2 claim with one command:** `python scripts/db2_evidence.py`. It runs 30 checks as real SQL against the database and writes [`docs/DB2_VERIFICATION.md`](docs/DB2_VERIFICATION.md) (30/30 on the live database, 11 Nov). The checks cover system-time `AS OF` and business-time rule versions (bitemporal), append-only triggers, RCAC, the column mask, MQT query rewrite, partition elimination, and Db2's own package-cache metrics and executed-section plan for question-box queries.
 5. **Real revisions, honestly:** we re-fetched 1 Oct to 6 Nov 2026 on 10 Nov and `MERGE`d it over the 8–9 Nov copy. **0 of 963,043 overlapping readings had changed**, so no receipt reports a real revision yet. The system-time history is in place to record one when CPCB revises a value. Until then, the tamper demo is a clearly labelled injected edit.
 6. **Video (2:59):** https://youtu.be/sq1AwgmbHcQ
 
 ### For judges: where to look
 | Criterion | Where to look |
 |---|---|
-| **Db2 integration & depth (30)** | [`docs/DB2_VERIFICATION.md`](docs/DB2_VERIFICATION.md): one command (`python scripts/db2_evidence.py`) runs every Db2 claim against the live database and records what Db2 answered (27 checks: temporal `AS OF`, trigger `75001`, `42501` for both restricted IDs, row permission, column mask, query timeout, partition elimination, MQT query rewrite, receipts). SQL: [`sql/`](sql) (SQL PL procedures, window functions, temporal + partitioned `READING`, `MERGE`, `VECTOR`, RCAC). |
+| **Db2 integration & depth (30)** | [`docs/DB2_VERIFICATION.md`](docs/DB2_VERIFICATION.md): one command (`python scripts/db2_evidence.py`) runs every Db2 claim against the live database and records what Db2 answered (30 checks: system-time `AS OF`, business-time rule versions (`PERIOD BUSINESS_TIME`, `WITHOUT OVERLAPS`, `FOR PORTION OF`), `MON_GET_PKG_CACHE_STMT` metrics, `EXPLAIN_FROM_SECTION`, trigger `75001`, `42501` for both restricted IDs, row permission, column mask, query timeout, partition elimination, MQT query rewrite, receipts). SQL: [`sql/`](sql) (SQL PL procedures, window functions, temporal + partitioned `READING`, `MERGE`, `VECTOR`, RCAC). |
 | **Innovation & impact (25)** | [Results on real data](#results-on-real-data): Db2 refuses an AQI on station-days where a plain average still prints one. Every verdict carries a hash-chained receipt that Db2 can replay from its own history; on the [live demo](https://debi910.github.io/aqi-truth/), open a day's Receipt tab and press "Try to tamper". |
 | **Architecture & AI (20)** | [architecture.md](architecture.md); [AI / LLM Architecture](#ai--llm-architecture): Granite explains and writes SQL, code checks both, Db2 decides. |
 | **Reproducibility & code (15)** | `docker compose up` ([Setup](#setup--installation)); 50 [tests](tests) against a real Db2, run by [CI](https://github.com/debi910/aqi-truth/actions/workflows/ci.yml) on every push in a fresh IBM Db2 Community container loaded from `data/sample` (no secrets, never the live database); [eval/](eval) with results files. |
@@ -242,7 +244,7 @@ cp .env.example .env
 ```bash
 pip install -r requirements.txt
 set -a; . ./.env; set +a; export DB2_HOST=localhost OLLAMA_URL=http://localhost:11434
-pytest tests/                      # 57 tests; the Db2 ones skip if DB2_PASSWORD is unset
+pytest tests/                      # 61 tests; the Db2 ones skip if DB2_PASSWORD is unset
 python eval/fault_injection.py     # rebuilds schema AQE and plants 198 faults
 python eval/ask_eval.py            # 20 gold questions + 8 attack prompts
 python scripts/db2_evidence.py     # proves the Db2 claims on the live database, writes docs/DB2_VERIFICATION.md

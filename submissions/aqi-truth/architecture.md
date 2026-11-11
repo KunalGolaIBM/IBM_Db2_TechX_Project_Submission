@@ -62,6 +62,8 @@ flowchart LR
 | Append-only question log | `AQ.ASK_LOG` | Every natural-language request is on record; identical questions reuse checked SQL so a CPU-only model stays usable |
 | Column mask + `ACTIVATE COLUMN ACCESS CONTROL` | `AQ.ASK_LOG.QUESTION` | E-mail addresses and phone numbers that visitors type are redacted for every ID except the auditor role; the stored text is unchanged |
 | Materialized query table (`REFRESH DEFERRED`, `ENABLE QUERY OPTIMIZATION`) | `AQ.MQT_READING_DAY` | Station-pollutant-day counts; with `CURRENT REFRESH AGE ANY` the optimizer answers queries on `AQ.READING` from it (EXPLAIN cost 95 vs 46,216) |
+| Application-period temporal table (`PERIOD BUSINESS_TIME`, `WITHOUT OVERLAPS`, `FOR PORTION OF`) | `AQ.RULE_VERSION` | Each CPCB rule setting with the days it applies to; `FOR BUSINESS_TIME AS OF <day>` gives the rule for that day and Db2 refuses overlapping versions. With system-time `READING`, the audit is bitemporal |
+| `MON_GET_PKG_CACHE_STMT`, `EXPLAIN_FROM_SECTION` | `scripts/db2_evidence.py` | Db2's own record of what a question-box query cost as `AQREADER` (executions, rows read, CPU) and the plan it actually ran |
 
 ## Runtime
 

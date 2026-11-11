@@ -49,8 +49,24 @@ if [ -f data/.full_loaded ] && [ ! -f data/.backup_1110 ]; then
     | tee -a data/backup.log | grep -q "Backup successful" && touch data/.backup_1110
   [ -f data/.backup_1110 ] || { echo "BACKUP FAILED: not applying the 10 Nov changes"; touch data/.no_changes; }
 fi
+# 11 Nov 2026 (Debi approved): back up once more before the add-only business-time table (sql/10, undo sql/10_undo.sql).
+# force is asynchronous, so wait before deactivating, and retry: the first 10 Nov attempt failed with SQL1035N.
+if [ -f data/.full_loaded ] && [ ! -f data/.backup_1111 ] && [ ! -f data/.no_changes_1111 ]; then
+  docker compose stop app >/dev/null 2>&1 || true
+  for t in 1 2 3; do
+    docker compose exec -T db2 bash -c 'su - db2inst1 -c "db2 force applications all >/dev/null; sleep 5; db2 deactivate db ${DBNAME:-AQIDB} >/dev/null; db2 backup db ${DBNAME:-AQIDB} to /database/backup compress without prompting"' \
+      | tee -a data/backup.log | grep -q "Backup successful" && { touch data/.backup_1111; break; }
+    sleep 10
+  done
+  [ -f data/.backup_1111 ] || { echo "BACKUP FAILED: not applying the 11 Nov change"; touch data/.no_changes_1111; }
+fi
 until docker compose up -d --build; do echo "compose up failed; retrying in 30 s"; sleep 30; done
 until [ "$(docker compose ps -a setup --format '{{.State}}')" = "exited" ]; do sleep 15; done
+# 11 Nov: add AQ.RULE_VERSION (business time) only after its backup, and only before 07:00 UTC (12:30 PM IST).
+if [ -f data/.backup_1111 ] && [ ! -f data/.m10 ] && [ "$(date -u +%FT%H%M)" \< "2026-11-11T0700" ]; then
+  docker compose run --rm setup python -c "import sys; sys.path.insert(0, 'src'); from db import connect; from load import run_tolerant; print('sql/10 statements:', run_tolerant(connect(autocommit=False), '10_rule_version.sql', None))" \
+    && touch data/.m10
+fi
 # Schema migrations (new triggers, indexes, views, grants) without touching loaded data.
 # 10 Nov rule: sql/09 is applied only after the backup above and only before 05:30 UTC; once applied, re-runs are no-ops.
 CUTOFF_OK=$([ "$(date -u +%FT%H%M)" \< "2026-11-10T0530" ] && echo 1 || echo 0)

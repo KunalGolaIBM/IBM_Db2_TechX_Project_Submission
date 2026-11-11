@@ -39,6 +39,8 @@
       "RUNSTATS via SYSPROC.ADMIN_CMD",
       "EXPLAIN (partition elimination evidence)",
       "Materialized query table (REFRESH DEFERRED) with optimizer query rewrite",
+      "Application-period temporal table (PERIOD BUSINESS_TIME, WITHOUT OVERLAPS, FOR PORTION OF): bitemporal with the system-time READING table",
+      "Db2 monitoring (MON_GET_PKG_CACHE_STMT) and EXPLAIN_FROM_SECTION for question-box queries",
       "Hash-chained SHA-256 receipts verified from system-time history (SQL PL)"
     ]
   },

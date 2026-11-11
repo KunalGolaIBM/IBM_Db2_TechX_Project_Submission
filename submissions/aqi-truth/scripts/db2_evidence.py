@@ -193,6 +193,67 @@ SELECT VALUE FROM AQV.READING FOR SYSTEM_TIME AS OF <time before the update> WHE
           lambda: f"AQAPP sees: {masked(app)} | owner sees: {masked(own)}",
           lambda o: "AQAPP sees: Email me at [e-mail removed] or call [number removed]" in o and ("owner sees: " + probe) in o)
 
+    # 9b. Business time: the CPCB rule versions by the days they apply to (sql/10_rule_version.sql).
+    def business():
+        cur = own.cursor()
+        try:
+            same = rows(own, "SELECT COUNT(*) FROM AQ.SETTING S JOIN AQ.RULE_VERSION FOR BUSINESS_TIME AS OF CURRENT DATE R "
+                             "ON R.NAME = S.NAME AND R.NUM_VALUE = S.NUM_VALUE")[0][0]
+            total = rows(own, "SELECT COUNT(*) FROM AQ.SETTING")[0][0]
+            # A hypothetical rule change from 1 Jan 2027, written the way a real one would be, then rolled back.
+            cur.execute("UPDATE AQ.RULE_VERSION FOR PORTION OF BUSINESS_TIME FROM '2027-01-01' TO '9999-12-31' "
+                        "SET NUM_VALUE = 18 WHERE NAME = 'MIN_HOURS_24H'")
+            split = rows(own, "SELECT COUNT(*) FROM AQ.RULE_VERSION WHERE NAME = 'MIN_HOURS_24H'")[0][0]
+            then = rows(own, "SELECT NUM_VALUE FROM AQ.RULE_VERSION FOR BUSINESS_TIME AS OF '2025-10-23' WHERE NAME = 'MIN_HOURS_24H'")[0][0]
+            later = rows(own, "SELECT NUM_VALUE FROM AQ.RULE_VERSION FOR BUSINESS_TIME AS OF '2027-03-01' WHERE NAME = 'MIN_HOURS_24H'")[0][0]
+            try:
+                cur.execute("INSERT INTO AQ.RULE_VERSION (NAME, NUM_VALUE, NOTE, SOURCE, EFF_FROM, EFF_TO) "
+                            "VALUES ('MIN_HOURS_24H', 12, 'overlap test', 'test', '2026-06-01', '2027-06-01')")
+                overlap = "overlapping version accepted"
+            except Exception as e:
+                overlap = err(e)
+        finally:
+            own.rollback()
+        return (f"{same} of {total} settings the audit reads match the version in force today. Hypothetical change from 2027 "
+                f"(rolled back): {split} versions; AS OF 2025-10-23 gives {then:g} hours, AS OF 2027-03-01 gives {later:g}; "
+                f"an overlapping version is refused: {overlap}")
+    check("Business time (rule versions)", "AQ.RULE_VERSION keeps each CPCB rule setting with PERIOD BUSINESS_TIME (the days it applies to) "
+          "and BUSINESS_TIME WITHOUT OVERLAPS. FOR PORTION OF splits a version, AS OF picks the rule for a given day, and Db2 refuses overlaps.",
+          "UPDATE AQ.RULE_VERSION FOR PORTION OF BUSINESS_TIME FROM '2027-01-01' TO '9999-12-31' SET NUM_VALUE = 18 WHERE NAME = 'MIN_HOURS_24H';\n"
+          "SELECT NUM_VALUE FROM AQ.RULE_VERSION FOR BUSINESS_TIME AS OF '2025-10-23' WHERE NAME = 'MIN_HOURS_24H';   -- then rolled back",
+          business, lambda o: re.match(r"(\d+) of \1 settings", o) and "2 versions; AS OF 2025-10-23 gives 16 hours, AS OF 2027-03-01 gives 18" in o
+          and "SQLSTATE=23505" in o)
+
+    # 10. Db2's own monitoring: what the question box's queries actually cost, and the plan of the compiled section.
+    qb = "SELECT STATUS, COUNT(*) AS DAYS FROM AQ.V_DAY GROUP BY STATUS"
+    pkg = ("SELECT NUM_EXECUTIONS, ROWS_READ, ROWS_RETURNED, TOTAL_CPU_TIME, STMT_EXEC_TIME, EXECUTABLE_ID "
+           "FROM TABLE(MON_GET_PKG_CACHE_STMT('D', NULL, NULL, -2)) WHERE STMT_TEXT LIKE ? ORDER BY NUM_EXECUTIONS DESC FETCH FIRST 1 ROW ONLY")
+    def monitor():
+        for _ in range(2): ask.run(qb, rd)      # as AQREADER, through the same checks the question box uses
+        n, rr, ret, cpu, ms, _ = rows(own, pkg, (qb + "%",))[0]; own.commit()
+        top = rows(own, "SELECT COUNT(*), SUM(NUM_EXECUTIONS) FROM TABLE(MON_GET_PKG_CACHE_STMT('D', NULL, NULL, -2)) "
+                        "WHERE STMT_TEXT LIKE '%AQ.V_DAY%' OR STMT_TEXT LIKE '%AQ.V_CHECK%'")[0]; own.commit()
+        return (f"package cache: this statement ran {n} times as AQREADER, read {rr:,} rows, returned {ret}, "
+                f"CPU {cpu:,} us, execution {ms} ms in total. Question-box statements in the cache now: {top[0]} ({top[1] or 0} executions)")
+    check("Db2 monitoring of question-box queries", "Db2's own package-cache metrics (MON_GET_PKG_CACHE_STMT) record what each "
+          "question-box query cost when it ran as the read-only ID: executions, rows read, CPU and time.",
+          "SELECT NUM_EXECUTIONS, ROWS_READ, ROWS_RETURNED, TOTAL_CPU_TIME, STMT_EXEC_TIME FROM TABLE(MON_GET_PKG_CACHE_STMT('D', NULL, NULL, -2))\n"
+          "WHERE STMT_TEXT LIKE 'SELECT STATUS, COUNT(*) AS DAYS FROM AQ.V_DAY%'   -- after running it twice as AQREADER",
+          monitor, lambda o: re.search(r"ran [1-9]\d* times as AQREADER, read [\d,]+ rows", o))
+    def section():
+        eid = rows(own, pkg, (qb + "%",))[0][5]
+        cur = own.cursor(); cur.execute("DELETE FROM EXPLAIN_INSTANCE"); own.commit()
+        cur.callproc("EXPLAIN_FROM_SECTION", (eid, "M", None, 0, None, "", "2000-01-01-00.00.00.000000", "", "", "")); own.commit()
+        ops = rows(own, "SELECT RTRIM(OPERATOR_TYPE), INTEGER(TOTAL_COST) FROM EXPLAIN_OPERATOR ORDER BY OPERATOR_ID")
+        tabs = sorted(r[0] for r in rows(own, "SELECT DISTINCT RTRIM(OBJECT_NAME) FROM EXPLAIN_STREAM WHERE OBJECT_SCHEMA = 'AQ' AND OBJECT_NAME IS NOT NULL"))
+        own.commit()
+        return (f"plan of the section Db2 actually ran: {' > '.join(o for o, _ in ops)} (cost {ops[0][1]:,} timerons); "
+                f"the view resolves to base tables {', '.join(tabs)}")
+    check("Access plan from the executed section", "EXPLAIN_FROM_SECTION rebuilds the access plan from the compiled section in the "
+          "package cache, so it is the plan Db2 really used for the question-box query, not a fresh estimate.",
+          "CALL EXPLAIN_FROM_SECTION(<EXECUTABLE_ID from MON_GET_PKG_CACHE_STMT>, 'M', NULL, 0, NULL, ?, ?, ?, ?, ?)",
+          section, lambda o: o.startswith("plan of the section Db2 actually ran: RETURN") and "VERDICT" in o)
+
     check("Optimizer statistics", "The loader runs RUNSTATS through SYSPROC.ADMIN_CMD after each load.",
           "SELECT TABNAME, STATS_TIME, CARD FROM SYSCAT.TABLES WHERE TABSCHEMA = 'AQ' AND TABNAME IN ('READING', 'VERDICT')",
           lambda: "; ".join(f"{t.strip()}: {c} rows, stats {s}" for t, s, c in rows(own, "SELECT TABNAME, STATS_TIME, CARD FROM SYSCAT.TABLES WHERE TABSCHEMA = 'AQ' AND TABNAME IN ('READING', 'VERDICT') ORDER BY 1")),
