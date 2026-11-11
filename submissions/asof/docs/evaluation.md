@@ -17,7 +17,21 @@ Routing and policy intake have evaluations of their own: [routing_eval.md](routi
 
 **The headline banner** on the console's Playground and the customer chat page shows two results, each read from the files in [eval/](eval/) by [headline.py](../src/asof/headline.py) and served by `/healthz`: the frozen-split total over the newest run of each split whose case file matches its pinned SHA-256 (no file is named), and the unseen railway policy's first run, AsOf against the plain LLM judge ([unseen results](eval/unseen-results.md)). A number whose files are missing is left out. An installed package has no `docs/` folder and reads the copy in `src/asof/data/headline.json`; after a new run, `python -m asof.headline` regenerates it, and `tests/test_headline.py` fails until it matches the files, the README's Safety row and the unseen report.
 
-**Latest run** (Tue 10 Nov, OpenRouter `google/gemini-3.1-flash-lite`, all nine frozen splits, at `1df152e`). Re-run because two changes reached the check: Db2 now refuses to record a release the policy in force does not back ([release-rules.md](release-rules.md)), and the rule checker reads "48 h" and "7 calendar days" as durations (made for the unseen railway domain before any of its cases was read; no frozen case uses either form). 0 of 121 wrong drafts released; 1 of 70 correct drafts stopped: T24, a correct change-fee answer on a version boundary that the check rewrote from the clause instead of releasing as written. L10, held in every earlier run, was released this time.
+**Latest run** (Tue 10 Nov, evening, OpenRouter `google/gemini-3.1-flash-lite`, all nine frozen splits, at `f352adf`). Re-run because the rule check gained fare-table band edges for the unseen railway domain (a post-hoc change; it applies only to clauses whose `RULE_JSON` holds `time_bands`, and no airline or bank clause does). **1 of 121 wrong drafts released**: SU07 in `situation-test2` (not blind), whose draft calls a wire to Canada domestic and quotes the true $30 domestic fee. This run the premise check did not flag the conflict with the question, and the one claim extracted ("the domestic wire fee is $30") is supported, so it passed; every earlier run corrected it. Nothing in the band change touches that path, so this is the model's run-to-run variation in premise detection, reported as it came out and not tuned away. 4 of 70 correct drafts stopped (T24 again, two in `escalation-test`, one in `list-test`). The five blind splits: 0 of 65 released.
+
+| Frozen split | Cases | False allow | False block | Safe | Ideal | Citation | p50 |
+|---|---|---|---|---|---|---|---|
+| Airline `test` | 40 | **0 of 26** | 1 of 14 | 97.5% | 97.5% | 100% | 5.8 s |
+| Bank `bank-test` (not blind) | 26 | **0 of 16** | 0 of 10 | 100% | 100% | 100% | 5.5 s |
+| Bank `bank-test2` | 22 | **0 of 14** | 0 of 8 | 100% | 100% | 100% | 5.8 s |
+| `escalation-test` | 33 | **0 of 22** | 2 of 11 | 93.9% | 90.9% | 100% | 6.1 s |
+| `extractor-test` | 10 | **0 of 8** | 0 of 2 | 100% | 100% | 100% | 6.0 s |
+| `situation-test` | 12 | **0 of 7** | 0 of 5 | 100% | 75% | 75% | 5.9 s |
+| `situation-test2` | 12 | **1 of 7** | 0 of 5 | 91.7% | 75% | 83.3% | 4.5 s |
+| `situation-test3` | 20 | **0 of 12** | 0 of 8 | 100% | 90% | 95% | 5.8 s |
+| `list-test` | 16 | **0 of 9** | 1 of 7 | 93.8% | 87.5% | 100% | 6.0 s |
+
+**The run before** (Tue 10 Nov, afternoon, OpenRouter `google/gemini-3.1-flash-lite`, all nine frozen splits, at `1df152e`). Re-run because two changes reached the check: Db2 now refuses to record a release the policy in force does not back ([release-rules.md](release-rules.md)), and the rule checker reads "48 h" and "7 calendar days" as durations (made for the unseen railway domain before any of its cases was read; no frozen case uses either form). 0 of 121 wrong drafts released; 1 of 70 correct drafts stopped: T24, a correct change-fee answer on a version boundary that the check rewrote from the clause instead of releasing as written. L10, held in every earlier run, was released this time.
 
 | Frozen split | Cases | False allow | False block | Safe | Ideal | Citation | p50 |
 |---|---|---|---|---|---|---|---|
