@@ -40,5 +40,60 @@ class TestLiveDb2(unittest.TestCase):
         self.assertNotEqual(res.gate.status.value, "BLOCKED")
 
 
+@unittest.skipUnless(os.getenv("SHIPSAFE_DB2_INTEGRATION") == "1", "set SHIPSAFE_DB2_INTEGRATION=1 to run against live Db2")
+class TestLiveApi(unittest.TestCase):
+    """The HTTP API end to end on IBM Db2: pool, auth, scan job, audit trail, vector search."""
+
+    @classmethod
+    def setUpClass(cls):
+        import time as _time
+
+        from fastapi.testclient import TestClient
+
+        from shipsafe.api import create_app
+        from shipsafe.config import ShipSafeConfig
+        from shipsafe.db2.pool import ConnectionPool
+        from shipsafe.security import issue_token
+
+        cls.time = _time
+        cfg = ShipSafeConfig.load()
+        cfg.allowed_roots, cfg.pip_audit = [str(FIXTURES)], "off"
+        cls.pool = ConnectionPool(cfg.db2, size=2)
+        cls.tid, tok, digest = issue_token()
+        with cls.pool.repository() as repo:
+            repo.create_token(cls.tid, "integration-test", "admin", digest)
+        cls.client = TestClient(create_app(cfg, cls.pool))
+        cls.h = {"Authorization": f"Bearer {tok}"}
+
+    @classmethod
+    def tearDownClass(cls):
+        with cls.pool.repository() as repo:
+            repo.revoke_token(cls.tid)
+
+    def test_ready_reports_db2_and_vectors(self):
+        body = self.client.get("/api/ready").json()
+        self.assertEqual(body["db2"]["engine"], "IBM Db2")
+        self.assertGreater(body["db2"]["policy_chunks"], 0)
+
+    def test_scan_persists_and_is_audited(self):
+        job = self.client.post("/api/scans", json={"target": "vulnerable_project"}, headers=self.h).json()
+        for _ in range(300):
+            job = self.client.get(f"/api/scans/{job['job_id']}", headers=self.h).json()
+            if job["status"] in ("done", "failed"):
+                break
+            self.time.sleep(0.1)
+        self.assertEqual(job["status"], "done", job.get("error"))
+        self.assertTrue(job["persisted"])
+        detail = self.client.get(f"/api/assessments/{job['assessment_id']}", headers=self.h).json()
+        cited = [f for f in detail["findings"] if (f["EVIDENCE"] or {}).get("policy")]
+        self.assertEqual(len(cited), len(detail["findings"]))  # every finding carries a Db2-retrieved policy
+        actions = {e["ACTION"] for e in self.client.get("/api/audit", headers=self.h).json()["items"]}
+        self.assertTrue({"scan.requested", "scan.completed"} <= actions)
+
+    def test_policy_search(self):
+        r = self.client.post("/api/policies/search", json={"query": "where do I keep the Db2 password"}, headers=self.h)
+        self.assertEqual(r.json()["results"][0]["doc_id"], "POL-SEC-002")
+
+
 if __name__ == "__main__":
     unittest.main()

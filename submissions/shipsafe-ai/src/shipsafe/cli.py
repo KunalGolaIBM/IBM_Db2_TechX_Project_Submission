@@ -46,9 +46,90 @@ def cmd_doctor(args) -> int:
 
 
 def cmd_init_db(args) -> int:
+    """Create the schema. Uses DB2_ADMIN_USERNAME / DB2_ADMIN_PASSWORD when set, so the
+    runtime user can be a least-privilege account (see docs/db2-least-privilege.sql)."""
+    import os
+
+    from .config import Db2Config
+    from .db2 import Db2Repository
+
+    config = ShipSafeConfig.load()
+    db2 = Db2Config.from_env("DB2_ADMIN_") if os.getenv("DB2_ADMIN_PASSWORD") else config.db2
+    repo = Db2Repository(db2, backend=config.backend, init_schema=False)
+    created = repo.initialize_schema()
+    print(f"Schema {repo.schema} ready as {db2.username}. Newly created: {', '.join(created) or 'none (already present)'}")
+    return 0
+
+
+def cmd_serve(args) -> int:
+    import uvicorn
+
+    from .api import create_app
+    from .db2.pool import ConnectionPool
+    from .logging_setup import configure_logging
+
+    config = ShipSafeConfig.load()
+    if args.host:
+        config.api_host = args.host
+    if args.port:
+        config.api_port = args.port
+    problems = config.validate()
+    if problems:
+        print("Configuration errors:\n  - " + "\n  - ".join(problems))
+        return 2
+    configure_logging(config.log_format, config.log_level)
+
+    pool = ConnectionPool(config.db2, backend=config.backend, size=config.pool_size)
+    try:
+        with pool.repository() as repo:
+            st = repo.check_connection()
+            print(f"[OK] {st['engine']} {st.get('version', '')} · schema {st.get('schema', '-')} · {st['latency_ms']} ms")
+            if repo.is_db2:
+                from .knowledge import PolicyKnowledgeBase
+
+                PolicyKnowledgeBase(repo, config.embedding_provider, config.embedding_dimension).ensure_ingested(config.policies_dir)
+            if config.auth_enabled and repo.count_active_admins() == 0:
+                from .security import issue_token
+
+                token_id, token, digest = issue_token()
+                repo.create_token(token_id, "bootstrap-admin", "admin", digest)
+                repo.audit("system", "token.bootstrap", "success", role="admin", target=token_id)
+                print("\n" + LINE + "\nFirst start: an admin API token was created. It is shown ONCE:\n\n"
+                      f"    {token}\n\nPaste it into the web UI sign-in. Create more with: shipsafe token create\n" + LINE + "\n")
+    except Exception as exc:
+        print(f"[WARN] IBM Db2 not reachable yet ({exc}). The UI will start in degraded mode and reconnect automatically.")
+    print(f"ShipSafe AI web UI: http://{config.api_host}:{config.api_port}  (API docs: /api/docs)")
+    uvicorn.run(create_app(config, pool), host=config.api_host, port=config.api_port,
+                log_level=config.log_level.lower(), access_log=False, proxy_headers=True)
+    return 0
+
+
+def cmd_token(args) -> int:
+    from .security import issue_token
+
     rt = build_runtime(with_knowledge=False)
-    created = rt.repository.initialize_schema()
-    print(f"Schema {rt.repository.schema} ready. Newly created: {', '.join(created) or 'none (already present)'}")
+    repo = rt.repository
+    if args.token_cmd == "create":
+        token_id, token, digest = issue_token()
+        repo.create_token(token_id, args.name, args.role, digest)
+        repo.audit("cli", "token.created", "success", role="admin", target=token_id, detail=f"name={args.name} role={args.role}")
+        print(f"Created {args.role} token {token_id} ({args.name}). Shown once:\n\n    {token}\n")
+    elif args.token_cmd == "list":
+        for t in repo.list_tokens():
+            state = "revoked" if int(t["REVOKED"]) else "active"
+            print(f"  {t['TOKEN_ID']:<18} {t['ROLE']:<9} {state:<8} {t['NAME']}")
+    elif args.token_cmd == "revoke":
+        ok = repo.revoke_token(args.token_id)
+        repo.audit("cli", "token.revoked", "success" if ok else "error", target=args.token_id)
+        print("Revoked." if ok else "Token not found.")
+        return 0 if ok else 1
+    return 0
+
+
+def cmd_audit(args) -> int:
+    rt = build_runtime(with_knowledge=False)
+    for e in rt.repository.list_audit(limit=args.limit):
+        print(f"{_ts(e['TS'])}  {e['OUTCOME']:<8} {e['ACTION']:<20} {e['ACTOR']:<18} {e.get('TARGET') or ''}")
     return 0
 
 
@@ -100,11 +181,13 @@ def cmd_scan(args) -> int:
             if policy:
                 print(f"     policy: {policy}")
     if result.persisted:
-        print(f"\nPersisted to IBM Db2: PROJECTS, ASSESSMENTS, TOOL_RUNS, FINDINGS, DEPENDENCIES")
+        print("\nPersisted to IBM Db2 in one transaction: PROJECTS, ASSESSMENTS, TOOL_RUNS, FINDINGS, DEPENDENCIES")
+    for w in result.warnings:
+        print(f"[WARN] {w}")
     if args.output:
         out = Path(args.output)
-        out.write_text(ReportGenerator.to_json(result) if args.format == "json" else ReportGenerator.to_markdown(result),
-                       encoding="utf-8")
+        render = {"json": ReportGenerator.to_json, "sarif": ReportGenerator.to_sarif}.get(args.format, ReportGenerator.to_markdown)
+        out.write_text(render(result), encoding="utf-8")
         print(f"Report written to {out.resolve()}")
     return 1 if gate.status.value == "BLOCKED" else 0
 
@@ -181,7 +264,7 @@ def main() -> None:
     p.add_argument("--target", default=".")
     p.add_argument("--profile", choices=["quick", "pre-pr", "deep"], default="pre-pr")
     p.add_argument("--output")
-    p.add_argument("--format", choices=["markdown", "json"], default="markdown")
+    p.add_argument("--format", choices=["markdown", "json", "sarif"], default="markdown")
 
     p_asm = sub.add_parser("assessment", help="Inspect stored assessments")
     asm_sub = p_asm.add_subparsers(dest="asm_cmd")
@@ -190,6 +273,22 @@ def main() -> None:
     p = asm_sub.add_parser("compare")
     p.add_argument("previous_id")
     p.add_argument("current_id")
+
+    p = sub.add_parser("serve", help="Start the web UI + REST API")
+    p.add_argument("--host")
+    p.add_argument("--port", type=int)
+
+    p_t = sub.add_parser("token", help="Manage API tokens")
+    t_sub = p_t.add_subparsers(dest="token_cmd")
+    p = t_sub.add_parser("create")
+    p.add_argument("--name", required=True)
+    p.add_argument("--role", choices=["viewer", "operator", "admin"], default="viewer")
+    t_sub.add_parser("list")
+    p = t_sub.add_parser("revoke")
+    p.add_argument("token_id")
+
+    p = sub.add_parser("audit", help="Show the Db2 audit log")
+    p.add_argument("--limit", type=int, default=30)
 
     p = sub.add_parser("history", help="Risk trend and severity analytics from Db2")
     p.add_argument("--limit", type=int, default=10)
@@ -203,7 +302,7 @@ def main() -> None:
     args = parser.parse_args()
     handlers = {
         "doctor": cmd_doctor, "init-db": cmd_init_db, "ingest": cmd_ingest, "discover": cmd_discover,
-        "scan": cmd_scan, "history": cmd_history,
+        "scan": cmd_scan, "history": cmd_history, "serve": cmd_serve, "token": cmd_token, "audit": cmd_audit,
     }
     if args.command in handlers:
         sys.exit(handlers[args.command](args))

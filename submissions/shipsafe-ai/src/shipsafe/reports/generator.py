@@ -12,7 +12,14 @@ class ReportGenerator:
     @staticmethod
     def to_json(result: AssessmentResult, indent: int = 2) -> str:
         """Serializes complete assessment bundle into standard JSON format."""
-        return json.dumps(result.to_dict(), indent=indent)
+        return json.dumps(result.to_dict(), indent=indent, default=str)
+
+    @staticmethod
+    def to_sarif(result: AssessmentResult) -> str:
+        """SARIF 2.1.0 for GitHub code scanning and other SARIF viewers."""
+        return json.dumps(sarif_document(result.assessment.assessment_id,
+                                         [f.to_dict() for f in result.findings]), indent=2)
+
 
     @staticmethod
     def to_markdown(result: AssessmentResult) -> str:
@@ -134,3 +141,46 @@ class ReportGenerator:
         ])
 
         return "\n".join(lines)
+
+
+SARIF_LEVEL = {"critical": "error", "high": "error", "medium": "warning", "low": "note", "info": "note"}
+SARIF_SCORE = {"critical": "9.5", "high": "7.5", "medium": "5.0", "low": "2.0", "info": "0.0"}
+
+
+def sarif_document(assessment_id: str, findings: list) -> Dict[str, Any]:
+    """Build a SARIF 2.1.0 log from finding dicts (engine objects or Db2 rows)."""
+    def g(f, key):
+        return f.get(key, f.get(key.upper()))
+
+    rules: Dict[str, Dict[str, Any]] = {}
+    results = []
+    for f in findings:
+        rule_id, sev = g(f, "rule_id"), (g(f, "severity") or "info").lower()
+        rules.setdefault(rule_id, {
+            "id": rule_id,
+            "name": rule_id,
+            "shortDescription": {"text": (g(f, "title") or rule_id)[:200]},
+            "help": {"text": g(f, "remediation") or "See ShipSafe report."},
+            "properties": {"security-severity": SARIF_SCORE.get(sev, "0.0"), "tags": ["security", g(f, "category")]},
+        })
+        res = {
+            "ruleId": rule_id,
+            "level": SARIF_LEVEL.get(sev, "note"),
+            "message": {"text": f"{g(f, 'title')}. {g(f, 'description') or ''}".strip()[:1000]},
+            "partialFingerprints": {"shipsafe/v1": g(f, "fingerprint")},
+            "properties": {"severity": sev, "confidence": g(f, "confidence"), "category": g(f, "category")},
+        }
+        if g(f, "file_path"):
+            region = {"startLine": int(g(f, "line_start") or 1)}
+            res["locations"] = [{"physicalLocation": {"artifactLocation": {"uri": g(f, "file_path")}, "region": region}}]
+        results.append(res)
+    return {
+        "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+        "version": "2.1.0",
+        "runs": [{
+            "tool": {"driver": {"name": "ShipSafe AI", "informationUri": "https://github.com/ddevSharma/IBM_Db2_TechX_Project_Submission",
+                                "version": "2.0.0", "rules": list(rules.values())}},
+            "automationDetails": {"id": f"shipsafe/{assessment_id}"},
+            "results": results,
+        }],
+    }
