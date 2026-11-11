@@ -113,6 +113,17 @@ main:focus, main:focus-visible { outline: none; }
   .status .tag.db2 { padding: 6px; }
 }
 @media (max-width: 1300px) { .tabs a { padding: 0 9px; } .brand { padding-right: 16px; } }
+/* The nav never runs under the status tags: the status keeps its width, the tabs take what is left and scroll sideways
+   only if they still do not fit. Below 1600 px the model tag is truncated (its full text stays in the tooltip). */
+.status { flex: none; }
+.tabs { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.status .tag:not(.db2) { display: inline-block; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+@media (max-width: 1599px) { .status .tag:not(.db2) { max-width: 150px; } }
+@media (max-width: 1299px) { .status .tag:not(.db2) { max-width: 118px; } }
+@media (max-width: 1199px) { .tabs a { padding: 0 8px; font-size: 13px; } .status { padding: 0 10px; } .status .tag:not(.db2) { max-width: 92px; } }
+@media (max-width: 1099px) { .tabs a { padding: 0 6px; } .brand { padding-right: 10px; } .status .tag:not(.db2) { max-width: 78px; } }
+@media (max-width: 720px) { .status .tag:not(.db2) { display: none; } .brand { padding-right: 10px; } }
 
 main { max-width: 1440px; margin: 0 auto; padding: 32px 32px 48px; outline: none; }
 .foot { max-width: 1440px; margin: 0 auto; padding: 16px 32px 32px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); }
@@ -248,6 +259,12 @@ input[type="file"]::file-selector-button:hover { background: #0353e9; border-col
 .decision h2 { font-size: 20px; font-weight: 400; }
 .decision p { margin-top: 3px; color: var(--ink-2); }
 .decision .meta { margin-left: auto; text-align: right; font-size: 12px; color: var(--muted); white-space: nowrap; letter-spacing: .32px; }
+/* The heading column takes the card's free width (the pill and heading wrap together), and the meta wraps under it on
+   narrow cards instead of squeezing it. */
+.decision { flex-wrap: wrap; }
+.decision > div:not(.icon):not(.meta) { flex: 1 1 320px; min-width: 0; }
+.decision .row { flex-wrap: wrap; row-gap: 4px; }
+.decision .meta { flex: 0 1 auto; max-width: 100%; overflow-wrap: anywhere; }
 .decision.pass { background: var(--pass-bg); border-color: var(--pass-line); border-left-color: var(--pass); }
 .decision.pass .icon { background: var(--pass); color: #fff; }
 .decision.corrected { background: var(--fix-bg); border-color: var(--fix-line); border-left-color: var(--fix-line); }
