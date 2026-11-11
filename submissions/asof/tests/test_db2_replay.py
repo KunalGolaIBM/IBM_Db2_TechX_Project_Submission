@@ -116,6 +116,16 @@ def test_the_ask_the_ledger_examples_replay_their_sql_which_then_runs_live(repla
     assert [(q, r.status, r.sql) for q, r in got] == [(a["question"], a["status"], a["sql"]) for a in RECORDING.scenarios["ask"]]
 
 
+
+@pytest.mark.parametrize("scope", ["airline", "bank"])
+def test_the_ask_examples_replay_for_each_domain_scope_too(replayed, settings, scope):
+    """The public demo runs Ask the ledger in replay mode, so each domain scope (its own model input: the views as that
+    domain's analyst reads them) has its own recording; a scope without one would fail closed in front of a visitor."""
+    asker = LedgerAsker(replayed.llm, settings, replayed.schema)
+    got = [asker.ask(a["question"], scope=scope) for a in RECORDING.scenarios["ask"]]
+    assert [r.status for r in got] == ["ANSWERED"] * len(got)
+    assert {tuple(r.scope_applied or ()) for r in got} == {(asker.scope(scope).doc_ids[0],)}
+
 def test_every_preset_replays_the_change_impact_agent_in_recorded_order(replayed, settings, embeddings):
     presets, recorded = replay.load_scenarios()["presets"], RECORDING.scenarios["impact"]
     assert [p["label"] for p in presets] == [r["preset"] for r in recorded]

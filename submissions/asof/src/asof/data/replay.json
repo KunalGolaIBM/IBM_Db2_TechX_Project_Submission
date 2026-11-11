@@ -200,6 +200,13 @@
     ]
    }
   },
+  "1aab77776bcf4dac681642ac7ec8c42c34fc53e5260173684a8eaf80f77a7aea": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "Clause version BRV-002 v1 had the most contradicted claims with a count of 5."
+   }
+  },
   "1d617382c5bfcb8cdac8652d486df6d1e4d11eb3d68d616f4651b4df6dd34caf": {
    "kind": "tools",
    "name": "tools",
@@ -232,6 +239,13 @@
       "text": "The overdraft fee is $35 for each item we pay."
      }
     ]
+   }
+  },
+  "2474c2ae4f0549b375f516de5f93e8677bba3fef3d704545c76cf7fec9944028": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "The share of checks for March 2026 travel dates that were escalated is 0.0."
    }
   },
   "2926e1013fe2bcb0131e914873aa57d0ab6bd393fd72bb7165da2c81b519efc8": {
@@ -539,6 +553,13 @@
     "sql": "SELECT CAST(SUM(CASE WHEN decision = 'ESCALATED' THEN 1 ELSE 0 END) AS DOUBLE) / NULLIF(COUNT(*), 0) AS escalation_share FROM v_audit_decisions WHERE as_of_date >= DATE('2026-03-01') AND as_of_date <= DATE('2026-03-31')"
    }
   },
+  "498d60911d9f482736ff863a81dd7e3501bc32c733f5ee45c7a5fededd5814af": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "All three escalated decisions contain masked content for both the customer's question and the reply, so the specific details are not available."
+   }
+  },
   "4d6459ee5afdacb575032b0bb10316c1ee8fb93bda9468f6afb173d5e1b3a483": {
    "kind": "structured",
    "name": "RewriteResult",
@@ -762,6 +783,13 @@
    "name": "chat",
    "output": "Yes, your cat is welcome to fly in the cabin with you as long as the combined weight of your pet and carrier does not exceed 8 kg. The fee for bringing your pet on board is $100 each way. We look forward to having both of you on your next flight!"
   },
+  "5c11f689c188cab598f49d9dbbe612c7f090f510cd03513b1714e330e5b13367": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "For the demo channel, there were 5 CORRECTED decisions, 3 ESCALATED decisions, and 5 PASS decisions."
+   }
+  },
   "5cb74fa987acc953a4104af3039f09d026c4e65b4626583b4efdfe0c01bb98c0": {
    "kind": "tools",
    "name": "tools",
@@ -920,6 +948,13 @@
       "name": "search_policy"
      }
     ]
+   }
+  },
+  "672648efc49a78834ea8b5b60f3674a7d2541d6bbc498bfa2c214697f3895c5b": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "In the demo channel, there were 2 CORRECTED decisions, 1 ESCALATED decision, and 1 PASS decision."
    }
   },
   "6a0c0481acb30a2c81805794ae8da90478fc505eb18e3f1278511087e8a6343a": {
@@ -1558,6 +1593,13 @@
    "name": "chat",
    "output": "Yes, you can certainly transfer your ticket to a friend! We simply charge a $50 name change fee to process the update for you."
   },
+  "cd42ee140fc49e1da12ea767a9e7969714a1c52fff15fd457af6c35adb227566": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "Clause versions FRV-001 version v1 and OVD-001 version v2 both had the most contradicted claims, each with a count of 1."
+   }
+  },
   "cddf73b6c0353024c909bde94c440d10deeda29d8f0ca62c53bc48041dd2cadf": {
    "kind": "structured",
    "name": "BankExtractionResult",
@@ -1810,6 +1852,13 @@
     ]
    }
   },
+  "e3976cfb433c6d02badcee94ed1d4e38b6572afd3af5838f49eebc6d8b81efb4": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "The customer's question and our reply are both masked in the provided data, so I cannot display them."
+   }
+  },
   "e3a0a4767b82a2b75a63ef0f908433be4562adfd64259b37fca02fbbf68dc70d": {
    "kind": "structured",
    "name": "JudgeResult",
@@ -1860,6 +1909,13 @@
       "text": "Travel credits are not valid for lounge access."
      }
     ]
+   }
+  },
+  "ef148e648c58fd184084f2b8e288a5bad511959d8a2e208f19378b08a9f22f2f": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "The share of checks for March 2026 travel dates that were escalated is 0.5."
    }
   },
   "f25f508ed638165672a896cfb6402afc90e6566f94686c08e33889e0ed4785b8": {

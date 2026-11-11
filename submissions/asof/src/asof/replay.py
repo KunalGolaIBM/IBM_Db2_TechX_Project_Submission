@@ -368,6 +368,7 @@ def record(settings) -> int:
         res = asker.ask(q)
         asks.append({"question": q, "status": res.status, "sql": res.sql})
         print(f"  ask {res.status:<9} {q}", flush=True)
+    failed += _ask_domain_scopes(asker)
 
     impacts = []
     for p in load_scenarios()["presets"]:
@@ -478,6 +479,20 @@ def record_only_chat(settings) -> int:
     return 0
 
 
+def _ask_domain_scopes(asker: Any) -> int:
+    """Record every Ask example once more for each domain scope: the model sees the views as that domain's analyst reads
+    them, so each scope is its own model input. Returns how many did not get a checked query."""
+    misses = 0
+    for scope in asker.scopes().values():
+        if scope.key == "all":
+            continue
+        for q in load_scenarios()["ask_examples"]:
+            res = asker.ask(q, scope=scope.key)
+            misses += res.status != "ANSWERED"
+            print(f"  ask [{scope.key}] {res.status:<9} {q}", flush=True)
+    return misses
+
+
 def record_only_ask(settings) -> int:
     """Re-record the Ask-the-ledger examples (after a change to the views they describe), leaving every other output as
     it is. The built-in checks replay first, from the recording, so the ledger the questions read is not empty."""
@@ -503,7 +518,7 @@ def record_only_ask(settings) -> int:
         res = asker.ask(q)
         asks.append({"question": q, "status": res.status, "sql": res.sql})
         print(f"  ask {res.status:<9} {q}", flush=True)
-    if any(a["status"] != "ANSWERED" for a in asks):
+    if any(a["status"] != "ANSWERED" for a in asks) or _ask_domain_scopes(asker):
         print("An example did not get a checked query; nothing saved. Run it again.")
         return 1
     recording.scenarios["ask"] = asks
