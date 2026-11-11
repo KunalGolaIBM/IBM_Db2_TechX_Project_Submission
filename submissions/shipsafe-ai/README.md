@@ -2,6 +2,8 @@
 
 > **One-line pitch:** ShipSafe AI checks a repository before the pull request is opened (secrets, SQL injection, risky code, vulnerable dependencies, failing tests), returns a deterministic `PASS` / `PASS_WITH_WARNINGS` / `BLOCKED` decision, stores every assessment in **IBM Db2**, and attaches the governing engineering policy to each finding using **LangChain + Db2 vector search**.
 
+![ShipSafe AI blocking a risky payments service, with a Db2-retrieved policy cited for every finding](docs/screenshots/scan-blocked.png)
+
 ---
 
 ## Table of Contents
@@ -185,19 +187,22 @@ SELECT COUNT(*) FROM POLICY_VECTORS;
 - **Demo video:** linked in the pull request description
 - **Sample report:** [`docs/sample-report.md`](docs/sample-report.md), generated from a real run on the vulnerable fixture
 
-The screenshots below show real output against IBM Db2 12.1.5.
+Every screenshot below is real output from a single run against IBM Db2 Community Edition 12.1.5 in Docker.
 
-**1. A risky service is blocked, and each finding cites the policy retrieved from Db2**
+**1. Db2 is running, and ShipSafe connects to it.** Db2 server level, schema and the policy vector store are all confirmed.
+![Db2 running in Docker and shipsafe doctor](docs/screenshots/db2-docker-doctor.png)
+
+**2. A risky payments service gets blocked.** Six real problems were found, and each one cites the team policy Db2 retrieved for it.
 ![Scan blocked](docs/screenshots/scan-blocked.png)
 
-**2. After the fixes: the gate passes and the regression diff stored in Db2 shows 6 resolved**
-![Fixed and diff](docs/screenshots/scan-fixed-and-diff.png)
+**3. The code is fixed and scanned again.** The diff shows the fix, and the gate now clears with zero findings.
+![Fix and re-scan](docs/screenshots/scan-fixed-and-diff.png)
 
-**3. Queried directly with the Db2 CLP: risk trend view (`LAG()` delta), findings and policy vectors**
-![Db2 CLP](docs/screenshots/db2-risk-trend-clp.png)
+**4. Proof straight from Db2.** All six issues are resolved, the risk trend drops from 47 to 0, and the embeddings sit in a native `VECTOR(384)` column.
+![Db2 CLP queries](docs/screenshots/db2-risk-trend-clp.png)
 
-**4. Policy question answered by `VECTOR_DISTANCE` in Db2 via langchain-db2**
-![Vector search](docs/screenshots/db2-vector-policy-search.png)
+**5. Asking the policies a question.** Db2 ranks the policy chunks with `VECTOR_DISTANCE` and returns the right one, word for word.
+![Vector search in Db2](docs/screenshots/db2-vector-policy-search.png)
 
 ## Known Limitations & Future Roadmap
 - **Limitations:**
