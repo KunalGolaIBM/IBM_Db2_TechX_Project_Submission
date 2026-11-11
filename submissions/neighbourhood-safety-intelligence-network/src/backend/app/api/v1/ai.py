@@ -1,5 +1,5 @@
 import json
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 from backend.app.database.base import get_db
@@ -73,11 +73,13 @@ def get_incident_ai_assistance(
 
 @router.get("/guidance", response_model=Dict[str, Any])
 def query_knowledge_base(
-    query: str = Query(..., description="Safety question or emergency topic"),
-    category: Optional[str] = Query(None, description="Optional category filter"),
-    current_user: User = Depends(get_current_user)
+    query: str = Query(..., min_length=3, max_length=500, description="Safety question or emergency topic"),
+    category: Optional[Literal["emergency_response", "child_safety", "elder_care", "hazard_mitigation",
+                               "transit_safety", "responder_procedures"]] = Query(None, description="Protocol category filter"),
+    audience: Optional[Literal["residents", "women", "guardians", "seniors", "caregivers", "responders"]] = Query(
+        None, description="Only protocols written for this audience"),
+    current_user: User = Depends(get_current_user),
 ):
-    """
-    Direct interface to the BM25 knowledge base for verified SOPs and civic guidance.
-    """
-    return retrieve_safety_guidance(query=query, category=category)
+    """Hybrid retrieval (Haystack BM25 + IBM Db2 vector search) with metadata filters; every result
+    cites the passage that matched."""
+    return retrieve_safety_guidance(query=query, category=category, audience=audience)

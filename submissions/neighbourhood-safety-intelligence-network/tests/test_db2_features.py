@@ -128,7 +128,7 @@ def test_db2_catalog_contains_schema_and_vector_columns():
         if vector_store.enabled:
             vectors = {(r[0], r[1]) for r in conn.execute(text(
                 "SELECT TABNAME, COLNAME FROM SYSCAT.COLUMNS WHERE TABSCHEMA = CURRENT SCHEMA AND TYPENAME = 'VECTOR'"))}
-            assert {("SAFETY_PROTOCOLS", "EMBEDDING"), ("INCIDENT_EMBEDDINGS", "EMBEDDING")} <= vectors
+            assert {("NSIN_PROTOCOL_PASSAGES", "EMBEDDING"), ("INCIDENT_EMBEDDINGS", "EMBEDDING")} <= vectors
 
 
 @db2_only

@@ -145,7 +145,8 @@ class KnowledgeAssistant:
             protocols.append({
                 "title": r["title"],
                 "source": r["source"],
-                "protocol_snippet": r["excerpt"][:220] + "..."
+                "protocol_snippet": r.get("cited_passage") or (r["excerpt"][:220] + "..."),
+                "matched_by": r.get("matched_by", ""),
             })
         return protocols
 

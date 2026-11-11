@@ -34,6 +34,8 @@ def get_db_status() -> dict:
         status["details"] = check
         from backend.app.ai.semantic.db2_vector_store import vector_store
         status["vector_search"] = vector_store.status()
+        from backend.app.ai.haystack.rag_pipeline import protocol_retriever
+        status["hybrid_retrieval"] = protocol_retriever.status()
     return status
 
 def init_db():
@@ -59,6 +61,8 @@ def init_db():
         engine, SessionLocal = db2.get_session_factory()
         from backend.app.ai.semantic.db2_vector_store import vector_store
         vector_store.initialise(engine)
+        from backend.app.ai.haystack.rag_pipeline import protocol_retriever
+        protocol_retriever.enable_db2()
     else:
         raise ValueError(f"Unsupported DATABASE_MODE: '{mode}'. Supported: sqlite, postgresql, db2")
 

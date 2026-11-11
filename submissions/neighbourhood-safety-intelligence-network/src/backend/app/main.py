@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.core.config import settings
 from backend.app.database.base import init_db, get_db_status
+from backend.app.ai.haystack.rag_pipeline import protocol_retriever
 from backend.app.ai.semantic.db2_vector_store import vector_store
 from backend.app.api.v1 import (
     auth, profiles, trusted_contacts, incidents, sos,
@@ -84,7 +85,7 @@ def health_check():
         "environment": settings.APP_ENV,
         "database": db_status,
         "ai_features": {
-            "haystack_bm25_retrieval": "active",
+            "haystack_retrieval": "hybrid (BM25 + IBM Db2 vector)" if protocol_retriever.hybrid else "BM25",
             "db2_vector_search": "active" if vector_store.enabled else "inactive",
             "triage_agents": "active"
         }
