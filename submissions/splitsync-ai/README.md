@@ -567,7 +567,7 @@ python scripts/validate_submission.py submissions/splitsync-ai
 
 | Contributor | GitHub Handle | Role & Responsibilities |
 |---|---|---|
-| **Vipin Sharma** | [@vks-sharma](https://github.com/vks-sharma) | Full-Stack Architecture, IBM Db2 Integration, Financial Ledger, LangChain AI Engine |
+| **Vikas Kumar Sharma** | [@vks-sharma](https://github.com/vks-sharma) | Full-Stack Architecture, IBM Db2 Integration, LangChain AI Engine |
 
 ---
 
