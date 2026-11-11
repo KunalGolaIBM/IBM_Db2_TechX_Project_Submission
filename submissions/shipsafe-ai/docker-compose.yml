@@ -1,6 +1,12 @@
-# IBM Db2 Community Edition for local development.
-# First start takes several minutes while the SAMPLE database is created:
-#   docker compose up -d && docker compose logs -f db2   (wait for "Setup has completed")
+# One command brings up IBM Db2 Community Edition, the ShipSafe API and the web UI:
+#   cp .env.example .env            # set DB2_PASSWORD
+#   docker compose up -d --build
+#   docker compose logs shipsafe    # the first start prints a one-time admin token
+#   open http://localhost:8080
+#
+# Already running Db2 (for example one created with the VS Code Db2 extension)?
+#   set DB2_HOST=host.docker.internal in .env, then:
+#   docker compose up -d --build --no-deps shipsafe
 services:
   db2:
     image: icr.io/db2_community/db2:latest
@@ -16,5 +22,35 @@ services:
       SAMPLEDB: "true"
     volumes:
       - db2data:/database
+    healthcheck:
+      test: ["CMD-SHELL", "su - db2inst1 -c 'db2 connect to SAMPLE' >/dev/null 2>&1"]
+      interval: 20s
+      timeout: 15s
+      retries: 60
+      start_period: 120s
+
+  shipsafe:
+    build: .
+    container_name: shipsafe
+    depends_on:
+      db2:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      DB2_HOST: ${DB2_HOST:-db2}
+      DB2_PORT: ${DB2_PORT:-50000}
+      DB2_DATABASE: ${DB2_DATABASE:-SAMPLE}
+      DB2_USERNAME: ${DB2_USERNAME:-db2inst1}
+      DB2_PASSWORD: ${DB2_PASSWORD:?set DB2_PASSWORD in .env}
+      DB2_SCHEMA: ${DB2_SCHEMA:-SHIPSAFE}
+      SHIPSAFE_PIP_AUDIT: ${SHIPSAFE_PIP_AUDIT:-deep}
+    volumes:
+      # Projects to scan. Read-only: ShipSafe never modifies scanned code.
+      - ./workspaces:/workspaces:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
 volumes:
   db2data:

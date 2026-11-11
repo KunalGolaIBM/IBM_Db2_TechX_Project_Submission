@@ -111,8 +111,8 @@ class PolicyKnowledgeBase:
     def retrieve(self, query: str, top_k: int = 3, category: Optional[str] = None) -> List[Dict[str, Any]]:
         """Semantic search in Db2. Returns verbatim policy text with citations."""
         flt = {"category": [category]} if category else None
-        # Over-fetch so that de-duplicating by document still yields top_k results.
-        results = self.store.similarity_search_with_score(query, k=top_k * 4, filter=flt)
+        # Over-fetch: DB2VS applies metadata filters after ranking, and we de-duplicate by document.
+        results = self.store.similarity_search_with_score(query, k=max(top_k * 4, 30 if flt else 0), filter=flt)
         out: List[Dict[str, Any]] = []
         seen = set()
         for doc, distance in results:

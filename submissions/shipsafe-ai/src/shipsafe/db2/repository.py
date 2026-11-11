@@ -131,8 +131,15 @@ class Db2Repository:
             "SELECT 1 AS X FROM SYSCAT.INDEXES WHERE INDSCHEMA = ? AND INDNAME = ?", (self.schema, name)))
 
     # ------------------------------------------------------------------- schema
-    def initialize_schema(self) -> List[str]:
-        """Create tables, indexes and views idempotently. Returns created objects."""
+    def _view_exists(self, name: str) -> bool:
+        return bool(self._query(
+            "SELECT 1 AS X FROM SYSCAT.VIEWS WHERE VIEWSCHEMA = ? AND VIEWNAME = ?", (self.schema, name)))
+
+    def initialize_schema(self, replace_views: bool = False) -> List[str]:
+        """Create tables, indexes and views idempotently. Returns created objects.
+
+        Only creates what is missing, so the runtime can use a least-privilege user that
+        has DML rights but no DDL rights once `shipsafe init-db` has run as an admin."""
         created: List[str] = []
         if not self.is_db2:
             self.conn.executescript(SQLITE_DDL)
@@ -147,8 +154,10 @@ class Db2Repository:
                 if not self._index_exists(name):
                     self._execute(ddl).close()
                     created.append(name)
-            for ddl in DB2_VIEWS.values():
-                self._execute(ddl).close()
+            for name, ddl in DB2_VIEWS.items():
+                if replace_views or not self._view_exists(name):
+                    self._execute(ddl).close()
+                    created.append(name)
             self.conn.commit()
         except Exception:
             self.rollback()
@@ -160,10 +169,16 @@ class Db2Repository:
         latency = self.ping()
         if not self.is_db2:
             return {"connected": True, "engine": "SQLite (unit-test backend)", "latency_ms": latency}
-        row = self._query(
-            "SELECT SERVICE_LEVEL, CURRENT SERVER AS DB_NAME, CURRENT SCHEMA AS SCHEMA_NAME "
-            "FROM SYSIBMADM.ENV_INST_INFO"
-        )[0]
+        try:
+            row = self._query(
+                "SELECT SERVICE_LEVEL, CURRENT SERVER AS DB_NAME, CURRENT SCHEMA AS SCHEMA_NAME "
+                "FROM SYSIBMADM.ENV_INST_INFO"
+            )[0]
+        except Exception:  # least-privilege users may not read SYSIBMADM
+            self.rollback()
+            row = self._query(
+                "SELECT 'IBM Db2' AS SERVICE_LEVEL, CURRENT SERVER AS DB_NAME, CURRENT SCHEMA AS SCHEMA_NAME "
+                "FROM SYSIBM.SYSDUMMY1")[0]
         counts = self._query(
             "SELECT TYPE, COUNT(*) AS N FROM SYSCAT.TABLES WHERE TABSCHEMA = ? GROUP BY TYPE", (self.schema,))
         by_type = {str(r["TYPE"]).strip(): int(r["N"]) for r in counts}

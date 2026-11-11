@@ -1,7 +1,15 @@
-# IBM Db2 driver (ibm_db + ibm_db_dbi DB-API)
+# IBM Db2 driver (ibm_db + ibm_db_dbi)
 ibm-db>=3.2.0
 # LangChain + IBM Db2 vector store (DB2VS)
 langchain-db2>=1.0.0
 langchain-core>=0.3
 langchain-community>=0.3
 langchain-text-splitters>=0.3
+# REST API + web UI host
+fastapi>=0.115
+uvicorn[standard]>=0.30
+# Industry scanners (used automatically when installed)
+bandit>=1.7.9
+pip-audit>=2.7
+# Tests
+httpx>=0.27

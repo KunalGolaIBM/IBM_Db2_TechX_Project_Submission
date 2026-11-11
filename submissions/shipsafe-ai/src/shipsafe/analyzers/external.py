@@ -57,8 +57,8 @@ def parse_bandit(data: dict, assessment_id: str, version: str = "") -> List[Find
             category="security",
             severity=sev,
             confidence=str(r.get("issue_confidence", "MEDIUM")).lower(),
-            title=f"Bandit {test_id}: {r.get('issue_text', '').strip()}"[:250],
-            description=r.get("issue_text", ""),
+            title=redact_secrets(f"Bandit {test_id}: {r.get('issue_text', '').strip()}")[:250],
+            description=redact_secrets(r.get("issue_text", "")),
             file_path=_rel(r.get("filename", "")),
             line_start=r.get("line_number"),
             line_end=(r.get("line_range") or [r.get("line_number")])[-1],
@@ -73,7 +73,7 @@ def run_bandit(boundary: SafeExecutionBoundary, assessment_id: str) -> Tuple[Too
     if not tool_available("bandit"):
         return _skipped(assessment_id, "bandit", "Bandit not installed (pip install bandit)"), []
     cmd = [sys.executable, "-m", "bandit", "-r", ".", "-f", "json", "-q", "-x", EXCLUDES]
-    ret, out, err, dur = boundary.run_command(cmd, timeout=120)
+    ret, out, err, dur = boundary.run_command(cmd, timeout=120, redact=False)
     try:
         data = json.loads(out or "{}")
     except json.JSONDecodeError:
@@ -156,7 +156,7 @@ def run_pip_audit(boundary: SafeExecutionBoundary, assessment_id: str) -> Tuple[
         direct = [l.split("==")[0].split(">=")[0].strip() for l in m.read_text(encoding="utf-8").splitlines()
                   if l.strip() and not l.strip().startswith("#")]
         cmd = [sys.executable, "-m", "pip_audit", "-r", rel, "-f", "json", "--progress-spinner", "off"]
-        ret, out, err, _ = boundary.run_command(cmd, timeout=240)
+        ret, out, err, _ = boundary.run_command(cmd, timeout=240, redact=False)
         last_ret = ret
         try:
             data = json.loads(out or "{}")

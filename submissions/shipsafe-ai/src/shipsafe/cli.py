@@ -56,12 +56,13 @@ def cmd_init_db(args) -> int:
     config = ShipSafeConfig.load()
     db2 = Db2Config.from_env("DB2_ADMIN_") if os.getenv("DB2_ADMIN_PASSWORD") else config.db2
     repo = Db2Repository(db2, backend=config.backend, init_schema=False)
-    created = repo.initialize_schema()
+    created = repo.initialize_schema(replace_views=True)
     print(f"Schema {repo.schema} ready as {db2.username}. Newly created: {', '.join(created) or 'none (already present)'}")
     return 0
 
 
 def cmd_serve(args) -> int:
+    sys.stdout.reconfigure(line_buffering=True)
     import uvicorn
 
     from .api import create_app
@@ -159,9 +160,16 @@ def cmd_discover(args) -> int:
 
 
 def cmd_scan(args) -> int:
-    rt = build_runtime()
-    print(f"Assessing '{args.target}' with profile '{args.profile}' ...")
-    result = rt.orchestrator.run_assessment(args.target, profile=args.profile)
+    if args.offline:
+        # CI mode: no database. Same scanners and gate; nothing is persisted and no policy citations.
+        from .orchestration import AssessmentOrchestrator
+
+        orchestrator = AssessmentOrchestrator(ShipSafeConfig.load(), None, None)
+        persist = False
+    else:
+        orchestrator, persist = build_runtime().orchestrator, True
+    print(f"Assessing '{args.target}' with profile '{args.profile}'{' (offline)' if args.offline else ''} ...")
+    result = orchestrator.run_assessment(args.target, profile=args.profile, persist_to_db2=persist)
     asm, gate = result.assessment, result.gate
 
     print("\n" + LINE)
@@ -265,6 +273,7 @@ def main() -> None:
     p.add_argument("--profile", choices=["quick", "pre-pr", "deep"], default="pre-pr")
     p.add_argument("--output")
     p.add_argument("--format", choices=["markdown", "json", "sarif"], default="markdown")
+    p.add_argument("--offline", action="store_true", help="Run without Db2 (CI): no persistence or policy citations")
 
     p_asm = sub.add_parser("assessment", help="Inspect stored assessments")
     asm_sub = p_asm.add_subparsers(dest="asm_cmd")

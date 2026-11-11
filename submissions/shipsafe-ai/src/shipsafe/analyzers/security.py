@@ -42,7 +42,7 @@ class SecurityAnalyzer:
             parts = path.parts
             if any(d in parts for d in SKIP_DIRS):
                 continue
-            rel_path = str(path.relative_to(root_path))
+            rel_path = path.relative_to(root_path).as_posix()
             if target_scope and rel_path not in target_scope:
                 continue
 

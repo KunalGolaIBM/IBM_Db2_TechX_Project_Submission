@@ -142,7 +142,7 @@ class SecretAnalyzer:
                 continue
 
             # Target scope check if specified
-            rel_path = str(path.relative_to(root_path))
+            rel_path = path.relative_to(root_path).as_posix()
             if target_scope and rel_path not in target_scope:
                 continue
 
@@ -173,7 +173,7 @@ class SecretAnalyzer:
                                 line_end=line_idx,
                                 evidence={"snippet": redacted_snippet},
                                 remediation=rule["remediation"],
-                                references=["https://ibmdb2techxsummit.glbajajgroup.ac.in/"],
+                                references=["https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html"],
                             ))
             except Exception:
                 continue

@@ -25,6 +25,9 @@ log = logging.getLogger("shipsafe.engine")
 
 ProgressFn = Callable[[str, str], None]  # (step_key, message)
 
+# Finding category -> policy category used to scope vector retrieval.
+POLICY_CATEGORY = {"quality": "tests"}
+
 
 @dataclass
 class AssessmentResult:
@@ -171,7 +174,11 @@ class AssessmentOrchestrator:
             try:
                 seen = set()
                 for f in findings:
-                    hits = self.knowledge_base.retrieve(f"{f.title}. {f.description}", top_k=1)
+                    # Search the finding's own policy category first, then fall back to all policies.
+                    query = f"{f.title}. {f.description}"
+                    category = POLICY_CATEGORY.get(f.category, f.category)
+                    hits = self.knowledge_base.retrieve(query, top_k=1, category=category) or \
+                        self.knowledge_base.retrieve(query, top_k=1)
                     if hits:
                         cite = f"{hits[0]['doc_id']}: {hits[0]['title']}"
                         f.references = list(dict.fromkeys(f.references + [cite]))

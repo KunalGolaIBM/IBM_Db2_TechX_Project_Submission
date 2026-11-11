@@ -85,7 +85,7 @@ class DependencyAnalyzer:
             if ".git" in req_file.parts or ".venv" in req_file.parts or "node_modules" in req_file.parts:
                 continue
             manifest_count += 1
-            rel_path = str(req_file.relative_to(root_path))
+            rel_path = req_file.relative_to(root_path).as_posix()
             try:
                 lines = req_file.read_text(encoding="utf-8").splitlines()
                 for line_idx, line in enumerate(lines, 1):

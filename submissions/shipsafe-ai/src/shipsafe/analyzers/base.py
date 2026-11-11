@@ -48,7 +48,8 @@ class SafeExecutionBoundary:
         self,
         cmd_args: List[str],
         cwd: Optional[str] = None,
-        timeout: Optional[int] = None
+        timeout: Optional[int] = None,
+        redact: bool = True,
     ) -> Tuple[int, str, str, int]:
         """
         Execute command with typed argument array.
@@ -79,6 +80,9 @@ class SafeExecutionBoundary:
             duration_ms = int((time.time() - start_time) * 1000)
             stdout = proc.stdout[:self.max_output_bytes]
             stderr = proc.stderr[:self.max_output_bytes]
+            if not redact:
+                # Machine-readable output (JSON) is parsed first; callers redact each field they keep.
+                return proc.returncode, stdout, redact_secrets(stderr), duration_ms
             return proc.returncode, redact_secrets(stdout), redact_secrets(stderr), duration_ms
 
         except subprocess.TimeoutExpired:

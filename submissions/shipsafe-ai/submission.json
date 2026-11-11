@@ -3,7 +3,7 @@
   "project": {
     "title": "ShipSafe AI: Pre-PR Production-Readiness Gate on IBM Db2",
     "slug": "shipsafe-ai",
-    "short_description": "Local-first pre-pull-request assessment engine that scans for secrets, SQL injection, risky code, vulnerable dependencies and failing tests, returns a deterministic PASS / PASS_WITH_WARNINGS / BLOCKED gate, persists every assessment in IBM Db2, and links each finding to the governing team policy via LangChain + Db2 vector search. Exposed as a CLI and an MCP server for IBM Bob.",
+    "short_description": "Tells you whether a change is safe to open as a pull request. Scans for leaked secrets, SQL injection, risky code, vulnerable dependencies and failing tests; gives one deterministic PASS / PASS_WITH_WARNINGS / BLOCKED decision; cites the governing team policy for every finding using LangChain + IBM Db2 vector search; and keeps assessments, risk trends, API tokens and an audit trail in IBM Db2. Ships as a web app, REST API, CLI (with SARIF) and an MCP server for IBM Bob.",
     "category": "DevSecOps / AI Developer Tooling / Vector Search",
     "demo_url": "",
     "video_url": "",
@@ -16,26 +16,28 @@
         "name": "Devanshu Sharma",
         "github": "ddevSharma",
         "email": "devanshusharma2005@gmail.com",
-        "role": "Solo developer: scanners, Db2 schema and persistence, LangChain Db2 vector retrieval, MCP server"
+        "role": "Solo developer: scanners, IBM Db2 schema and persistence, LangChain Db2 vector retrieval, API, web app, MCP server"
       }
     ]
   },
   "ibm_db2": {
-    "edition": "Db2 Community Edition 12.1.5 (Docker, icr.io/db2_community/db2)",
-    "connector": "ibm_db / ibm_db_dbi (DB-API 2.0) + langchain-db2 (DB2VS)",
+    "edition": "Db2 Community Edition 12.1.5 (Docker, icr.io/db2_community/db2; also created via the VS Code Db2 extension)",
+    "connector": "ibm_db / ibm_db_dbi (DB-API 2.0, pooled) + langchain-db2 (DB2VS)",
     "features_used": [
-      "Relational tables with foreign keys and ON DELETE CASCADE",
+      "Relational tables with foreign keys, CHECK and UNIQUE constraints",
       "Secondary indexes",
-      "MERGE upserts",
+      "MERGE upserts and multi-statement transactions",
       "Native VECTOR(384, FLOAT32) column and VECTOR_DISTANCE (COSINE) search",
-      "OLAP window functions (LAG, ROW_NUMBER) in a view",
+      "OLAP window functions (LAG, ROW_NUMBER) in views",
       "CLOB JSON evidence storage",
-      "SYSCAT / SYSIBMADM catalog queries"
+      "Append-only audit table and hashed API tokens",
+      "SYSCAT / SYSIBMADM catalog queries",
+      "Least-privilege role grants"
     ]
   },
   "tech_stack": {
-    "languages": ["Python"],
-    "frameworks": ["LangChain", "langchain-db2", "Model Context Protocol (stdio JSON-RPC 2.0)"],
+    "languages": ["Python", "TypeScript"],
+    "frameworks": ["LangChain", "langchain-db2", "FastAPI", "React", "Vite", "Tailwind CSS", "React Bits", "Model Context Protocol"],
     "ai_models": ["Offline feature-hashing embeddings (default)", "sentence-transformers/all-MiniLM-L6-v2 (optional)"]
   }
 }
