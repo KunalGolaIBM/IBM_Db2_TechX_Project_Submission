@@ -1,15 +1,31 @@
+"""Incident triage agents, orchestrated as a CrewAI Flow.
+
+The four agents (intake, triage, knowledge, community insights) are deterministic Python, so no
+resident text is sent to an LLM. CrewAI's Flow engine runs them as an event-driven workflow with
+typed state: @start -> @listen -> @router, with a dedicated escalation branch for critical reports.
+"""
 import logging
+import os
 import re
 import time
-from typing import Dict, Any, List, Optional
-from backend.app.ai.haystack.rag_pipeline import retrieve_safety_guidance
+from typing import Any, Dict, List, Optional
+
+# Privacy: CrewAI telemetry and execution tracing stay off in a deployment that handles resident data.
+os.environ.setdefault("CREWAI_DISABLE_TELEMETRY", "true")
+os.environ.setdefault("CREWAI_TRACING_ENABLED", "false")
+os.environ.setdefault("OTEL_SDK_DISABLED", "true")
+
+from crewai.flow.flow import Flow, listen, router, start  # noqa: E402
+from pydantic import BaseModel, Field  # noqa: E402
+
+from backend.app.ai.haystack.rag_pipeline import retrieve_safety_guidance  # noqa: E402
 
 logger = logging.getLogger("neighbourhood_safety.crewai")
 
 
 # Keyword rules are matched on whole words / phrases (see _mentions), in priority order.
 CATEGORY_KEYWORDS = (
-    ("sos", ("sos", "help me", "attack", "attacked", "danger", "stalk", "stalking", "stalker", "emergency",
+    ("sos", ("sos", "help me", "attack", "attacked", "attacking", "threatening", "danger", "stalk", "stalking", "stalker", "emergency",
              "assault", "assaulted", "kidnap", "following me")),
     ("medical", ("heart attack", "chest pain", "breathing", "breathe", "unconscious", "bleeding", "blood",
                  "doctor", "ambulance", "fell", "fall", "fallen", "injury", "injured", "fainted", "seizure", "stroke")),
@@ -21,7 +37,7 @@ CATEGORY_KEYWORDS = (
                              "stolen", "break-in", "burglar", "burglary", "trespass", "trespassing")),
 )
 LIFE_THREAT_WORDS = ("weapon", "knife", "gun", "bleeding heavily", "severe bleeding", "fire", "smoke",
-                     "attack", "attacked", "not breathing", "unconscious")
+                     "attack", "attacked", "attacking", "not breathing", "unconscious")
 ELDER_RISK_WORDS = ("not answering", "not answered", "hasn't answered", "has not answered", "no answer",
                     "not picking up", "not responding", "unresponsive", "no response", "no reply",
                     "missed", "fell", "fall", "collapsed", "confused", "wandered", "missing")
@@ -172,50 +188,97 @@ class CommunityInsightsAgent:
         else:
             return "Optimal neighbourhood safety metrics. All active corridors verified clear by community patrol."
 
-class SafetyCrewOrchestrator:
-    """
-    Coordinates the execution of the multi-agent crew with timeouts and strict safety bounds.
-    """
-    def __init__(self):
+class TriageState(BaseModel):
+    """Typed state shared by every step of the CrewAI Flow."""
+    raw_text: str = ""
+    reported_category: Optional[str] = None
+    location: Optional[str] = None
+    intake: Dict[str, Any] = Field(default_factory=dict)
+    triage: Dict[str, Any] = Field(default_factory=dict)
+    protocols: List[Dict[str, Any]] = Field(default_factory=list)
+    escalated: bool = False
+    steps: List[str] = Field(default_factory=list)
+
+
+class IncidentTriageFlow(Flow[TriageState]):
+    """intake -> triage -> router -> (critical: escalate + retrieve | standard: retrieve)."""
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
         self.intake_agent = IncidentIntakeAgent()
         self.triage_agent = SafetyTriageAssistant()
         self.knowledge_agent = KnowledgeAssistant()
+
+    @start()
+    def intake(self):
+        self.state.intake = self.intake_agent.execute(self.state.raw_text, self.state.reported_category)
+        if self.state.location and not self.state.intake.get("extracted_location"):
+            self.state.intake["extracted_location"] = self.state.location
+        self.state.steps.append(f"intake:{self.state.intake['parsed_category']}")
+
+    @listen(intake)
+    def assess(self):
+        self.state.triage = self.triage_agent.execute(self.state.intake, self.state.raw_text)
+        self.state.steps.append(f"triage:{self.state.triage['suggested_priority']}")
+
+    @router(assess)
+    def route(self):
+        return "critical" if self.state.triage["suggested_priority"] == "P1_CRITICAL" else "standard"
+
+    def _retrieve(self) -> None:
+        category = self.state.intake["parsed_category"]
+        query = f"{category.replace('_', ' ')} {self.state.raw_text}"
+        self.state.protocols = self.knowledge_agent.execute(category, query)
+        self.state.steps.append(f"knowledge:{len(self.state.protocols)}")
+
+    @listen("critical")
+    def escalate(self):
+        # Critical reports skip nothing: flag for immediate dispatch and put the life-safety step first.
+        self.state.escalated = True
+        checklist = self.state.triage["immediate_safety_checklist"]
+        first = "Call 112 now if anyone is in immediate danger; responders are being alerted."
+        if first not in checklist:
+            checklist.insert(0, first)
+        self.state.steps.append("escalated")
+        self._retrieve()
+
+    @listen("standard")
+    def standard_path(self):
+        self._retrieve()
+
+
+class SafetyCrewOrchestrator:
+    """Runs the CrewAI triage Flow and shapes its state into the API response."""
+
+    def __init__(self):
         self.insights_agent = CommunityInsightsAgent()
 
     def run_incident_assistance_workflow(
         self,
         raw_text: str,
         reported_category: Optional[str] = None,
-        location: Optional[str] = None
+        location: Optional[str] = None,
     ) -> Dict[str, Any]:
         start_time = time.time()
-        logger.info(f"Running CrewAI incident assistance workflow for query: {raw_text[:50]}...")
-
-        # Step 1: Intake
-        intake_out = self.intake_agent.execute(raw_text, reported_category)
-        if location and not intake_out.get("extracted_location"):
-            intake_out["extracted_location"] = location
-
-        # Step 2: Triage
-        triage_out = self.triage_agent.execute(intake_out, raw_text)
-
-        # Step 3: Knowledge via Haystack
-        search_query = f"{intake_out['parsed_category'].replace('_', ' ')} {raw_text}"
-        knowledge_out = self.knowledge_agent.execute(intake_out["parsed_category"], search_query)
-
-        execution_duration = round(time.time() - start_time, 3)
-        logger.info(f"CrewAI workflow completed in {execution_duration}s. Priority: {triage_out['suggested_priority']}")
-
+        flow = IncidentTriageFlow()
+        flow.kickoff(inputs={"raw_text": raw_text, "reported_category": reported_category, "location": location})
+        st = flow.state
+        duration = round(time.time() - start_time, 3)
+        logger.info("Triage flow %s finished in %ss (priority %s)", " > ".join(st.steps), duration,
+                    st.triage["suggested_priority"])
         return {
-            "parsed_category": intake_out["parsed_category"],
-            "extracted_location": intake_out["extracted_location"],
-            "missing_critical_info": intake_out["missing_critical_info"],
-            "suggested_priority": triage_out["suggested_priority"],
-            "triage_reasoning": triage_out["triage_reasoning"],
-            "immediate_safety_checklist": triage_out["immediate_safety_checklist"],
-            "retrieved_civic_protocols": knowledge_out,
-            "execution_duration_sec": execution_duration,
-            "advisory_notice": "AI-assisted guidance is strictly advisory. Final decisions remain with verified human responders."
+            "parsed_category": st.intake["parsed_category"],
+            "extracted_location": st.intake["extracted_location"],
+            "missing_critical_info": st.intake["missing_critical_info"],
+            "suggested_priority": st.triage["suggested_priority"],
+            "triage_reasoning": st.triage["triage_reasoning"],
+            "immediate_safety_checklist": st.triage["immediate_safety_checklist"],
+            "retrieved_civic_protocols": st.protocols,
+            "escalated": st.escalated,
+            "workflow_steps": st.steps,
+            "execution_duration_sec": duration,
+            "advisory_notice": "AI-assisted guidance is strictly advisory. Final decisions remain with verified human responders.",
         }
+
 
 crew_orchestrator = SafetyCrewOrchestrator()

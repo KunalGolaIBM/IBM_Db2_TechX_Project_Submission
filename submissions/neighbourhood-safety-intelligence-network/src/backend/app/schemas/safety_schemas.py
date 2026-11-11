@@ -311,3 +311,5 @@ class AIIncidentAssistanceResponse(BaseModel):
     retrieved_civic_protocols: List[Dict[str, str]]
     advisory_notice: str = "AI-assisted guidance is advisory only. Verified human responders supervise all incident actions."
     persisted_analysis_id: Optional[int] = None
+    escalated: bool = False  # True when the CrewAI flow took the critical (P1) branch
+    workflow_steps: List[str] = []

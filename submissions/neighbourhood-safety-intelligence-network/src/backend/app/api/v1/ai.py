@@ -68,7 +68,9 @@ def get_incident_ai_assistance(
         immediate_safety_checklist=workflow_result["immediate_safety_checklist"],
         retrieved_civic_protocols=workflow_result["retrieved_civic_protocols"],
         advisory_notice=workflow_result["advisory_notice"],
-        persisted_analysis_id=persisted_id
+        persisted_analysis_id=persisted_id,
+        escalated=workflow_result["escalated"],
+        workflow_steps=workflow_result["workflow_steps"],
     )
 
 @router.get("/guidance", response_model=Dict[str, Any])

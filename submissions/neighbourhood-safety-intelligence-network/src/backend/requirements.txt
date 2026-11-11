@@ -10,6 +10,8 @@ haystack-ai>=2.28.0
 # IBM's Haystack integration: Db2 document store + embedding retriever (VECTOR, BSON metadata)
 ibm-db-haystack>=1.0.0
 fastembed-haystack>=1.4.0
+# CrewAI Flows orchestrate the triage agents (no LLM calls; telemetry disabled in code)
+crewai>=0.100.0
 # Local ONNX embeddings for Db2 VECTOR search (only loaded when DATABASE_MODE=db2)
 fastembed>=0.4.0
 pytest>=8.1.0

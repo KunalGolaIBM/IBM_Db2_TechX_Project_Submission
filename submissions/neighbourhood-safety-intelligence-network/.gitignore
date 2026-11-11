@@ -10,3 +10,5 @@ dist/
 src/android/.gradle/
 src/android/app/build/
 src/android/local.properties
+.coverage
+htmlcov/
