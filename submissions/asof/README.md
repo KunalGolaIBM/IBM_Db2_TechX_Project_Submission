@@ -1,7 +1,7 @@
 # AsOf
 
 > **What did the policy say on that date, and what did your AI tell the customer?**
-> AsOf checks each policy claim in an AI assistant's answer against the policy version in force on the customer's date, stops answers that contradict it, and keeps a tamper-evident Db2 record of what was said and why.
+> AsOf checks each policy claim in an AI assistant's answer against the policy version in force on the customer's date, stops answers that contradict it, and keeps a tamper-evident Db2 record of what was said and why. Db2 itself refuses to record a release the policy in force does not back, for every user, the owner included.
 
 | [**1 of 121** wrong drafts released (frozen)](docs/evaluation.md#the-frozen-test-splits) | [**0 of 65** on blind sets](docs/evaluation.md#the-frozen-test-splits) | [**30/40 vs 6/40** on another AI's policy](docs/eval/unseen-results.md) | [**9 of 10** on real US DOT rules](docs/eval/real-regulation.md) | [**1,331 tests**, CI on IBM's Db2 image](https://github.com/JustJay7/asof/actions/workflows/ci.yml) | [**Live demo**, spend-capped by Db2](docs/public-demo.md) |
 |:---:|:---:|:---:|:---:|:---:|:---:|
