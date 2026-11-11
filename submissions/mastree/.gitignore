@@ -1,0 +1,18 @@
+# Environment variables and secrets
+.env
+.env.local
+
+# Python caches and artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Streamlit local runtime state
+.streamlit/
+

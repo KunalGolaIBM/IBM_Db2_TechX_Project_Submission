@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "MasteryLoop (mastree)",
+    "slug": "mastree",
+    "short_description": "Open-source adaptive learning engine implementing Bloom's mastery learning with IBM Db2 LUW recursive graph analytics, multi-mode ingestion (Wikipedia/PDF/Notes), FastAPI backend, static vanilla frontend, and dual teaching formats (Board & in-browser Video Lecture).",
+    "category": "AI / Education / Data Engineering / Adaptive Learning",
+    "demo_url": "http://localhost:8000",
+    "video_url": "https://github.com/Suryakanth25",
+    "repo_url": "https://github.com/Suryakanth25/mastree"
+  },
+  "team": {
+    "name": "Suryakanth",
+    "members": [
+      {
+        "name": "Suryakanth",
+        "github": "Suryakanth25",
+        "email": "suryakanth@example.com",
+        "role": "Solo Participant — Full-Stack Architecture, Db2 LUW Analytics & AI Engine"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 LUW (Community Edition / Enterprise Server 12.01.0500)",
+    "connector": "ibm_db",
+    "features_used": [
+      "Recursive CTE (Ancestor Prerequisite Root Cause Analysis without RECURSIVE keyword)",
+      "Analytical View (v_student_progress cross-joining students and curriculum matrix)",
+      "Append-Only Audit History Table (mastery_history)",
+      "Atomic ACID Transactions with Autocommit Off and Rollback",
+      "Relational Tables with Identity Keys (IDENTITY_VAL_LOCAL)",
+      "Foreign Key and Composite Performance Indexes (student_id, concept_id)",
+      "Persistent Vector & LLM Response Cache Table (llm_cache with SHA-256 keys)",
+      "BLOB Image Table for Optional Lesson Illustrations (lesson_images)"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python 3.11+", "JavaScript (ES6+)", "HTML5", "CSS3"],
+    "frameworks": ["FastAPI", "Uvicorn", "ibm_db", "google-genai", "python-multipart", "pypdf", "requests", "pytest", "numpy"],
+    "ai_models": ["Google Gemini 2.5 Flash", "Gemini Embedding 001"]
+  }
+}
