@@ -41,6 +41,9 @@ from . import pdfs
 HERE = Path(__file__).resolve().parent
 RECORDS = HERE / "onboarding"
 DECISIONS = RECORDS / "decisions.json"
+# Corrections made after the first unseen-domain run (the fare tables as time bands): post-hoc, kept apart so the
+# policy the first run checked can still be rebuilt (rebuild(..., posthoc=False), CLI --first-run-policy).
+POSTHOC = RECORDS / "posthoc_changes.json"
 DOC_ID = RAIL.doc_id
 DEFAULT_SCHEMA = "ASOF_UNSEEN"
 DOCUMENT = (DOC_ID, "Suryapath Railways passenger cancellation and refund policy (fictional)",
@@ -202,8 +205,19 @@ def decide_upload(settings: Settings, target: str, upload: Upload, decision: dic
     upload.decision, upload.applied = decision, out["applied"]
 
 
+def apply_posthoc(settings: Settings, target: str, embeddings: Embeddings) -> list[dict[str, Any]]:
+    """The post-hoc corrections, as the editor, through APPLY_POLICY_CHANGE (the console's policy change)."""
+    out = []
+    changes = json.loads(POSTHOC.read_text(encoding="utf-8"))["changes"] if POSTHOC.exists() else []
+    with db.connection(settings, "editor") as editor:
+        for c in changes:
+            change = policy.PolicyChange(**{k: v for k, v in c.items() if k != "why"})
+            out.append(policy.apply_change(editor, change, embeddings, target) | {"clause_id": change.clause_id})
+    return out
+
+
 def rebuild(settings: Settings, target: str, embeddings: Embeddings, fresh: bool = True,
-            upload_version: int | None = None, log: Any = print) -> list[Upload]:
+            upload_version: int | None = None, log: Any = print, posthoc: bool = True) -> list[Upload]:
     """Replay every recorded upload and decision in order. With `upload_version`, then upload that version live,
     record the proposal and leave its draft pending: the editor's review comes next."""
     decisions = load_decisions()
@@ -225,6 +239,10 @@ def rebuild(settings: Settings, target: str, embeddings: Embeddings, fresh: bool
         log(f"upload {n} (v{version}): draft {draft_id}, {len(proposals)} proposals, {len(upload.applied)} accepted, "
             f"{len(upload.changes)} corrections")
         done.append(upload)
+    if posthoc and upload_version is None and complete():
+        applied = apply_posthoc(settings, target, embeddings)
+        if applied:
+            log(f"post-hoc: {len(applied)} corrections from {POSTHOC.name}")
     n = len(decisions) + 1
     path = recording_path(n, upload_version or 0)
     if upload_version is not None:
@@ -260,7 +278,7 @@ def drive(settings: Settings, target: str, embeddings: Embeddings, log: Any = pr
     MAX_UPLOADS_PER_VERSION uploads, deciding each upload by the editor's rule (accuracy.review) and recording it."""
     from . import accuracy
 
-    rebuild(settings, target, embeddings, fresh=True, log=log)
+    rebuild(settings, target, embeddings, fresh=True, log=log, posthoc=False)
     decisions = load_decisions()
     for version in pdfs.VERSIONS:
         while (missing := missing_sections(settings, target, version)) and \
@@ -311,6 +329,8 @@ def main(argv: list[str] | None = None) -> int:
                    help=f"target schema (default {DEFAULT_SCHEMA}, dropped and rebuilt; ASOF is added to, never dropped)")
     p.add_argument("--upload", type=int, choices=pdfs.VERSIONS,
                    help="after replaying the records, upload this version live and record the model's proposal")
+    p.add_argument("--first-run-policy", action="store_true",
+                   help=f"leave out the post-hoc corrections ({POSTHOC.name}): the policy the first run checked")
     p.add_argument("--drive", action="store_true",
                    help="after replaying the records, upload live and decide by the editor's rule until every version "
                         f"is in force or has had {MAX_UPLOADS_PER_VERSION} uploads (records every upload)")
@@ -327,7 +347,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     try:
         uploads = rebuild(settings, target, get_embeddings(settings.embedding_model), fresh=fresh,
-                          upload_version=args.upload)
+                          upload_version=args.upload, posthoc=not args.first_run_policy)
     except (OnboardError, intake.IntakeError, db.DatabaseError) as exc:
         print(f"ONBOARDING FAILED: {exc}")
         return 1

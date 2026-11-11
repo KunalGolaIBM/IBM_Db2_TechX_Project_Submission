@@ -432,3 +432,169 @@ def check(claim: str, clause: RuleClause, candidates: Sequence[RuleClause] = (),
     if "MATCH" in statuses:
         return RuleResult("MATCH", tuple(details))
     return RuleResult("NOT_APPLICABLE", tuple(details))
+
+
+# ---- Time bands: a charge that depends on how long before departure a cancellation is made ---------------------
+# RULE_JSON "time_bands" is a list of bands of T, the time from the cancellation request to the scheduled departure,
+# in hours: {"from_h": 12, "to_h": 48, "charge_inr": {"1A": 120, ...}}. from_h is inclusive ("at least 12 hours"
+# includes 12 h 00 min), to_h exclusive, either may be left out for an open end. A band states one outcome: a flat
+# charge per class ("charge_inr"), a charge as a percentage of the fare ("charge_pct"), or "refund": false. Added
+# after the first unseen-domain run (SPR's fare tables); a clause without "time_bands" is never checked here.
+BAND_KEYS = {"from_h", "to_h", "charge_inr", "charge_pct", "refund"}
+CLASSES = {"1a": "1A", "ac first": "1A", "first ac": "1A", "2a": "2A", "ac two tier": "2A", "ac 2 tier": "2A",
+           "two tier": "2A", "sl": "SL", "sleeper": "SL", "2s": "2S", "second sitting": "2S"}
+_CLASS = re.compile(r"\b(1a|2a|sl|2s|ac first|first ac|ac two tier|ac 2 tier|two tier|sleeper|second sitting)\b", re.I)
+_HM = r"(\d+(?:\.\d+)?)\s*(?:h|hrs?|hours?)(?:\s*(?:and\s*)?(\d+)\s*(?:m|mins?|minutes?))?"
+_T_PATTERN = re.compile(
+    rf"\b(?:{_HM}|(\d+)\s*(?:mins?|minutes?)|(\d+)\s*(?:days?))\b"
+    r"(?=\s*(?:before|ahead|out\b|prior|left|remaining|to\s+(?:go|departure)|until)|\s+(?:early|in advance))", re.I)
+_INR = re.compile(r"(?:INR|Rs\.?|₹)\s?(\d{1,3}(?:,\d{3})+|\d+)", re.I)
+_FARE = re.compile(r"(?:(?:base\s+)?fare(?:\s+(?:of|is|was))?\s*:?\s*(?:INR|Rs\.?|₹)\s?(\d{1,3}(?:,\d{3})+|\d+))"
+                   r"|(?:(?:INR|Rs\.?|₹)\s?(\d{1,3}(?:,\d{3})+|\d+)\s*(?:base\s+)?fare)"
+                   r"|(?:for\s+(?:INR|Rs\.?|₹)\s?(\d{1,3}(?:,\d{3})+|\d+))", re.I)
+_NO_REFUND = re.compile(r"\bno (?:voluntary )?refund\b|\bnon-?refundable\b|\bnothing back\b|\bnot (?:be )?refunded\b"
+                        r"|\bno money back\b|\bget nothing\b", re.I)
+_REFUND_CUE = re.compile(r"\b(?:refund\w*|back|receive|get|return\w*|recover)\b", re.I)
+_CHARGE_CUE = re.compile(r"\b(?:charge\w*|deduct\w*|fee|cost\w*|penalty|pay)\b", re.I)
+
+
+def validate_time_bands(value: Any) -> None:
+    """Raise ValueError unless `value` is a well-formed time_bands list (used where RULE_JSON is accepted)."""
+    if not isinstance(value, list) or not 1 <= len(value) <= 8:
+        raise ValueError("time_bands must be a list of 1 to 8 bands")
+    for band in value:
+        if not isinstance(band, dict) or not set(band) <= BAND_KEYS:
+            raise ValueError(f"a time band may only have {sorted(BAND_KEYS)}")
+        for k in ("from_h", "to_h", "charge_pct"):
+            if k in band and (isinstance(band[k], bool) or not isinstance(band[k], (int, float)) or band[k] < 0):
+                raise ValueError(f"time band {k} must be a number of at least 0")
+        outcomes = [k for k in ("charge_inr", "charge_pct", "refund") if k in band]
+        if len(outcomes) != 1:
+            raise ValueError("a time band states exactly one of charge_inr, charge_pct, refund")
+        if "refund" in band and band["refund"] is not False:
+            raise ValueError("time band refund may only be false")
+        if "charge_inr" in band and not (isinstance(band["charge_inr"], dict) and band["charge_inr"] and all(
+                k in CLASSES.values() and isinstance(v, (int, float)) and not isinstance(v, bool) and v >= 0
+                for k, v in band["charge_inr"].items())):
+            raise ValueError(f"time band charge_inr maps a class ({sorted(set(CLASSES.values()))}) to an amount")
+
+
+def _amount(token: str) -> float:
+    return float(token.replace(",", ""))
+
+
+def time_before_departure(text: str) -> list[float]:
+    """Every cancellation time T stated in `text`, in hours ("2 hours 59 minutes before departure", "35h59m ahead",
+    "exactly 3 hours before", "8 days before"). A limit ("at least 36 hours before") is a rule, not a time."""
+    out = []
+    for m in _T_PATTERN.finditer(text):
+        before = text[max(0, m.start() - 25):m.start()]
+        if _LIMIT_BEFORE.search(before) or re.search(r"(?:\d\s*(?:h|hours?)?\s*(?:to|-|and)|between)\s*$", before, re.I):
+            continue  # a limit ("at least 36 hours before") or a range ("4 to 12 hours before") is a rule
+        hours, minutes, only_minutes, days = m.group(1), m.group(2), m.group(3), m.group(4)
+        if hours is not None:
+            out.append(float(hours) + (float(minutes) / 60 if minutes else 0.0))
+        elif only_minutes is not None:
+            out.append(float(only_minutes) / 60)
+        else:
+            out.append(float(days) * 24)
+    return out
+
+
+def _one(values: list[Any]) -> Any:
+    distinct = set(values)
+    return next(iter(distinct)) if len(distinct) == 1 else None
+
+
+def band_for(bands: list[dict[str, Any]], hours: float) -> dict[str, Any] | None:
+    """The band T falls in: from_h <= T < to_h, minutes counted exactly, so 2 h 59 min is below a 3 h edge."""
+    eps = 1e-9
+    return next((b for b in bands if (b.get("from_h") is None or hours >= b["from_h"] - eps)
+                 and (b.get("to_h") is None or hours < b["to_h"] - eps)), None)
+
+
+def _describe(band: dict[str, Any]) -> str:
+    lo, hi = band.get("from_h"), band.get("to_h")
+    span = (f"{lo:g} <= T < {hi:g} h" if lo is not None and hi is not None else
+            f"T >= {lo:g} h" if lo is not None else f"T < {hi:g} h" if hi is not None else "any T")
+    if "refund" in band:
+        return f"{span}: no refund"
+    if "charge_pct" in band:
+        return f"{span}: a {band['charge_pct']:g}% charge"
+    return f"{span}: charge " + ", ".join(f"{c} INR {v:g}" for c, v in band["charge_inr"].items())
+
+
+def band_check(claim: str, question: str, rule: dict[str, Any], clause_id: str = "") -> RuleResult:
+    """Check a claim's charge or refund against the band its cancellation time falls in.
+
+    The time T comes from the claim, or else from the customer's question; the class and the fare likewise. With no
+    single T, or a clause with no time_bands, the result is NOT_APPLICABLE. MISMATCH when the claim promises a refund
+    in a no-refund band, says there is no refund in a band with one, or states a charge or refund (percentage, or
+    rupees when the class and fare are known) that is not the band's."""
+    bands = rule.get("time_bands")
+    if not isinstance(bands, list):
+        return RuleResult("NOT_APPLICABLE")
+    t = _one(time_before_departure(claim)) if time_before_departure(claim) else _one(time_before_departure(question))
+    if t is None:
+        return RuleResult("NOT_APPLICABLE")
+    band = band_for(bands, t)
+    if band is None:
+        return RuleResult("NOT_APPLICABLE")
+    cls = _one([CLASSES[m.group(1).lower()] for m in _CLASS.finditer(claim)]) or _one(
+        [CLASSES[m.group(1).lower()] for m in _CLASS.finditer(question)])
+    fares = [_amount(next(g for g in m.groups() if g)) for m in _FARE.finditer(question)]
+    fare = _one(fares)
+    where = f"T = {int(t)} h {round((t - int(t)) * 60):02d} min falls in {clause_id} {_describe(band)}"
+    said_none = bool(_NO_REFUND.search(claim))
+    pcts = [(float(m.group(1)), m.span()) for m in re.finditer(r"\b(\d+(?:\.\d+)?)\s?(?:%|percent\b)", claim)]
+    rupees = [(_amount(m.group(1)), m.span()) for m in _INR.finditer(claim)]
+
+    def cue(span: tuple[int, int]) -> str | None:
+        """Whether an amount is a charge or a refund: the nearer cue word within 40 characters decides."""
+        def gap(pattern: re.Pattern[str]) -> int | None:
+            gaps = [max(m.start() - span[1], span[0] - m.end(), 0) for m in pattern.finditer(claim)]
+            near = [g for g in gaps if g <= 40]
+            return min(near) if near else None
+        refund, charge = gap(_REFUND_CUE), gap(_CHARGE_CUE)
+        if refund is None or (charge is not None and charge < refund):
+            return None if charge is None else "charge"
+        return "refund" if charge is None or refund < charge else None
+
+    statuses: list[Status] = []
+    if "refund" in band:
+        if said_none:
+            statuses.append("MATCH")
+        elif pcts or any(a != fare and cue(span) == "refund" for a, span in rupees):
+            return RuleResult("MISMATCH", (f"{where}; the claim states a charge or refund",))
+        return RuleResult(statuses[0] if statuses else "NOT_APPLICABLE", (where,))
+    if "charge_pct" in band:
+        p = float(band["charge_pct"])
+        expected = {"charge": p, "refund": 100 - p}
+        money = None if fare is None else {"charge": fare * p / 100, "refund": fare * (100 - p) / 100}
+    else:
+        flat = band["charge_inr"].get(cls) if cls else None
+        expected = {}
+        if flat is not None and pcts:
+            return RuleResult("MISMATCH", (f"{where}; the claim states a percentage",))
+        charge = None if flat is None else (min(float(flat), fare) if fare is not None else float(flat))
+        money = None if charge is None else {"charge": charge, **({"refund": fare - charge} if fare is not None else {})}
+    if said_none:
+        refund_left = money.get("refund") if money else None
+        if refund_left is None and "charge_pct" in band:
+            refund_left = 100 - float(band["charge_pct"])
+        if refund_left is not None and refund_left > 0:
+            return RuleResult("MISMATCH", (f"{where}; the claim says there is no refund",))
+        if refund_left is not None:
+            statuses.append("MATCH")  # the flat charge takes the whole fare
+    for value, span in pcts:
+        kind = cue(span)
+        if kind and expected:
+            statuses.append("MATCH" if _close(value, expected[kind], "pct") else "MISMATCH")
+    for value, span in rupees:
+        kind = cue(span)
+        if value == fare or kind is None or not money or kind not in money:
+            continue
+        statuses.append("MATCH" if abs(value - money[kind]) < 0.5 else "MISMATCH")
+    if "MISMATCH" in statuses:
+        return RuleResult("MISMATCH", (f"{where}; the claim's charge or refund is not this band's",))
+    return RuleResult("MATCH" if statuses else "NOT_APPLICABLE", (where,))

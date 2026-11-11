@@ -62,6 +62,11 @@ class PolicyChange(BaseModel):
                 isinstance(value, list) and all(isinstance(x, (str, int, float)) for x in value))
             if key == "applies_when":
                 ok = isinstance(value, dict)
+            if key == "time_bands":  # a fare table's bands (rules.band_check)
+                from .rules import validate_time_bands
+
+                validate_time_bands(value)
+                ok = True
             if not ok:
                 raise ValueError(f"rule value for {key!r} must be a number, boolean, string or list")
         if len(json.dumps(rule).encode("utf-8")) > MAX_RULE_BYTES:

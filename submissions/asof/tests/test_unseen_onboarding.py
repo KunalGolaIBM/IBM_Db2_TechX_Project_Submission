@@ -137,9 +137,28 @@ def test_spr_rebuilt_from_the_records_gives_each_booking_date_its_version(settin
         assert "INR 20 per booking" in fee_on(date(2026, 4, 30))
         assert "INR 25 per booking" in fee_on(date(2026, 5, 1)) and "INR 25 per booking" in fee_on(date(2026, 8, 31))
         assert "INR 30 per booking" in fee_on(date(2026, 9, 1))
+        from asof.eval.unseen import bands  # the post-hoc corrections: each version's fare table as time bands
+
+        table = next(c for c in clauses.values() if c["title"].lower().startswith("ordinary voluntary cancellation"))
+        for v, day in ((1, date(2026, 4, 30)), (2, date(2026, 8, 31)), (3, date(2026, 9, 1))):
+            row = next(x for x in table["versions"] if x["from"] <= day < x["to"])
+            assert row["rule"]["time_bands"] == bands.P03[v]
         with pytest.raises(onboard.OnboardError):
             onboard.prepare(settings, target, False, embeddings)  # SPR is there already: never loaded twice
     finally:
         from asof import schema
 
         schema.drop(admin_conn, target)
+
+
+def test_the_posthoc_corrections_keep_text_and_parameters_and_add_only_the_bands():
+    from asof.eval.unseen import bands
+
+    changes = json.loads(onboard.POSTHOC.read_text(encoding="utf-8"))["changes"]
+    assert len(changes) == 6
+    for c in changes:
+        section = accuracy.ref_of_clause(c["clause_text"])
+        version = next(v for v, start in accuracy.STARTS.items() if start.isoformat() == c["effective_from"])
+        assert c["rule"]["time_bands"] == bands.SECTIONS[section][version]
+        intake.rule_checks(c["clause_text"], {k: v for k, v in c["rule"].items() if k != "time_bands"})
+        assert c["why"].startswith("Post-hoc")

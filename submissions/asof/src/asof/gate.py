@@ -39,7 +39,7 @@ from .llm import LLMError, ModelClient
 from .prompts import extract_messages, judge_messages, rewrite_messages
 from .redact import redact
 from .retriever import RetrievedClause, clauses_as_of
-from .rules import RuleClause, RuleResult, extract_quantities, situation_conflicts
+from .rules import RuleClause, RuleResult, band_check, extract_quantities, situation_conflicts
 from .rules import _close as same_amount
 from .rules import check as rule_check
 from .schemas import MAX_CLAIMS, ClaimVerdict, ExtractedClaim, JudgeResult, RewriteResult
@@ -459,6 +459,13 @@ class Gate:
         conflicts = situation_conflicts(claim.text, question) if question else ()
         if conflicts:
             rule = RuleResult("MISMATCH", (*rule.details, *conflicts), rule.clause_id)
+        # A fare table's bands (RULE_JSON "time_bands"; no airline or bank clause has them): the claim's charge or
+        # refund against the band the customer's cancellation time falls in. Like every rule check, only stricter.
+        bands = band_check(claim.text, question, clause.rule, clause.clause_id)
+        if bands.status == "MISMATCH":
+            rule = RuleResult("MISMATCH", (*rule.details, *bands.details), rule.clause_id)
+        elif bands.status == "MATCH" and rule.status == "NOT_APPLICABLE":
+            rule = RuleResult("MATCH", (*rule.details, *bands.details), rule.clause_id)
         if rule.clause_id and rule.clause_id in pool:
             clause, span = pool[rule.clause_id], None
         if rule.status == "MISMATCH":
