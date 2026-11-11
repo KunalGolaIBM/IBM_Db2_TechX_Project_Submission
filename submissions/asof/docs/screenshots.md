@@ -2,7 +2,7 @@
 
 Every screen of the console and the customer chat page. The demo walkthrough is in the [README](../README.md#screenshots--demo).
 
-- **Slides:** [docs/slides/AsOf_slides.pdf](slides/AsOf_slides.pdf), a 14-slide deck in IBM's Carbon design (problem, solution, agentic AI, Db2 integration, workflow, architecture, security, evaluation, impact and status).
+- **Slides:** [docs/slides/AsOf_slides.pdf](slides/AsOf_slides.pdf), a 15-slide deck in IBM's Carbon design (problem, solution, agentic AI, Db2 integration, what building AsOf taught us about Db2, workflow, architecture, security, evaluation, impact and status).
 - **Live demo:** https://136-108-251-170.sslip.io (the built-in scenarios replay; with live checks on, new input is checked live within a daily cap Db2 holds, [details](public-demo.md); policy changes and sends are refused there, everything else works). The [README's setup](../README.md#setup--installation) runs the full flows locally with one command (`./quickstart.sh`).
 - **Screenshots:** all taken from a clean demo run (`python -m asof.setup --reset --yes`, then `python -m asof.demo`). The playground is also at the top of the [README](../README.md).
 
