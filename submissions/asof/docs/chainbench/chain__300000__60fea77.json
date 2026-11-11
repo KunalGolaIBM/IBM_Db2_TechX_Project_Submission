@@ -1,0 +1,64 @@
+{
+ "ran_at": "2026-11-11T02:02:36+00:00",
+ "git_commit": "60fea77",
+ "machine": "Google Cloud VM asof-build: 16 vCPU AMD EPYC 7B12, 64 GB RAM, Ubuntu 24.04; IBM stock image icr.io/db2_community/db2:12.1.5.0 running natively on x86_64 (container db2c, 6 GiB memory limit), client on the same VM; seven other Db2 containers on the VM, load average under 2 at the start; the last minute of a Db2 test run on the same container overlapped the start of the 300,000-row full verify, and the 100,000 to 300,000 load shared it with that run",
+ "rows": 300000,
+ "citations_per_row": 2,
+ "points": [
+  {
+   "status": "OK",
+   "rows_checked": 10000,
+   "detail": "every row, link and citation verified",
+   "seconds": 26.7,
+   "rows": 10000,
+   "load_seconds_total": 89.7,
+   "incremental": {
+    "status": "OK",
+    "rows_checked": 10000,
+    "from_ledger_id": 1,
+    "detail": "every row, link and citation verified",
+    "seconds": 27.8
+   }
+  },
+  {
+   "status": "OK",
+   "rows_checked": 100000,
+   "detail": "every row, link and citation verified",
+   "seconds": 247.8,
+   "rows": 100000,
+   "load_seconds_total": 1118.0,
+   "incremental": {
+    "status": "OK",
+    "rows_checked": 90001,
+    "from_ledger_id": 10000,
+    "detail": "the checkpoint row and every row, link and citation after it verified",
+    "seconds": 220.9
+   }
+  },
+  {
+   "status": "OK",
+   "rows_checked": 300000,
+   "detail": "every row, link and citation verified",
+   "seconds": 890.9,
+   "rows": 300000,
+   "load_seconds_total": 4271.5,
+   "incremental": {
+    "status": "OK",
+    "rows_checked": 200001,
+    "from_ledger_id": 100000,
+    "detail": "the checkpoint row and every row, link and citation after it verified",
+    "seconds": 506.0
+   }
+  }
+ ],
+ "after_checkpoint": {
+  "status": "OK",
+  "rows_checked": 1001,
+  "from_ledger_id": 300000,
+  "detail": "the checkpoint row and every row, link and citation after it verified",
+  "seconds": 4.3,
+  "rows": 301000,
+  "appended": 1000
+ },
+ "note": "Stopped at 300,000 rows, not 1,000,000: on this container an append took about 9 ms at the start and about 25 ms near 300,000 (before the overlapping test run began), with the release-rules trigger, the row permissions and the MQT maintenance all running on each one; the cause was not profiled. 1,000,000 rows would have needed several hours of loading."
+}

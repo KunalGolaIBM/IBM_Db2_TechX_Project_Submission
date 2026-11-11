@@ -178,7 +178,7 @@ def report(results: list[dict[str, Any]]) -> str:
              "trust: keep the full scan for audits (the nightly Airflow run) and the incremental one in between.", ""]
     for r in sorted(results, key=lambda x: x["ran_at"], reverse=True):
         lines += [f"## {r['rows']:,} rows, run {r['ran_at'][:16].replace('T', ' ')} UTC at `{r['git_commit']}`", "",
-                  f"Machine: {r.get('machine') or MACHINE_BEFORE_LABELS}.", ""]
+                  f"Machine: {r.get('machine') or MACHINE_BEFORE_LABELS}.", ""] + ([r["note"], ""] if r.get("note") else [])
         incremental = any("incremental" in p for p in r["points"])
         if incremental:
             lines += ["| Rows | VERIFY_CHAIN (full) | Time | Per 1,000 rows | From the checkpoint | Rows recomputed | "
