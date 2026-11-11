@@ -1,0 +1,119 @@
+# SplitSync AI — Security & Environment Git Ignore Policy
+
+# -------------------------------------------------------------
+# 1. Environment Secrets & Credentials (ZERO SECRETS POLICY)
+# -------------------------------------------------------------
+.env
+.env.*
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+*.env
+
+# Explicitly whitelist example templates
+!.env.example
+
+# Private Keys, Certificates, and Tokens
+*.pem
+*.key
+*.p12
+*.pfx
+*.pkcs12
+*.crt
+*.der
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# -------------------------------------------------------------
+# 2. Python Virtual Environments & Build Artifacts
+# -------------------------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+.envdir/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+
+# Python Testing & Quality Caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+
+# -------------------------------------------------------------
+# 3. Node.js & Next.js Build Artifacts
+# -------------------------------------------------------------
+node_modules/
+.next/
+out/
+.turbo/
+.nuxt/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# Diagnostic & Coverage reports
+coverage/
+.nyc_output/
+
+# -------------------------------------------------------------
+# 4. Local Database Files & Temporary Dumps
+# -------------------------------------------------------------
+*.sqlite
+*.sqlite3
+*.db
+*.bak
+*.tmp
+*.temp
+*~
+*.swp
+
+# -------------------------------------------------------------
+# 5. Operating System & Editor Files
+# -------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editors
+.idea/
+*.sublime-workspace
+*.sublime-project
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
