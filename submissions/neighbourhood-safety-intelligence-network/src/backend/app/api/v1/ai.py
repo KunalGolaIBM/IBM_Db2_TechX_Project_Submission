@@ -1,11 +1,13 @@
 import json
 from typing import Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 from backend.app.database.base import get_db
 from backend.app.schemas.safety_schemas import AIIncidentAssistanceRequest, AIIncidentAssistanceResponse
-from backend.app.api.deps import get_current_user
-from backend.app.models.entities import User, Incident, AIAnalysisRecord, AuditEvent
+from backend.app.api.deps import get_current_user, is_staff
+from backend.app.api.v1.incidents import _get_visible_incident
+from backend.app.core.audit import record_audit
+from backend.app.models.entities import User, AIAnalysisRecord
 from backend.app.ai.crewai.agents import crew_orchestrator
 from backend.app.ai.haystack.rag_pipeline import retrieve_safety_guidance
 
@@ -14,6 +16,7 @@ router = APIRouter(prefix="/ai", tags=["AI Safety Intelligence"])
 @router.post("/incident-assistance", response_model=AIIncidentAssistanceResponse)
 def get_incident_ai_assistance(
     req: AIIncidentAssistanceRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -28,9 +31,10 @@ def get_incident_ai_assistance(
     """
     incident = None
     if req.incident_id is not None:
-        incident = db.query(Incident).filter(Incident.id == req.incident_id).first()
-        if incident is None:
-            raise HTTPException(status_code=404, detail="Incident not found")
+        incident = _get_visible_incident(db, req.incident_id, current_user)
+        # Only the reporter or verified staff may attach an analysis to an incident.
+        if not is_staff(current_user) and incident.reporter_id != current_user.id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "You can only run triage on your own incidents.")
 
     workflow_result = crew_orchestrator.run_incident_assistance_workflow(
         raw_text=req.raw_text,
@@ -49,13 +53,8 @@ def get_incident_ai_assistance(
         record.triage_reasoning = workflow_result["triage_reasoning"]
         record.recommended_actions_json = json.dumps(workflow_result["immediate_safety_checklist"])
         record.retrieved_protocols_json = json.dumps(workflow_result["retrieved_civic_protocols"])
-        db.add(AuditEvent(
-            user_id=current_user.id,
-            action="ai_triage",
-            resource_type="incident",
-            resource_id=str(incident.id),
-            details_json=json.dumps({"priority": workflow_result["suggested_priority"]}),
-        ))
+        record_audit(db, "ai_triage", "incident", incident.id, user_id=current_user.id, request=request,
+                     details={"priority": workflow_result["suggested_priority"]})
         db.commit()
         db.refresh(record)
         persisted_id = record.id

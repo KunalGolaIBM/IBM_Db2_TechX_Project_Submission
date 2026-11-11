@@ -19,6 +19,9 @@ def _load_env_file(path: Path) -> None:
 
 _load_env_file(BASE_DIR / ".env")
 
+DEV_JWT_SECRET = "local-development-only-jwt-secret-change-me"
+
+
 class Settings:
     PROJECT_NAME: str = "Neighbourhood Safety Intelligence Network"
     VERSION: str = "1.0.0"
@@ -45,7 +48,7 @@ class Settings:
     DB2_SECURITY: str = os.getenv("DB2_SECURITY", "")
     
     # JWT & Auth
-    JWT_SECRET: str = os.getenv("JWT_SECRET", "super_secret_civic_safety_network_jwt_key_change_in_production")
+    JWT_SECRET: str = os.getenv("JWT_SECRET", DEV_JWT_SECRET)
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
     
@@ -60,4 +63,19 @@ class Settings:
         if origin.strip()
     ]
 
+    # Login throttling (per client IP + email)
+    LOGIN_MAX_ATTEMPTS: int = int(os.getenv("LOGIN_MAX_ATTEMPTS", "5"))
+    LOGIN_WINDOW_SECONDS: int = int(os.getenv("LOGIN_WINDOW_SECONDS", "300"))
+
+
+def _validate(s: "Settings") -> None:
+    """Refuse to run a production deployment with development-grade secrets."""
+    if s.APP_ENV.lower() == "production":
+        if s.JWT_SECRET == DEV_JWT_SECRET or len(s.JWT_SECRET) < 32:
+            raise RuntimeError("JWT_SECRET must be set to a random value of at least 32 characters when APP_ENV=production.")
+        if "*" in s.CORS_ORIGINS:
+            raise RuntimeError("CORS_ORIGINS must list explicit origins when APP_ENV=production.")
+
+
 settings = Settings()
+_validate(settings)

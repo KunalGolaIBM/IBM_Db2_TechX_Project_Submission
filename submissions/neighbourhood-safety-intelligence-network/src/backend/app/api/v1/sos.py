@@ -1,33 +1,39 @@
 import datetime
-import random
-from fastapi import APIRouter, Depends, HTTPException, status
+
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
-from backend.app.database.base import get_db
-from backend.app.models.entities import User, Incident, IncidentStatusHistory, LocationEvent
-from backend.app.schemas.safety_schemas import SOSCreate, IncidentResponse, IncidentStatusHistoryItem
+
 from backend.app.api.deps import get_current_user
-from backend.app.ai.crewai.agents import crew_orchestrator
+from backend.app.api.v1.incidents import _format_incident_response, _get_visible_incident, assign_reference_code
+from backend.app.core.audit import record_audit
+from backend.app.database.base import get_db
+from backend.app.models.entities import (
+    Incident, IncidentStatusHistory, LocationEvent, Responder, TrustedContact, User,
+)
+from backend.app.schemas.safety_schemas import IncidentResponse, SOSCreate
 
 router = APIRouter(prefix="/sos", tags=["Emergency SOS"])
+
 
 @router.post("", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
 def trigger_sos(
     req: SOSCreate,
+    request: Request,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
+    """Create a P1_CRITICAL incident, its GPS location event, the first status entry and an
+    audit row in a single transaction, and record who the alert reaches."""
     now = datetime.datetime.utcnow()
-    ref_code = f"SOS-{now.strftime('%Y%m')}-{random.randint(1000, 9999)}"
 
-    description_text = req.description or f"EMERGENCY SOS triggered by {current_user.full_name}."
+    description = (req.description or "").strip() or f"EMERGENCY SOS triggered by {current_user.full_name}."
     if current_user.emergency_notes:
-        description_text += f" [Medical Notes: {current_user.emergency_notes}]"
+        description += f" [Medical Notes: {current_user.emergency_notes}]"
 
     incident = Incident(
-        reference_code=ref_code,
         reporter_id=current_user.id,
-        title=f"🚨 EMERGENCY SOS - {current_user.full_name}",
-        description=description_text,
+        title=f"EMERGENCY SOS - {current_user.full_name}",
+        description=description[:4000],
         incident_type="sos",
         priority="P1_CRITICAL",
         status="reported",
@@ -35,57 +41,33 @@ def trigger_sos(
         latitude=req.latitude,
         longitude=req.longitude,
         created_at=now,
-        updated_at=now
+        updated_at=now,
     )
-    db.add(incident)
-    db.flush()  # assign incident.id; incident, location and history commit together below
+    assign_reference_code(db, incident, "SOS")
 
-    # Record location event if coordinates present
     if req.latitude is not None and req.longitude is not None:
-        loc_event = LocationEvent(
-            incident_id=incident.id,
-            user_id=current_user.id,
-            latitude=req.latitude,
-            longitude=req.longitude,
-            event_type="sos_trigger_point",
-            timestamp=now
-        )
-        db.add(loc_event)
+        db.add(LocationEvent(incident_id=incident.id, user_id=current_user.id, latitude=req.latitude,
+                             longitude=req.longitude, event_type="sos_trigger_point", timestamp=now))
 
-    # Initial status log
-    status_entry = IncidentStatusHistory(
+    # Boolean filters use "== True" (rendered as "= 1" on Db2); ".is_(True)" renders "IS 1", which Db2 rejects.
+    contacts = db.query(TrustedContact).filter(
+        TrustedContact.user_id == current_user.id, TrustedContact.can_receive_sos == True,  # noqa: E712
+    ).count()
+    on_duty = db.query(Responder).join(User, Responder.user_id == User.id).filter(
+        Responder.is_available == True, User.is_verified == True, User.is_active == True,  # noqa: E712
+    ).count()
+
+    db.add(IncidentStatusHistory(
         incident_id=incident.id,
         status="reported",
-        notes=f"Emergency distress broadcast sent to nearby responders and trusted contacts.",
+        notes=(f"SOS ({req.emergency_type}) raised. Alert routed to {contacts} trusted contact(s) "
+               f"and {on_duty} on-duty verified responder(s)."),
         updated_by_id=current_user.id,
-        created_at=now
-    )
-    db.add(status_entry)
+        created_at=now,
+    ))
+    record_audit(db, "sos_triggered", "incident", incident.id, user_id=current_user.id, request=request,
+                 details={"emergency_type": req.emergency_type, "contacts": contacts, "on_duty_responders": on_duty,
+                          "has_gps": req.latitude is not None})
     db.commit()
-    db.refresh(incident)
 
-    return IncidentResponse(
-        id=incident.id,
-        reference_code=incident.reference_code,
-        reporter_id=incident.reporter_id,
-        reporter_name=current_user.full_name,
-        title=incident.title,
-        description=incident.description,
-        incident_type=incident.incident_type,
-        priority=incident.priority,
-        status=incident.status,
-        location_address=incident.location_address,
-        latitude=incident.latitude,
-        longitude=incident.longitude,
-        created_at=incident.created_at,
-        updated_at=incident.updated_at,
-        status_history=[
-            IncidentStatusHistoryItem(
-                id=status_entry.id,
-                status=status_entry.status,
-                notes=status_entry.notes,
-                updated_by_name=current_user.full_name,
-                created_at=status_entry.created_at
-            )
-        ]
-    )
+    return _format_incident_response(_get_visible_incident(db, incident.id, current_user), current_user)

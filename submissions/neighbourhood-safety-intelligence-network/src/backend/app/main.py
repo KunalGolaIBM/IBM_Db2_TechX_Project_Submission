@@ -1,6 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.core.config import settings
 from backend.app.database.base import init_db, get_db_status
@@ -36,19 +37,45 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS Middleware
+# CORS: explicit origins only (validated in production by core.config)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "geolocation=(self), camera=(), microphone=()",
+    "Cache-Control": "no-store",
+}
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    for header, value in SECURITY_HEADERS.items():
+        response.headers.setdefault(header, value)
+    return response
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    # Log the full error server-side; never return SQL, driver or stack details to clients.
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error. The incident has been logged."})
 
 # Health endpoint
 @app.get("/health", tags=["Health & Diagnostics"])
 def health_check():
     db_status = get_db_status()
+    if settings.APP_ENV.lower() == "production":
+        # Do not disclose connection details (host, port, database name) publicly.
+        db_status = {k: db_status[k] for k in ("mode", "connected", "driver") if k in db_status}
     return {
         "status": "healthy" if db_status.get("connected") else "degraded",
         "service": settings.PROJECT_NAME,

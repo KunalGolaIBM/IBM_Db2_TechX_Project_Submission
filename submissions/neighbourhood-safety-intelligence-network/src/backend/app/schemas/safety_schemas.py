@@ -1,20 +1,45 @@
 import datetime
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Optional, List, Dict, Any, Literal
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+# Allowed values, shared by request validation, the incident state machine and the clients.
+IncidentType = Literal["sos", "hazard", "medical", "child_alert", "elder_welfare", "suspicious_activity"]
+Priority = Literal["P1_CRITICAL", "P2_HIGH", "P3_MODERATE", "P4_ADVISORY"]
+IncidentStatus = Literal["reported", "acknowledged", "responder_en_route", "on_scene", "resolving", "resolved", "false_alarm"]
+Level = Literal["low", "medium", "high"]
+
+EMAIL_PATTERN = r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]{2,}$"
+PHONE_PATTERN = r"^[0-9+()\-\s]{5,30}$"
+
+
+def Latitude():
+    return Field(default=None, ge=-90, le=90)
+
+
+def Longitude():
+    return Field(default=None, ge=-180, le=180)
+
 
 # --- Auth & Profile ---
 class UserRegister(BaseModel):
-    email: str = Field(min_length=3)
-    password: str = Field(min_length=6)
-    full_name: str = Field(min_length=2)
-    phone: Optional[str] = None
-    role: str = "resident"  # resident, responder, admin, guardian
-    emergency_notes: Optional[str] = None
-    address: Optional[str] = None
+    email: str = Field(max_length=255, pattern=EMAIL_PATTERN)
+    # bcrypt only uses the first 72 bytes, so longer passwords are rejected instead of silently truncated.
+    password: str = Field(min_length=8, max_length=72)
+    full_name: str = Field(min_length=2, max_length=255)
+    phone: Optional[str] = Field(default=None, pattern=PHONE_PATTERN)
+    # Admin accounts can never be self-registered; responders stay unverified until an admin approves them.
+    role: Literal["resident", "guardian", "responder"] = "resident"
+    emergency_notes: Optional[str] = Field(default=None, max_length=2000)
+    address: Optional[str] = Field(default=None, max_length=255)
+
+    @field_validator("email")
+    @classmethod
+    def normalise_email(cls, v: str) -> str:
+        return v.strip().lower()
 
 class UserLogin(BaseModel):
-    email: str
-    password: str
+    email: str = Field(max_length=255)
+    password: str = Field(max_length=72)
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -39,17 +64,17 @@ class UserProfile(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class UserUpdate(BaseModel):
-    full_name: Optional[str] = None
-    phone: Optional[str] = None
-    emergency_notes: Optional[str] = None
-    address: Optional[str] = None
+    full_name: Optional[str] = Field(default=None, min_length=2, max_length=255)
+    phone: Optional[str] = Field(default=None, pattern=PHONE_PATTERN)
+    emergency_notes: Optional[str] = Field(default=None, max_length=2000)
+    address: Optional[str] = Field(default=None, max_length=255)
 
 # --- Trusted Contacts ---
 class TrustedContactCreate(BaseModel):
-    name: str = Field(min_length=2)
-    relationship: str
-    phone: str
-    email: Optional[str] = None
+    name: str = Field(min_length=2, max_length=255)
+    relationship: str = Field(min_length=2, max_length=100)
+    phone: str = Field(pattern=PHONE_PATTERN)
+    email: Optional[str] = Field(default=None, max_length=255, pattern=EMAIL_PATTERN)
     can_receive_sos: bool = True
     can_track_location: bool = True
 
@@ -68,24 +93,24 @@ class TrustedContactResponse(BaseModel):
 
 # --- Incident & SOS ---
 class SOSCreate(BaseModel):
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    location_address: Optional[str] = "Current GPS Location"
-    description: Optional[str] = "Emergency SOS triggered by resident."
-    emergency_type: str = "sos"  # sos, medical, harassment, danger
+    latitude: Optional[float] = Latitude()
+    longitude: Optional[float] = Longitude()
+    location_address: Optional[str] = Field(default="Current GPS Location", max_length=255)
+    description: Optional[str] = Field(default="Emergency SOS triggered by resident.", max_length=2000)
+    emergency_type: Literal["sos", "medical", "harassment", "danger"] = "sos"
 
 class IncidentCreate(BaseModel):
-    title: str = Field(min_length=3)
-    description: str = Field(min_length=5)
-    incident_type: str = "hazard"  # sos, hazard, medical, child_alert, elder_welfare, suspicious_activity
-    priority: Optional[str] = "P2_HIGH"  # P1_CRITICAL, P2_HIGH, P3_MODERATE, P4_ADVISORY
-    location_address: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    title: str = Field(min_length=3, max_length=200)
+    description: str = Field(min_length=5, max_length=4000)
+    incident_type: IncidentType = "hazard"
+    priority: Optional[Priority] = "P2_HIGH"
+    location_address: Optional[str] = Field(default=None, max_length=255)
+    latitude: Optional[float] = Latitude()
+    longitude: Optional[float] = Longitude()
 
 class IncidentStatusUpdate(BaseModel):
-    status: str  # acknowledged, responder_en_route, on_scene, resolving, resolved, false_alarm
-    notes: Optional[str] = None
+    status: IncidentStatus
+    notes: Optional[str] = Field(default=None, max_length=2000)
 
 class IncidentStatusHistoryItem(BaseModel):
     id: int
@@ -118,16 +143,16 @@ class IncidentResponse(BaseModel):
 
 # --- Child Safety ---
 class ChildJourneyCreate(BaseModel):
-    child_name: str
-    origin: str
-    destination: str
-    expected_duration_minutes: int = 30
-    notes: Optional[str] = None
+    child_name: str = Field(min_length=1, max_length=255)
+    origin: str = Field(min_length=2, max_length=255)
+    destination: str = Field(min_length=2, max_length=255)
+    expected_duration_minutes: int = Field(default=30, ge=1, le=480)
+    notes: Optional[str] = Field(default=None, max_length=2000)
 
 class ChildCheckInRequest(BaseModel):
-    status: str = "completed"  # active, completed, delayed, alert_triggered
-    current_location: Optional[str] = None
-    notes: Optional[str] = None
+    status: Literal["active", "completed", "delayed", "alert_triggered"] = "completed"
+    current_location: Optional[str] = Field(default=None, max_length=255)
+    notes: Optional[str] = Field(default=None, max_length=1000)
 
 class ChildJourneyResponse(BaseModel):
     id: int
@@ -146,8 +171,8 @@ class ChildJourneyResponse(BaseModel):
 
 # --- Elder Care ---
 class ElderCheckInCreate(BaseModel):
-    wellness_status: str = "good"  # good, needs_assistance, emergency
-    notes: Optional[str] = None
+    wellness_status: Literal["good", "needs_assistance", "emergency"] = "good"
+    notes: Optional[str] = Field(default=None, max_length=2000)
 
 class ElderCheckInResponse(BaseModel):
     id: int
@@ -163,9 +188,9 @@ class ElderCheckInResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class AssistanceRequestCreate(BaseModel):
-    request_type: str  # grocery, medicine, mobility, check_in, urgent
-    description: str
-    urgency: str = "medium"  # low, medium, high
+    request_type: Literal["grocery", "medicine", "mobility", "check_in", "urgent"]
+    description: str = Field(min_length=3, max_length=2000)
+    urgency: Level = "medium"
 
 class AssistanceRequestResponse(BaseModel):
     id: int
@@ -184,8 +209,8 @@ class AssistanceRequestResponse(BaseModel):
 # --- Responders ---
 class ResponderAvailabilityUpdate(BaseModel):
     is_available: bool
-    current_lat: Optional[float] = None
-    current_lng: Optional[float] = None
+    current_lat: Optional[float] = Latitude()
+    current_lng: Optional[float] = Longitude()
 
 class ResponderProfileResponse(BaseModel):
     id: int
@@ -201,12 +226,12 @@ class ResponderProfileResponse(BaseModel):
 
 # --- Community Insights & Hazards ---
 class CommunityHazardCreate(BaseModel):
-    title: str
-    hazard_type: str  # dark_street, road_block, aggressive_animals, electrical, flooding
-    severity: str = "medium"
-    address: str
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    title: str = Field(min_length=3, max_length=255)
+    hazard_type: Literal["dark_street", "road_block", "aggressive_animals", "electrical", "flooding"]
+    severity: Level = "medium"
+    address: str = Field(min_length=3, max_length=255)
+    latitude: Optional[float] = Latitude()
+    longitude: Optional[float] = Longitude()
 
 class CommunityHazardResponse(BaseModel):
     id: int
@@ -236,8 +261,8 @@ class CommunityInsightsResponse(BaseModel):
 # --- AI Workflows ---
 class AIIncidentAssistanceRequest(BaseModel):
     raw_text: str = Field(..., min_length=3, max_length=4000)
-    incident_type: Optional[str] = None
-    location_address: Optional[str] = None
+    incident_type: Optional[IncidentType] = None
+    location_address: Optional[str] = Field(default=None, max_length=255)
     incident_id: Optional[int] = None  # when set, the analysis is persisted against this incident
 
 class AIIncidentAssistanceResponse(BaseModel):

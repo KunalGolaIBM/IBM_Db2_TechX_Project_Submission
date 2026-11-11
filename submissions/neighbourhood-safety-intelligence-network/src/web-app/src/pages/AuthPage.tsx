@@ -192,7 +192,6 @@ export const AuthPage: React.FC = () => {
                     <option value="resident">Resident / Citizen</option>
                     <option value="responder">Community Responder (Patrol / Medical)</option>
                     <option value="guardian">Family Guardian / Caregiver</option>
-                    <option value="admin">Civic Administrator</option>
                   </select>
                 </div>
 

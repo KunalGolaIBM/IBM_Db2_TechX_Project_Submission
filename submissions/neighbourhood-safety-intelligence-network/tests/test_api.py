@@ -1,18 +1,6 @@
-import pytest
-from fastapi.testclient import TestClient
-from backend.app.main import app
-from backend.app.database.base import init_db
-from backend.app.ai.haystack.rag_pipeline import retrieve_safety_guidance
+"""End-to-end API workflows (fixtures live in conftest.py)."""
 from backend.app.ai.crewai.agents import crew_orchestrator
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_db():
-    init_db()
-
-@pytest.fixture
-def client():
-    with TestClient(app) as c:
-        yield c
+from backend.app.ai.haystack.rag_pipeline import retrieve_safety_guidance
 
 def test_health_check(client):
     response = client.get("/health")
