@@ -3,8 +3,8 @@
   "project": {
     "title": "Neighbourhood Safety Intelligence Network (NSIN)",
     "slug": "neighbourhood-safety-intelligence-network",
-    "short_description": "A neighbourhood emergency and safety platform with web and Android clients on a shared FastAPI backend. Residents raise SOS alerts, report incidents, track a child's commute and run elder wellness check-ins, while responders triage and resolve incidents. Every incident, status transition, triage result and audit event is stored in IBM Db2.",
-    "category": "Civic Safety / AI Triage / Full-Stack (Web + Android)",
+    "short_description": "A neighbourhood emergency and safety platform (React web, native Android, FastAPI) with IBM Db2 as the system of record: transactional SOS and incident lifecycle with an append-only audit trail, semantic protocol retrieval and duplicate-report detection with native Db2 VECTOR columns and VECTOR_DISTANCE, and response-time and hotspot analytics computed in Db2 SQL. Runs on a least-privilege Db2 role.",
+    "category": "Civic Safety / Hybrid RAG / Analytics / Full-Stack (Web + Android)",
     "demo_url": "",
     "video_url": "",
     "repo_url": "https://github.com/KunalGolaIBM/IBM_Db2_TechX_Project_Submission/tree/main/submissions/neighbourhood-safety-intelligence-network"
@@ -21,18 +21,17 @@
     ]
   },
   "ibm_db2": {
-    "edition": "Db2 Community Edition (Docker, icr.io/db2_community/db2); compatible with Db2 on IBM Cloud over SSL",
+    "edition": "Db2 12.1 Community Edition (Docker, icr.io/db2_community/db2); compatible with Db2 on IBM Cloud over SSL",
     "connector": "ibm_db_sa (SQLAlchemy dialect) + ibm_db (native driver)",
     "features_used": [
-      "Relational Tables (12) with Primary/Foreign Keys",
-      "Unique Constraints and Secondary Indexes",
-      "Identity Columns",
-      "CLOB storage for free text and JSON payloads",
-      "ACID Transactions with explicit commit/rollback",
-      "Prepared, parameterised statements (ibm_db.prepare / execute)",
-      "Schema auto-provisioning and seed data via ibm_db_sa",
-      "Health probe via SYSIBM.SYSDUMMY1",
-      "Append-only status history and audit tables"
+      "VECTOR(384, FLOAT32) columns with VECTOR_DISTANCE (COSINE) for semantic retrieval and related-incident search",
+      "MERGE upserts for embeddings",
+      "Analytics in SQL: CTEs, SECONDS_BETWEEN, MEDIAN, PERCENTILE_CONT WITHIN GROUP, RANK() OVER, HOUR()",
+      "14 tables with primary, foreign and unique keys, identity columns and 11 secondary indexes",
+      "ACID transactions (SOS writes incident, location, history and audit atomically)",
+      "Least-privilege role NSIN_APP (data access only, append-only audit table) with CURRENTSCHEMA",
+      "SYSCAT catalog queries for schema checks; db2look DDL export",
+      "Prepared, parameterised statements via ibm_db.prepare / execute; SYSIBM.SYSDUMMY1 health probe"
     ]
   },
   "tech_stack": {
@@ -47,6 +46,7 @@
       "SQLAlchemy",
       "Pydantic",
       "Haystack 2 (haystack-ai)",
+      "fastembed",
       "React",
       "Vite",
       "Tailwind CSS",
@@ -54,7 +54,8 @@
       "Retrofit"
     ],
     "ai_models": [
-      "None: deterministic multi-agent triage with Haystack BM25 retrieval, no external LLM"
+      "BAAI/bge-small-en-v1.5 embeddings (local ONNX via fastembed, stored in Db2 VECTOR columns)",
+      "No hosted LLM: deterministic triage agents with Haystack BM25 + Db2 vector hybrid retrieval"
     ]
   }
 }

@@ -1,7 +1,12 @@
 # System Architecture
 
 ## Overview
-NSIN is a three-tier system. Two thin clients, a React web app and a native Android app, talk to a single FastAPI backend over JSON/REST with JWT bearer tokens. The backend owns all business rules (role-based access, the incident state machine, SOS fan-out, journey and check-in tracking) and runs the triage agent pipeline in-process. All state lives in IBM Db2 and is reached through SQLAlchemy with the `ibm_db_sa` dialect. A native `ibm_db` connection handles health probing and raw parameterised SQL. SQLite and PostgreSQL adapters share the same models, for local development and tests.
+NSIN has three tiers. A React web app and a native Android app talk to one FastAPI backend over JSON/REST with JWT bearer tokens. The backend owns all business rules: role checks, the incident state machine, SOS routing, journey and check-in tracking, triage and retrieval. **IBM Db2 is the system of record**, and it also does work beyond storage:
+- semantic search over protocol and incident embeddings, with native `VECTOR` columns and `VECTOR_DISTANCE`;
+- response-time and hotspot analytics in SQL;
+- privilege separation, through a data-only role and an append-only audit table.
+
+Access goes through SQLAlchemy with the `ibm_db_sa` dialect, plus the native `ibm_db` driver for health checks and prepared statements. SQLite and PostgreSQL adapters share the same models, for tests and local development.
 
 ---
 
@@ -9,50 +14,59 @@ NSIN is a three-tier system. Two thin clients, a React web app and a native Andr
 
 ```mermaid
 graph TD
-    Web["Web client<br/>React 19 + TypeScript + Vite"] -->|"HTTPS / JSON + JWT"| API
-    Android["Android client<br/>Kotlin + Compose + Retrofit"] -->|"HTTPS / JSON + JWT"| API
+    Web["Web client<br/>React 19 + TypeScript"] -->|"HTTPS · JSON · JWT"| API
+    Android["Android client<br/>Kotlin + Compose + Retrofit"] -->|"HTTPS · JSON · JWT"| API
 
     subgraph Backend["FastAPI backend (Python 3.11)"]
-        API["REST routers /api/v1<br/>auth · sos · incidents · contacts<br/>children · elder-care · responders · community · ai"]
-        RBAC["JWT auth + role checks<br/>(api/deps.py)"]
-        Crew["Triage pipeline<br/>Intake → Triage → Knowledge"]
-        KB["Haystack Pipeline<br/>InMemoryBM25Retriever<br/>curated civic safety SOPs"]
-        DAL["Database layer<br/>DATABASE_MODE = db2 | sqlite | postgresql"]
-        API --> RBAC
-        API --> Crew
-        Crew --> KB
-        API --> DAL
+        API["REST routers /api/v1<br/>auth · sos · incidents · contacts · children<br/>elder-care · responders · community · ai"]
+        SEC["Security<br/>JWT · role checks · login throttle<br/>validation · audit"]
+        TRI["Triage agents<br/>Intake → Triage → Knowledge"]
+        HAY["Haystack Pipeline<br/>InMemoryBM25Retriever"]
+        VEC["Db2 vector store<br/>fastembed bge-small (local ONNX)"]
+        ANA["Analytics<br/>Db2-native SQL"]
+        API --> SEC
+        API --> TRI
+        TRI --> HAY
+        TRI --> VEC
+        API --> ANA
     end
 
-    DAL -->|"SQLAlchemy ORM<br/>ibm_db_sa (db2+ibm_db://)"| Db2[("IBM Db2<br/>database NSIN")]
-    DAL -->|"ibm_db native<br/>SYSIBM.SYSDUMMY1 probe,<br/>prepared statements"| Db2
-    Db2 -->|"rows, history, analyses"| DAL
-    API -->|"JSON response"| Web
-    API -->|"JSON response"| Android
+    API -->|"ibm_db_sa ORM<br/>transactions"| DB2
+    VEC -->|"MERGE · VECTOR_DISTANCE"| DB2
+    ANA -->|"MEDIAN · PERCENTILE_CONT · RANK OVER"| DB2
+    SEC -->|"ibm_db health probe<br/>audit_events"| DB2
+
+    subgraph DB2["IBM Db2 12.1 · database NSIN"]
+        REL[("12 relational tables<br/>incidents · status history · audit · ...")]
+        VT[("safety_protocols · incident_embeddings<br/>VECTOR(384, FLOAT32)")]
+    end
 ```
 
-### SOS → triage → persistence sequence
+### SOS → triage → related reports
 
 ```mermaid
 sequenceDiagram
     participant R as Resident (web/Android)
     participant A as FastAPI
-    participant P as Triage pipeline
+    participant V as Embeddings (local ONNX)
     participant D as IBM Db2
-    participant Q as Responder (web/Android)
+    participant Q as Responder
 
-    R->>A: POST /api/v1/sos {lat, lng, message}
-    A->>D: INSERT incidents (P1_CRITICAL) + incident_status_history + location_events (single transaction)
-    A-->>R: 201 incident {reference_code, status: reported}
-    Q->>A: GET /api/v1/responders/assignments
-    A->>D: SELECT open incidents ORDER BY priority, created_at
-    Q->>A: POST /api/v1/incidents/{id}/acknowledge
-    A->>D: UPDATE incidents + INSERT incident_status_history (commit)
-    R->>A: POST /api/v1/ai/incident-assistance {raw_text, incident_id}
-    A->>P: intake → triage → BM25 retrieval
-    P-->>A: category, priority, reasoning, checklist, cited SOPs
-    A->>D: UPSERT ai_analysis_records + INSERT audit_events (commit)
-    A-->>R: analysis + persisted_analysis_id
+    R->>A: POST /sos {lat, lng}
+    A->>D: INSERT incident + location_event + status_history + audit_event (one transaction)
+    A->>V: embed title + description
+    A->>D: MERGE INTO incident_embeddings (VECTOR)
+    A-->>R: 201 SOS-202611-00042 (P1_CRITICAL)
+    R->>A: POST /ai/incident-assistance {raw_text, incident_id}
+    A->>A: intake + triage rules (priority, missing info)
+    A->>D: VECTOR_DISTANCE over safety_protocols  ‖  Haystack BM25 in-process
+    A->>A: reciprocal rank fusion + category prior
+    A->>D: MERGE ai_analysis_records + INSERT audit_events
+    Q->>A: GET /incidents/{id}/similar
+    A->>D: self-join on incident_embeddings ORDER BY VECTOR_DISTANCE
+    A-->>Q: related reports (same address first)
+    Q->>A: POST /incidents/{id}/acknowledge
+    A->>D: state-machine check → UPDATE incident + INSERT status_history + audit (commit)
 ```
 
 ---
@@ -60,218 +74,155 @@ sequenceDiagram
 ## Component Breakdown
 
 1. **User Interface / Client Layer**
-   - **Web (`src/web-app`)**: React Router pages per role (resident dashboard, SOS, report incident, incident timeline, trusted contacts, child transit, elder care, responder command, admin, community map). `AuthContext` keeps the JWT, and `services/api.ts` is a typed client for every endpoint.
-   - **Android (`src/android`)**: Jetpack Compose with Material 3 in an MVVM layout (`SafetyViewModel` → `SafetyRepository` → Retrofit `SafetyApiService`). The base URL can be changed at runtime from the Settings screen (emulator `10.0.2.2` or LAN IP).
-   - Both clients use the same API contract, so an incident raised on Android appears on the web responder dashboard immediately.
+   - **Web (`src/web-app`)**: role-based pages for resident, responder, admin, community analytics and incident detail with related reports. `services/api.ts` is a typed client and turns validation errors into readable messages.
+   - **Android (`src/android`)**: Compose + Material 3 in MVVM (`SafetyViewModel` → `SafetyRepository` → Retrofit). The base URL can be changed at runtime. Cleartext HTTP is debug-only, and backups are disabled because the app stores a session token. It ships with a Gradle wrapper.
 
 2. **Application Backend Layer (`src/backend/app`)**
-   - `api/v1/*`: 10 routers and 27 endpoints. Pydantic schemas validate every request body (for example, triage text is limited to 3–4000 characters).
-   - `api/deps.py`: decodes the JWT, loads the user, and enforces role checks (responder/admin-only routes).
-   - `core/security.py`: bcrypt password hashing and HS256 JWT issuing.
-   - `core/config.py`: twelve-factor settings from environment variables or `src/backend/.env`. No secrets are hard-coded for production.
-   - Incident state machine: `reported → acknowledged → responder_en_route → on_scene → resolving → resolved | false_alarm`. Each transition appends to `incident_status_history`.
+   - `api/v1/*`: 10 routers. Pydantic schemas validate every request with enums, coordinate ranges, and length limits sized to the Db2 columns.
+   - `api/deps.py`: JWT verification; `ensure_verified_staff` blocks unverified responders.
+   - `api/v1/incidents.py`: an explicit `ALLOWED_TRANSITIONS` state machine (409 on illegal moves), identity-based reference codes, eager loading (no N+1), pagination, and privacy masking of other residents' identities and coordinates. Private incidents return 404 to non-owners.
+   - `core/`: bcrypt hashing; HS256 JWT; a sliding-window login throttle (429 + `Retry-After`) with constant-time behaviour for unknown emails; a same-transaction audit helper; a production guard that refuses default secrets or wildcard CORS.
+   - `main.py`: security headers, and a generic 500 handler that never returns SQL or driver details.
 
 3. **Database Layer (IBM Db2)**
-   - `database/base.py`: picks the adapter from `DATABASE_MODE` and exposes the `get_db()` session dependency.
    - `database/db2_adapter.py`:
-     - `test_connection()`: native `ibm_db.connect` followed by `SELECT CURRENT TIMESTAMP FROM SYSIBM.SYSDUMMY1`, reporting native Db2 error text on failure.
-     - `execute_query()` / `execute_non_query()`: `ibm_db.prepare` + `ibm_db.execute` with bound parameters. Autocommit is off, with explicit `commit` / `rollback`.
-     - `get_session_factory()`: SQLAlchemy engine on `db2+ibm_db://…` with `pool_pre_ping`, runs `create_all` (DDL in Db2), and seeds the demo personas on first run.
-   - **Fail-fast**: in Db2 mode an unreachable database stops startup instead of falling back silently.
+     - Native `ibm_db` health probe (server time, version via `server_info()`, `CURRENT SCHEMA`) and prepared-statement helpers with explicit commit / rollback.
+     - The `ibm_db_sa` engine is built with `URL.create`, so credentials are escaped. `CurrentSchema` support lets a least-privilege login resolve the owner's tables.
+     - Table existence is checked in `SYSCAT.TABLES` for `CURRENT SCHEMA`, and DDL runs only for missing tables, so the restricted login never attempts it.
+   - `ai/semantic/db2_vector_store.py`: raw DDL for the `VECTOR` tables, `MERGE` upserts, the `VECTOR_DISTANCE` protocol search with confidence gating, an incident self-join for related reports, and a backfill of incidents that have no embedding yet.
+   - `analytics/insights.py`: Db2-native SQL for the response-time distribution, hotspots, hourly counts and SLA breaches, plus a portable Python path. A Db2 test asserts both give identical results.
+   - **Fail-fast:** if `DATABASE_MODE=db2` and Db2 is unreachable, startup is refused.
 
-4. **AI / Model Orchestration Layer (`src/backend/app/ai`)**
-   - `crewai/agents.py`: four role/goal agents coordinated by `SafetyCrewOrchestrator`:
-     - `IncidentIntakeAgent`: category detection, location entity extraction, missing-information prompts.
-     - `SafetyTriageAssistant`: risk signals mapped to `P1_CRITICAL … P4_ADVISORY`, with written reasoning and an immediate checklist.
-     - `KnowledgeAssistant`: category-filtered retrieval of protocols.
-     - `CommunityInsightsAgent`: neighbourhood-level summary for the admin and community views.
-   - `haystack/rag_pipeline.py`: a Haystack 2 `Pipeline` with an `InMemoryBM25Retriever` over an `InMemoryDocumentStore` of curated SOP documents (`documents.py`). It filters on `meta.category` and returns an explicit "not found" result when no document shares keywords with the query.
-   - Deterministic by design: there are no outbound LLM calls, so resident-written text can't hijack the output and the system works offline. Every response carries an advisory notice, and dispatch decisions stay with human responders.
+4. **AI / Retrieval Layer (`src/backend/app/ai`)**
+   - `crewai/agents.py`: four role/goal agents in plain Python, coordinated by `SafetyCrewOrchestrator` (`crewai` is not a dependency). Intake uses whole-word keyword rules, so "person" never matches "son". Triage escalates threats to life to P1; medical, child alerts, unresponsive seniors and intrusions to P2; and hazards and suspicious activity to P3.
+   - `haystack/rag_pipeline.py`: a Haystack 2 `Pipeline` with `InMemoryBM25Retriever`, fused with Db2 vector hits using RRF (k = 60). It adds a category prior from triage and records per result whether it matched by BM25, vector or both. Haystack telemetry is disabled.
+   - Everything is deterministic and local: no hosted LLM, resident text never leaves the deployment, and output is advisory.
 
 ---
 
 ## Data Flow
 
-1. **Input Ingestion**: a resident triggers SOS or files a report from either client. Pydantic validates the payload and the JWT identifies the reporter and role.
-2. **Context Retrieval**: the backend reads the reporter's profile and medical notes, trusted contacts, on-duty responders and open incidents from Db2 through indexed lookups (`users.email`, `incidents.reporter_id`, `incidents.reference_code`, `trusted_contacts.user_id`).
-3. **Augmentation & Inference**: on request, the triage pipeline structures the free text, assigns a priority and retrieves cited SOP excerpts through the Haystack BM25 pipeline.
-4. **State Persistence**: the incident, its status history and location pings are written in one transaction. Triage output is upserted into `ai_analysis_records`, and an `audit_events` row records who did what.
-5. **Response Delivery**: JSON goes back to the caller. Responder and resident dashboards poll (refresh) the same Db2-backed endpoints, so both sides see the same timeline.
+1. **Input Ingestion**: a resident raises an SOS or files a report from either client. Pydantic validates the payload, and the JWT identifies the user and role.
+2. **Context Retrieval**: the backend reads the reporter's profile, SOS-enabled trusted contacts and on-duty verified responders from Db2. For triage it retrieves protocols with BM25 and Db2 `VECTOR_DISTANCE`.
+3. **Augmentation & Inference**: the triage agents structure the free text, assign a priority with reasoning and attach the best-matching cited protocol.
+4. **State Persistence**: the incident, location event, first status entry and audit row commit in one transaction. The incident is then embedded with `MERGE` into `incident_embeddings`, and triage output is upserted into `ai_analysis_records`.
+5. **Response Delivery**: JSON goes back to the caller. Responder queues, related reports and community analytics are served from Db2 queries, so web and Android always see the same state.
 
 ---
 
 ## IBM Db2 Schema & Storage Design
 
-The tables are generated from the SQLAlchemy models in [`src/backend/app/models/entities.py`](src/backend/app/models/entities.py) by `ibm_db_sa` on first start. The equivalent Db2 DDL is:
+The full DDL, exported from a live database with `db2look`, is in [`db/db2_schema.sql`](db/db2_schema.sql): 14 tables, 11 secondary indexes, primary, foreign and unique keys. The core tables:
 
 ```sql
-CREATE TABLE users (
-    id               INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    email            VARCHAR(255) NOT NULL UNIQUE,
-    hashed_password  VARCHAR(255) NOT NULL,
-    full_name        VARCHAR(255) NOT NULL,
-    phone            VARCHAR(50),
-    role             VARCHAR(50)  NOT NULL DEFAULT 'resident',  -- resident | guardian | elder | responder | admin
-    is_active        SMALLINT,
-    is_verified      SMALLINT,
-    emergency_notes  CLOB,
-    address          VARCHAR(255),
-    created_at       TIMESTAMP,
-    updated_at       TIMESTAMP
-);
-
-CREATE TABLE trusted_contacts (
-    id                  INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    user_id             INTEGER NOT NULL REFERENCES users(id),
-    name                VARCHAR(255) NOT NULL,
-    relationship        VARCHAR(100) NOT NULL,
-    phone               VARCHAR(50)  NOT NULL,
-    email               VARCHAR(255),
-    can_receive_sos     SMALLINT,
-    can_track_location  SMALLINT,
-    created_at          TIMESTAMP
-);
-CREATE INDEX ix_trusted_contacts_user_id ON trusted_contacts(user_id);
-
-CREATE TABLE responders (
-    id                    INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    user_id               INTEGER NOT NULL UNIQUE REFERENCES users(id),
-    badge_number          VARCHAR(100) NOT NULL,
-    service_type          VARCHAR(100),          -- medical | security | fire | community_patrol
-    is_available          SMALLINT,
-    current_lat           DOUBLE,
-    current_lng           DOUBLE,
-    rating                DOUBLE,
-    is_verified_by_admin  SMALLINT,
-    created_at            TIMESTAMP
-);
-
 CREATE TABLE incidents (
-    id                     INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    reference_code         VARCHAR(50)  NOT NULL UNIQUE,      -- e.g. INC-202611-001
-    reporter_id            INTEGER NOT NULL REFERENCES users(id),
-    title                  VARCHAR(255) NOT NULL,
-    description            CLOB NOT NULL,
-    incident_type          VARCHAR(50)  NOT NULL,             -- sos | hazard | medical | child_alert | elder_welfare | suspicious_activity
-    priority               VARCHAR(50)  NOT NULL,             -- P1_CRITICAL .. P4_ADVISORY
-    status                 VARCHAR(50)  NOT NULL,             -- reported .. resolved | false_alarm
-    location_address       VARCHAR(255),
-    latitude               DOUBLE,
-    longitude              DOUBLE,
-    assigned_responder_id  INTEGER REFERENCES users(id),
-    created_at             TIMESTAMP,
-    updated_at             TIMESTAMP,
-    resolved_at            TIMESTAMP
+    id                    INTEGER NOT NULL GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    reference_code        VARCHAR(50)  NOT NULL UNIQUE,      -- INC-202611-00042, derived from id
+    reporter_id           INTEGER      NOT NULL REFERENCES users(id),
+    title                 VARCHAR(255) NOT NULL,
+    description           CLOB         NOT NULL,
+    incident_type         VARCHAR(50)  NOT NULL,             -- sos | hazard | medical | child_alert | elder_welfare | suspicious_activity
+    priority              VARCHAR(50)  NOT NULL,             -- P1_CRITICAL .. P4_ADVISORY
+    status                VARCHAR(50)  NOT NULL,             -- reported .. resolved | false_alarm (state machine in code)
+    location_address      VARCHAR(255),
+    latitude DOUBLE, longitude DOUBLE,
+    assigned_responder_id INTEGER REFERENCES users(id),
+    created_at TIMESTAMP, updated_at TIMESTAMP, resolved_at TIMESTAMP
 );
-CREATE INDEX ix_incidents_reporter_id ON incidents(reporter_id);
+CREATE INDEX ix_incidents_status_priority ON incidents (status, priority);   -- responder queues
+CREATE INDEX ix_incidents_created_at      ON incidents (created_at);         -- 30-day analytics windows
+CREATE INDEX ix_incidents_reporter_id     ON incidents (reporter_id);
 
-CREATE TABLE incident_status_history (          -- append-only audit trail of every transition
-    id             INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    incident_id    INTEGER NOT NULL REFERENCES incidents(id),
-    status         VARCHAR(50) NOT NULL,
-    notes          CLOB,
-    updated_by_id  INTEGER NOT NULL REFERENCES users(id),
-    created_at     TIMESTAMP
+CREATE TABLE incident_status_history (                 -- append-only lifecycle trail
+    id INTEGER NOT NULL GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    incident_id   INTEGER NOT NULL REFERENCES incidents(id),
+    status        VARCHAR(50) NOT NULL,
+    notes         CLOB,
+    updated_by_id INTEGER NOT NULL REFERENCES users(id),
+    created_at    TIMESTAMP
 );
-CREATE INDEX ix_incident_status_history_incident_id ON incident_status_history(incident_id);
+CREATE INDEX ix_status_history_incident_status_time
+    ON incident_status_history (incident_id, status, created_at);    -- first-acknowledgement CTE
 
-CREATE TABLE location_events (
-    id           INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    incident_id  INTEGER REFERENCES incidents(id),
-    user_id      INTEGER NOT NULL REFERENCES users(id),
-    latitude     DOUBLE NOT NULL,
-    longitude    DOUBLE NOT NULL,
-    accuracy     DOUBLE,
-    event_type   VARCHAR(50),
-    timestamp    TIMESTAMP
+CREATE TABLE audit_events (                            -- append-only for the application role
+    id INTEGER NOT NULL GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    action VARCHAR(100) NOT NULL, resource_type VARCHAR(100) NOT NULL, resource_id VARCHAR(100),
+    ip_address VARCHAR(50), details_json CLOB, timestamp TIMESTAMP
 );
 
-CREATE TABLE child_journeys (
-    id                     INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    guardian_id            INTEGER NOT NULL REFERENCES users(id),
-    child_name             VARCHAR(255) NOT NULL,
-    origin                 VARCHAR(255) NOT NULL,
-    destination            VARCHAR(255) NOT NULL,
-    expected_arrival_time  TIMESTAMP NOT NULL,
-    actual_arrival_time    TIMESTAMP,
-    status                 VARCHAR(50) NOT NULL,   -- active | completed | delayed | alert_triggered
-    last_check_in          TIMESTAMP,
-    notes                  CLOB,
-    created_at             TIMESTAMP
+-- Semantic search inside Db2
+CREATE TABLE safety_protocols (
+    doc_id VARCHAR(40) NOT NULL PRIMARY KEY, title VARCHAR(255) NOT NULL, category VARCHAR(50) NOT NULL,
+    source VARCHAR(255), body CLOB(64K) NOT NULL,
+    embedding VECTOR(384, FLOAT32) NOT NULL, embedding_model VARCHAR(100) NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT TIMESTAMP
 );
-
-CREATE TABLE elder_checkins (
-    id               INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    user_id          INTEGER NOT NULL REFERENCES users(id),
-    scheduled_time   TIMESTAMP NOT NULL,
-    checked_in_at    TIMESTAMP,
-    status           VARCHAR(50) NOT NULL,       -- pending | completed | missed | flagged
-    wellness_status  VARCHAR(50) NOT NULL,       -- good | needs_assistance | emergency
-    notes            CLOB,
-    created_at       TIMESTAMP
-);
-
-CREATE TABLE assistance_requests (
-    id              INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    user_id         INTEGER NOT NULL REFERENCES users(id),
-    request_type    VARCHAR(100),                -- grocery | medicine | mobility | check_in | urgent
-    description     CLOB NOT NULL,
-    urgency         VARCHAR(50),
-    status          VARCHAR(50),
-    assigned_to_id  INTEGER REFERENCES users(id),
-    created_at      TIMESTAMP,
-    resolved_at     TIMESTAMP
-);
-
-CREATE TABLE community_hazards (
-    id              INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    reported_by_id  INTEGER NOT NULL REFERENCES users(id),
-    title           VARCHAR(255) NOT NULL,
-    hazard_type     VARCHAR(100) NOT NULL,
-    severity        VARCHAR(50),
-    latitude        DOUBLE,
-    longitude       DOUBLE,
-    address         VARCHAR(255) NOT NULL,
-    status          VARCHAR(50),
-    verified_at     TIMESTAMP,
-    created_at      TIMESTAMP
-);
-
-CREATE TABLE ai_analysis_records (              -- one triage result per incident (upserted)
-    id                        INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    incident_id               INTEGER NOT NULL UNIQUE REFERENCES incidents(id),
-    intake_summary            CLOB NOT NULL,
-    suggested_priority        VARCHAR(50) NOT NULL,
-    triage_reasoning          CLOB NOT NULL,
-    recommended_actions_json  CLOB NOT NULL,
-    retrieved_protocols_json  CLOB NOT NULL,
-    created_at                TIMESTAMP
-);
-
-CREATE TABLE audit_events (
-    id             INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    user_id        INTEGER REFERENCES users(id),
-    action         VARCHAR(100) NOT NULL,
-    resource_type  VARCHAR(100) NOT NULL,
-    resource_id    VARCHAR(100),
-    ip_address     VARCHAR(50),
-    details_json   CLOB,
-    timestamp      TIMESTAMP
+CREATE TABLE incident_embeddings (
+    incident_id INTEGER NOT NULL PRIMARY KEY REFERENCES incidents(id) ON DELETE CASCADE,
+    embedding VECTOR(384, FLOAT32) NOT NULL, embedding_model VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT TIMESTAMP
 );
 ```
 
+Other tables: `users`, `trusted_contacts`, `responders`, `location_events`, `child_journeys`, `elder_checkins`, `assistance_requests`, `community_hazards` and `ai_analysis_records` (one row per incident, unique `incident_id`).
+
+### Representative Db2 SQL
+
+```sql
+-- Time to first acknowledgement per priority (analytics/insights.py)
+WITH first_ack AS (
+    SELECT incident_id, MIN(created_at) AS ack_at
+    FROM incident_status_history WHERE status = 'acknowledged' GROUP BY incident_id)
+SELECT i.priority, COUNT(*) AS incidents, COUNT(a.ack_at) AS acknowledged,
+       MEDIAN(DOUBLE(SECONDS_BETWEEN(a.ack_at, i.created_at)))                     AS median_ack_s,
+       PERCENTILE_CONT(0.9) WITHIN GROUP
+           (ORDER BY DOUBLE(SECONDS_BETWEEN(a.ack_at, i.created_at)))             AS p90_ack_s
+FROM incidents i LEFT JOIN first_ack a ON a.incident_id = i.id
+WHERE i.created_at >= :since
+GROUP BY i.priority;
+
+-- Hotspots
+SELECT RANK() OVER (ORDER BY COUNT(*) DESC) AS hotspot_rank, location_address, COUNT(*) AS incidents
+FROM incidents WHERE created_at >= :since AND location_address IS NOT NULL
+GROUP BY location_address ORDER BY hotspot_rank FETCH FIRST 5 ROWS ONLY;
+
+-- Related reports: self-join on embeddings (db2_vector_store.py)
+SELECT other.incident_id, VECTOR_DISTANCE(other.embedding, target.embedding, COSINE) AS distance
+FROM incident_embeddings target
+JOIN incident_embeddings other ON other.incident_id <> target.incident_id
+WHERE target.incident_id = :incident_id
+ORDER BY distance FETCH FIRST 20 ROWS ONLY;
+```
+
 **Design notes**
-- Status values are stored as short `VARCHAR` codes rather than lookup tables. This keeps the state machine in application code, where it is tested, while every transition is still kept in `incident_status_history`.
-- `UNIQUE (incident_id)` on `ai_analysis_records` makes re-running triage an update rather than a duplicate row.
-- Variable-length free text (`description`, `notes`, JSON payloads) uses `CLOB`, and bounded identifiers use `VARCHAR`.
-- All application SQL is bound-parameter SQL, either through the ORM or through `ibm_db.prepare` / `execute`. No query is built by string concatenation.
+- Status and type codes are short `VARCHAR`s validated by Pydantic enums. The lifecycle rules live in one tested state machine, and every transition is kept in `incident_status_history`.
+- Reference codes are derived from the identity value inside the same transaction, so they can't collide; the earlier random 4-digit scheme could.
+- Embeddings are stored next to the data they describe, so similarity search, joins and access control all stay inside Db2.
+- Boolean filters are written as `col == True` in SQLAlchemy, which renders `= 1`. The alternative `.is_(True)` renders `IS 1`, which SQLite accepts and Db2 rejects (SQL0104N). The Db2 test run caught this.
 
 ---
 
 ## Security & Secrets Management
-- Database credentials, the JWT signing key and allowed CORS origins are read at runtime from environment variables or `src/backend/.env`. `.env` is gitignored, and `.env.example` contains placeholders only.
-- Passwords are stored as bcrypt hashes. API access uses short-lived HS256 JWTs, and responder and admin routes are role-gated.
-- CORS is an explicit allow-list (no `*`).
-- Db2 on IBM Cloud connections use `SECURITY=SSL` when `DB2_SECURITY=SSL`.
-- Least privilege: the application only needs DML rights plus `CREATE TABLE` on first run. In production, run the schema creation once with an admin user, then point the app at a user that has only `SELECT/INSERT/UPDATE/DELETE` on the NSIN tables.
-- Triage never sends resident text to a third-party model, and its output is advisory only.
+- **Secrets:** database credentials, the JWT key and CORS origins come from the environment or `src/backend/.env` (gitignored). With `APP_ENV=production` the app refuses the development JWT secret, short secrets and wildcard CORS, and `/health` hides connection details.
+- **Least privilege in Db2:** [`db/least_privilege.sql`](db/least_privilege.sql) creates role `NSIN_APP`:
+  - `SELECT/INSERT/UPDATE/DELETE` on the 14 application tables, and no DDL;
+  - `audit_events` is insert/read only.
+  
+  The app runs as login `nsinapp` with `DB2_SCHEMA=DB2INST1`. Tests prove `CREATE`, `DROP`, `ALTER` and audit tampering fail with `SQL0551N`.
+- **Authentication:** bcrypt (cost 12), HS256 JWTs, throttled failed logins (429), identical responses and timing for unknown emails. Admin accounts can't be self-registered, and responders act only after admin verification.
+- **Authorisation and privacy:**
+  - Private incidents are visible only to the reporter and verified staff; others get 404, so ids can't be probed.
+  - Public alerts hide the reporter's identity and coordinates from other residents.
+  - Responders' live GPS is hidden from residents.
+  - AI analyses can only be attached by the reporter or staff.
+- **Input and output:**
+  - All SQL is parameterised: ORM, `ibm_db.prepare`, or bound `text()` parameters. The only interpolated values are validated integers in `FETCH FIRST n ROWS`.
+  - Request limits are sized to the Db2 columns, so oversized input returns 422 instead of a 500.
+  - Security headers are set on every response.
+  - Unhandled errors return a generic 500 and are logged server-side.
+- **Containers and clients:**
+  - The backend runs as a non-root user, with the embedding model baked in, so there are no outbound calls at runtime.
+  - Haystack telemetry is disabled.
+  - Android allows cleartext HTTP in debug builds only.
+- **AI safety:** no hosted LLM and no prompt surface. Resident text stays inside the deployment, and triage output is advisory.

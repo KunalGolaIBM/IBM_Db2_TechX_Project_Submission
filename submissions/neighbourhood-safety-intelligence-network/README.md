@@ -1,6 +1,8 @@
 # Neighbourhood Safety Intelligence Network (NSIN)
 
-> **One-Line Pitch:** A neighbourhood emergency and safety platform (web + Android + FastAPI) that lets residents raise SOS alerts, report incidents, track a child's commute and run elder wellness check-ins, with every incident, status change, triage result and audit event stored in IBM Db2.
+> **One-Line Pitch:** A neighbourhood emergency and safety platform (web + Android + FastAPI) where IBM Db2 is the system of record. It stores every SOS, incident, status change and audit event, runs semantic search over safety protocols and incident reports with native `VECTOR` columns, and computes response-time analytics in Db2 SQL.
+
+![Community safety dashboard: response times and hotspots computed in IBM Db2](docs/screenshots/community-insights.png)
 
 ---
 
@@ -22,87 +24,97 @@
 ---
 
 ## Problem Statement
-- **The problem:** When something goes wrong in a residential neighbourhood (a fall, a stalker, a child who hasn't reached school, a broken streetlight), the people who can help fastest are usually nearby: family, neighbours and local volunteers. Today that coordination happens in noisy WhatsApp groups with no structure, no status tracking and no record of who responded.
-- **Who it's for:** Residents, and specifically the groups most exposed to everyday safety risk: women travelling alone, children commuting to school, and senior citizens living independently. Also for the volunteer responders and resident-welfare-association admins who coordinate help.
-- **Why existing tools fall short:** Emergency-number apps only reach official services. Social apps have no incident lifecycle, no prioritisation and no accountability. Location-sharing apps don't cover hazards, elder check-ins or responder dispatch. Nothing ties these together around one trustworthy, auditable record.
+- **The problem:** When something goes wrong in a residential neighbourhood (a fall, someone following a woman home, a child who hasn't reached school, a broken streetlight), the people who can help fastest are nearby: family, neighbours and local volunteers. Today that help is coordinated in noisy WhatsApp groups with no priority, no status tracking and no record of who responded.
+- **Who it's for:** Residents, especially women travelling alone, school-going children and senior citizens living independently. Also the volunteer responders and resident-welfare-association (RWA) admins who coordinate help.
+- **Why existing tools fall short:** Emergency-number apps only reach official services. Chat groups have no incident lifecycle, prioritisation or accountability. Location-sharing apps don't cover hazards, elder check-ins or responder dispatch. Nothing ties these together around one trustworthy, auditable record, or measures how fast help actually arrives.
 
 ---
 
 ## Solution Overview
-NSIN is one backend with two clients (a React web app and a native Android app), backed by IBM Db2.
 
 | Feature | What it does |
 |---|---|
-| **SOS dispatch** | Two-step confirmed SOS atomically creates a `P1_CRITICAL` incident, its GPS location event and the first status-history entry. It goes to the top of every on-duty responder's queue, and the resident's trusted-contact circle is shown alongside it. |
-| **Incident lifecycle** | `reported → acknowledged → responder_en_route → on_scene → resolved`, with every transition written to an append-only `incident_status_history` table. |
-| **Trusted contacts** | Each resident manages an emergency circle with per-contact SOS and location-sharing permissions. |
-| **Child safe transit** | A guardian starts a journey (origin, destination, expected arrival); check-ins update it and overdue journeys are flagged. |
-| **Elder care** | Daily wellness check-ins and non-emergency assistance requests (medicine, groceries, mobility). |
-| **Responder roster** | Verified responders toggle availability, view assignments and claim incidents. |
-| **Community hazards** | Residents report persistent hazards (dark streets, flooding, stray animals); admins see neighbourhood-level insights. |
-| **Triage assistant** | A multi-agent pipeline classifies free-text reports, suggests a priority, flags missing details and retrieves the relevant safety protocol. Results are saved per incident in Db2. |
-| **Role-based access** | Resident, guardian, elder, responder and admin roles with JWT auth. |
+| **SOS dispatch** | Two-step confirmed SOS writes a `P1_CRITICAL` incident, its GPS point, the first status entry and an audit row in **one Db2 transaction**, and records how many trusted contacts and on-duty verified responders it reached. |
+| **Incident lifecycle** | Enforced state machine `reported → acknowledged → responder_en_route → on_scene → resolving → resolved / false_alarm`. Illegal transitions return 409, and every step is appended to `incident_status_history`. |
+| **AI triage with citations** | Classifies a free-text report, suggests a priority with reasoning, lists missing details and cites the matching safety protocol (Haystack BM25 fused with Db2 vector search). The result is saved per incident. |
+| **Related-report detection** | Responders see reports with similar meaning (Db2 `VECTOR_DISTANCE`), with reports at the same address ranked first, so duplicates are spotted before dispatch. |
+| **Response analytics** | Median / p90 time-to-acknowledge per priority against SOP targets, `RANK()`-ordered hotspots and live SLA breaches, all computed in Db2 SQL. |
+| **Child safe transit** | Guardians start a journey with an expected arrival; overdue journeys are flagged `delayed` automatically. |
+| **Elder care** | Daily wellness check-ins and assistance requests; reports of unresponsive seniors escalate to P2. |
+| **Trusted contacts & roles** | Per-resident emergency circle; resident, guardian, responder and admin roles. Responders must be verified by an admin before they can act. |
+
+Web and Android share one REST API, so an SOS raised on a phone appears in the web responder queue.
 
 ---
 
 ## IBM Db2 Integration
-- **Db2 Edition & Environment:** IBM Db2 Community Edition in Docker (`icr.io/db2_community/db2`, wired up in [`docker-compose.db2.yml`](docker-compose.db2.yml)). The same code runs on Db2 on IBM Cloud by setting `DB2_SECURITY=SSL` and the service host/port.
+
+- **Db2 Edition & Environment:** IBM Db2 12.1 Community Edition in Docker (`icr.io/db2_community/db2`, see [`docker-compose.db2.yml`](docker-compose.db2.yml)). Db2 on IBM Cloud works by setting `DB2_SECURITY=SSL`.
 - **Connector / Driver Used:**
-  - `ibm_db_sa` (SQLAlchemy dialect, `db2+ibm_db://…`) for all application reads and writes through the ORM.
-  - `ibm_db` (native driver) for the startup health probe (`SELECT CURRENT TIMESTAMP FROM SYSIBM.SYSDUMMY1`) and for raw parameterised queries via `ibm_db.prepare` / `ibm_db.execute` with explicit commit/rollback ([`db2_adapter.py`](src/backend/app/database/db2_adapter.py)).
-- **Database Schema / Data Models:** 12 relational tables with primary keys, foreign keys, unique constraints and secondary indexes: `users`, `trusted_contacts`, `responders`, `incidents`, `incident_status_history`, `location_events`, `child_journeys`, `elder_checkins`, `assistance_requests`, `community_hazards`, `ai_analysis_records`, `audit_events`. The full DDL is in [architecture.md](architecture.md#ibm-db2-schema--storage-design).
+  - `ibm_db_sa` (SQLAlchemy dialect) for all application reads and writes.
+  - `ibm_db` (native driver) for the health probe (`SYSIBM.SYSDUMMY1`, `server_info()`) and parameterised `prepare` / `execute` with explicit commit / rollback ([`db2_adapter.py`](src/backend/app/database/db2_adapter.py)).
+- **Database Schema / Data Models:** 14 tables, 11 secondary indexes. The real DDL, exported with `db2look`, is in [`db/db2_schema.sql`](db/db2_schema.sql); the design is explained in [architecture.md](architecture.md#ibm-db2-schema--storage-design).
+  - 12 relational tables: users, contacts, responders, incidents, append-only status history, location events, child journeys, elder check-ins, assistance requests, hazards, AI analyses and audit events.
+  - 2 tables with native **`VECTOR(384, FLOAT32)`** columns: `safety_protocols` and `incident_embeddings`.
 - **Key Queries & Operations:**
-  - On first start in Db2 mode the backend creates the schema in Db2 and seeds the demo personas, so a judge gets a working app against Db2 with no manual SQL.
-  - Incident creation and every status transition run as one transaction (incident row plus history row commit together).
-  - Responder dashboards filter incidents by status and priority, using the indexed `reporter_id`, `status` and `reference_code` columns.
-  - Triage output is upserted into `ai_analysis_records` (unique per incident), and an `audit_events` row records who ran it.
-  - `/health` reports live Db2 connectivity and server time straight from `SYSIBM.SYSDUMMY1`.
-- **Strict mode:** if `DATABASE_MODE=db2` and Db2 is unreachable, the backend refuses to start. It never silently falls back to SQLite, so a "working" demo always means a working Db2 connection.
-- **Other modes:** SQLite (zero-setup local development and the test suite) and PostgreSQL share the same SQLAlchemy models. Db2 is the target deployment database.
+
+| Db2 feature | Where it's used |
+|---|---|
+| `VECTOR(384, FLOAT32)` + `VECTOR_DISTANCE(..., COSINE)` | Semantic protocol retrieval and related-incident search ([`db2_vector_store.py`](src/backend/app/ai/semantic/db2_vector_store.py)) |
+| `MERGE INTO ... USING (VALUES ...)` | Idempotent upsert of protocol and incident embeddings |
+| CTEs, `SECONDS_BETWEEN`, `MEDIAN`, `PERCENTILE_CONT(0.9) WITHIN GROUP` | Time-to-acknowledge statistics per priority ([`insights.py`](src/backend/app/analytics/insights.py)) |
+| `RANK() OVER (ORDER BY COUNT(*) DESC)`, `HOUR()` | Hotspot ranking and hourly distribution |
+| `SYSCAT.TABLES`, `SYSCAT.COLUMNS`, `CURRENT SCHEMA` | Catalog-driven DDL (create only what's missing) and schema tests |
+| Transactions + identity columns | SOS / incident writes commit together; reference codes are derived from the identity value, so they never collide |
+| Roles and grants | `NSIN_APP` role with data access only; `audit_events` is append-only for the app ([`db/least_privilege.sql`](db/least_privilege.sql)) |
+
+- **Least privilege, proven:** the full test suite also runs as a restricted login (`nsinapp`), and tests assert that `CREATE`, `DROP`, `ALTER` and `UPDATE` / `DELETE` on `audit_events` are rejected with `SQL0551N`.
+- **Fail-fast:** in `DATABASE_MODE=db2` an unreachable Db2 stops startup instead of silently falling back to SQLite.
+- **Other modes:** SQLite (tests and zero-setup development) and PostgreSQL share the same SQLAlchemy models. Analytics then use an equivalent Python path, and a Db2 test proves both paths return the same numbers.
 
 ---
 
 ## AI / LLM Architecture (if applicable)
-- **Framework:** A custom agent pipeline following CrewAI's role/goal/task pattern (`IncidentIntakeAgent → SafetyTriageAssistant → KnowledgeAssistant`, coordinated by `SafetyCrewOrchestrator`). Retrieval uses **Haystack 2** (`haystack-ai`): an `InMemoryDocumentStore` indexed with BM25 and an `InMemoryBM25Retriever` inside a Haystack `Pipeline`, filtered by category metadata ([`rag_pipeline.py`](src/backend/app/ai/haystack/rag_pipeline.py)). The agent orchestration is plain Python; the `crewai` package is not a dependency.
-- **Model Provider & Model:** None. The agents are deterministic (keyword and entity rules plus BM25 ranking) and do not call an LLM. This is deliberate for a safety product: output is predictable, works offline, costs nothing per request and can't be prompt-injected by the free-text report. Every response carries an advisory notice, and humans make all dispatch decisions.
-- **RAG / Tool-Calling Workflow:**
-  1. **Intake:** extract category, location and missing critical details from the resident's free-text report.
-  2. **Triage:** score risk signals (weapons, injuries, children, elders, time of day) into `P1_CRITICAL … P4_ADVISORY` with written reasoning and an immediate safety checklist.
-  3. **Knowledge:** a Haystack BM25 pipeline over a curated set of civic safety SOPs, filtered by category, returning cited excerpts with scores (and an explicit "not found" result when no protocol shares keywords with the report).
-  4. **Persist:** when an `incident_id` is passed, the full analysis is written to Db2 (`ai_analysis_records`) and audited (`audit_events`).
+- **Framework:** **Haystack 2** (`haystack-ai`): an `InMemoryDocumentStore` with BM25 and an `InMemoryBM25Retriever` in a Haystack `Pipeline` ([`rag_pipeline.py`](src/backend/app/ai/haystack/rag_pipeline.py)). Haystack results are fused with **IBM Db2 vector search** by reciprocal rank fusion. A small multi-agent pipeline (Intake → Triage → Knowledge, following CrewAI's role/goal pattern in plain Python; the `crewai` package is not used) orchestrates the steps.
+- **Model Provider & Model:** No hosted LLM. Embeddings come from **BAAI/bge-small-en-v1.5** running locally with ONNX (`fastembed`, 384 dimensions), and the model is baked into the Docker image. This is deliberate for a safety product: resident reports never leave the deployment, there's no per-request cost, it works offline, and output can't be prompt-injected. Haystack telemetry is disabled.
+- **RAG / Tool Calling Workflow:**
+  1. **Intake:** whole-word rules extract category, location and missing details from the report.
+  2. **Triage:** risk signals map to `P1_CRITICAL … P4_ADVISORY` with written reasoning and an immediate checklist (10 regression cases cover tricky wording).
+  3. **Retrieve:** Haystack BM25 and Db2 `VECTOR_DISTANCE` each rank the approved protocols. The rankings are fused, with a prior for the triaged category. Vector matches are gated by a calibrated distance and top-2 margin, so off-topic questions return nothing.
+  4. **Persist:** with an `incident_id`, the analysis is upserted into `ai_analysis_records` and audited.
+  5. **Link:** each new incident is embedded into `incident_embeddings`, and `GET /incidents/{id}/similar` returns related reports for responders.
+
+Output is advisory. Humans make every dispatch decision.
 
 ---
 
 ## Tech Stack
-- **Backend / Core:** Python 3.11, FastAPI, Uvicorn, SQLAlchemy 2, Pydantic 2, python-jose (JWT), passlib/bcrypt
-- **Database:** IBM Db2 (`ibm_db`, `ibm_db_sa`). SQLite for local development and tests; PostgreSQL optional.
-- **Frontend / UI:** React 19 + TypeScript + Vite + Tailwind CSS 4 (web); Kotlin + Jetpack Compose + Material 3 + Retrofit (Android, MVVM)
-- **AI / Retrieval:** Haystack 2 (`haystack-ai`): BM25 document store, retriever and pipeline
-- **Libraries & Tools:** Docker / Docker Compose, Pytest, Robolectric, oxlint
+- **Backend / Core:** Python 3.11, FastAPI, SQLAlchemy 2, Pydantic 2, python-jose (JWT), bcrypt
+- **Database:** IBM Db2 12.1 (`ibm_db`, `ibm_db_sa`); SQLite for tests and local development; PostgreSQL optional
+- **AI / Retrieval:** Haystack 2 (BM25 pipeline), fastembed (local ONNX embeddings), Db2 `VECTOR`
+- **Frontend / UI:** React 19 + TypeScript + Vite + Tailwind CSS 4 (web); Kotlin + Jetpack Compose + Material 3 + Retrofit (Android)
+- **Libraries & Tools:** Docker Compose, pytest, Robolectric, ruff, oxlint, Gradle wrapper
 
 ---
 
 ## Prerequisites
-- **Docker** with Docker Compose v2 (for the one-command stack and Db2 Community Edition; Db2 needs about 4 GB RAM)
-- **Python ≥ 3.11** and `pip` (for running the backend and tests without Docker)
-- **Node.js ≥ 18** and `npm` (web app)
-- **Android Studio** (Ladybug or newer) or Gradle 8.x with JDK 17 (optional, Android app)
+- **Docker** with Docker Compose v2 (Db2 Community Edition needs about 4 GB of RAM; the first Db2 start takes 3–5 minutes)
+- **Python ≥ 3.11** (to run the backend or tests without Docker)
+- **Node.js ≥ 18** (web app without Docker)
+- **JDK 17 + Android SDK 36**, or Android Studio (optional, Android app)
 
 ---
 
 ## Setup & Installation
 
 ```bash
-# 1. Clone the repository and go to this submission
 git clone https://github.com/KunalGolaIBM/IBM_Db2_TechX_Project_Submission.git
 cd IBM_Db2_TechX_Project_Submission/submissions/neighbourhood-safety-intelligence-network
 
-# 2. Backend dependencies (includes ibm_db and ibm_db_sa)
+# Only needed when running without Docker:
 python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+source .venv/bin/activate              # Windows: .venv\Scripts\activate
 pip install -r src/backend/requirements.txt
-
-# 3. Web app dependencies
 npm --prefix src/web-app install
 ```
 
@@ -111,152 +123,161 @@ npm --prefix src/web-app install
 ## Configuration
 
 ```bash
-cp .env.example src/backend/.env               # backend settings (Db2 credentials, JWT secret, CORS)
-cp src/web-app/.env.example src/web-app/.env   # web app → backend URL
+cp .env.example src/backend/.env
+cp src/web-app/.env.example src/web-app/.env
 ```
 
 | Variable | Purpose |
 |---|---|
 | `DATABASE_MODE` | `db2`, `sqlite` or `postgresql` |
 | `DB2_HOST`, `DB2_PORT`, `DB2_DATABASE`, `DB2_USER`, `DB2_PASSWORD` | Db2 connection |
+| `DB2_SCHEMA` | Schema of the tables when connecting as the least-privilege login (`DB2INST1`) |
 | `DB2_SECURITY` | Empty for local Db2 CE, `SSL` for Db2 on IBM Cloud |
-| `JWT_SECRET` | Token signing key: set a long random value |
-| `CORS_ORIGINS` | Comma-separated web origins allowed to call the API |
-| `VITE_API_BASE_URL` | (web app) backend URL, default `http://localhost:8000` |
+| `ENABLE_VECTOR_SEARCH`, `EMBEDDING_MODEL` | Db2 vector search (Db2 mode only) |
+| `JWT_SECRET` | Token signing key; required (32+ characters) when `APP_ENV=production` |
+| `CORS_ORIGINS` | Comma-separated allowed web origins (no wildcard in production) |
+| `VITE_API_BASE_URL` | Web app → backend URL |
 
-The backend reads `src/backend/.env` at startup; real environment variables take precedence.
+The backend reads `src/backend/.env`; real environment variables take precedence.
 
-> **Security Warning:** Never commit `.env` or any real API keys or database passwords to Git! `.env` is listed in this project's `.gitignore`.
+> **Security Warning:** Never commit `.env` or any real API keys or database passwords to Git! `.env` is gitignored, and `.env.example` contains placeholders only.
 
 ---
 
 ## Running the Project
 
-### Option A: Full stack on IBM Db2 (Docker)
+### Option A: Full stack on IBM Db2 (recommended)
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.db2.yml up --build
 ```
-This starts Db2 Community Edition (database `NSIN`), waits for it to become healthy (first boot takes about 3–5 minutes), then starts the backend in Db2 mode, which creates the schema and seeds the demo data, and finally starts the web app.
+This starts Db2 Community Edition (database `NSIN`) and waits until it's healthy. The backend then creates the schema (12 relational + 2 vector tables), seeds a 30-day demo history, embeds protocols and incidents into Db2, and the web app starts.
 
-- Web app: http://localhost:3000
+- Web app: **http://localhost:3000**
 - API + Swagger UI: http://localhost:8000/docs
-- Db2 health: http://localhost:8000/health → `"database": {"mode": "db2", "connected": true, ...}`
+- Db2 status: http://localhost:8000/health shows `mode: db2`, the server version and `vector_search.enabled: true`
 
-### Option B: Quick start without Db2 (SQLite)
+### Option B: Run as the least-privilege Db2 login
+After Option A has started once:
+```bash
+NSIN_APP_PASSWORD='choose-a-strong-password' ./scripts/db2_least_privilege.sh
+# then restart the backend with DB2_USER=nsinapp, DB2_PASSWORD=<that password>, DB2_SCHEMA=DB2INST1
+```
+
+### Option C: Quick start without Db2 (SQLite)
 ```bash
 docker compose up --build
 ```
 
-### Option C: Run locally without Docker
+### Option D: Local development without Docker
 ```bash
-# Terminal 1: backend (run from src/ because the code is imported as the `backend` package)
-cd src
-uvicorn backend.app.main:app --reload --port 8000
-
-# Terminal 2: web app
-npm --prefix src/web-app run dev        # http://localhost:5173
+# Db2 only (in Docker): docker compose -f docker-compose.yml -f docker-compose.db2.yml up -d db2
+cd src && uvicorn backend.app.main:app --reload --port 8000     # run from src/
+npm --prefix src/web-app run dev                                # http://localhost:5173
 ```
-To point a local backend at Db2, start only the database with `docker compose -f docker-compose.yml -f docker-compose.db2.yml up -d db2`, then set `DATABASE_MODE=db2` and the `DB2_*` values in `src/backend/.env`.
 
-### Android app
-Open `src/android/` in Android Studio and run the `app` configuration on an emulator. The app targets `http://10.0.2.2:8000` (the host machine's backend) by default; on a physical device, change the base URL in the app's **Settings** screen to your machine's LAN IP.
+### Android
 ```bash
 cd src/android
-gradle :app:assembleDebug     # → app/build/outputs/apk/debug/app-debug.apk
+./gradlew :app:assembleDebug          # Windows: gradlew.bat
+# → app/build/outputs/apk/debug/app-debug.apk
 ```
+The app talks to `http://10.0.2.2:8000` (the host machine from the emulator). On a physical device, set your machine's LAN IP in the app's **Settings** screen. Cleartext HTTP is allowed in debug builds only.
 
-### Demo accounts (seeded automatically, password `Password123!`)
+### Demo accounts (password `Password123!`)
 | Role | Email | Try this |
 |---|---|---|
-| Resident | `resident@neighbourhood.org` | Trigger SOS, report an incident, run AI triage, manage trusted contacts, start a child journey |
-| Responder | `responder@neighbourhood.org` | Toggle availability, acknowledge an incident and advance its status |
+| Resident | `resident@neighbourhood.org` | SOS, report an incident and run AI triage, trusted contacts, child journey |
+| Responder | `responder@neighbourhood.org` | Claim an incident, move it to on-scene, open it to see related reports |
 | Elder | `elder.ramesh@neighbourhood.org` | Daily check-in, assistance request |
-| Admin | `admin@neighbourhood.org` | Community insights, responder roster, database diagnostics |
+| Admin | `admin@neighbourhood.org` | Db2 diagnostics, verify pending responders, community analytics |
 
-The web login page has one-click buttons for each role.
+The web sign-in page has one-click buttons for each role.
 
-### API overview (`/api/v1`)
+### API overview (`/api/v1`, full schemas at `/docs`)
 | Area | Endpoints |
 |---|---|
 | Auth & profile | `POST /auth/register`, `POST /auth/login`, `GET/PATCH /profiles/me` |
-| SOS & incidents | `POST /sos`, `GET/POST /incidents`, `GET /incidents/{id}`, `POST /incidents/{id}/acknowledge`, `POST /incidents/{id}/status` |
-| Trusted contacts | `GET/POST /trusted-contacts`, `DELETE /trusted-contacts/{id}` |
-| Child transit | `GET/POST /children/journeys`, `POST /children/journeys/{id}/check-in` |
-| Elder care | `GET/POST /elder-care/checkins`, `GET/POST /elder-care/assistance-requests` |
-| Responders | `GET /responders/roster`, `GET /responders/assignments`, `PATCH /responders/availability` |
-| Community | `GET /community/insights`, `GET/POST /community/hazards` |
-| AI | `POST /ai/incident-assistance`, `GET /ai/guidance?query=…` |
-
-Full request/response schemas are at http://localhost:8000/docs.
+| SOS & incidents | `POST /sos`, `GET/POST /incidents`, `GET /incidents/{id}`, `GET /incidents/{id}/similar`, `POST /incidents/{id}/acknowledge`, `POST /incidents/{id}/status` |
+| Contacts, children, elders | `/trusted-contacts`, `/children/journeys`, `/elder-care/checkins`, `/elder-care/assistance-requests` |
+| Responders | `GET /responders/assignments`, `PATCH /responders/availability`, `GET /responders/roster`, `POST /responders/{user_id}/verify` (admin) |
+| Community & AI | `GET /community/insights`, `GET/POST /community/hazards`, `POST /ai/incident-assistance`, `GET /ai/guidance` |
 
 ---
 
 ## Testing & Verification
 
 ```bash
-# From this submission folder (tests use an isolated, auto-seeded SQLite file)
+# Fast suite on SQLite (Db2-only tests are skipped)
 pytest tests/ -v
 
-# Web app type-check and production build
-npm --prefix src/web-app run build
+# Same suite against IBM Db2 (with the stack from Option A running)
+NSIN_TEST_DB2=1 DATABASE_MODE=db2 DB2_HOST=localhost DB2_DATABASE=NSIN \
+  DB2_USER=db2inst1 DB2_PASSWORD=<password> pytest tests/ -v
 
-# Android JVM unit tests (Robolectric)
-cd src/android && gradle :app:testDebugUnitTest
+# ...and as the least-privilege login (after Option B)
+NSIN_TEST_DB2=1 DATABASE_MODE=db2 DB2_HOST=localhost DB2_DATABASE=NSIN \
+  DB2_USER=nsinapp DB2_PASSWORD=<password> DB2_SCHEMA=DB2INST1 pytest tests/ -v
+
+npm --prefix src/web-app run build                          # type-check + production build
+cd src/android && ./gradlew :app:testDebugUnitTest          # Android JVM tests (Robolectric)
 ```
 
-The 8 backend tests cover health, auth and profile, trusted contacts, the full incident lifecycle across resident and responder accounts, SOS, knowledge retrieval, the agent pipeline, and persistence of triage results (including the upsert and 404 paths).
+| Suite | Result |
+|---|---|
+| SQLite | 43 passed, 11 Db2-only skipped |
+| IBM Db2 as `nsinapp` (least privilege) | 54 passed |
+| Android `testDebugUnitTest` | 4 passed; `assembleDebug` builds |
+| Web `npm run build` | passes (strict TypeScript) |
 
-The full flow (schema creation, seeding, SOS, triage persistence and the responder lifecycle) has been run end to end against Db2 Community Edition in Docker.
+The tests cover:
+- **Security:** admin self-registration blocked, login throttling, token tampering, private-incident isolation, privacy masking, responder verification, input limits sized to the Db2 columns, security headers.
+- **Integrity:** the incident state machine, collision-free reference codes, SOS atomicity and audit rows, overdue journeys.
+- **AI:** triage wording traps and the cited protocol for each category.
+- **Db2:** catalog contents including the `VECTOR` columns, semantic retrieval and off-topic rejection, duplicate-report linking, native-SQL vs Python analytics parity, and DDL denied to the restricted login.
 
-**Verifying the Db2 integration:**
-1. Start Option A and open http://localhost:8000/health: `database.mode` is `db2`, `connected` is `true` and `server_time` comes from Db2.
-2. Log in as the resident, report an incident and run AI triage on it.
-3. Query Db2 directly:
-   ```bash
-   docker exec -it nsin_db2 su - db2inst1 -c "db2 connect to NSIN && \
-     db2 \"SELECT reference_code, status, priority FROM incidents ORDER BY id DESC FETCH FIRST 5 ROWS ONLY\" && \
-     db2 \"SELECT incident_id, suggested_priority FROM ai_analysis_records\" && \
-     db2 \"SELECT incident_id, status, created_at FROM incident_status_history ORDER BY id DESC FETCH FIRST 10 ROWS ONLY\""
-   ```
+**Inspect the data directly in Db2:**
+```bash
+docker exec -it nsin_db2 su - db2inst1 -c "db2 connect to NSIN && \
+  db2 \"SELECT reference_code, priority, status FROM incidents ORDER BY id DESC FETCH FIRST 5 ROWS ONLY\" && \
+  db2 \"SELECT doc_id, VECTOR_DISTANCE(embedding, (SELECT embedding FROM safety_protocols WHERE doc_id='DOC-ELDER-003'), COSINE) AS d FROM safety_protocols ORDER BY d\""
+```
 
 ---
 
 ## Screenshots & Demo
-- **Live Demo Link:** Not hosted. Run locally with Option A or B above.
-- **Demo Video Link:** Will be shared with the judges at the Top 10 pitch.
-- Screenshots (captured from the running app with seeded demo data) are in [`docs/screenshots/`](docs/screenshots/):
+- **Live Demo Link:** Not hosted. Run locally with Option A.
+- **Demo Video Link:** Submitted with the Db2Hack form (YouTube).
+- All screenshots were captured from the Docker stack running on IBM Db2 ([`docs/screenshots/`](docs/screenshots/)):
 
-| Landing page | Sign-in with one-click demo roles |
+| AI triage with a cited protocol | Related reports (Db2 `VECTOR_DISTANCE`) |
 |---|---|
-| ![Landing page](docs/screenshots/landing.png) | ![Sign-in](docs/screenshots/login.png) |
-| **Resident dashboard: SOS, incidents, guardians** | **Report an incident** |
-| ![Resident dashboard](docs/screenshots/resident-dashboard.png) | ![Report incident](docs/screenshots/report-incident.png) |
-| **Responder command: incident queue and duty status** | **Admin dashboard** |
+| ![AI triage](docs/screenshots/report-incident.png) | ![Related reports](docs/screenshots/related-reports.png) |
+| **Responder queue** | **Admin: live Db2 diagnostics** |
 | ![Responder dashboard](docs/screenshots/responder-dashboard.png) | ![Admin dashboard](docs/screenshots/admin-dashboard.png) |
+| **Resident dashboard** | **Landing page** |
+| ![Resident dashboard](docs/screenshots/resident-dashboard.png) | ![Landing page](docs/screenshots/landing.png) |
 | **Child safe transit** | **Trusted contacts** |
 | ![Child safe transit](docs/screenshots/child-safety.png) | ![Trusted contacts](docs/screenshots/trusted-contacts.png) |
-| **Community insights and hazards** | |
-| ![Community insights](docs/screenshots/community-insights.png) | |
 
 ---
 
 ## Known Limitations & Future Roadmap
 - **Current Limitations:**
-  - SOS "notifications" to trusted contacts are recorded and shown in-app; SMS and push delivery are not wired to a provider yet.
-  - Triage is rule-based. It is predictable and offline-capable, but it won't understand phrasing outside its vocabulary.
-  - Location history is stored as latitude/longitude columns; there are no spatial queries yet.
-  - No Gradle wrapper JAR is committed; use Android Studio or a local Gradle install.
+  - SOS alerts reach trusted contacts and responders in-app; SMS and push delivery are not wired to a provider yet.
+  - Triage rules are deterministic. They are predictable and tested, but phrasing outside their vocabulary falls back to the reported category.
+  - Location is a free-text address plus latitude/longitude; there are no spatial queries yet.
+  - The login throttle is in-process (one backend instance).
 - **Next Steps:**
-  - Optional LLM step (IBM watsonx.ai Granite) for report summarisation, behind the existing rule-based guardrails.
-  - Move the Haystack document store into Db2: store protocol embeddings in Db2's `VECTOR` type and use `VECTOR_DISTANCE` for hybrid BM25 + semantic retrieval.
-  - Db2 temporal tables for incident history, and row-level access control for multi-society deployments.
-  - Push notifications (FCM) and SMS fallback for SOS.
+  - An optional watsonx.ai Granite summary step behind the existing rule-based guardrails.
+  - Chunk long protocols and add a Db2 vector index as the corpus grows.
+  - Spatial hotspot clustering, FCM push notifications and an SMS fallback for SOS.
+  - Row-level access control for multi-society deployments on one Db2.
 
 ---
 
 ## Team Members & Credits
 | Name | GitHub Handle | Role / Contribution |
 |---|---|---|
-| Yagnik Sharma | [@YagnikSharma](https://github.com/YagnikSharma) | Full stack: FastAPI backend, IBM Db2 integration, triage pipeline, React web app, Android app |
+| Yagnik Sharma | [@YagnikSharma](https://github.com/YagnikSharma) | Full stack: FastAPI backend, IBM Db2 integration (vectors, analytics, least privilege), retrieval and triage, React web app, Android app |
 
-**License:** MIT (see [LICENSE](LICENSE)). Third-party libraries keep their own licenses (FastAPI, SQLAlchemy, React and Retrofit: MIT / Apache-2.0; `ibm_db` / `ibm_db_sa`: Apache-2.0; Db2 Community Edition: IBM license, accepted via `LICENSE=accept`).
+**License:** MIT (see [LICENSE](LICENSE)). Third-party components keep their own licenses: FastAPI, SQLAlchemy and React are MIT; Haystack, Retrofit, `ibm_db` and `ibm_db_sa` are Apache-2.0; the BAAI bge-small model is MIT; Db2 Community Edition is under the IBM license, accepted via `LICENSE=accept`.
