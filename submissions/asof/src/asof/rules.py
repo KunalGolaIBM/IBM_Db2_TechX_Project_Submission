@@ -456,6 +456,8 @@ _NO_REFUND = re.compile(r"\bno (?:voluntary )?refund\b|\bnon-?refundable\b|\bnot
                         r"|\bno money back\b|\bget nothing\b", re.I)
 _REFUND_CUE = re.compile(r"\b(?:refund\w*|back|receive|get|return\w*|recover)\b", re.I)
 _CHARGE_CUE = re.compile(r"\b(?:charge\w*|deduct\w*|fee|cost\w*|penalty|pay)\b", re.I)
+_FEE_ONLY = re.compile(r"\b(?:booking|service)\s+(?:service\s+)?fee\b|\bclerkage\b", re.I)
+_RESULT_CUE = re.compile(r"\b(?:resulting in|leaving|leaves|left with|comes to|so you (?:get|receive))\b[^.;]{0,30}$", re.I)
 
 
 def validate_time_bands(value: Any) -> None:
@@ -545,7 +547,8 @@ def band_check(claim: str, question: str, rule: dict[str, Any], clause_id: str =
     fares = [_amount(next(g for g in m.groups() if g)) for m in _FARE.finditer(question)]
     fare = _one(fares)
     where = f"T = {int(t)} h {round((t - int(t)) * 60):02d} min falls in {clause_id} {_describe(band)}"
-    said_none = bool(_NO_REFUND.search(claim))
+    # "The booking service fee is not refunded" is about the fee, not the fare: only other sentences count.
+    said_none = any(_NO_REFUND.search(x) and not _FEE_ONLY.search(x) for x in re.split(r"[.;!?]", claim))
     pcts = [(float(m.group(1)), m.span()) for m in re.finditer(r"\b(\d+(?:\.\d+)?)\s?(?:%|percent\b)", claim)]
     rupees = [(_amount(m.group(1)), m.span()) for m in _INR.finditer(claim)]
 
@@ -555,6 +558,8 @@ def band_check(claim: str, question: str, rule: dict[str, Any], clause_id: str =
             gaps = [max(m.start() - span[1], span[0] - m.end(), 0) for m in pattern.finditer(claim)]
             near = [g for g in gaps if g <= 40]
             return min(near) if near else None
+        if _RESULT_CUE.search(claim[max(0, span[0] - 40):span[0]]) or re.match(r"\s*(?:back|refund)", claim[span[1]:]):
+            return "refund"  # "... minus this charge, resulting in INR 800", "INR 800 back"
         refund, charge = gap(_REFUND_CUE), gap(_CHARGE_CUE)
         if refund is None or (charge is not None and charge < refund):
             return None if charge is None else "charge"

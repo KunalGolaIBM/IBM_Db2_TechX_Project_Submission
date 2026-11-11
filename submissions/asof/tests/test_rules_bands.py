@@ -112,3 +112,21 @@ def test_the_spr_tables_are_well_formed():
     for table in (P03, P05):
         for bands in table.values():
             rules.validate_time_bands(bands)
+
+
+def test_a_sentence_about_the_booking_fee_is_not_a_no_refund_claim():
+    """Found in the post-hoc run (R10, R21): "the booking service fee is not refunded" held a right rewrite."""
+    q = Q.format(when="exactly 3 hours")
+    assert check("The booking service fee is not refunded.", q, P03[2]) == "NOT_APPLICABLE"
+    assert check("A 50% charge applies. The booking service fee is not refunded.", q, P03[2]) == "MATCH"
+    assert check("There is no refund. The booking service fee is not refunded.", q, P03[2]) == "MISMATCH"
+
+
+def test_an_amount_that_a_sentence_results_in_is_the_refund():
+    """Found in the post-hoc run (R06): "minus this charge, resulting in INR 800" read the 800 as the charge."""
+    q = Q.format(when="exactly 2 hours")  # v3 1A, 2 h: the 60% band, INR 2,000 fare
+    claim = "Your refund is the base fare minus this charge, resulting in an amount of INR 800."
+    assert rules.band_check(claim, q, {"time_bands": P03[3]}).status == "MATCH"
+    assert rules.band_check("You get INR 800 back after a 60% deduction.", q, {"time_bands": P03[3]}).status == "MATCH"
+    assert rules.band_check("You get INR 1,000 back after a 50% deduction.", q,
+                            {"time_bands": P03[3]}).status == "MISMATCH"
