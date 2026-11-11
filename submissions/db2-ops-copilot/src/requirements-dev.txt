@@ -1,0 +1,4 @@
+# Development / test dependencies (all offline, no external services required)
+-r requirements.txt
+
+pytest>=8.0,<10.0

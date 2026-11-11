@@ -1,0 +1,20 @@
+# Db2 Ops Copilot — runtime dependencies (offline-capable core)
+# These are enough to run the backend and its tests WITHOUT Docker, Db2 or Ollama.
+# Real-service drivers/integrations live in requirements-integration.txt (M2+).
+
+fastapi>=0.115,<1.0
+uvicorn>=0.30,<1.0
+pydantic>=2.7,<3.0
+pydantic-settings>=2.4,<3.0
+python-dotenv>=1.0,<2.0
+
+# HTTP client used by the REAL Ollama adapters (/api/chat, /api/embed, /api/tags).
+# Imported at module level via the adapter registry, therefore a runtime
+# dependency even in mock mode (adapters are always imported, only constructed
+# conditionally). Lightweight; no services required to install it.
+httpx>=0.27,<1.0
+
+# SQL validation (AST-based gate). db2-sqlglot-dialect is the official IBM SQLGlot plugin.
+# NOTE: sqlglot is a validation layer, NOT the sole security boundary (see docs/ARCHITECTURE.md).
+sqlglot>=25.0
+db2-sqlglot-dialect>=1.1.0,<2.0

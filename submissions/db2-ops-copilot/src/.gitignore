@@ -1,0 +1,64 @@
+# --- Secrets & local environment (never commit) ---
+.env
+.env.*
+!.env.example
+
+# --- Python ---
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pip-cache/
+
+# --- Models & large artifacts (data lives on E:, never in Git) ---
+*.gguf
+ollama-models/
+models/
+*.safetensors
+
+# --- Databases / local data files ---
+*.db
+*.db2
+*.duckdb
+*.sqlite3
+
+# --- OS / editor noise ---
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
+
+# --- Node ---
+node_modules/
+npm-debug.log*
+
+# --- Build outputs ---
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Docker volumes / local database data ---
+*.vhdx
+.docker/
+docker-data/
+
+# --- Credentials & local secrets ---
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials.json
+
+# --- Temporary archives & backups ---
+*.tar.gz
+*.tgz
+*.zip
+*.bak
+backups/
