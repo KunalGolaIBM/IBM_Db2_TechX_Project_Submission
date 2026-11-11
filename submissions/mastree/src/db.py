@@ -29,7 +29,7 @@ def get_connection_string() -> str:
     port = os.getenv("DB2_PORT", "50000")
     database = os.getenv("DB2_DATABASE", "MLOOP")
     user = os.getenv("DB2_USER", "mloop")
-    password = os.getenv("DB2_PASSWORD", "123")
+    password = os.getenv("DB2_PASSWORD", "")
     return (
         f"DATABASE={database};"
         f"HOSTNAME={host};"

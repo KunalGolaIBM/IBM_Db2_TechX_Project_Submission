@@ -29,7 +29,8 @@ TABLES = [
     "mastery",
     "mastery_history",
     "loop_events",
-    "llm_cache"
+    "llm_cache",
+    "lesson_images"
 ]
 
 
@@ -63,7 +64,7 @@ def check_db_health():
     # Check concept count and prerequisite count
     try:
         concepts = execute_query("SELECT concept_id, name, seq_order FROM concepts ORDER BY seq_order ASC")
-        print(f"Total Concepts Seeded: {len(concepts)}")
+        print(f"Total Concepts Registered: {len(concepts)}")
         for c in concepts:
             prereqs = execute_query(
                 "SELECT c2.name FROM concept_prereqs cp JOIN concepts c2 ON cp.prereq_id = c2.concept_id WHERE cp.concept_id = ?",

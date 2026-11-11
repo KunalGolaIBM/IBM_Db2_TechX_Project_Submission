@@ -1,164 +1,123 @@
-# MasteryLoop (mastree)
+# MasteryLoop (`mastree`)
 
-> **One-Line Pitch:** MasteryLoop is an open-source adaptive tutor (MIT License) that unites Bloom's mastery learning pedagogy, Google Gemini generative instruction, and IBM Db2 LUW recursive graph analytics to diagnose learning bottlenecks, deliver multi-format instruction, and guide learners to complete conceptual mastery.
-
----
-
-## Author
-- **Author:** Suryakanth ([@Suryakanth25](https://github.com/Suryakanth25))
-- **Status:** Solo Participant
+> **One-Line Pitch:** MasteryLoop is an open-source adaptive learning tutor (MIT License) uniting Bloom's mastery learning pedagogy, Google Gemini generative instruction, open-internet/document RAG, and IBM Db2 LUW recursive graph analytics to diagnose prerequisite gaps and guide learners to verified mastery.
 
 ---
 
 ## Table of Contents
-- [What It Does](#what-it-does)
-- [The 8-Step MasteryLoop Workflow](#the-8-step-masteryloop-workflow)
-- [Three Input Modes](#three-input-modes)
-- [Dual Teaching Formats](#dual-teaching-formats)
-- [Interactive Visual Schemas](#interactive-visual-schemas)
-- [REST API Reference (/docs)](#rest-api-reference-docs)
+- [Problem Statement](#problem-statement)
+- [Solution Overview](#solution-overview)
+- [IBM Db2 Integration](#ibm-db2-integration)
+- [AI / LLM Architecture](#ai--llm-architecture)
+- [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
-- [Db2 Database Setup (MLOOP Database & User)](#db2-database-setup-mloop-database--user)
+- [Db2 Database Setup](#db2-database-setup)
 - [Setup & Installation](#setup--installation)
-- [.env Setup](#env-setup)
+- [Configuration](#configuration)
 - [Running the Project](#running-the-project)
+- [REST API Reference (/docs)](#rest-api-reference-docs)
 - [Testing & Verification](#testing--verification)
-- [Screenshots](#screenshots)
-- [IBM Db2 Architecture & Schema Highlights](#ibm-db2-architecture--schema-highlights)
-- [Known Limitations and Roadmap](#known-limitations-and-roadmap)
-- [Attributions & Credits](#attributions--credits)
+- [Screenshots & Demo](#screenshots--demo)
+- [Known Limitations & Future Roadmap](#known-limitations--future-roadmap)
+- [Team Members & Credits](#team-members--credits)
 
 ---
 
-## What It Does
-MasteryLoop is an adaptive tutoring platform designed to eliminate learning plateaus in technical disciplines. Unlike conventional platforms that repeat static questions or offer generic hints when a student fails, MasteryLoop:
-1. **Curates and Ingests Knowledge:** Fetches educational articles on any subject from Wikipedia (with optional Google Search grounding via Gemini), parses user-uploaded PDF/Markdown/Text notes, or provides a pre-seeded 9-concept SQL curriculum.
-2. **Embeds and Stores in IBM Db2 LUW:** Partitions text into ~120-word chunks, generates embeddings via Google Gemini in a single batched call, and persists them directly in Db2 (`concepts`, `documents`, and `chunks` tables).
-3. **Offers Dual Teaching Formats:** Allows learners to select between a progressive step-by-step written **Board** with chunk citations or an interactive **Video Lecture** player with synchronized Web Speech narration, animated flow diagrams, and captions.
-4. **Enforces Grounded Pedagogy:** Instructs strictly using retrieved Db2 chunks—citing chunk IDs with zero hallucination.
-5. **Assesses Comprehension:** Delivers a deterministic 5-question multiple-choice quiz (easy, medium, hard) verified against source chunks.
-6. **Diagnoses Prerequisite Root Causes via Db2 Recursive CTEs:** If a student does not pass the mastery gate ($\ge 80\%$, $\ge 5$ attempts, $\ge 2$ difficulty levels), an IBM Db2 recursive query navigates the prerequisite dependency graph to identify the deepest unmastered ancestor. The student is then guided through targeted remediation in a new pedagogical style (overview, worked example, analogy, step-by-step) in their chosen format.
+## Problem Statement
+- **Static Tutoring Loops:** Traditional e-learning quizzes repeat identical questions on the same surface text when a learner fails, failing to diagnose *which* upstream foundation caused the mistake.
+- **Target Audience:** Students, self-taught developers, and technical teams mastering structured programming, databases, or custom study notes.
+- **Why Existing Tooling Falls Short:** Most AI tutor prototypes wrap external chat APIs without transactional mastery tracking, verifiable source-chunk citations, deterministic gating rules, or recursive dependency graph analytics in an enterprise relational engine.
 
 ---
 
-## The 8-Step MasteryLoop Workflow
+## Solution Overview
+MasteryLoop resolves learning plateaus through an **8-step adaptive workflow** persisted end-to-end in IBM Db2 LUW:
 
-```
-1. Login ─────────► 2. Ingest ─────────► 3. Db2 RAG ─────────► 4. Format
-(Username only)     (Wiki/Upload/SQL)    (Store Chunks)       (Board / Video)
-       ▲                                                             │
-       │                                                             ▼
-8. Persistence ◄─── 7. Gate Decision ◄── 6. Assessment ◄────── 5. Grounded
-(All in Db2)        (Recursive CTE)      (5 MCQs)              Teaching
+```text
+1. Login ─────────► 2. Source ────────► 3. Ingest ────────► 4. Format
+(Username only)     (Web / AI KB /      (Chunk & Embed      (Board / Video)
+                    URL / Notes / DB)    into Db2)                 │
+       ▲                                                           ▼
+8. Ledger ◄──────── 7. Gate Rule ◄───── 6. Assessment ◄──── 5. Classroom
+(Trajectory &       (Recursive CTE      (5 Verified MCQs)   (Grounded Scenes
+ "Why this?" SQL)    Root Cause)                             Citing Chunks)
 ```
 
-1. **Passwordless Learner Login:** Student enters a username without password overhead; new students are automatically provisioned in IBM Db2 (`students` table).
-2. **Three Flexible Input Modes:**
-   - **(a) Search Any Topic:** Free-text query dynamically searched and fetched from Wikipedia via the MediaWiki API (and optional Gemini Google Search grounding).
-   - **(b) Attach Notes:** Upload `.txt`, `.md`, or `.pdf` (parsed via `pypdf`) or paste custom notes.
-   - **(c) Course (SQL):** Pick from the curated 9-concept SQL curriculum graph.
-3. **Non-Blocking Background RAG Ingestion into IBM Db2:** Material is chunked (~120 words), batch-embedded in one call (with keyword retrieval fallback), and stored in Db2 (`concepts`, `documents`, and `chunks` tables) within an atomic transaction. UI polls status and displays: *"Stored N chunks in Db2"*.
-4. **Teaching Format Selection:** Learner chooses their preferred format: **"Board"** (step-by-step interactive card deck) or **"Video lecture"** (in-browser narrated classroom player using the Web Speech API, not an exported MP4).
-5. **Grounded AI Teaching:** The AI teaches using **ONLY** the retrieved Db2 chunks, displaying explicit citation badges (`#chunk_id`) with zero external hallucination.
-6. **Deterministic Assessment:** Student takes a 5-question multiple-choice quiz (A–D, mixed difficulty) generated and verified from the same chunks, evaluated instantaneously without LLM latency.
-7. **Mastery Gate & Remediation Loop:**
-   - **Mastered ($\ge 80\%$, $\ge 5$ attempts, $\ge 2$ difficulty levels):** Unlocks and recommends the next curriculum topic.
-   - **Not Mastered:** Executes an IBM Db2 **Recursive Common Table Expression (CTE)** over the prerequisite graph to diagnose the deepest unmastered ancestor. Re-teaches the prerequisite first (or re-teaches the current concept in a different style: overview $\rightarrow$ worked example $\rightarrow$ analogy $\rightarrow$ step-by-step) in the **same format** chosen by the student, serving new questions. Maximum 3 remediation loops before escalating to *"Needs Human Help"*.
-8. **End-to-End Db2 Persistence:** Everything—materials, documents, chunks, lessons, quiz attempts, mastery history, loop events, and optional illustrations—is persisted and audited in IBM Db2 LUW.
+1. **Passwordless Login:** Learners sign in with a handle; records are created or resumed in IBM Db2 (`students`).
+2. **Flexible Knowledge Acquisition (`4+` Channels):**
+   - **Open-Internet Search:** Queries DuckDuckGo (`ddgs`), Hacker News Algolia, StackExchange API, and OpenAlex open-access papers—excluding Wikipedia by default (with an opt-in checkbox if desired).
+   - **Gemini AI Knowledge Base (`ai_kb`):** Synthesizes an 800–1,100-word structured 5-section study guide directly when no external URL or file is needed.
+   - **Direct URL / PDF Import (`url`):** Fetches readable content or PDFs directly from any `http(s)://` URL (`10s` HTTP timeout).
+   - **Attach Notes (`upload` / `paste`) & Optional Seeded SQL Curriculum (`course`):** Upload `.txt`, `.md`, or `.pdf` files (`pypdf`), paste notes, attach optional prerequisite concepts, or select from stored topics in Db2.
+3. **Non-Blocking Background Ingestion into IBM Db2:** Content (capped at `3,000` words / `25` chunks of ~120 words) is batch-embedded in a single call and committed atomically to Db2 (`concepts`, `documents`, `chunks`) while the UI polls live job progress.
+4. **Dual Teaching Formats (`format` selector):**
+   - **Interactive Technical Board:** Progressive step-by-step instructional cards with structured visual diagrams, code blocks, and verified chunk badges.
+   - **Narrated Visual Lecture:** In-browser `16:9` classroom stage driven by Web Speech synthesis (`window.speechSynthesis`), live captions, timeline scrub bar, scene thumbnails, playback speed controls (`0.75x`, `1.0x`, `1.25x`, `1.5x`), Mute, and CC toggles *(in-browser narrated stage, not an exported MP4 file)*.
+5. **Grounded 5–6 Scene Pedagogy & 8 Visual Schemas:** Scenes cite verified Db2 `chunk_id`s and render structured visuals (`flow`, `cycle`, `hierarchy`, `compare`, `timeline`, `concept_map`, `equation`, `bullets`)—zero raw LLM HTML/SVG.
+6. **Non-Repeating 5-MCQ Assessment:** Synthesizes and audits 5 topic-specific MCQs prioritizing previously untested chunks across loops and blocking repeated stems. Graded deterministically without extra LLM calls.
+7. **3-Factor Mastery Gate & Recursive CTE Remediation:**
+   - **Pass Rule:** `mastery >= 0.80` AND `attempts >= 5` AND `distinct_difficulties >= 2`.
+   - **Recency-Weighted Formula:** Exponential decay (`0.85^age`) × difficulty weight (`easy=1.0`, `medium=1.5`, `hard=2.0`).
+   - **Gate Fail Diagnosis:** Executes an IBM Db2 Recursive CTE over `concept_prereqs` to isolate the deepest unmastered ancestor, shifting style across remediation loops (`overview` → `worked example` → `analogy` → `step-by-step`) up to 3 loops before flagging *"Needs Human Help"*.
+8. **Persistent Ledger & Explainability:** Displays mastery progression, concept completion matrix (`v_student_progress`), and the exact executed Recursive CTE SQL (`"Why this?"`).
 
 ---
 
-## Three Input Modes
-
-1. **Search Any Topic (Wikipedia & Web):**
-   - Queries the MediaWiki API (`action=query`, `list=search`) with a 10s timeout to return candidate articles.
-   - Optional Google Search grounding via Gemini when `GEMINI_WEB_SEARCH=1`.
-   - Fetches clean plain text extract, capped at 3000 words / 25 chunks.
-   - Allows optional prerequisite linking to existing topics so the Db2 recursive CTE diagnostic engine works for custom topics too.
-2. **Attach My Notes (Upload / Paste):**
-   - Supports `.txt`, `.md`, and `.pdf` documents (using `pypdf`), or direct pasting into a text area.
-   - Prompts for a required Topic Name and optional prerequisite associations.
-   - Ingestion runs in a background worker thread with in-memory polling.
-3. **Course (SQL Curriculum):**
-   - Pre-seeded 9-concept SQL DAG with verified guides and worked example queries.
-   - Topological prerequisite hierarchy: `SELECT basics` $\rightarrow$ `WHERE` / `ORDER BY` $\rightarrow$ `Aggregate functions` $\rightarrow$ `GROUP BY` $\rightarrow$ `HAVING` $\rightarrow$ `JOINs` $\rightarrow$ `Subqueries` $\rightarrow$ `Window functions`.
+## IBM Db2 Integration
+- **Db2 Edition & Environment:** IBM Db2 LUW (Community Edition / Enterprise Server v11.5+ / v12.1.x, local or Docker).
+- **Connector / Driver Used:** Native Python `ibm_db` driver using parameterized `?` markers (zero raw string interpolation).
+- **Database Schema / Data Models ([`src/schema.sql`](src/schema.sql)):**
+  - **13 Tables:** `students`, `concepts` (with `is_custom`, `created_by`), `concept_prereqs`, `documents` (`source_type`, `source_url`), `chunks` (text + vector `CLOB`), `lessons`, `questions`, `attempts`, `mastery`, `mastery_history`, `loop_events`, `llm_cache`, and `lesson_images` (`BLOB(5M)`).
+  - **12 Indexes** on foreign-key and `(student_id, concept_id)` composite predicates.
+  - **1 Analytics View (`v_student_progress`):** Cross-joins `students` × `concepts` with `mastery` to expose live per-concept gate pass indicators.
+- **Key Db2 LUW Operations ([`src/db.py`](src/db.py)):**
+  - **Recursive CTE (`find_root_cause_prereq`):** Uses strict Db2 LUW syntax (`WITH prereq_tree (concept_id, prereq_id, depth) AS (...)` without the `RECURSIVE` keyword, and comma-join syntax in the recursive member to satisfy rule `SQL0345N`).
+  - **Atomic Transactions (`transaction`):** Wraps multi-table writes (`record_attempt_and_update_mastery`, ingestion commits) with `autocommit` disabled, explicit commit, and rollback on error.
+  - **Idempotent DDL & Migrations (`src/init_db.py`):** Queries `SYSCAT.TABLES` and `SYSCAT.COLUMNS` before altering tables; uses `IDENTITY_VAL_LOCAL()` and `FETCH FIRST n ROWS ONLY`.
 
 ---
 
-## Dual Teaching Formats
-
-- **Board (Step-by-Step):**
-  - Card-based progressive deck revealing educational scenes step-by-step with "Next Step" and "Previous Step" buttons.
-  - Every step cites source chunk IDs with interactive badges (`#chunk_id`).
-  - High-contrast visual styling for both light and dark themes.
-- **Video Lecture (In-Browser Narrated Classroom Player):**
-  - **Important:** *Video lecture = in-browser narrated lecture player using the Web Speech API, not an exported MP4.*
-  - Self-contained 16:9 dark classroom screen rendered with zero external CDN or network dependencies.
-  - Animated scene transitions, staggered bullet reveals, glowing key-term badges, and animated process flow diagrams.
-  - Voice narration driven by browser `window.speechSynthesis` with auto-advance on utterance completion (and automatic timer fallback with captions if speech is unavailable).
-  - Full player controls: Play/Pause, Previous/Next scene, Speed selector (0.8x / 1x / 1.25x), Captions toggle, and Mute.
+## AI / LLM Architecture
+- **Framework:** Custom lightweight Python orchestration on the official `google-genai` SDK (**no LangChain**).
+- **Model Provider & Failover (`src/ai.py`):**
+  - Primary generative model: Google Gemini **`gemini-3.5-flash-lite`** with automatic failover across `gemini-3.5-flash`, `gemini-3.6-flash`, and `gemini-3.8-flash` on `404`/`500`/`503`/`504`/timeout responses (`25s` `HttpOptions` timeout).
+  - Embedding model: **`gemini-embedding-001`** in a single batched call per ingestion job (`batch_embed_texts`) using a single pooled Db2 connection for cache reads/writes.
+  - Optional image model: `GEMINI_IMAGE_MODEL` stores PNG illustrations into `lesson_images` (`/api/illustration/{lesson_id}`).
+- **RAG & Anti-Repetition Workflow:**
+  - Open-web search & extraction ([`src/web_search.py`](src/web_search.py)) feeds clean article/PDF chunks into Db2 `chunks`.
+  - Vector cosine similarity retrieval with automatic **BM25 keyword fallback** (`retrieve_top_chunks`).
+  - Prioritizes unseen chunks across loops on `/api/lesson` and `/api/quiz/generate`, passes `excluded_questions` to avoid repeated quiz stems, audits MCQs in a 1-call verification pass (`_batch_verify_questions`), and caches responses by SHA-256 (`model::prompt`) in `llm_cache` (enabling `DEMO_MODE=1` offline demos and deterministic fallbacks).
 
 ---
 
-## Interactive Visual Schemas
-
-MasteryLoop generates structured, safe visual objects with zero raw HTML or SVG from the LLM. Visual types:
-1. `flow`: Sequential process boxes with arrows (`{"type": "flow", "steps": ["Step 1", "Step 2", ...]}`)
-2. `cycle`: Looped phase badges (`{"type": "cycle", "steps": ["Phase A", "Phase B", ...]}`)
-3. `hierarchy`: Nested root and children nodes (`{"type": "hierarchy", "root": {"label": "Root", "children": [...]}}`)
-4. `compare`: Side-by-side comparison card (`{"type": "compare", "left": {"title": "A", "points": [...]}, "right": {"title": "B", "points": [...]}}`)
-5. `timeline`: Chronological events (`{"type": "timeline", "events": [{"label": "Phase 1", "detail": "..."}]}`)
-6. `concept_map`: Nodes and directional edges (`{"type": "concept_map", "nodes": [...], "edges": [{"from": "A", "to": "B"}]}`)
-7. `equation`: Clean math / SQL syntax formula box with explanation (`{"type": "equation", "latex": "...", "explanation": "..."}`)
-8. `bullets`: Fallback structured bullet summary (`{"type": "bullets"}`)
-
----
-
-## REST API Reference (/docs)
-
-Interactive OpenAPI / Swagger documentation is available at `http://localhost:8000/docs`. All errors conform to the uniform JSON format: `{"error": "<ErrorType>", "detail": "<Human readable description>"}`.
-
-| Method | Endpoint | Description | Request Body / Parameters |
-|---|---|---|---|
-| `POST` | `/api/login` | Student login / auto-provision | `{"username": "alex"}` |
-| `GET` | `/api/courses` | List all curriculum concepts & prereq graph | *None* |
-| `POST` | `/api/search` | Search Wikipedia & optional Web grounding | `{"query": "B-Tree", "include_web": false}` |
-| `POST` | `/api/ingest` | Queue background ingestion (wiki/web/course) | `{"source_type": "wikipedia", "topic_name": "ACID"}` |
-| `POST` | `/api/ingest/upload` | Ingest file (.pdf/.txt/.md) or pasted text | Multipart form (`file`, `text`, `topic_name`, `prereq_ids`) |
-| `GET` | `/api/ingest/{job_id}` | Poll background ingestion status & progress | URL path parameter `job_id` |
-| `POST` | `/api/lesson` | Synthesize 5-6 scene grounded lesson | `{"student_id": 1, "concept_id": 1, "format": "board", "style": "overview"}` |
-| `POST` | `/api/quiz/generate` | Generate 5 verified MCQs (answer key hidden) | `{"concept_id": 1, "student_id": 1}` |
-| `POST` | `/api/quiz/answer` | Grade quiz & update Bloom mastery in Db2 | `{"student_id": 1, "concept_id": 1, "answers": [...]}` |
-| `POST` | `/api/gate` | Evaluate 3-factor gate & Db2 recursive CTE | `{"student_id": 1, "concept_id": 1, "loop_count": 1}` |
-| `GET` | `/api/progress/{student_id}` | Read view `v_student_progress` & history | URL path parameter `student_id` |
-| `GET` | `/api/why/{event_id}` | Inspect exact SQL and recursive CTE rows | URL path parameter `event_id` |
-| `GET` | `/api/illustration/{lesson_id}` | Serve generated illustration BLOB | URL path parameter `lesson_id` |
+## Tech Stack
+- **Backend / Core:** Python 3.11+ (verified on 3.12), FastAPI, Uvicorn, Pydantic
+- **Database:** IBM Db2 LUW via `ibm_db`
+- **Frontend / UI:** Static Vanilla HTML5, CSS3 (Swiss Light & Obsidian Dark themes), ES6+ JavaScript, Web Speech API (`window.speechSynthesis`)
+- **AI, Search & Document Parsing:** `google-genai`, `ddgs`, `pypdf`, `requests`, `numpy`
+- **Testing:** `pytest`, `httpx` (FastAPI `TestClient`)
 
 ---
 
 ## Prerequisites
-- **Python:** 3.11 or higher (Python 3.12 verified)
-- **IBM Db2:** Running instance of IBM Db2 LUW (v11.5 or v12.1 on Windows, Linux, or Docker container)
+- **Python:** 3.11 or higher (verified on Python 3.12)
+- **IBM Db2:** Running instance of IBM Db2 LUW (v11.5 or v12.1 on Windows, Linux, or Docker `icr.io/db2_community/db2:latest`)
 - **Package Manager:** `pip`
+- **Google Gemini API Key:** Free-tier or paid Gemini key (or set `DEMO_MODE=1` for offline fallback/cache evaluation)
 
 ---
 
-## Db2 Database Setup (MLOOP Database & User)
+## Db2 Database Setup
 
 If configuring a fresh IBM Db2 instance:
 
 ```bash
-# 1. Open the Db2 Command Window (db2cmd on Windows, or su - db2inst1 on Linux)
-db2cmd
-
-# 2. Create the MLOOP database
+# 1. Open Db2 Command Window (db2cmd on Windows, or su - db2inst1 on Linux / Docker container shell)
 db2 "CREATE DATABASE MLOOP USING CODESET UTF-8 TERRITORY US"
 
-# 3. Connect to MLOOP as administrator
+# 2. Verify connection (default admin user db2inst1, or grant privileges to your dedicated user)
 db2 "CONNECT TO MLOOP"
-
-# 4. Grant authority to application user 'mloop' (or db2admin / db2inst1)
-db2 "GRANT DBADM, DATAACCESS ON DATABASE TO USER mloop"
+# Optional: db2 "GRANT DBADM, DATAACCESS ON DATABASE TO USER db2inst1"
 db2 "CONNECT RESET"
 ```
 
@@ -167,16 +126,15 @@ db2 "CONNECT RESET"
 ## Setup & Installation
 
 ```bash
-# 1. Navigate to submissions/mastree
+# 1. Navigate to the submission directory
 cd submissions/mastree
 
 # 2. Create and activate a Python virtual environment
 python -m venv .venv
-
-# On Windows:
-.venv\Scripts\activate
-# On Linux / macOS:
-# source .venv/bin/activate
+# Linux / macOS:
+source .venv/bin/activate
+# Windows PowerShell:
+# .venv\Scripts\Activate.ps1
 
 # 3. Install dependencies
 pip install -r requirements.txt
@@ -184,141 +142,160 @@ pip install -r requirements.txt
 
 ---
 
-## .env Setup
+## Configuration
 
-Copy `.env.example` to `.env`:
+Copy `.env.example` to `.env` and fill in your local credentials:
 
 ```bash
+# Linux / macOS:
 cp .env.example .env
+# Windows PowerShell:
+# Copy-Item .env.example .env
 ```
 
-Edit `.env` with your local credentials:
+Example `.env` variables ([`.env.example`](.env.example)):
+
 ```ini
-# IBM Db2 LUW Connection Configuration
+# IBM Db2 LUW Connection Configuration (Dummy placeholders only)
 DB2_HOST=localhost
 DB2_PORT=50000
 DB2_DATABASE=MLOOP
-DB2_USER=mloop
+DB2_USER=db2inst1
 DB2_PASSWORD=your_db2_password_here
 
 # Google Gemini API Settings (Free Tier / Generative AI SDK)
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.5-flash-lite
 GEMINI_EMBED_MODEL=gemini-embedding-001
+GEMINI_IMAGE_MODEL=
 
-# Optional Operational Flags
+# Operational Mode (Set DEMO_MODE=1 for offline cache-only demonstration)
 DEMO_MODE=0
-GEMINI_WEB_SEARCH=0
 ```
 
-> **Security Note:** Never commit `.env` to Git. `.env.example` contains dummy values only and is tracked in version control.
+> **Security Warning:** Never commit `.env` or real database passwords/API keys to Git. `.gitignore` excludes `.env`, `.env.*`, `.venv/`, `.pytest_cache/`, and `__pycache__/`.
 
 ---
 
 ## Running the Project
 
-### 1. Initialize Database Schema & Seed Curriculum
-Executes idempotent DDL, creates all 13 tables and view `v_student_progress`, checks `SYSCAT.COLUMNS` for migrations (`is_custom`, `created_by`, `source_type`, `source_url`), and seeds the 9 SQL concepts with 11 prerequisite edges and 28 text chunks:
+### 1. Initialize Database Schema (Clean Workspace by Default)
+Creates all 13 tables, 12 indexes, and view `v_student_progress` idempotently via `SYSCAT` inspection **without** pre-seeding sample SQL courses:
 
 ```bash
 python src/init_db.py
 ```
 
-To wipe all tables completely and start with a 100% clean slate for custom search and uploaded notes:
-```bash
-python src/init_db.py --clean
-```
-*(You can also click the **Clean DB** button directly in the application header or call `POST /api/admin/reset`).*
+- **Optional SQL Sample Curriculum:** Seed the 9 SQL concepts, 11 prerequisite edges, and `sql_notes.md` chunks:
+  ```bash
+  python src/init_db.py --seed
+  ```
+- **Wipe All Tables Clean:** Clear all user progress, chunks, concepts, and caches completely (also accessible from the UI **Clean DB** button):
+  ```bash
+  python src/init_db.py --clean
+  ```
 
-### 2. Verify Db2 Health & Seed Counts (Optional Check)
-Confirms table row counts, prerequisite graph integrity, and active Db2 server version:
-
+### 2. Verify Db2 Schema & Connectivity (Optional)
 ```bash
 python src/check_db.py
 ```
 
-### 3. Launch the Server & Static Frontend
-From the `src/` directory, launch Uvicorn:
+### 3. Launch FastAPI Server & Static Frontend
+Run Uvicorn from inside `submissions/mastree/src/`:
 
 ```bash
 cd src
 uvicorn api:app --port 8000
 ```
-Open your browser at `http://localhost:8000` to interact with the application.
-Open `http://localhost:8000/docs` to explore the interactive OpenAPI documentation.
+
+- **Web Application:** Open `http://localhost:8000`
+- **Interactive Swagger / OpenAPI Docs:** Open `http://localhost:8000/docs`
+
+---
+
+## REST API Reference (/docs)
+
+All errors conform cleanly to `{"error": "<ErrorType>", "detail": "<Human-readable description>"}`.
+
+| Method | Endpoint | Description | Request Body / Parameters |
+|---|---|---|---|
+| `POST` | `/api/login` | Student login / auto-provision | `{"username": "surya"}` |
+| `GET` | `/api/courses` | List stored concepts, `chunk_count`, and prereqs | *None* |
+| `POST` | `/api/search` | Open-internet search (opt-in Wikipedia) | `{"query": "Python decorators", "include_web": true, "include_wikipedia": false}` |
+| `POST` | `/api/ingest` | Queue background ingestion (`web`/`url`/`ai_kb`/`wikipedia`/`course`/`paste`) | `{"source_type": "ai_kb", "topic_name": "B-Trees", "replace_existing": true}` |
+| `POST` | `/api/ingest/upload` | Ingest `.txt`/`.md`/`.pdf` or pasted text | Multipart form (`file`, `text`, `topic_name`, `student_id`, `prereq_ids`) |
+| `GET` | `/api/ingest/{job_id}` | Poll ingestion job step, progress & `chunks_preview` | Path parameter `job_id` |
+| `POST` | `/api/lesson` | Generate/retrieve 5–6 scene grounded lesson | `{"student_id": 1, "concept_id": 1, "format": "board", "style": "overview", "loop_count": 1}` |
+| `POST` | `/api/quiz/generate` | Generate 5 chunk-verified MCQs across unseen chunks | `{"concept_id": 1, "student_id": 1, "loop_index": 1}` |
+| `POST` | `/api/quiz/answer` | Grade quiz deterministically & update mastery | `{"student_id": 1, "concept_id": 1, "answers": [...]}` |
+| `POST` | `/api/gate` | Evaluate 3-factor gate & execute Db2 Recursive CTE | `{"student_id": 1, "concept_id": 1, "loop_count": 1}` |
+| `GET` | `/api/progress/{student_id}` | Read `v_student_progress`, trajectory & `latest_event_id` | Path parameter `student_id` |
+| `GET` | `/api/why/{event_id}` | Inspect executed Db2 Recursive CTE SQL & rows | Path parameter `event_id` |
+| `GET` | `/api/illustration/{lesson_id}` | Serve PNG illustration `BLOB` from `lesson_images` | Path parameter `lesson_id` |
+| `POST` | `/api/admin/reset` | Clear Db2 data (`wipe_all=true` clears concepts too) | `{"wipe_all": true}` |
 
 ---
 
 ## Testing & Verification
 
-Run the comprehensive 35-test `pytest` suite:
+Run the **38-test** `pytest` suite covering mastery math, gate evaluation, live IBM Db2 integration & Recursive CTEs, chunking, mocked web/Wikipedia parsing, visual schema JSON validation, anti-repetition quiz fallbacks, and end-to-end FastAPI smoke flows:
 
 ```bash
 pytest tests/ -v
 ```
 
-The test suite covers:
-- **Mastery Formula:** Empty state, single attempt, recency decay calculation ($0.85^{\text{age}}$), and difficulty weights (1.0, 1.5, 2.0).
-- **Gate Rule:** Threshold boundary tests, attempt minimums, and difficulty span requirements.
-- **Db2 Integration:** Live Db2 engine verification, transactional attempt logging, `v_student_progress` view queries, persistent `llm_cache` storage, and recursive CTE execution with root-cause identification.
-- **Chunking Algorithm:** Word count bounds and sentence integrity preservation.
-- **Wikipedia Mocking:** MediaWiki search API parsing and extract cleaning with mocked HTTP responses.
-- **Scene-JSON Validation:** Strict visual schema validation (`flow`, `cycle`, `hierarchy`, `compare`, `timeline`, `concept_map`, `equation`, `bullets`) and bounds enforcement (narration $\le 45$ words, bullets $\le 4$).
-- **FastAPI Smoke Tests:** `TestClient` endpoint verification (`/api/login`, `/api/courses`, `/api/search`, `/api/progress/{id}`, error handling).
+*(Note: After running tests against your local Db2 database, run `python src/init_db.py --clean` if you want an empty workspace afterward.)*
 
 ---
 
-## Screenshots
+## Screenshots & Demo
 
-The following screenshots in `docs/screenshots/` illustrate key system views:
+- **Hackathon Pitch Deck:** [MasteryLoop_Pitch_Deck.pptx](docs/MasteryLoop_Pitch_Deck.pptx) *(10-slide Swiss & Obsidian presentation deck)*
 
-- **Step-by-Step Lesson Board:** Progressive card deck with chunk citations.
-  ![Lesson Board](docs/screenshots/board.png)
+Captures of the **Obsidian** cockpit UI running against IBM Db2 LUW (`MLOOP`):
 
-- **Concept Assessment & Gate Evaluation:** Instantaneous letter evaluation with mastery gate criteria.
-  ![Quiz and Gate](docs/screenshots/quiz.png)
+- **1. Student Gateway (Login):**
+  ![Login Screen](docs/screenshots/01-login.png)
 
-- **Db2 Recursive CTE Root Cause Diagnosis:** Automated traversal pinpointing prerequisite gaps.
-  ![Root Cause Analysis](docs/screenshots/root_cause.png)
+- **2. Multi-Source Discovery (Open Internet Search / AI Knowledge Base / Attach Notes):**
+  ![Source Search](docs/screenshots/02-source-web-search.png)
 
-- **Student Progress Matrix:** Real-time completion analytics via SQL VIEW `v_student_progress`.
-  ![Progress Matrix](docs/screenshots/progress.png)
+- **3. Asynchronous RAG Vector Ingestion Pipeline (`DB2.CHUNKS`):**
+  ![Vector Ingestion Pipeline](docs/screenshots/03-ingest-pipeline.png)
 
----
+- **4. Cognitive Delivery Format Selection (Technical Board vs. Narrated Visual Lecture):**
+  ![Format Selection](docs/screenshots/04-format-selection.png)
 
-## IBM Db2 Architecture & Schema Highlights
+- **5. Grounded Classroom Stage with Visual Schemas & Db2 Citations:**
+  ![Classroom Board Stage](docs/screenshots/05-classroom-board.png)
 
-- **Db2 LUW Dialect Adherence:**
-  - Auto-incrementing primary keys: `INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY`.
-  - Recursive CTE: `WITH prereq_tree (concept_id, prereq_id, depth) AS (...)` with **no** `RECURSIVE` keyword, and comma-join syntax in the recursive member to comply with Db2 rule `SQL0345N`.
-  - Paging: `FETCH FIRST n ROWS ONLY` instead of `LIMIT`.
-  - Parameter markers: Native `?` parameter markers via `ibm_db.prepare` / `ibm_db.execute` to eliminate SQL injection risks.
-  - Atomic transactions: Multi-step writes wrapped with autocommit disabled, committing on success or rolling back on exception.
-- **Tables (13):** `students`, `concepts`, `concept_prereqs`, `documents`, `chunks`, `lessons`, `questions`, `attempts`, `mastery`, `mastery_history`, `loop_events`, `llm_cache`, `lesson_images`.
-- **View (1):** `v_student_progress` cross-joins students with curriculum concepts and computes real-time gate pass status.
-- **Rate-Limit & Gemini Cache:** Table `llm_cache` caches generative and embedding outputs by SHA-256 hash (`model::prompt`), enabling cost-free repeat sessions and offline demonstrations with `DEMO_MODE=1`.
+- **6. Deterministic 5-MCQ Assessment with Source-Chunk Feedback:**
+  ![Knowledge Assessment MCQ](docs/screenshots/06-assessment-mcq.png)
 
----
+- **7. 3-Factor Adaptive Mastery Gate & Loop Remediation:**
+  ![Mastery Gate Evaluation](docs/screenshots/07-mastery-gate.png)
 
-## Known Limitations and Roadmap
-
-- **Known Limitations:**
-  - **Wikipedia Ingestion Latency:** Wikipedia ingestion depends on the Gemini free tier API for batch vector embeddings; embedding long articles can encounter free-tier rate limits (15 RPM). When throttled, the engine falls back to BM25 keyword retrieval.
-  - **Web Speech API Voice Variance:** Voice synthesis quality in the Video Lecture depends on the client browser's local OS voices. Subtitles and captions are rendered on screen to ensure accessibility if speech synthesis is muted or unavailable.
-- **Roadmap & Future Work:**
-  - Multi-source search beyond Wikipedia (e.g. arXiv papers, StackOverflow docs, and GitHub readmes).
-  - Illustrated boards with dynamically generated SVG diagrams and animated database execution plans.
-  - Custom standalone HTML UI export bundles for LMS (Learning Management System) integration.
-  - Interactive SQL sandbox allowing learners to execute live SQL queries directly inside temporary Db2 sessions.
-  - Multi-tenant cohort analytics for database instructors using Db2 window functions.
-
-*(Note: Dual teaching formats—step-by-step interactive Boards and in-browser narrated Video Lectures with Web Speech API—and the FastAPI backend with vanilla static frontend are already fully implemented and operational.)*
+- **8. Persistent Db2 Relational Ledger (`v_student_progress` & Mastery Trajectory):**
+  ![Relational Ledger Progress](docs/screenshots/08-ledger-progress.png)
 
 ---
 
-## Attributions & Credits
+## Known Limitations & Future Roadmap
+- **Current Limitations:**
+  - Some JavaScript-heavy client-rendered webpages yield <40 extractable words in plain HTTP GET requests; in those cases the UI directs learners to select another search result, import a PDF/markdown source, or use **AI Knowledge Base** synthesis.
+  - Web Speech synthesis (`window.speechSynthesis`) voice quality varies across browser/OS installations (captions and scene progression remain active even when muted).
+- **Roadmap:**
+  - Server-side neural voiceover (`edge-tts` / Kokoro) with word-level caption synchronization and downloadable MP4 lesson export.
+  - Native Db2 `VECTOR` / `VECTOR_DISTANCE` SQL execution for Db2 v12.1.2+ deployments alongside JSON fallback.
+  - Live interactive SQL sandbox sessions against isolated temporary schemas.
 
-- **DeepTutor Inspiration:**
-  > "Inspired by the teach-and-assess idea in DeepTutor (HKUDS/DeepTutor, Apache-2.0). All code in this project was written from scratch. Wikipedia text is CC BY-SA."
-- **Content Licensing:** Wikipedia educational text fetched via the MediaWiki API is licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
-- **License:** MasteryLoop is open-source under the [MIT License](LICENSE).
+---
+
+## Team Members & Credits
+
+| Name | GitHub Handle | Role / Contribution |
+|---|---|---|
+| Suryakanth | [@Suryakanth25](https://github.com/Suryakanth25) | Solo Participant — Full-Stack Architecture, IBM Db2 LUW Schema & Recursive CTEs, RAG & Gemini Engine |
+
+- **Pedagogical Inspiration:** *"Inspired by the teach-and-assess idea in DeepTutor (HKUDS/DeepTutor, Apache-2.0). All code in this project was written from scratch. Wikipedia text (when optionally toggled) is CC BY-SA."*
+- **License:** Open-source under the [MIT License](LICENSE).

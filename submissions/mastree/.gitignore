@@ -1,6 +1,8 @@
 # Environment variables and secrets
 .env
+.env.*
 .env.local
+!.env.example
 
 # Python caches and artifacts
 __pycache__/
@@ -12,7 +14,3 @@ __pycache__/
 .venv/
 venv/
 ENV/
-
-# Streamlit local runtime state
-.streamlit/
-

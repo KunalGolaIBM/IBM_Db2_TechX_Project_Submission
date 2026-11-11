@@ -873,7 +873,7 @@ def search_with_gemini_grounding(query: str) -> List[Dict[str, str]]:
         return []
     try:
         client = get_gemini_client()
-        model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
+        model_name = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite").strip()
         resp = client.models.generate_content(
             model=model_name,
             contents=f"Provide a concise technical summary and key web references for: {query}",

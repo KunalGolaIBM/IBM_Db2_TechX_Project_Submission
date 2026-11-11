@@ -3,11 +3,11 @@
   "project": {
     "title": "MasteryLoop (mastree)",
     "slug": "mastree",
-    "short_description": "Open-source adaptive learning engine implementing Bloom's mastery learning with IBM Db2 LUW recursive graph analytics, multi-mode ingestion (Wikipedia/PDF/Notes), FastAPI backend, static vanilla frontend, and dual teaching formats (Board & in-browser Video Lecture).",
+    "short_description": "Open-source adaptive learning engine implementing Bloom's mastery learning with IBM Db2 LUW recursive graph analytics, multi-source RAG (open internet search, direct URL/PDF extraction, Gemini Knowledge Base synthesis, and uploaded notes), FastAPI backend, static vanilla frontend, and dual teaching formats (Technical Board & Narrated Video Lecture).",
     "category": "AI / Education / Data Engineering / Adaptive Learning",
-    "demo_url": "http://localhost:8000",
-    "video_url": "https://github.com/Suryakanth25",
-    "repo_url": "https://github.com/Suryakanth25/mastree"
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/Suryakanth25/IBM_Db2_TechX_Project_Submission"
   },
   "team": {
     "name": "Suryakanth",
@@ -15,8 +15,8 @@
       {
         "name": "Suryakanth",
         "github": "Suryakanth25",
-        "email": "suryakanth@example.com",
-        "role": "Solo Participant — Full-Stack Architecture, Db2 LUW Analytics & AI Engine"
+        "email": "suryakanth2512@gmail.com",
+        "role": "Solo Participant — Full-Stack Architecture, IBM Db2 LUW Analytics & AI RAG Engine"
       }
     ]
   },
@@ -25,7 +25,7 @@
     "connector": "ibm_db",
     "features_used": [
       "Recursive CTE (Ancestor Prerequisite Root Cause Analysis without RECURSIVE keyword)",
-      "Analytical View (v_student_progress cross-joining students and curriculum matrix)",
+      "Analytical View (v_student_progress cross-joining students and concepts matrix)",
       "Append-Only Audit History Table (mastery_history)",
       "Atomic ACID Transactions with Autocommit Off and Rollback",
       "Relational Tables with Identity Keys (IDENTITY_VAL_LOCAL)",
@@ -36,7 +36,7 @@
   },
   "tech_stack": {
     "languages": ["Python 3.11+", "JavaScript (ES6+)", "HTML5", "CSS3"],
-    "frameworks": ["FastAPI", "Uvicorn", "ibm_db", "google-genai", "python-multipart", "pypdf", "requests", "pytest", "numpy"],
-    "ai_models": ["Google Gemini 2.5 Flash", "Gemini Embedding 001"]
+    "frameworks": ["FastAPI", "Uvicorn", "ibm_db", "google-genai", "ddgs", "python-multipart", "pypdf", "requests", "httpx", "pytest", "numpy"],
+    "ai_models": ["Google Gemini 3.5 Flash Lite (with Flash Failover)", "Gemini Embedding 001"]
   }
 }

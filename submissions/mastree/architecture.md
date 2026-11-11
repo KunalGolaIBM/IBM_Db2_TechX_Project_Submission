@@ -1,70 +1,78 @@
 # MasteryLoop System Architecture
 
 ## Overview
-**MasteryLoop** (project slug: `mastree`) is an open-source adaptive tutor implementing Benjamin Bloom's mastery learning pedagogy. The system dynamically adapts instructional content and assessment rigor for students learning Structured Query Language (SQL) and custom uploaded or Wikipedia-researched topics.
+**MasteryLoop** (project slug: `mastree`) is an open-source adaptive learning platform implementing Benjamin Bloom's mastery learning pedagogy over **IBM Db2 LUW**. Students can learn any topic sourced from **open-internet tutorials/papers (`ddgs`, Hacker News Algolia, StackExchange, OpenAlex)**, **direct webpage or PDF URLs**, **Gemini AI Knowledge Base (`ai_kb`) synthesis**, **uploaded/pasted notes (`.txt`, `.md`, `.pdf`)**, **opt-in Wikipedia**, or an **optional seeded 9-concept SQL curriculum (`--seed`)**.
 
-The architecture unites a modern **FastAPI** REST backend serving a responsive vanilla HTML5/CSS/JS frontend at `/`, an intelligent **AI / LLM Orchestration Layer** running on Google Gemini via the `google-genai` SDK, and a deep, transactional **IBM Db2 LUW** relational database layer. Background knowledge ingestion executes asynchronously in dedicated worker threads monitored via an in-memory job registry. When students struggle to advance past concept mastery gates, the engine executes an IBM Db2 **Recursive Common Table Expression (CTE)** over a directed acyclic graph (DAG) of prerequisite dependencies to identify the deepest unmastered root-cause concept, automatically routing the student through targeted multi-style remediation in their chosen format.
+The application pairs a **FastAPI** REST backend (serving a zero-dependency vanilla HTML5/CSS/JS frontend at `/`) with custom **Google Gemini (`google-genai`) orchestration** and a transactional **IBM Db2 LUW** relational database layer. When a learner misses a mastery gate, Db2 executes a **Recursive Common Table Expression (CTE)** across the prerequisite directed acyclic graph (`concept_prereqs`) to pinpoint the deepest unmastered root cause and trigger style-shifted remediation.
 
 ---
 
-## The 8-Step System Lifecycle
+## Architecture Diagram
 
 ```mermaid
 flowchart TD
-    S1[1. Student Login via Username] --> S2[2. Choose Topic: Search Wikipedia / Attach Notes / Course SQL]
-    S2 --> S3[3. RAG Ingestion into Db2: Chunk ~120 words + Batch Embeddings]
-    S3 --> S4[4. Choose Format: Board or Video Lecture]
-    S4 --> S5[5. Grounded AI Teaching citing Chunk IDs]
-    S5 --> S6[6. Assessment: 5 MCQs from Same Chunks]
-    S6 --> S7[7. Gate Decision: Mastered -> Next Topic | Not Mastered -> Db2 Recursive CTE Diagnosis]
-    S7 --> S8[8. End-to-End Persistence in IBM Db2 LUW]
-    S7 -. Remediation Cycle (Max 3 Loops) .-> S4
+    UI[Vanilla SPA Client - Obsidian and Swiss Light Themes] -->|REST JSON and Multipart Upload| API[FastAPI Server src/api.py]
+    API -->|Open Web and PDF Extract| WEB[Web Search and Parser src/web_search.py]
+    API -->|Opt-in Wikipedia Extract| WIKI[MediaWiki Client src/wiki.py]
+    API -->|Background Worker Threads| JOBS[In-Memory INGESTION_JOBS Registry]
+    API -->|Failover LLM and Batch Embeddings| AI[Gemini Orchestrator src/ai.py]
+    API -->|Parameterized SQL and Recursive CTE| DB[IBM Db2 LUW Layer src/db.py]
+    AI -->|SHA-256 Cache and Vector Retrieval| DB
+    DB -->|Tables, View, BLOB, CTE Diagnostics| DB2[(IBM Db2 LUW Engine)]
 ```
 
 ---
 
-## Three Input Modes & Ingestion Architecture
+## Component Breakdown
 
-MasteryLoop supports three distinct knowledge acquisition channels:
-1. **Search Any Topic (Wikipedia):**
-   - Live query via MediaWiki API (`action=query`, `list=search`) displaying top 3 candidate articles.
-   - Text extract fetched via `prop=extracts`, `explaintext=1`, capped at ~5000 words.
-   - Attributed as `Source: Wikipedia - <Title>` with canonical URL stored.
-2. **Attach My Notes (Upload / Paste):**
-   - Supports `.txt`, `.md`, and `.pdf` files (extracted via `pypdf`) alongside raw pasted text.
-   - Requires a Topic Name and allows optional prerequisite linking to existing topics.
-3. **Course (SQL Curriculum):**
-   - 9 Curated concepts pre-seeded in Db2 with a directed acyclic prerequisite dependency structure.
-
-All ingested topics are partitioned into ~120-word chunks, batch-embedded, and persisted in Db2 with relational associations to `concepts`, `documents`, and `chunks`.
+1. **User Interface / Client Layer (`frontend/index.html`, `frontend/app.js`)**:
+   - Single-page 8-step cockpit (`Login` → `Source` → `Ingest` → `Format` → `Classroom` → `Assessment` → `Gate` → `Ledger`) with Obsidian Dark and Swiss Light CSS themes and high-contrast Technical Board cards.
+   - Polls asynchronous ingestion status (`GET /api/ingest/{job_id}`), renders 8 safe visual schemas (`renderVisualHtml`), synchronizes Web Speech API playback (`0.75x`, `1.0x`, `1.25x`, `1.5x`), renders mastery bar charts, and inspects live Recursive CTE SQL (`"Why this?"`).
+2. **Application Backend Layer (`src/api.py`)**:
+   - Exposes 14 JSON/multipart REST endpoints with uniform `{"error", "detail"}` exception handling, mounts `frontend/` cleanly at `/`, and runs background ingestion workers in daemon threads tracked via `INGESTION_JOBS`.
+3. **Database Layer (`src/db.py`, `src/schema.sql`, `src/init_db.py`)**:
+   - Native `ibm_db` connector enforcing Db2 LUW conventions: `GENERATED ALWAYS AS IDENTITY`, `IDENTITY_VAL_LOCAL()`, `FETCH FIRST n ROWS ONLY`, `?` parameter markers, atomic `transaction()` contexts (`autocommit` off + rollback), catalog inspection (`SYSCAT.TABLES`, `SYSCAT.COLUMNS`), and non-`RECURSIVE` comma-join CTE traversal (`SQL0345N`-compliant).
+4. **AI, Search & Retrieval Layer (`src/ai.py`, `src/web_search.py`, `src/wiki.py`)**:
+   - Custom pipeline (**no LangChain**) featuring multi-provider internet search (`ddgs` → HN Algolia → StackExchange → OpenAlex), clean HTML/PDF extraction, Gemini Knowledge Base authoring, ~120-word chunking (capped at `3,000` words / `25` chunks), pooled single-call batch embeddings (`gemini-embedding-001`) with BM25 fallback, `gemini-3.5-flash-lite` failover chain, schema-validated scenes, and 2-pass non-repeating MCQ synthesis + verification backed by `llm_cache`.
 
 ---
 
-## Dual Teaching Formats
+## Data Flow
 
-- **Board (Step-by-Step):** Progressive card deck revealing educational concepts step-by-step with explicit citation badges (`#chunk_id`).
-- **Video Lecture:**
-  > **Note on Implementation:** *Video lecture = in-browser narrated lecture player using the Web Speech API, not an exported MP4.*
-  - Self-contained 16:9 dark classroom screen with zero CDN or external network dependencies.
-  - Generates 5–6 scenes in one Gemini call, verified strictly against Db2 chunks.
-  - Staggered bullet reveals synchronized with browser voice synthesis (`window.speechSynthesis`), glowing key-term badges, and animated process flow diagrams (`[Step 1] ➔ [Step 2] ➔ [Step 3]`).
-  - Speed adjustments (0.8x, 1.0x, 1.25x), Play/Pause, Prev/Next, Subtitles toggle, and Mute.
+1. **Knowledge Acquisition & Background Ingestion**:
+   - Client initiates search (`POST /api/search`) or submits a source via `POST /api/ingest` (`web`, `url`, `ai_kb`, `wikipedia`, `course`, `paste`) or `POST /api/ingest/upload` (`.txt`, `.md`, `.pdf`).
+   - Background worker fetches text (capped at `3,000` words / `25` chunks of ~120 words), executes one batched `gemini-embedding-001` call (caching vectors in `llm_cache`), optionally cleans prior stale chunks when `replace_existing=true`, and commits `concepts`, `documents`, and `chunks` in a single Db2 transaction.
+2. **Grounded Lesson Generation**:
+   - `POST /api/lesson` selects top-k chunks scoped strictly to `concept_id` (deprioritizing previously covered chunks on `loop_count > 1`) and synthesizes 5–6 scenes (`<= 45` words narration, `<= 4` bullets, validated `citations` + `visual` schema) in a single cached Gemini call, storing the lesson in Db2 `lessons` (plus optional PNG in `lesson_images`).
+3. **Non-Repeating Assessment & Mastery Update**:
+   - `POST /api/quiz/generate` prioritizes untested chunks, excludes prior question stems (`excluded_questions`), and verifies 5 MCQs (easy/medium/hard) against cited chunks before saving to `questions`.
+   - `POST /api/quiz/answer` deterministically grades selections, inserts into `attempts`, recomputes recency-decay weighted mastery (`0.85^age` × difficulty weight), and atomically updates `mastery` + `mastery_history`.
+4. **Gate Evaluation & Recursive Remediation**:
+   - `POST /api/gate` checks all 3 criteria (`mastery >= 0.80`, `attempts >= 5`, `distinct_difficulties >= 2`). On failure, Db2 runs `find_root_cause_prereq`, logs `loop_events` with the exact executed SQL query, returns the ancestor chain (`prereq_chain`), and cycles pedagogical styles up to 3 remediation loops.
 
 ---
 
-## IBM Db2 LUW Schema & Storage Design
+## Dual Teaching Formats & Visual Schemas
 
-The application adheres strictly to the IBM Db2 LUW relational dialect:
+- **Interactive Technical Board:** Progressive card deck displaying scene narrative, worked syntax/code blocks, bullet points, visual schema widgets, and interactive `#chunk_id` source badges.
+- **Narrated Visual Lecture:** In-browser `16:9` presentation canvas *(not an exported MP4)* pairing structured visual diagrams with browser `window.speechSynthesis`, live captions, Play/Pause, Prev/Next, rate selector (`0.75x`, `1.0x`, `1.25x`, `1.5x`), Mute, and CC toggles.
+- **8 Validated Visual Schemas (Zero LLM-authored HTML/SVG):** `flow`, `cycle`, `hierarchy`, `compare`, `timeline`, `concept_map`, `equation`, `bullets`.
+
+---
+
+## IBM Db2 Schema & Storage Design
+
+Defined in [`src/schema.sql`](src/schema.sql) and initialized cleanly (empty workspace by default via `python src/init_db.py`; optional SQL curriculum via `--seed`; full reset via `--clean`):
 
 ```sql
--- 1. Students Table
+-- 13 Core Tables + 12 Indexes + 1 Analytics View
+
 CREATE TABLE students (
     student_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     username VARCHAR(100) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Concepts Table (Supports Seed and Custom User/Wikipedia Topics)
 CREATE TABLE concepts (
     concept_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
@@ -76,7 +84,6 @@ CREATE TABLE concepts (
     CONSTRAINT fk_concept_creator FOREIGN KEY (created_by) REFERENCES students(student_id) ON DELETE SET NULL
 );
 
--- 3. Concept Prerequisites Graph Table (DAG Structure)
 CREATE TABLE concept_prereqs (
     concept_id INTEGER NOT NULL,
     prereq_id INTEGER NOT NULL,
@@ -85,7 +92,6 @@ CREATE TABLE concept_prereqs (
     CONSTRAINT fk_cp_prereq FOREIGN KEY (prereq_id) REFERENCES concepts(concept_id) ON DELETE CASCADE
 );
 
--- 4. Documents Table (Seed, Wikipedia, Upload, Paste)
 CREATE TABLE documents (
     doc_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     concept_id INTEGER NOT NULL,
@@ -98,7 +104,6 @@ CREATE TABLE documents (
     CONSTRAINT fk_doc_concept FOREIGN KEY (concept_id) REFERENCES concepts(concept_id) ON DELETE CASCADE
 );
 
--- 5. Text Chunks & Vector Embeddings Table (RAG Knowledge Base)
 CREATE TABLE chunks (
     chunk_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     doc_id INTEGER NOT NULL,
@@ -111,7 +116,6 @@ CREATE TABLE chunks (
     CONSTRAINT fk_chunk_concept FOREIGN KEY (concept_id) REFERENCES concepts(concept_id) ON DELETE CASCADE
 );
 
--- 6. Interactive Lessons Table (Board steps & Video lecture scenes)
 CREATE TABLE lessons (
     lesson_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     student_id INTEGER NOT NULL,
@@ -124,7 +128,6 @@ CREATE TABLE lessons (
     CONSTRAINT fk_les_concept FOREIGN KEY (concept_id) REFERENCES concepts(concept_id) ON DELETE CASCADE
 );
 
--- 7. Quiz Questions Pool Table
 CREATE TABLE questions (
     question_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     concept_id INTEGER NOT NULL,
@@ -143,7 +146,6 @@ CREATE TABLE questions (
     CONSTRAINT fk_q_chunk FOREIGN KEY (source_chunk_id) REFERENCES chunks(chunk_id) ON DELETE SET NULL
 );
 
--- 8. Student Quiz Attempts Table
 CREATE TABLE attempts (
     attempt_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     student_id INTEGER NOT NULL,
@@ -158,7 +160,6 @@ CREATE TABLE attempts (
     CONSTRAINT fk_att_question FOREIGN KEY (question_id) REFERENCES questions(question_id) ON DELETE CASCADE
 );
 
--- 9. Student Concept Current Mastery Table
 CREATE TABLE mastery (
     mastery_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     student_id INTEGER NOT NULL,
@@ -172,7 +173,6 @@ CREATE TABLE mastery (
     CONSTRAINT fk_mas_concept FOREIGN KEY (concept_id) REFERENCES concepts(concept_id) ON DELETE CASCADE
 );
 
--- 10. Append-Only Mastery History Table
 CREATE TABLE mastery_history (
     history_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     student_id INTEGER NOT NULL,
@@ -185,7 +185,6 @@ CREATE TABLE mastery_history (
     CONSTRAINT fk_mh_attempt FOREIGN KEY (attempt_id) REFERENCES attempts(attempt_id) ON DELETE SET NULL
 );
 
--- 11. Loop Events & Gate Decisions Log Table
 CREATE TABLE loop_events (
     event_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     student_id INTEGER NOT NULL,
@@ -204,7 +203,6 @@ CREATE TABLE loop_events (
     CONSTRAINT fk_le_rc FOREIGN KEY (root_cause_concept_id) REFERENCES concepts(concept_id) ON DELETE SET NULL
 );
 
--- 12. Persistent LLM & Embedding Cache Table
 CREATE TABLE llm_cache (
     cache_key VARCHAR(64) NOT NULL PRIMARY KEY,
     model_name VARCHAR(100) NOT NULL,
@@ -213,7 +211,6 @@ CREATE TABLE llm_cache (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 13. Optional Generated Lesson Illustrations Table
 CREATE TABLE lesson_images (
     image_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     lesson_id INTEGER,
@@ -224,28 +221,9 @@ CREATE TABLE lesson_images (
     CONSTRAINT fk_lim_concept FOREIGN KEY (concept_id) REFERENCES concepts(concept_id) ON DELETE CASCADE
 );
 
--- Indexes for Foreign Keys & Composite Lookups
-CREATE INDEX idx_cp_prereq ON concept_prereqs (prereq_id);
-CREATE INDEX idx_doc_concept ON documents (concept_id);
-CREATE INDEX idx_chk_doc ON chunks (doc_id);
-CREATE INDEX idx_chk_concept ON chunks (concept_id);
-CREATE INDEX idx_les_sc ON lessons (student_id, concept_id);
-CREATE INDEX idx_q_concept ON questions (concept_id);
-CREATE INDEX idx_q_chunk ON questions (source_chunk_id);
-CREATE INDEX idx_att_sc ON attempts (student_id, concept_id);
-CREATE INDEX idx_att_q ON attempts (question_id);
-CREATE INDEX idx_mas_sc ON mastery (student_id, concept_id);
-CREATE INDEX idx_mh_sc ON mastery_history (student_id, concept_id);
-CREATE INDEX idx_le_sc ON loop_events (student_id, concept_id);
-
--- Analytics View: Student Progress Matrix
 CREATE VIEW v_student_progress AS
 SELECT 
-    s.student_id,
-    s.username,
-    c.concept_id,
-    c.name AS concept_name,
-    c.seq_order,
+    s.student_id, s.username, c.concept_id, c.name AS concept_name, c.seq_order,
     COALESCE(m.mastery_score, 0.0) AS current_mastery,
     COALESCE(m.attempt_count, 0) AS total_attempts,
     COALESCE(m.distinct_difficulties, 0) AS distinct_difficulties,
@@ -265,17 +243,12 @@ LEFT JOIN mastery m ON s.student_id = m.student_id AND c.concept_id = m.concept_
 
 ## Recursive CTE Prerequisite Root-Cause Query
 
-When a student fails the mastery gate, Db2 LUW traverses ancestor prerequisites to locate the weakest unmastered concept:
-
 ```sql
 WITH prereq_tree (concept_id, prereq_id, depth) AS (
-    -- Anchor member: Direct prerequisites of the target concept (depth = 1)
     SELECT cp.concept_id, cp.prereq_id, 1
     FROM concept_prereqs cp
     WHERE cp.concept_id = ?
     UNION ALL
-    -- Recursive member: Ancestor prerequisites (depth + 1)
-    -- Uses comma-join syntax with WHERE to strictly comply with Db2 rule SQL0345N
     SELECT pt.concept_id, cp2.prereq_id, pt.depth + 1
     FROM prereq_tree pt, concept_prereqs cp2
     WHERE pt.prereq_id = cp2.concept_id
@@ -292,17 +265,10 @@ GROUP BY c.concept_id, c.name, c.seq_order, m.mastery_score, m.attempt_count, m.
 ORDER BY mastery_score ASC, min_depth DESC;
 ```
 
-### How the Diagnostic Engine Works:
-1. **Anchor Execution:** Evaluates `cp.concept_id = ?` to seed the queue with direct prerequisites.
-2. **Recursive Traversal:** Iterates upward through the directed acyclic graph (DAG) to collect all transitive ancestor dependencies. Db2 LUW dialect rules require omitting the `RECURSIVE` keyword (`WITH name (cols) AS ...`) and using comma-separated join syntax in the recursive member to prevent `SQL0345N`.
-3. **Weakest-Link Diagnosis:** Joins the transitive prerequisites with the student's recorded mastery scores (`mastery` table). The results are ranked primarily by `mastery_score ASC` (lowest mastery score first) and secondarily by `min_depth DESC` (deepest unmastered foundation first). The top candidate with mastery $< 0.80$ is flagged as the root cause.
-4. **Pedagogical Action:** The tutor dynamically shifts context to re-teach this foundational prerequisite before returning the learner to the original target concept.
-
 ---
 
 ## Security, Attributions & Secrets Management
 - **Author:** Suryakanth ([@Suryakanth25](https://github.com/Suryakanth25)), solo participant.
-- All database credentials (`DB2_HOST`, `DB2_PORT`, `DB2_DATABASE`, `DB2_USER`, `DB2_PASSWORD`) and Google Gemini API keys are loaded at runtime from environment variables.
-- Parameterized queries (`?` parameter markers) prevent SQL injection across all query execution paths.
-- **Wikipedia:** Fetched text is licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
-- **DeepTutor Attribution:** "Inspired by the teach-and-assess idea in DeepTutor (HKUDS/DeepTutor, Apache-2.0). All code in this project was written from scratch. Wikipedia text is CC BY-SA."
+- **Secrets Policy:** Runtime configuration loads via `.env` (excluded by `.gitignore`) while `.env.example` contains dummy placeholders only. All SQL executes with `?` parameter markers to prevent injection.
+- **DeepTutor Attribution:** *"Inspired by the teach-and-assess idea in DeepTutor (HKUDS/DeepTutor, Apache-2.0). All code in this project was written from scratch. Wikipedia text (when optionally enabled) is CC BY-SA."*
+- **License:** MIT License ([`LICENSE`](LICENSE)).
