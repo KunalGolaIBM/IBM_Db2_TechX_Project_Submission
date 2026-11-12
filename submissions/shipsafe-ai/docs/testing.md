@@ -3,6 +3,18 @@
 **220 tests, 99% line and branch coverage, no mocks.** Every test that needs a database uses the real
 IBM Db2 from `.env`, and every test that needs a model uses the real Granite models in Ollama.
 
+## Fresh-machine install checks
+
+The published downloads are also tested the way a new user gets them, with nothing configured:
+
+| Machine | What ran | Result |
+|---|---|---|
+| Windows 11, new Python 3.13 venv, no Db2, no Ollama, empty home folder | `pip install https://shipsafe-bob.vercel.app/downloads/…whl`, `shipsafe check`, `shipsafe connect bob` | Installs; check blocks SQL injection and secrets in about 0.5 s with one "connect Db2" hint; Bob config written |
+| Linux, clean `python:3.13-slim` container | same, plus the official MCP client against `shipsafe-mcp` | Installs; 11 tools listed; `shipsafe_check_code` answers over stdio |
+| IBM Bob 1.126 | `bobide --install-extension "$HOME/Downloads/shipsafe-3.0.0.vsix"` | Installed |
+
+Python 3.14 is not supported yet because CrewAI does not support it; pip says so and stops.
+
 ## How it works
 
 - `tests/conftest.py` drops and recreates a separate schema, `SHIPSAFE_TEST`, at the start of each run
