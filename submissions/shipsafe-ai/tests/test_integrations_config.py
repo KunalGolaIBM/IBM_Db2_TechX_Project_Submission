@@ -36,7 +36,10 @@ def test_connect_writes_each_ide_config(tmp_path, target, path, key):
     cfg = json.loads((tmp_path / path).read_text(encoding="utf-8"))
     entry = cfg[key]["shipsafe"]
     assert entry["command"] == "/venv/python" and entry["args"] == ["-m", "shipsafe.mcp_server"]
-    assert entry["env"] == {"SHIPSAFE_ENV_FILE": "/x/.env"}
+    expected_env = {"SHIPSAFE_ENV_FILE": "/x/.env"}
+    if target in ("bob", "vscode"):
+        expected_env["SHIPSAFE_WORKSPACE"] = "${workspaceFolder}"  # these editors start the server outside the project
+    assert entry["env"] == expected_env
     assert (entry.get("type") == "stdio") == (target in ("claude", "vscode"))
     assert (tmp_path / path).resolve() in [f.resolve() for f in files]
     connect(target, str(tmp_path))  # idempotent

@@ -204,6 +204,29 @@ def cmd_hook(args) -> int:
     return 0
 
 
+def cmd_guard_hook(args) -> int:
+    """Claude Code PreToolUse hook: block a file write whose new content ShipSafe blocks."""
+    from .integrations.claude_hook import evaluate
+
+    try:
+        event = json.loads(sys.stdin.read() or "{}")
+    except json.JSONDecodeError:
+        return 0  # not a hook call we understand: never break the editor
+    code, message = evaluate(event, _services(argparse_ns(event.get("cwd"))))
+    if message:
+        print(message, file=sys.stderr)
+    return code
+
+
+def argparse_ns(workspace):
+    class _Args:
+        pass
+
+    a = _Args()
+    a.workspace = workspace
+    return a
+
+
 def register(sub) -> dict:
     p = sub.add_parser("setup", help="Save the Db2/Ollama connection, create the schema, check Granite")
     p.add_argument("--env-file", help="Where to store settings (default ~/.shipsafe/.env)")
@@ -239,5 +262,7 @@ def register(sub) -> dict:
     p = sub.add_parser("report", help="What ShipSafe caught per IDE (Db2 stored procedure)")
     p.add_argument("--since-minutes", type=int, default=1440)
     p = sub.add_parser("hook", help="Install a git pre-commit hook that runs `shipsafe check --staged`")
+    sub.add_parser("guard-hook", help="Claude Code PreToolUse hook (reads the tool call on stdin; exit 2 blocks the write)")
     return {"setup": cmd_setup, "connect": cmd_connect, "check": cmd_check, "fix": cmd_fix, "sql": cmd_sql,
-            "ask": cmd_ask, "remember": cmd_remember, "recall": cmd_recall, "forget": cmd_forget, "report": cmd_report, "hook": cmd_hook}
+            "ask": cmd_ask, "remember": cmd_remember, "recall": cmd_recall, "forget": cmd_forget, "report": cmd_report, "hook": cmd_hook,
+            "guard-hook": cmd_guard_hook}

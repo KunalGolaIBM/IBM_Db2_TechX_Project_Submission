@@ -46,10 +46,12 @@ test("markdown report renders strings and objects", () => {
 
 test("mcp entry keeps only ShipSafe env vars and marks Claude as stdio", () => {
   const bob = mcpEntry(server, "bob");
-  assert.deepEqual(bob.env, { SHIPSAFE_ENV_FILE: "/x/.env" });
+  assert.deepEqual(bob.env, { SHIPSAFE_ENV_FILE: "/x/.env", SHIPSAFE_WORKSPACE: "${workspaceFolder}" });
+  assert.deepEqual(mcpEntry(server, "claude").env, { SHIPSAFE_ENV_FILE: "/x/.env" });
   assert.equal(bob.type, undefined);
   assert.equal(mcpEntry(server, "claude").type, "stdio");
-  assert.equal(mcpEntry({ command: "c", args: [] }, "bob").env, undefined);
+  assert.deepEqual(mcpEntry({ command: "c", args: [] }, "bob").env, { SHIPSAFE_WORKSPACE: "${workspaceFolder}" });
+  assert.equal(mcpEntry({ command: "c", args: [] }, "claude").env, undefined);
 });
 
 test("merge keeps other servers and user options", () => {

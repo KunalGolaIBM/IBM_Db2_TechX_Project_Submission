@@ -20,6 +20,7 @@ import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
 
+
 _SQLCODE = re.compile(r"SQLCODE=(-?\d+)")
 _SQLSTATE = re.compile(r"SQLSTATE=(\w+)")
 _QUOTED = re.compile(r'"([^"]+)"')
@@ -37,6 +38,19 @@ SQLCODE_HELP = {
     -117: "The number of values does not match the number of columns.",
 }
 READ_ONLY = ("SELECT", "WITH", "VALUES")
+
+
+def _vector_type():
+    from sqlalchemy.types import UserDefinedType
+
+    class _Db2Vector(UserDefinedType):
+        """Db2 12.1 native VECTOR column (reflection only)."""
+        cache_ok = True
+
+        def get_col_spec(self, **_kw) -> str:
+            return "VECTOR"
+
+    return _Db2Vector
 
 
 @dataclass
@@ -133,6 +147,13 @@ class Db2SqlChecker:
             url = URL.create("ibm_db_sa", username=cfg.username, password=cfg.password, host=cfg.host,
                              port=cfg.port, database=cfg.database, query=query)
             self._engine = create_engine(url, pool_pre_ping=True, pool_size=2, max_overflow=0)
+            from sqlalchemy import event
+
+            from ..db2.repository import set_lock_timeout
+
+            event.listen(self._engine, "connect", lambda dbapi_conn, _rec: set_lock_timeout(dbapi_conn, cfg.lock_timeout))
+            # ibm_db_sa does not know Db2's native VECTOR type yet: register it so reflection reports it.
+            self._engine.dialect.ischema_names = {**self._engine.dialect.ischema_names, "VECTOR": _vector_type()}
         return self._engine
 
     def schema_overview(self, schema: Optional[str] = None, tables: Optional[List[str]] = None) -> Dict[str, Any]:

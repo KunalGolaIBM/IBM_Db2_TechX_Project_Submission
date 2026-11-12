@@ -97,7 +97,10 @@ graph TD
    Bandit, dependency CVEs, tests) with a deterministic PASS / PASS_WITH_WARNINGS / BLOCKED gate, saved in one
    transaction; the risk trend comes from the `SP_PROJECT_RISK` stored procedure.
 8. **Surfaces.** The VS Code / Bob extension (`extension/`) is an MCP client of the same server and adds
-   Problems-panel diagnostics, a verified quick fix and one-click IDE wiring. The CLI adds `setup`, `connect`,
+   Shippy's sidebar (guided setup of engine, Db2, Granite and the agent; per-agent activity from `SP_GUARD_SUMMARY`),
+   Problems-panel diagnostics, a safety-net check of every file written to disk, a verified quick fix, 20+ settings
+   and one-click IDE wiring. `shipsafe connect claude` adds a `PreToolUse` hook so Claude Code cannot write a
+   blocked file. MCP tool work runs on one worker thread, off the server's event loop. The CLI adds `setup`, `connect`,
    `check --staged` with a git pre-commit hook, and every tool as a command. The REST API and web dashboard
    serve teams.
 
@@ -177,7 +180,7 @@ because routine resolution uses `CURRENT PATH`, and OUT parameters are never NUL
 
 | Piece | Where it comes from | Needs |
 |---|---|---|
-| Python package (MCP server, CLI, Db2 schema) | `pip install https://shipsafe-bob.vercel.app/downloads/shipsafe-3.0.0-py3-none-any.whl` | Python 3.11–3.13 |
+| Python package (MCP server, CLI, Db2 schema) | `pip install https://shipsafe-bob.vercel.app/downloads/shipsafe-3.1.0-py3-none-any.whl` | Python 3.11–3.13 |
 | Extension for IBM Bob / VS Code | `.vsix` from [shipsafe-bob.vercel.app](https://shipsafe-bob.vercel.app) | the Python package on PATH, or `shipsafe.pythonPath` |
 | Bob rules + MCP config | `shipsafe connect bob` | the Python package |
 

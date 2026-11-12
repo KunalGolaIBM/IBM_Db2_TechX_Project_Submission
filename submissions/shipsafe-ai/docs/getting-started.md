@@ -4,6 +4,14 @@ About ten minutes, most of it downloading the Granite models once. All downloads
 
 **You need:** Python 3.11–3.13 · Docker Desktop or WSL 2 · about 3 GB free disk · VS Code or IBM Bob.
 
+## Fastest path: let Shippy do it
+
+Install the extension (`.vsix` from [shipsafe-bob.vercel.app](https://shipsafe-bob.vercel.app)), open a project folder
+and **trust it** when asked (a new folder opens in Restricted Mode, which pauses extensions). Click the ShipSafe
+shield in the activity bar: Shippy installs the engine into a private folder (a few minutes the first time),
+then offers to connect IBM Db2 (yours, or Db2 Community Edition in Docker), set up Granite in Ollama and connect
+Bob. The manual steps below do the same from a terminal.
+
 ## 1. Start IBM Db2 (10 min)
 
 Easiest: install IBM's **Db2 Developer Extension** in VS Code (it also works in IBM Bob), click the Db2
@@ -34,7 +42,7 @@ ollama pull granite-embedding:30m   # embeddings, 62 MB, 384 dimensions
 
 ```bash
 python -m venv .venv && . .venv/bin/activate      # Windows: .venv\Scripts\activate
-pip install https://shipsafe-bob.vercel.app/downloads/shipsafe-3.0.0-py3-none-any.whl   # or: pip install ./submissions/shipsafe-ai
+pip install https://shipsafe-bob.vercel.app/downloads/shipsafe-3.1.0-py3-none-any.whl   # or: pip install ./submissions/shipsafe-ai
 export DB2_HOST=127.0.0.1 DB2_PORT=50001 DB2_NAME=TESTDB DB2_USERNAME=db2inst1 DB2_PASSWORD=<yours>
 shipsafe setup
 ```
@@ -68,12 +76,12 @@ makes the agent call ShipSafe without being asked.
 
 **Extension (Problems panel, quick fix, commands):**
 
-Download `shipsafe-3.0.0.vsix` from [shipsafe-bob.vercel.app](https://shipsafe-bob.vercel.app/#get); this works from any folder
+Download `shipsafe-3.1.0.vsix` from [shipsafe-bob.vercel.app](https://shipsafe-bob.vercel.app/#get); this works from any folder
 (PowerShell, bash or zsh):
 
 ```bash
-bobide --install-extension "$HOME/Downloads/shipsafe-3.0.0.vsix"
-code   --install-extension "$HOME/Downloads/shipsafe-3.0.0.vsix"
+bobide --install-extension "$HOME/Downloads/shipsafe-3.1.0.vsix"
+code   --install-extension "$HOME/Downloads/shipsafe-3.1.0.vsix"
 ```
 
 Set `shipsafe.pythonPath` to the interpreter from step 3 if `shipsafe-mcp` is not on your PATH.

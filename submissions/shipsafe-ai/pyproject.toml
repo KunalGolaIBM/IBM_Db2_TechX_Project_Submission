@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "shipsafe"
-version = "3.0.0"
+version = "3.1.0"
 description = "Production-readiness add-on for IBM Bob and other AI IDEs: checks code before it is written, verified Granite fixes, Db2 SQL validation and project memory, all on IBM Db2"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"

@@ -1,6 +1,6 @@
 # Testing
 
-**220 tests, 99% line and branch coverage, no mocks.** Every test that needs a database uses the real
+**228 tests, 99% line and branch coverage, no mocks.** Every test that needs a database uses the real
 IBM Db2 from `.env`, and every test that needs a model uses the real Granite models in Ollama.
 
 ## Fresh-machine install checks
@@ -75,3 +75,28 @@ Mocked tests would have passed all of these:
 5. Granite cited policy ids that do not exist.
 6. Stored-procedure OUT parameters returned as NULL break the driver (CLI0110E); procedures must be
    called schema-qualified because routine resolution uses `CURRENT PATH`.
+
+## Live checks in real editors (version 3.1)
+
+Unit and integration tests run the code; these runs used the real applications on a real machine.
+
+| What | How | Result |
+|---|---|---|
+| IBM Bob's agent, logged in | A normal task ("write get_order and orders_for_client on the ORDERS table") in a folder connected with `shipsafe connect bob` | Bob called `shipsafe_recall`, `shipsafe_db2_schema`, `shipsafe_check_sql` (twice, both clean) and `shipsafe_check_code` ("Verdict is clean, safe to write") before writing the file with `?` markers, then `shipsafe_readiness_check` |
+| Claude Code 2.1 | `claude -p` asked to write `os.system(cmd)` in a folder connected with `shipsafe connect claude` | The `PreToolUse` hook blocked the write; no file was created; Db2 recorded the block under `claude-code` |
+| Fresh VS Code profile | Extension downloaded from the live site, nothing else installed in the profile | Shippy showed the trust step in Restricted Mode, then installed the engine from the live site (8 minutes the first time), connected Db2 and blocked the demo file |
+| Granite fix of the demo file | Three runs in a row | Verified 3/3 (1–2 rounds, 113–229 s on a laptop CPU) |
+
+These runs found bugs the automated suite had missed, all fixed and now covered by tests:
+
+1. `shipsafe_fix_code` failed when called through MCP: CrewAI refuses to run its crew synchronously inside the
+   server's event loop. Tool work now runs on a worker thread; a new test calls the fix over the real stdio transport.
+2. A fix could never be "verified" when a low-severity note (Bandit's "subprocess imported") had to stay in correct
+   code. Fixes now target the blocking issues; the final verdict must still be non-blocking.
+3. Bob starts MCP servers outside the project, so the readiness check scanned Bob's own install folder. The Bob and
+   VS Code configs now pass `SHIPSAFE_WORKSPACE=${workspaceFolder}`.
+4. Bob cancels tool calls after 60 s by default; `.bob/mcp.json` now sets a 10-minute timeout.
+5. A test run holding Db2 catalog locks made schema reads wait for minutes. Every connection now sets
+   `CURRENT LOCK TIMEOUT` (15 s) and fails fast instead.
+6. A new folder opens in Restricted Mode, where the extension was invisible. It now declares limited support and
+   shows the trust step.

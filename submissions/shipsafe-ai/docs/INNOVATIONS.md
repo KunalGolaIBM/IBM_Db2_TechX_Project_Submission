@@ -115,3 +115,20 @@ A git pre-commit hook uses the same checks for code written without an assistant
 Granite runs in Ollama on the developer's machine, Db2 runs locally or on the team's server, and the
 usage telemetry that CrewAI, LiteLLM and Haystack send by default is switched off. Code never leaves
 the machine.
+
+## 11. Enforced, not requested: a pre-write hook
+
+**What.** `shipsafe connect claude` also installs a Claude Code `PreToolUse` hook. Before every Write, Edit or
+MultiEdit, the hook rebuilds the file as it would look after the edit and checks it; a blocking verdict cancels
+the write and tells the model why.
+
+**Why it matters.** Rules files and "skills" ask the model to call a checker. A hook makes skipping it impossible.
+
+**Proof.** Asked to write `os.system(cmd)`, Claude Code answered that "the ShipSafe pre-write hook blocked it as a
+high-severity command-injection risk", and no file was created (see [testing.md](testing.md)).
+
+## 12. Shippy: setup, safety net and per-agent accountability
+
+**What.** The extension's sidebar guide installs the engine, connects Db2 and Granite and wires Bob, checks every
+file an agent writes to disk even if the agent skipped ShipSafe, and shows from Db2's `SP_GUARD_SUMMARY` how often
+each AI agent (Bob, Claude Code, VS Code agent mode) was checked and blocked.

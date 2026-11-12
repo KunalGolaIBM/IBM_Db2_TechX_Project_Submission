@@ -47,6 +47,33 @@ def test_stdio_end_to_end_like_bob(db2_schema):
     assert sql["verdict"] == "block" and sql["issues"][0]["code"] == "NO-WHERE"
 
 
+@pytest.mark.ollama
+def test_fix_over_stdio_runs_the_crew(db2_schema, granite):
+    """The fix tool through the real MCP transport, as Bob and the extension call it: the CrewAI crew must
+    run off the server's event loop (CrewAI refuses synchronous kickoff inside a running loop)."""
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.client.stdio import stdio_client
+
+    env = {**os.environ, "DB2_SCHEMA": TEST_SCHEMA, "SHIPSAFE_WORKSPACE": str(FIXTURES)}
+    params = StdioServerParameters(command=sys.executable, args=["-m", "shipsafe.mcp_server"], env=env)
+    code = "import subprocess\n\ndef deploy(cmd):\n    return subprocess.run(cmd, shell=True)\n"
+
+    async def run():
+        async with stdio_client(params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                fix = await session.call_tool("shipsafe_fix_code", {"code": code, "filename": "deploy.py"})
+                status = await session.call_tool("shipsafe_status", {})
+                return fix, status
+
+    fix, status = asyncio.run(run())
+    assert not fix.isError, fix.content[0].text
+    r = json.loads(fix.content[0].text)
+    assert r["rounds"] >= 1 and r["verified"], r["message"]
+    assert "shell=True" not in r["fixed_code"]
+    assert json.loads(status.content[0].text)["db2"]["connected"]  # the server still answers after a long fix
+
+
 @pytest.fixture()
 def tools(services, monkeypatch):
     monkeypatch.setattr(mcp_server, "_services", services)
@@ -54,7 +81,7 @@ def tools(services, monkeypatch):
 
 
 def call(fn, **kw):
-    return json.loads(fn(**kw))
+    return json.loads(asyncio.run(fn(**kw)))
 
 
 def test_tool_registry():

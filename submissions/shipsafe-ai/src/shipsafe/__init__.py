@@ -10,4 +10,4 @@ for _key, _value in (("CREWAI_DISABLE_TELEMETRY", "true"), ("OTEL_SDK_DISABLED",
                      ("ANONYMIZED_TELEMETRY", "False")):
     _os.environ.setdefault(_key, _value)
 
-__version__ = "3.0.0"
+__version__ = "3.1.0"

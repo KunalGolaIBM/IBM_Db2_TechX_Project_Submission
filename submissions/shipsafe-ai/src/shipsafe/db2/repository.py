@@ -35,6 +35,7 @@ def connect_db2(config: Db2Config, retries: int = 3, base_delay: float = 0.5):
         try:
             conn = ibm_db_dbi.connect(config.connection_string(), "", "")
             conn.set_autocommit(False)
+            set_lock_timeout(conn, config.lock_timeout)
             return conn
         except Exception as exc:  # network / server not ready
             last = exc
@@ -42,6 +43,15 @@ def connect_db2(config: Db2Config, retries: int = 3, base_delay: float = 0.5):
             if attempt < retries:
                 time.sleep(base_delay * (2 ** (attempt - 1)))
     raise ConnectionError(f"Could not connect to IBM Db2 at {config.host}:{config.port}/{config.database}: {_safe_err(last)}")
+
+
+def set_lock_timeout(dbapi_conn, seconds: int) -> None:
+    """Wait at most `seconds` for a Db2 lock, then fail (SQL0911N) instead of hanging the IDE or the agent."""
+    cur = dbapi_conn.cursor()
+    try:
+        cur.execute(f"SET CURRENT LOCK TIMEOUT = {int(seconds)}")
+    finally:
+        cur.close()
 
 
 def _safe_err(exc: Optional[Exception]) -> str:

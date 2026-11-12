@@ -7,13 +7,15 @@ assistant works, it checks every file *before* it is written, fixes problems wit
 proves each fix, validates SQL against your real **IBM Db2** database, and remembers your team's decisions
 between sessions. Every check, fix, memory and policy lives in IBM Db2.
 
-> 11 MCP tools · 3 Db2 stored procedures · 2 Db2 vector stores · 220 tests, 99% coverage, no mocks ·
+> 11 MCP tools · 3 Db2 stored procedures · 2 Db2 vector stores · 228 tests, 99% coverage, no mocks ·
 > everything runs on your machine
 
 **Live site, install guide and downloads: [shipsafe-bob.vercel.app](https://shipsafe-bob.vercel.app)**
 
-![ShipSafe inside IBM Bob: the shell injection is flagged in the Problems panel and the status bar shows 2 blocking](docs/screenshots/ide-bob.png)
-*Real IBM Bob window from our end-to-end test: ShipSafe flags `shell=True` (CMD-SHELL, policy POL-SEC-004) and the status bar shows "ShipSafe: 2 blocking".*
+![IBM Bob's agent calls ShipSafe before it writes a file: recall, Db2 schema, SQL validated on Db2, code check clean, then the write](docs/screenshots/bob-agent.png)
+*Real IBM Bob session: given a normal task, Bob's own agent recalled team decisions, read the real Db2 schema,
+validated both SQL statements on Db2 and checked the file with ShipSafe ("Verdict is clean, safe to write")
+before writing it with `?` parameter markers. Shippy, in the left sidebar, then checked the saved file too.*
 
 | Read next | |
 |---|---|
@@ -72,6 +74,19 @@ ShipSafe gives the assistant tools that it calls on its own. A rules file instal
 
 The same server powers a **VS Code / Bob extension** (Problems panel on save, verified quick fix, SQL check,
 memory commands), a **CLI** with a git pre-commit hook, and a **REST API with a team dashboard**.
+
+**New in 3.1, each proved live in a real editor:**
+- **Shippy sets everything up.** The extension adds a ShipSafe sidebar. On first start it finds Python 3.11–3.13,
+  installs the engine into a private folder, connects IBM Db2 (or starts Db2 Community Edition in Docker), sets up
+  Granite in Ollama and connects Bob's agent. In Restricted Mode it shows the one step needed: trust the folder.
+- **Safety net.** Every file saved or written to disk, by you or by an agent, is checked too, even if the agent
+  skipped ShipSafe; the sidebar shows, from Db2, how often each AI agent was checked and blocked.
+- **Enforced in Claude Code.** `shipsafe connect claude` installs a `PreToolUse` hook: a blocked file cannot be
+  written (Claude Code answered: "the ShipSafe pre-write hook blocked it as a high-severity command-injection risk").
+- **Bob-ready config.** `.bob/mcp.json` passes `${workspaceFolder}` and a 10-minute tool timeout, so readiness
+  checks scan the project and Granite fixes are not cut off.
+- **20+ real settings:** severity floor, block threshold, ignored rules, languages, exclude globs, check as you
+  type, fix rounds, auto-apply verified fixes, models.
 
 **Highlights** (details and proof in [docs/INNOVATIONS.md](docs/INNOVATIONS.md)):
 - Python rules read the syntax tree, so comments and docstrings never raise false alarms, and SQL is
@@ -156,7 +171,7 @@ shipsafe connect bob        # or: vscode | claude | cursor
 
 Extension: download it from [shipsafe-bob.vercel.app](https://shipsafe-bob.vercel.app/#get) (or build it with
 `cd extension && npm ci && npm run package`), then
-`bobide --install-extension "$HOME/Downloads/shipsafe-3.0.0.vsix"` (or `code --install-extension ...`).
+`bobide --install-extension "$HOME/Downloads/shipsafe-3.1.0.vsix"` (or `code --install-extension ...`).
 Step-by-step guide with expected output: [docs/getting-started.md](docs/getting-started.md).
 
 ## Configuration
@@ -193,7 +208,7 @@ shipsafe doctor                     # Db2, vectors, Granite and scanner health
 ## Testing & Verification
 
 ```bash
-pytest --cov=shipsafe               # 220 tests, 99% coverage, real Db2 + Granite, no mocks
+pytest --cov=shipsafe               # 228 tests, 99% coverage, real Db2 + Granite, no mocks
 cd extension && npm test            # extension unit tests
 ```
 

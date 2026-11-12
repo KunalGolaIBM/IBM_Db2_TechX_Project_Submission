@@ -66,6 +66,7 @@ class Db2Config:
     security: str = "NONE"
     schema: str = "SHIPSAFE"
     connect_timeout: int = 10
+    lock_timeout: int = 15                 # seconds to wait for a Db2 lock before failing (never hang the IDE)
 
     def __post_init__(self) -> None:
         # "localhost" may resolve to IPv6 ::1 first, while Docker/WSL port forwards for Db2 listen on IPv4 only:
@@ -83,6 +84,7 @@ class Db2Config:
             password=os.getenv(f"{prefix}PASSWORD", os.getenv("DB2_PASSWORD", "")),
             security=_security_from_env(),
             schema=os.getenv("DB2_SCHEMA", "SHIPSAFE").upper(),
+            lock_timeout=max(1, int(os.getenv("DB2_LOCK_TIMEOUT", "15"))),
         )
 
     def connection_string(self) -> str:
@@ -129,6 +131,8 @@ class ShipSafeConfig:
     policies_dir: str = str(POLICIES_DIR)
     # Scanners
     use_bandit: bool = True
+    cite_policies: bool = True                 # attach the matching Db2 team policy to each issue
+    fix_max_rounds: int = 3                    # Granite fix-and-verify rounds
     pip_audit: str = "deep"                    # deep (deep profile only) | always | off
     # API server
     api_host: str = "127.0.0.1"
@@ -153,6 +157,8 @@ class ShipSafeConfig:
             embedding_dimension=int(os.getenv("SHIPSAFE_VECTOR_DIMENSION", "384")),
             policies_dir=os.getenv("SHIPSAFE_POLICIES_DIR", str(POLICIES_DIR)),
             use_bandit=_bool("SHIPSAFE_BANDIT", "true"),
+            cite_policies=_bool("SHIPSAFE_CITE_POLICIES", "true"),
+            fix_max_rounds=min(5, max(1, int(os.getenv("SHIPSAFE_FIX_ROUNDS", "3")))),
             pip_audit=os.getenv("SHIPSAFE_PIP_AUDIT", "deep").lower(),
             api_host=os.getenv("SHIPSAFE_API_HOST", "127.0.0.1"),
             api_port=int(os.getenv("SHIPSAFE_API_PORT", "8080")),

@@ -104,9 +104,11 @@ class ShipSafeServices:
 
     # -------------------------------------------------------------- features
     def check_code(self, code: str, filename: str = "snippet.py", client: str = "unknown",
-                   project: Optional[str] = None, cite_policies: bool = True, tool: str = "check_code") -> Dict[str, Any]:
+                   project: Optional[str] = None, cite_policies: Optional[bool] = None, tool: str = "check_code") -> Dict[str, Any]:
         result: GuardResult = check_code(code, filename, use_bandit=self.config.use_bandit)
         notes: List[str] = []
+        if cite_policies is None:
+            cite_policies = self.config.cite_policies
         # The verdict comes from the code alone. Db2 (policy citations, event log) and the embedding model
         # add context; if either is unavailable the check still answers and says what was skipped.
         if cite_policies and result.issues:
@@ -167,7 +169,7 @@ class ShipSafeServices:
         from .agents import FixCrew
 
         crew = FixCrew(self.config.llm, policy_lookup=lambda q, c: self.policies_for(q, c),
-                       use_bandit=self.config.use_bandit)
+                       use_bandit=self.config.use_bandit, max_rounds=self.config.fix_max_rounds)
         result = crew.fix(code, filename)
         if result.rounds:
             with self._lock:

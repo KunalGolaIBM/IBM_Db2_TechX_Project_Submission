@@ -56,6 +56,20 @@ def test_guard_still_answers_when_db2_is_down(config, granite, tmp_path):
     assert st["db2"]["connected"] is False and st["ollama"]["running"]
 
 
+def test_editor_settings_reach_the_engine(config, tmp_path, monkeypatch):
+    from shipsafe.config import ShipSafeConfig
+
+    monkeypatch.setenv("SHIPSAFE_CITE_POLICIES", "false")
+    monkeypatch.setenv("SHIPSAFE_FIX_ROUNDS", "9")
+    loaded = ShipSafeConfig.load()
+    assert loaded.cite_policies is False and loaded.fix_max_rounds == 5  # clamped to 1..5
+    monkeypatch.setenv("SHIPSAFE_FIX_ROUNDS", "0")
+    assert ShipSafeConfig.load().fix_max_rounds == 1
+    svc = ShipSafeServices(replace(down(config), cite_policies=False), workspace_root=str(tmp_path))
+    r = svc.check_code("import os\nos.system(cmd)\n", "x.py")
+    assert r["verdict"] == "block" and all(i["policy"] is None for i in r["issues"])  # no policy lookup at all
+
+
 def test_services_files_and_search(services, tmp_path):
     svc = ShipSafeServices(services.config, workspace_root=str(tmp_path))
     (tmp_path / "big.py").write_text("x = 1\n" * 80_000, encoding="utf-8")

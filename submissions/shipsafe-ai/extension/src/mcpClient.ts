@@ -64,7 +64,7 @@ export class McpClient {
         protocolVersion: "2025-06-18",
         capabilities: {},
         clientInfo: { name: this.clientName, version: this.clientVersion },
-      }, 30_000)
+      }, 120_000) // cold start loads the AI frameworks; slow laptops need more than 30 s
         .then(() => {
           this.notify("notifications/initialized", {});
           resolve();

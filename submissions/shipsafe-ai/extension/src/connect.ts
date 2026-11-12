@@ -46,6 +46,10 @@ export function mcpEntry(server: ServerCommand, flavour: "bob" | "claude"): McpE
   if (Object.keys(env).length) {
     entry.env = env;
   }
+  if (flavour === "bob") {
+    // Bob starts MCP servers outside the project and expands ${workspaceFolder} in env itself.
+    entry.env = { ...(entry.env || {}), SHIPSAFE_WORKSPACE: "${workspaceFolder}" };
+  }
   if (flavour === "claude") {
     entry.type = "stdio";
   }
@@ -53,7 +57,7 @@ export function mcpEntry(server: ServerCommand, flavour: "bob" | "claude"): McpE
 }
 
 /** Merge ShipSafe into an existing MCP config JSON text, keeping every other server untouched. */
-export function mergeMcpConfig(existing: string | undefined, entry: McpEntry): string {
+export function mergeMcpConfig(existing: string | undefined, entry: McpEntry, defaults: Record<string, unknown> = {}): string {
   let config: { mcpServers?: Record<string, unknown>; [key: string]: unknown } = {};
   if (existing && existing.trim()) {
     const parsed = JSON.parse(existing);
@@ -66,7 +70,7 @@ export function mergeMcpConfig(existing: string | undefined, entry: McpEntry): s
   const servers = (config.mcpServers && typeof config.mcpServers === "object") ? config.mcpServers : {};
   const previous = (servers as Record<string, Record<string, unknown>>)[SERVER_NAME] || {};
   // Keep user-set options such as "alwaysAllow" or "disabled"; refresh command, args and env.
-  (servers as Record<string, unknown>)[SERVER_NAME] = { ...previous, ...entry };
+  (servers as Record<string, unknown>)[SERVER_NAME] = { ...defaults, ...previous, ...entry };
   config.mcpServers = servers;
   return JSON.stringify(config, null, 2) + "\n";
 }
@@ -81,15 +85,43 @@ export function connectBob(workspace: string, server: ServerCommand): string[] {
   const mcpFile = path.join(workspace, ".bob", "mcp.json");
   const rulesFile = path.join(workspace, ".bob", "rules", "shipsafe.md");
   const existing = fs.existsSync(mcpFile) ? fs.readFileSync(mcpFile, "utf8") : undefined;
-  writeFile(mcpFile, mergeMcpConfig(existing, mcpEntry(server, "bob")));
+  // Bob cancels MCP tool calls after 60 s unless told otherwise; Granite fixes can take longer.
+  writeFile(mcpFile, mergeMcpConfig(existing, mcpEntry(server, "bob"), { timeout: 600_000 }));
   writeFile(rulesFile, BOB_RULES);
   return [mcpFile, rulesFile];
 }
 
-/** Writes .mcp.json (Claude Code project scope) and CLAUDE.md guidance when absent. */
+/** The command Claude Code runs before every Write/Edit: `shipsafe guard-hook` from the same engine. */
+export function hookCommand(server: ServerCommand): string {
+  const q = (p: string) => `"${p.split("\\").join("/")}"`;
+  const exe = /shipsafe-mcp(\.exe)?$/i;
+  if (exe.test(server.command)) {
+    return `${q(server.command.replace(exe, (_m: string, ext?: string) => `shipsafe${ext || ""}`))} guard-hook`;
+  }
+  return `${q(server.command)} -m shipsafe.cli guard-hook`;
+}
+
+/** Add ShipSafe's PreToolUse hook to .claude/settings.json, keeping every other setting and hook. */
+export function mergeHookSettings(existing: string | undefined, command: string): string {
+  const config = existing && existing.trim() ? JSON.parse(existing) : {};
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    throw new Error(".claude/settings.json is not a JSON object");
+  }
+  config.hooks = config.hooks && typeof config.hooks === "object" ? config.hooks : {};
+  const pre = (Array.isArray(config.hooks.PreToolUse) ? config.hooks.PreToolUse : [])
+    .filter((h: { hooks?: { command?: string }[] }) => !(h.hooks || []).some((x) => String(x.command || "").includes("guard-hook")));
+  pre.push({ matcher: "Write|Edit|MultiEdit", hooks: [{ type: "command", command, timeout: 120 }] });
+  config.hooks.PreToolUse = pre;
+  return JSON.stringify(config, null, 2) + "\n";
+}
+
+/** Writes .mcp.json (Claude Code project scope) and the pre-write hook in .claude/settings.json. */
 export function connectClaude(workspace: string, server: ServerCommand): string[] {
   const mcpFile = path.join(workspace, ".mcp.json");
   const existing = fs.existsSync(mcpFile) ? fs.readFileSync(mcpFile, "utf8") : undefined;
   writeFile(mcpFile, mergeMcpConfig(existing, mcpEntry(server, "claude")));
-  return [mcpFile];
+  const settings = path.join(workspace, ".claude", "settings.json");
+  const current = fs.existsSync(settings) ? fs.readFileSync(settings, "utf8") : undefined;
+  writeFile(settings, mergeHookSettings(current, hookCommand(server)));
+  return [mcpFile, settings];
 }

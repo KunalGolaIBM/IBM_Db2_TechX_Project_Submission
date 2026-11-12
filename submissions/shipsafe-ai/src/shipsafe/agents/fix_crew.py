@@ -69,6 +69,12 @@ def _blocking(issues: List[GuardIssue]) -> List[GuardIssue]:
     return [i for i in issues if i.severity in ("critical", "high")]
 
 
+def _targets(issues: List[GuardIssue]) -> List[GuardIssue]:
+    """What a fix must remove: the blocking issues. Low-severity notes (e.g. Bandit's "subprocess imported")
+    often cannot disappear in correct code, so they are only targeted when nothing more serious exists."""
+    return _blocking(issues) or [i for i in issues if i.severity == "medium"] or issues
+
+
 class FixCrew:
     """Builds and runs the two-agent crew; verification is deterministic."""
 
@@ -109,7 +115,9 @@ class FixCrew:
                 "With ibm_db, bind values like this: `stmt = ibm_db.prepare(conn, sql)` then "
                 "`ibm_db.execute(stmt, (value,))`, then fetch rows from the statement: `ibm_db.fetch_assoc(stmt)` "
                 "(execute returns True/False; exec_immediate cannot take parameters). With a DB-API "
-                "cursor use `cursor.execute(sql, (value,))`. Keep every import the code needs.\n\n"
+                "cursor use `cursor.execute(sql, (value,))`. For shell commands never use shell=True or os.system: "
+                "call `subprocess.run(args, check=True)` with an argument list (use `shlex.split(cmd)` when the "
+                "input is a string). Keep every import the code needs.\n\n"
                 "Code:\n```{language}\n{code}\n```"),
             expected_output="The complete corrected file in one fenced code block, and nothing else.",
             agent=engineer, context=[plan])
@@ -132,7 +140,7 @@ class FixCrew:
         started = time.perf_counter()
         language = language_for(filename)
         before = check_code(code, filename, use_bandit=self.use_bandit)
-        targets = issues if issues is not None else before.issues
+        targets = issues if issues is not None else _targets(before.issues)
         if not targets:
             return FixResult(filename, True, code, "", 0, [], [], "", self.cfg.chat_model,
                              int((time.perf_counter() - started) * 1000), "Nothing to fix: the code passes every check.")
