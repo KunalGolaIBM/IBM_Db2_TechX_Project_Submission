@@ -3,7 +3,7 @@ import * as os from "os";
 import * as path from "path";
 import * as vscode from "vscode";
 import { connectBob, connectClaude } from "./connect";
-import { CheckResult, diagnosticLevel, diagnosticMessage, isSupportedLanguage, markdownReport, statusText } from "./format";
+import { CheckResult, diagnosticLevel, diagnosticMessage, isMissingServer, isSupportedLanguage, markdownReport, statusText } from "./format";
 import { McpClient, ServerCommand } from "./mcpClient";
 
 let client: McpClient | undefined;
@@ -58,9 +58,35 @@ async function showMarkdown(title: string, body: unknown): Promise<void> {
   await vscode.commands.executeCommand("markdown.showPreviewToSide", doc.uri);
 }
 
+const INSTALL_URL = "https://shipsafe-bob.vercel.app/#start";
+let missingServerShown = false;
+
 function reportError(action: string, err: unknown): void {
   const message = err instanceof Error ? err.message : String(err);
   output.appendLine(`[${action}] ${message}`);
+  if (isMissingServer(message)) {
+    client?.dispose();
+    client = undefined;
+    if (missingServerShown) {
+      return; // one prompt per session, not one per save
+    }
+    missingServerShown = true;
+    void vscode.window.showWarningMessage(
+      "ShipSafe needs its Python package (Python 3.11-3.13). Run: pip install " +
+        "https://shipsafe-bob.vercel.app/downloads/shipsafe-3.0.0-py3-none-any.whl  then `shipsafe setup`. " +
+        "If it is installed in a virtual environment, set shipsafe.pythonPath to that interpreter.",
+      "Install guide", "Set Python path", "Show log",
+    ).then((pick) => {
+      if (pick === "Install guide") {
+        void vscode.env.openExternal(vscode.Uri.parse(INSTALL_URL));
+      } else if (pick === "Set Python path") {
+        void vscode.commands.executeCommand("workbench.action.openSettings", "shipsafe.pythonPath");
+      } else if (pick) {
+        output.show();
+      }
+    });
+    return;
+  }
   void vscode.window.showErrorMessage(`ShipSafe could not ${action}: ${message}`, "Show log").then((pick) => {
     if (pick) {
       output.show();

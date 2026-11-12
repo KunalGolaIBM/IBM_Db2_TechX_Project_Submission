@@ -4,7 +4,7 @@ import * as os from "os";
 import * as path from "path";
 import { test } from "node:test";
 import { BOB_RULES, connectBob, connectClaude, mcpEntry, mergeMcpConfig } from "../connect";
-import { diagnosticLevel, diagnosticMessage, isSupportedLanguage, markdownReport, statusText } from "../format";
+import { diagnosticLevel, diagnosticMessage, isMissingServer, isSupportedLanguage, markdownReport, statusText } from "../format";
 
 const server = { command: "/opt/py/bin/python", args: ["-m", "shipsafe.mcp_server"], env: { SHIPSAFE_ENV_FILE: "/x/.env", PATH: "/bin" } };
 
@@ -84,4 +84,12 @@ test("connectBob and connectClaude write real files", () => {
 test("Bob rules are identical to the Python package copy", () => {
   const pyCopy = path.resolve(__dirname, "..", "..", "..", "src", "shipsafe", "integrations", "bob_rules.md");
   assert.equal(fs.readFileSync(pyCopy, "utf8"), BOB_RULES);
+});
+
+test("a missing ShipSafe install is recognised, other failures are not", () => {
+  assert.ok(isMissingServer("spawn shipsafe-mcp.exe ENOENT"));
+  assert.ok(isMissingServer("ModuleNotFoundError: No module named 'shipsafe'"));
+  assert.ok(isMissingServer("ShipSafe server exited with code 9009"));
+  assert.ok(!isMissingServer("Timed out waiting for shipsafe_check_code"));
+  assert.ok(!isMissingServer("Could not connect to IBM Db2 at 127.0.0.1:50001/TESTDB"));
 });

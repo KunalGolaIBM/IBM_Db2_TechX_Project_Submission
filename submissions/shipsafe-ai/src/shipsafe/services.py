@@ -25,6 +25,10 @@ POLICY_CATEGORY = {"secrets": "secrets", "security": "security", "quality": "tes
 MAX_FILE_BYTES = 400_000
 
 
+DB2_RETRY_AFTER_S = 30.0
+DB2_OFFLINE = ("IBM Db2 is not reachable; code checks still run. Run `shipsafe setup` (or `shipsafe doctor`) "
+               "to connect Db2 for policy citations, history, memory and SQL checks.")
+
 class ShipSafeServices:
     def __init__(self, config: Optional[ShipSafeConfig] = None, repository: Optional[Db2Repository] = None,
                  workspace_root: Optional[str] = None):
@@ -33,13 +37,20 @@ class ShipSafeServices:
         self.workspace_root = Path(workspace_root or Path.cwd()).resolve()
         self._lock = threading.RLock()  # one ibm_db connection: serialise access
         self._kb = self._advisor = self._memory = self._sql = self._orchestrator = None
+        self._db2_down_until = 0.0  # after a failed connect, answer at once instead of retrying every call
 
     # ------------------------------------------------------------- plumbing
     @property
     def repository(self) -> Db2Repository:
         with self._lock:
             if self._repo is None:
-                self._repo = Db2Repository(self.config.db2)
+                if time.monotonic() < self._db2_down_until:
+                    raise ConnectionError(DB2_OFFLINE)
+                try:
+                    self._repo = Db2Repository(self.config.db2)
+                except Exception:
+                    self._db2_down_until = time.monotonic() + DB2_RETRY_AFTER_S
+                    raise
             return self._repo
 
     @property
@@ -106,6 +117,8 @@ class ShipSafeServices:
                         h = hits[0]
                         issue.policy = {"doc_id": h["doc_id"], "title": h["title"], "section": h["section"],
                                         "excerpt": h["content"][:600], "similarity": h["similarity"]}
+            except ConnectionError:
+                notes.append(DB2_OFFLINE)
             except Exception as exc:
                 notes.append(f"Policy citations skipped: {_short(exc)}")
         try:
@@ -115,6 +128,9 @@ class ShipSafeServices:
                     duration_ms=result.duration_ms, project=project or self.workspace_root.name, file_path=filename,
                     language=result.language, max_severity=result.max_severity,
                     rule_ids=[i.rule_id for i in result.issues])
+        except ConnectionError:
+            if DB2_OFFLINE not in notes:
+                notes.append(DB2_OFFLINE)
         except Exception as exc:
             notes.append(f"Not logged to Db2: {_short(exc)}")
             self._reset_repository()

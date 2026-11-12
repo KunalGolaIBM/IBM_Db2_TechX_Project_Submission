@@ -38,7 +38,7 @@ def connect_db2(config: Db2Config, retries: int = 3, base_delay: float = 0.5):
             return conn
         except Exception as exc:  # network / server not ready
             last = exc
-            log.warning("db2 connect attempt %s/%s failed: %s", attempt, retries, _safe_err(exc))
+            log.debug("db2 connect attempt %s/%s failed: %s", attempt, retries, _safe_err(exc))
             if attempt < retries:
                 time.sleep(base_delay * (2 ** (attempt - 1)))
     raise ConnectionError(f"Could not connect to IBM Db2 at {config.host}:{config.port}/{config.database}: {_safe_err(last)}")

@@ -62,3 +62,8 @@ export function markdownReport(title: string, body: unknown): string {
   }
   return `# ${title}\n\n\`\`\`json\n${JSON.stringify(body, null, 2)}\n\`\`\`\n`;
 }
+
+/** True when the error means the ShipSafe Python package is not installed where the extension looks for it. */
+export function isMissingServer(message: string): boolean {
+  return /\bENOENT\b|No module named ['"]?shipsafe|exited with code 9009\b|is not recognized as an internal/i.test(message);
+}

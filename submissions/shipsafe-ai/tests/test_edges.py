@@ -34,7 +34,7 @@ from shipsafe.llm import ModelUnavailable, ollama_status, require_models
 from shipsafe.models import Finding
 from shipsafe.orchestration import AssessmentOrchestrator
 from shipsafe.security import issue_token, role_allows
-from shipsafe.services import ShipSafeServices, _short
+from shipsafe.services import DB2_OFFLINE, ShipSafeServices, _short
 from tests.conftest import FIXTURES
 
 
@@ -48,8 +48,10 @@ def test_guard_still_answers_when_db2_is_down(config, granite, tmp_path):
     svc = ShipSafeServices(down(config), workspace_root=str(tmp_path))
     r = svc.check_code("import os\nos.system(cmd)\n", "x.py")
     assert r["verdict"] == "block"
-    assert any(n.startswith("Policy citations skipped") for n in r["notes"])
-    assert any(n.startswith("Not logged to Db2") for n in r["notes"])
+    assert r["notes"] == [DB2_OFFLINE]  # one actionable hint instead of raw driver errors
+    t = time.perf_counter()
+    again = svc.check_code("import os\nos.system(cmd)\n", "x.py")
+    assert again["notes"] == [DB2_OFFLINE] and time.perf_counter() - t < 1.5  # no reconnect on every call
     st = svc.status()
     assert st["db2"]["connected"] is False and st["ollama"]["running"]
 

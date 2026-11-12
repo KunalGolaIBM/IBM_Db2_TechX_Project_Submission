@@ -121,6 +121,9 @@ def cmd_check(args) -> int:
                 policy = f"  [{i['policy']['doc_id']}]" if i.get("policy") else ""
                 print(f"         L{i['line']:<4} {i['severity']:<8} {i['rule_id']}: {i['title']}{policy}")
                 print(f"               fix: {i['fix']}")
+        notes = sorted({n for f in result["files"] for n in f.get("notes", [])})
+        for n in notes:
+            print(f"  note: {n}")
         print(f"\nVerdict: {result['verdict'].upper()}")
     return 1 if result["verdict"] == "block" else 0
 

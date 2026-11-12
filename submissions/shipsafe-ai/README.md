@@ -7,7 +7,7 @@ assistant works, it checks every file *before* it is written, fixes problems wit
 proves each fix, validates SQL against your real **IBM Db2** database, and remembers your team's decisions
 between sessions. Every check, fix, memory and policy lives in IBM Db2.
 
-> 11 MCP tools · 3 Db2 stored procedures · 2 Db2 vector stores · 218 tests, 99% coverage, no mocks ·
+> 11 MCP tools · 3 Db2 stored procedures · 2 Db2 vector stores · 219 tests, 99% coverage, no mocks ·
 > everything runs on your machine
 
 **Live site, install guide and downloads: [shipsafe-bob.vercel.app](https://shipsafe-bob.vercel.app)**
@@ -193,7 +193,7 @@ shipsafe doctor                     # Db2, vectors, Granite and scanner health
 ## Testing & Verification
 
 ```bash
-pytest --cov=shipsafe               # 218 tests, 99% coverage, real Db2 + Granite, no mocks
+pytest --cov=shipsafe               # 219 tests, 99% coverage, real Db2 + Granite, no mocks
 cd extension && npm test            # extension unit tests
 ```
 

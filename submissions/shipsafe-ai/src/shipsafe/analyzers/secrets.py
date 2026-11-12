@@ -49,11 +49,26 @@ DETECTION_RULES = [
     {
         "id": "SEC-005",
         "name": "Hardcoded API Secret / Token",
-        "regex": re.compile(r'(?i)(api[_-]?secret|jwt[_-]?secret|auth[_-]?secret)\s*[:=]\s*["\']([^"\'\s]{8,})["\']'),
+        # Any name containing api_key, client_secret, access_token, password... assigned a quoted literal.
+        # Template placeholders (${X}, {{x}}, <x>, changeme, example, your_...) are not secrets.
+        "regex": re.compile(r'(?i)\w*(?:api[_-]?(?:secret|key)|jwt[_-]?secret|auth[_-]?(?:secret|token)|client[_-]?secret|'
+                            r'secret[_-]?key|access[_-]?(?:token|key)|private[_-]?key|passw(?:or)?d|pwd)\w*["\']?\s*[:=]\s*'
+                            r'["\'](?![^"\']*(?:\$\{|\{\{|<|changeme|example|xxxx|your[_-]))([^"\'\s]{8,})["\']'),
         "severity": "high",
         "confidence": "medium",
         "category": "secrets",
         "remediation": "Move secrets out of source code into environment variables or secrets manager.",
+    },
+    {
+        "id": "SEC-006",
+        "name": "Known API Token Format Detected",
+        "regex": re.compile(r'\b((?:sk|rk)_live_[0-9A-Za-z]{10,}|xox[abprs]-[0-9A-Za-z-]{10,}|AIza[0-9A-Za-z_-]{35}|'
+                            r'glpat-[0-9A-Za-z_-]{20}|npm_[0-9A-Za-z]{36}|github_pat_[0-9A-Za-z_]{40,}|'
+                            r'sk-(?:proj-)?[A-Za-z0-9_-]{32,})'),
+        "severity": "critical",
+        "confidence": "high",
+        "category": "secrets",
+        "remediation": "Revoke the token with its provider, then load it from an environment variable or a secrets manager.",
     },
 ]
 

@@ -24,7 +24,7 @@ def test_blocks_vulnerable_code_and_merges_tools():
     sqli = by_rule["SQLI-DYNAMIC"]
     assert sqli.line == 6 and sqli.severity == "critical"
     assert sorted(sqli.sources) == ["bandit", "shipsafe_code_rules"]  # Bandit B608 merged into one issue
-    assert "SEC-005" in by_rule
+    assert by_rule.keys() & {"SEC-005", "SEC-006"}  # one secret issue per line, the strongest rule kept
     assert not any(i.rule_id == "CODE-EVAL" for i in r.issues)  # docstring mention ignored
     assert r.issues[0].severity == "critical"  # sorted by severity
     d = r.to_dict()
@@ -54,6 +54,19 @@ def test_javascript_and_other_languages():
     sql = check_code("-- password='hunter2hunter2'\nSELECT 1;\n", "q.sql")
     assert sql.language == "sql" and sql.checks == ["secrets"]
     assert check_code("AKIAABCDEFGHIJKLMNOP", "notes.txt").issues[0].rule_id == "SEC-001"
+
+
+def test_common_secret_shapes_are_caught_and_placeholders_are_not():
+    def rules(src):
+        return {i.rule_id for i in check_code(src, "cfg.py", use_bandit=False).issues}
+
+    assert rules('API_KEY = "sk_live_9f8e7d6c5b4a3210"\n') == {"SEC-006"}  # merged into the critical rule
+    assert "SEC-006" in rules('token = "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789AB"\n')
+    assert "SEC-005" in rules('cfg = {"client_secret": "9a8b7c6d5e4f3a2b1c"}\n')
+    assert "SEC-005" in rules('DB_PASSWORD = "Tr0ub4dor&3x"\n')
+    for safe in ('password = os.environ["DB_PASSWORD"]\n', 'password = "changeme123"\n',
+                 'api_key = "${API_KEY}"\n', 'api_key = "<your-api-key>"\n'):
+        assert not rules(safe) & {"SEC-005", "SEC-006"}, safe
 
 
 def test_bandit_can_be_turned_off():

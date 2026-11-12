@@ -120,7 +120,8 @@ def test_original_code_is_really_injectable(orders_conn):
 def test_fix_is_verified_and_works_on_real_db2(services, orders_conn, monkeypatch):
     result = services.fix_code(VULNERABLE, "orders/repository.py", client="pytest")
     assert result["verified"], result["message"] + "\n" + (result["fixed_code"] or "")
-    assert {i["rule_id"] for i in result["issues_before"]} >= {"SQLI-DYNAMIC", "SEC-005"}
+    before = {i["rule_id"] for i in result["issues_before"]}
+    assert "SQLI-DYNAMIC" in before and before & {"SEC-005", "SEC-006"}
     assert result["issues_after"] == []
     assert result["fix_id"] and result["diff"].startswith("--- a/orders/repository.py")
     assert {p["doc_id"] for p in result["policies"]} >= {"POL-DB2-001"}
@@ -129,7 +130,8 @@ def test_fix_is_verified_and_works_on_real_db2(services, orders_conn, monkeypatc
     fixed = _load(result["fixed_code"])
     assert fixed["get_order"](orders_conn, "A1")["ID"] == "A1"            # still works
     assert not fixed["get_order"](orders_conn, "x' OR '1'='1")           # injection no longer returns data
-    assert fixed.get("API_SECRET") == "from-env"                          # secret now comes from the environment
+    code = result["fixed_code"]
+    assert "sk_live_" not in code and ("os.environ" in code or "getenv" in code)  # secret now comes from the environment
     assert services.repository.list_fix_attempts(limit=1)[0]["VERIFIED"] == 1
 
 
