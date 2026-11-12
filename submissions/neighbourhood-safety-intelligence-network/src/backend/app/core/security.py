@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 import bcrypt
-from jose import JWTError, jwt
+import jwt
 
 from backend.app.core.config import settings
 
@@ -40,5 +40,5 @@ def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
     """Return the token claims, or None if the signature, algorithm or expiry check fails."""
     try:
         return jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
-    except JWTError:
+    except jwt.PyJWTError:
         return None
