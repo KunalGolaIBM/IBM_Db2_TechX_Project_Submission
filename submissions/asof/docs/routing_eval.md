@@ -13,7 +13,7 @@ Whether the routing agent runs depends on the model (`ASOF_ROUTER_AGENT=auto`, t
 | Configuration | Routed right | **Misrouted** | Asked, document was clear | Asked when it should | Guessed | Agent calls | Median latency |
 |---|---|---|---|---|---|---|---|
 | Db2 vote only (no model) | 26 of 30 | **0 of 30** | 4 of 30 | 10 of 10 | 0 of 10 | 0 | 19 ms |
-| Db2 vote + routing agent (openrouter:google/gemini-3.1-flash-lite) | 30 of 30 | **0 of 30** | 0 of 30 | 10 of 10 | 0 of 10 | 10 | 28 ms |
+| Db2 vote + routing agent (openrouter:google/gemini-3.1-flash-lite) | 30 of 30 | **0 of 30** | 0 of 30 | 10 of 10 | 0 of 10 | 10 | 24 ms |
 | Db2 vote + routing agent (ollama:qwen2.5:7b-instruct) | 30 of 30 | **0 of 30** | 0 of 30 | 6 of 10 | 4 of 10 | 10 | 24 ms |
 
 ## routing-test: Db2 vote only (no model), run 2026-11-08 at `333f14b`
@@ -41,7 +41,7 @@ Whether the routing agent runs depends on the model (`ASOF_ROUTER_AGENT=auto`, t
 
 Not as labelled: `RT17` (trap) expected AURELIA-CSP, got ASK via ask; `RT22` (trap) expected AURELIA-CSP, got ASK via ask; `RT24` (trap) expected FERNHOLLOW-FEES, got ASK via ask; `RT27` (trap) expected FERNHOLLOW-FEES, got ASK via ask.
 
-## routing-test: Db2 vote + routing agent (openrouter:google/gemini-3.1-flash-lite), run 2026-11-08 at `333f14b`
+## routing-test: Db2 vote + routing agent (openrouter:google/gemini-3.1-flash-lite), run 2026-11-12 at `e92de25`
 
 | Measure | Result |
 |---|---|
@@ -52,7 +52,7 @@ Not as labelled: `RT17` (trap) expected AURELIA-CSP, got ASK via ask; `RT22` (tr
 | Guessed when it should have asked | 0 of 10 |
 | Decided by Db2 alone / with the agent / asked | 26 / 4 / 10 |
 | Routing agent calls | 10 |
-| Median latency | 28 ms |
+| Median latency | 24 ms |
 
 | Category | Cases | Correct | Misrouted | Asked | Guessed |
 |---|---|---|---|---|---|
@@ -171,4 +171,5 @@ Earlier or repeated runs of a split and configuration shown above. Every run is 
 - routing-test, Db2 vote only (no model), 2026-11-08 at `6c5e99f`: 26 of 30 routed right, 0 misrouted, 4 asked; 10 of 10 asked when they should, 0 guessed.
 - routing-test, Db2 vote + routing agent (ollama:qwen2.5:7b-instruct), 2026-11-08 at `6c5e99f`: 30 of 30 routed right, 0 misrouted, 0 asked; 6 of 10 asked when they should, 4 guessed.
 - routing-test, Db2 vote + routing agent (openrouter:google/gemini-3.1-flash-lite), 2026-11-08 at `69d92a8`: 30 of 30 routed right, 0 misrouted, 0 asked; 10 of 10 asked when they should, 0 guessed.
+- routing-test, Db2 vote + routing agent (openrouter:google/gemini-3.1-flash-lite), 2026-11-08 at `333f14b`: 30 of 30 routed right, 0 misrouted, 0 asked; 10 of 10 asked when they should, 0 guessed.
 - routing-test, Db2 vote + routing agent (openrouter:google/gemini-3.1-flash-lite), 2026-11-08 at `333f14b`: 30 of 30 routed right, 0 misrouted, 0 asked; 10 of 10 asked when they should, 0 guessed.
