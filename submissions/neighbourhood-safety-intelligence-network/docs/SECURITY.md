@@ -58,6 +58,21 @@ The whole test suite runs as this login (`NSIN_KEEP_DB=1 DB2_USER=nsinapp …`),
 | Python dependencies (pip-audit) | `pip-audit` on the exact installed versions | Fixed: `python-jose` was replaced by PyJWT (removing the unfixed `ecdsa`), and `filelock` is pinned to `>=4.2.1`. **Remaining (accepted):** `chromadb` 1.5.9, an indirect dependency of CrewAI used only by CrewAI's optional memory feature. NSIN does not enable crew memory (vectors live in Db2), so the code is never called; no fixed version is published yet |
 | Web dependencies (npm audit) | `npm --prefix src/web-app audit` | **0 vulnerabilities** |
 | Lint (ruff) | `ruff check src/backend tests --select F,E9,B` | clean |
+| Landing site dependencies | `npm --prefix site audit --omit=dev` (deployment repo) | **0 vulnerabilities** |
+
+Last full run: **12 Nov 2026**. Bandit scanned 3,057 lines of backend code.
+
+## 6a. The hosted live demo
+The public site lets anyone try the real app. That opens new risks, so here is what we did about each one. Details: [LIVE_DEMO.md](LIVE_DEMO.md).
+
+| Risk | What we did |
+|---|---|
+| Exposing a home machine to the internet | Only the API port (8000) is tunnelled, over an outbound-only Cloudflare quick tunnel with TLS. No inbound port is opened on the router; Db2 (50000) and Ollama (11434) are never exposed. |
+| Cross-site calls to the API | `CORS_ORIGINS` lists the exact Vercel origin and localhost. Wildcards are refused when `APP_ENV=production`. |
+| Secrets leaking through the site | `live.json` holds only the public tunnel URL. No keys, tokens or passwords are in the static site; the JWT secret and Db2 password live only in the backend's environment. |
+| Demo accounts | Seeded test residents only, with no real people's data. Every action still goes through the same JWT auth, role checks and Db2 audit trail as production. |
+| A stale URL breaking the demo | `live.json` is served with `Cache-Control: no-store`, so a new tunnel URL takes effect right away, with no rebuild. |
+| Clickjacking of the landing page | `X-Content-Type-Options: nosniff` and a strict `Referrer-Policy` on every page. The app frame is same-origin (`/app/`), so no third-party framing is needed. |
 
 ## 7. Reporting a vulnerability
 Please open a private security advisory on the repository, or contact the author listed in `submission.json`. Do not include real resident data in reports.

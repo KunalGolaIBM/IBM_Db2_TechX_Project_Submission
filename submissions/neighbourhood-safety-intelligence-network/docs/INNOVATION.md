@@ -51,6 +51,15 @@ When three neighbours report the same dark street, responders see one incident w
 ## 7. Proven with real infrastructure
 Every backend test runs against a **real IBM Db2 12.1** and a **real local Granite model**. Nothing is mocked and there is no SQLite. The whole suite also passes as the **least-privilege Db2 login**, which proves the app needs no DDL rights at runtime. See [TESTING.md](TESTING.md).
 
+## 8. A live demo of the real system, not a recording
+Most hackathon demos are videos or mock-ups. On our landing page the **real web app** runs inside a phone frame, a desktop browser frame and a full-screen view. It talks to the real backend (IBM Db2 12.1 + Granite) through a secure tunnel. A judge can sign in as a resident, report an incident and watch Granite triage it against Db2 in real time. When the machine is off, the page says so honestly and shows **recorded real responses**, each with the date and Db2 version it came from. See [LIVE_DEMO.md](LIVE_DEMO.md).
+
+## 9. One address book for every client
+The web app and the Android app both read the backend URL from one small file, `live.json`, when they start. Moving the backend means changing one line, not rebuilding two apps. The APK therefore works on a real phone out of the box, and a tester never has to type an IP address.
+
+## 10. Designed for calm, not alarm
+The interface uses a light "hope" theme: warm paper, a dawn accent and calm blue, with a full dark mode. Safety tools are used by frightened people. The design keeps the one action that matters (SOS) obvious, and keeps everything else quiet.
+
 ## Who benefits
 
 | Person | Before | With NSIN |

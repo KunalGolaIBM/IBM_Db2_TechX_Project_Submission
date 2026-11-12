@@ -2,6 +2,12 @@
 
 > **One-Line Pitch:** A neighbourhood emergency and safety platform (web + Android + FastAPI) where IBM Db2 is the system of record. It stores every SOS, incident, status change and audit event, runs semantic search over safety protocols and incident reports with native `VECTOR` columns, and computes response-time analytics in Db2 SQL.
 
+### ▶ [Try the live app](https://ibm-db2-tech-x-project-submission-n.vercel.app) · [Judge's 5-minute guide](docs/JUDGES_GUIDE.md) · [Download the Android APK](https://ibm-db2-tech-x-project-submission-n.vercel.app/downloads/nsin-android.apk)
+
+[![The NSIN site runs the real web app, live on IBM Db2](docs/screenshots/site-hero.png)](https://ibm-db2-tech-x-project-submission-n.vercel.app)
+
+The real NSIN web app runs on the site, in a phone frame, a desktop frame and a full-screen view. It talks to IBM Db2 12.1 and IBM Granite through a secure tunnel. When the pill reads **LIVE · Db2 12.01**, every click is a real call. How it works: [docs/LIVE_DEMO.md](docs/LIVE_DEMO.md).
+
 ![Community safety dashboard: response times and hotspots computed in IBM Db2](docs/screenshots/community-insights.png)
 
 ---
@@ -27,12 +33,14 @@
 ## Documentation
 | Document | What's inside |
 |---|---|
+| [docs/JUDGES_GUIDE.md](docs/JUDGES_GUIDE.md) | **Start here:** evaluate NSIN in 5 minutes, with every judging criterion mapped to evidence |
 | [architecture.md](architecture.md) | Components, diagrams, data flow, Db2 schema and SQL |
 | [docs/DB2_DEEP_DIVE.md](docs/DB2_DEEP_DIVE.md) | Every IBM Db2 feature in use (vectors, JSON, analytics SQL, transactions, roles), with code locations |
 | [docs/AI_DESIGN.md](docs/AI_DESIGN.md) | Granite models, Haystack / CrewAI / LangChain pipelines, grounding and measured calibration |
 | [docs/SECURITY.md](docs/SECURITY.md) | Threat model mapped to code and tests, least privilege, privacy, scan results |
 | [docs/INNOVATION.md](docs/INNOVATION.md) | What is new, who benefits, and the evidence |
 | [docs/TESTING.md](docs/TESTING.md) | Real-infrastructure tests, what each file proves, bugs caught on Db2 |
+| [docs/LIVE_DEMO.md](docs/LIVE_DEMO.md) | The hosted live demo: architecture, request flow, security choices and limits |
 
 ---
 
@@ -209,7 +217,7 @@ NSIN_APP_PASSWORD='choose-a-strong-password' DB2_CONTAINER=<db2 container> ./scr
 cd src/android
 ./gradlew :app:assembleDebug          # Windows: gradlew.bat
 ```
-The app talks to `http://10.0.2.2:8000` (the host machine from the emulator); on a device, set your machine's LAN IP in **Settings**. Cleartext HTTP is allowed in debug builds only.
+At start-up the app reads the live demo backend URL from the site's `live.json`, so the [APK](https://ibm-db2-tech-x-project-submission-n.vercel.app/downloads/nsin-android.apk) works on a real phone without typing an address. If no live backend is published it falls back to `http://10.0.2.2:8000` (the host machine from the emulator); you can also set any URL in **Settings**. Cleartext HTTP is allowed in debug builds only.
 
 ### Demo accounts (password `Password123!`)
 | Role | Email | Try this |
@@ -276,7 +284,7 @@ docker exec -it <db2 container> su - db2inst1 -c "db2 connect to TESTDB && \
 ---
 
 ## Screenshots & Demo
-- **Live Demo Link:** Not hosted. Run locally with Option A.
+- **Live Demo Link:** https://ibm-db2-tech-x-project-submission-n.vercel.app (the real app, live while the demo machine is on; otherwise recorded real responses). See [docs/LIVE_DEMO.md](docs/LIVE_DEMO.md).
 - **Demo Video Link:** Submitted with the Db2Hack form (YouTube).
 - All screenshots were captured from the Docker stack running on IBM Db2 ([`docs/screenshots/`](docs/screenshots/)):
 

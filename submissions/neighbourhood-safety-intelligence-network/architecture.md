@@ -238,3 +238,17 @@ ORDER BY distance FETCH FIRST 20 ROWS ONLY;
   - The LLM runs locally (Ollama, IBM Granite), so resident text stays inside the deployment.
   - The rule-based priority is authoritative; the crew only explains and advises, using retrieved Db2 passages, and its output is checked for a cited protocol.
   - Triage output is advisory.
+
+## Deployment: the hosted live demo
+
+```mermaid
+flowchart LR
+    U["Visitor<br/>browser or Android"] --> V["Vercel<br/>landing page + web app at /app/"]
+    V -. "live.json → apiUrl" .-> U
+    U -- "HTTPS" --> T["Cloudflare quick tunnel<br/>(outbound only)"]
+    T --> B["FastAPI"]
+    B --> D[("IBM Db2 12.1")]
+    B --> O["Ollama · IBM Granite"]
+```
+
+The static site and the web app are served by Vercel. The API, Db2 and the Granite models stay on the demo machine and are reached through an outbound-only TLS tunnel, so resident data and model calls never reach a cloud AI. Both clients read the backend URL from `live.json` at start-up. Full details, the request sequence and the limits are in [docs/LIVE_DEMO.md](docs/LIVE_DEMO.md).

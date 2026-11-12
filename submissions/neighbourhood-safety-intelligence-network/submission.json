@@ -5,7 +5,7 @@
     "slug": "neighbourhood-safety-intelligence-network",
     "short_description": "A neighbourhood emergency and safety platform (React web, native Android, FastAPI) with IBM Db2 as the system of record: transactional SOS and incident lifecycle with an append-only audit trail, semantic protocol retrieval and duplicate-report detection with native Db2 VECTOR columns and VECTOR_DISTANCE, and response-time and hotspot analytics computed in Db2 SQL. Runs on a least-privilege Db2 role.",
     "category": "Civic Safety / Hybrid RAG / Analytics / Full-Stack (Web + Android)",
-    "demo_url": "",
+    "demo_url": "https://ibm-db2-tech-x-project-submission-n.vercel.app",
     "video_url": "",
     "repo_url": "https://github.com/KunalGolaIBM/IBM_Db2_TechX_Project_Submission/tree/main/submissions/neighbourhood-safety-intelligence-network"
   },
