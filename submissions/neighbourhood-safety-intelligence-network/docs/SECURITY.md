@@ -55,7 +55,7 @@ The whole test suite runs as this login (`NSIN_KEEP_DB=1 DB2_USER=nsinapp …`),
 | Scan | Command | Result |
 |---|---|---|
 | Python static analysis (Bandit) | `bandit -r src/backend/app` | **0 issues** (High 0 · Medium 0 · Low 0). Two false positives are annotated with the reason: a token-type label, and a dev secret that production refuses |
-| Python dependencies (pip-audit) | `pip-audit -r src/backend/requirements.txt` | PIP_AUDIT_RESULT |
+| Python dependencies (pip-audit) | `pip-audit` on the exact installed versions | Fixed: `python-jose` was replaced by PyJWT (removing the unfixed `ecdsa`), and `filelock` is pinned to `>=4.2.1`. **Remaining (accepted):** `chromadb` 1.5.9, an indirect dependency of CrewAI used only by CrewAI's optional memory feature. NSIN does not enable crew memory (vectors live in Db2), so the code is never called; no fixed version is published yet |
 | Web dependencies (npm audit) | `npm --prefix src/web-app audit` | **0 vulnerabilities** |
 | Lint (ruff) | `ruff check src/backend tests --select F,E9,B` | clean |
 
