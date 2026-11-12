@@ -1,0 +1,102 @@
+# Testing
+
+**228 tests, 99% line and branch coverage, no mocks.** Every test that needs a database uses the real
+IBM Db2 from `.env`, and every test that needs a model uses the real Granite models in Ollama.
+
+## Fresh-machine install checks
+
+The published downloads are also tested the way a new user gets them, with nothing configured:
+
+| Machine | What ran | Result |
+|---|---|---|
+| Windows 11, new Python 3.13 venv, no Db2, no Ollama, empty home folder | `pip install https://shipsafe-bob.vercel.app/downloads/…whl`, `shipsafe check`, `shipsafe connect bob` | Installs; check blocks SQL injection and secrets in about 0.5 s with one "connect Db2" hint; Bob config written |
+| Linux, clean `python:3.13-slim` container | same, plus the official MCP client against `shipsafe-mcp` | Installs; 11 tools listed; `shipsafe_check_code` answers over stdio |
+| IBM Bob 1.126 | `bobide --install-extension "$HOME/Downloads/shipsafe-3.0.0.vsix"` | Installed |
+
+Python 3.14 is not supported yet because CrewAI does not support it; pip says so and stops.
+
+## How it works
+
+- `tests/conftest.py` drops and recreates a separate schema, `SHIPSAFE_TEST`, at the start of each run
+  (`SYSPROC.ADMIN_DROP_SCHEMA`), so tests never touch your real `SHIPSAFE` data.
+- If Db2 or a Granite model is missing, the affected tests **fail** with a message saying what to start.
+  They are never skipped silently.
+- Coverage is enforced at 90% (`fail_under = 90` in `pyproject.toml`).
+
+## Run
+
+```bash
+cd submissions/shipsafe-ai
+pip install -e ".[dev,scanners]"
+pytest --cov=shipsafe                      # whole suite, about 5 minutes on a laptop GPU
+pytest tests/test_guard.py tests/test_ast_rules.py   # fast checks, no model needed
+cd extension && npm ci && npm test         # VS Code / Bob extension
+```
+
+## What is covered
+
+| Area | File | Highlights |
+|---|---|---|
+| Code rules | `test_ast_rules.py` | 48 cases: real vulnerabilities found; mentions in comments, docstrings, strings and URLs ignored; taint through variables |
+| Guard | `test_guard.py` | Verdicts, Bandit merge, JS/TS, syntax errors, size limits |
+| Db2 SQL checker | `test_sql_checker.py` | Live PREPARE: SQL0206N / SQL0204N / SQL0104N with suggestions; static rules; SQLAlchemy catalog |
+| Repository | `test_db2_repository.py` | Atomic save rolled back on error, cascades, diffs, tokens, audit, all three stored procedures, CHECK constraints |
+| AI features | `test_ai_live.py` | Haystack memory scoped by project; LangChain answers with verified citations; **a Granite fix executed against a real Db2 table** proves the injection is gone and the query still works |
+| MCP server | `test_mcp_server.py` | **Stdio end to end with the official MCP client, as Bob runs it**, plus every tool in-process |
+| CLI | `test_cli.py` | Every command, including `setup`, `connect`, `check --staged` in a real git repo, `hook`, `fix`, `forget` |
+| API | `test_api.py`, `test_platform.py` | Auth and roles, allow-listing, rate limits, scan jobs, exports, reindex |
+| Platform | `test_platform.py` | Pool replaces a killed Db2 connection; unreachable Db2 fails fast; live pip-audit against PyPI/OSV; git discovery; log redaction |
+| IDE configs | `test_integrations_config.py` | Bob / Claude / Cursor / VS Code config files merged without losing other servers |
+| Extension | `extension/src/test` | Diagnostics, status text, config merge, Bob rules identical to the Python copy |
+
+## What coverage does not include, and why
+
+A few lines are marked `# pragma: no cover`, each with its reason in the code. They need software or
+privileges a single developer machine does not have, and we would rather list them than fake them:
+
+| Code path | Why it is not exercised |
+|---|---|
+| gitleaks branch of the secret scanner | Runs only where the `gitleaks` binary is installed |
+| "Bandit / pip-audit not installed" and "tool printed invalid JSON" | Both tools are declared dependencies |
+| SYSIBMADM fallback in `check_connection` | Needs a least-privilege Db2 user without SYSIBMADM access |
+| Rollback inside `compare_assessments` | Needs Db2 to fail between two inserts of the same diff |
+| `os.chmod` failure | Only happens on file systems without POSIX modes |
+| Git binary missing or hung | Discovery reports a warning; every test machine has git |
+| The blocking `uvicorn.run` call | Start-up logic is in `bootstrap_server()`, tested in-process; `shipsafe serve` itself is tested as a real subprocess |
+
+## Bugs the real-infrastructure tests found
+
+Mocked tests would have passed all of these:
+
+1. Every Db2 connect waited about 10 s (`localhost` → IPv6, Db2 forwarded on IPv4).
+2. The MCP server froze on Windows while loading native libraries under the stdio transport.
+3. Bandit and git subprocesses hung by inheriting the MCP stdin pipe.
+4. Granite wrote `ibm_db` code that passed every security check but would fail at runtime.
+5. Granite cited policy ids that do not exist.
+6. Stored-procedure OUT parameters returned as NULL break the driver (CLI0110E); procedures must be
+   called schema-qualified because routine resolution uses `CURRENT PATH`.
+
+## Live checks in real editors (version 3.1)
+
+Unit and integration tests run the code; these runs used the real applications on a real machine.
+
+| What | How | Result |
+|---|---|---|
+| IBM Bob's agent, logged in | A normal task ("write get_order and orders_for_client on the ORDERS table") in a folder connected with `shipsafe connect bob` | Bob called `shipsafe_recall`, `shipsafe_db2_schema`, `shipsafe_check_sql` (twice, both clean) and `shipsafe_check_code` ("Verdict is clean, safe to write") before writing the file with `?` markers, then `shipsafe_readiness_check` |
+| Claude Code 2.1 | `claude -p` asked to write `os.system(cmd)` in a folder connected with `shipsafe connect claude` | The `PreToolUse` hook blocked the write; no file was created; Db2 recorded the block under `claude-code` |
+| Fresh VS Code profile | Extension downloaded from the live site, nothing else installed in the profile | Shippy showed the trust step in Restricted Mode, then installed the engine from the live site (8 minutes the first time), connected Db2 and blocked the demo file |
+| Granite fix of the demo file | Three runs in a row | Verified 3/3 (1–2 rounds, 113–229 s on a laptop CPU) |
+
+These runs found bugs the automated suite had missed, all fixed and now covered by tests:
+
+1. `shipsafe_fix_code` failed when called through MCP: CrewAI refuses to run its crew synchronously inside the
+   server's event loop. Tool work now runs on a worker thread; a new test calls the fix over the real stdio transport.
+2. A fix could never be "verified" when a low-severity note (Bandit's "subprocess imported") had to stay in correct
+   code. Fixes now target the blocking issues; the final verdict must still be non-blocking.
+3. Bob starts MCP servers outside the project, so the readiness check scanned Bob's own install folder. The Bob and
+   VS Code configs now pass `SHIPSAFE_WORKSPACE=${workspaceFolder}`.
+4. Bob cancels tool calls after 60 s by default; `.bob/mcp.json` now sets a 10-minute timeout.
+5. A test run holding Db2 catalog locks made schema reads wait for minutes. Every connection now sets
+   `CURRENT LOCK TIMEOUT` (15 s) and fails fast instead.
+6. A new folder opens in Restricted Mode, where the extension was invisible. It now declares limited support and
+   shows the trust step.

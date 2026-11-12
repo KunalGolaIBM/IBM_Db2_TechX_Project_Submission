@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shipsafe"
+version = "3.1.0"
+description = "Production-readiness add-on for IBM Bob and other AI IDEs: checks code before it is written, verified Granite fixes, Db2 SQL validation and project memory, all on IBM Db2"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = "Apache-2.0"
+authors = [{name = "Devanshu Sharma", email = "devanshusharma2005@gmail.com"}]
+keywords = ["ibm-db2", "ibm-bob", "mcp", "granite", "langchain", "haystack", "crewai", "vector-search", "devsecops"]
+dependencies = [
+  "ibm-db>=3.2.8",
+  "ibm_db_sa>=0.4.1",
+  "sqlalchemy>=2.0",
+  "langchain-core>=0.3",
+  "langchain-community>=0.3",
+  "langchain-text-splitters>=0.3",
+  "langchain-db2>=1.0.0",
+  "langchain-ollama>=0.3",
+  "haystack-ai>=2.28",
+  "ibm-db-haystack>=1.0.0",
+  "ollama-haystack>=5.0",
+  "crewai>=1.0",
+  "mcp>=1.10",
+  "bandit>=1.7.9",
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+]
+
+[project.optional-dependencies]
+scanners = ["pip-audit>=2.7"]
+dev = ["pytest>=8", "pytest-cov>=5", "httpx>=0.27"]
+
+[project.scripts]
+shipsafe = "shipsafe.cli:main"
+shipsafe-mcp = "shipsafe.mcp_server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+shipsafe = ["integrations/*.md", "team_policies/*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+  "db2: needs the live IBM Db2 instance from .env",
+  "ollama: needs Ollama with the Granite models",
+]
+
+[tool.coverage.run]
+source = ["shipsafe"]
+branch = true
+# Measure the MCP server, `shipsafe serve` and other CLI processes the tests launch.
+patch = ["subprocess"]
+omit = ["*/shipsafe/web/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 90

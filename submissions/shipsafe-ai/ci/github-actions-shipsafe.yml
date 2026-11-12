@@ -1,0 +1,33 @@
+# Copy to .github/workflows/shipsafe.yml in the repository you want to protect.
+# Runs ShipSafe on every pull request, fails the check when the release gate is BLOCKED,
+# and uploads SARIF so findings appear inline in the pull request.
+name: ShipSafe pre-merge gate
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write   # upload SARIF to code scanning
+
+jobs:
+  shipsafe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ShipSafe AI
+        run: pip install "shipsafe-ai[scanners] @ git+https://github.com/ddevSharma/IBM_Db2_TechX_Project_Submission@submission/shipsafe-ai#subdirectory=submissions/shipsafe-ai"
+      - name: Run the release gate
+        # --offline: no database in CI. To keep history and policy citations, set DB2_* secrets
+        # pointing at your Db2 (for example Db2 on Cloud with DB2_SECURITY=SSL) and drop --offline.
+        run: shipsafe scan --target . --profile pre-pr --offline --format sarif --output shipsafe.sarif
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: shipsafe.sarif
+          category: shipsafe

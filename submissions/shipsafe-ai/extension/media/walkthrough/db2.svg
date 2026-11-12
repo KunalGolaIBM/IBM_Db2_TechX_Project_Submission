@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400"><rect width="640" height="400" rx="24" fill="#0B0B0B"/><rect x="1" y="1" width="638" height="398" rx="23" fill="none" stroke="#F2C94C" stroke-opacity=".35" stroke-width="2"/><g transform="translate(400 70) scale(1.15)">
+
+<ellipse cx="100" cy="214" rx="54" ry="8" fill="#141414" opacity="0.18"/>
+<path d="M36 120 q-22 -14 -18 -40" stroke="#141414" stroke-width="13" fill="none" stroke-linecap="round"/><path d="M36 120 q-22 -14 -18 -40" stroke="#F2C94C" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M164 120 q22 -14 18 -40" stroke="#141414" stroke-width="13" fill="none" stroke-linecap="round"/><path d="M164 120 q22 -14 18 -40" stroke="#F2C94C" stroke-width="7" fill="none" stroke-linecap="round"/>
+<path d="M100 44 C128 54 150 56 166 56 L166 118 C166 164 134 192 100 206 C66 192 34 164 34 118 L34 56 C50 56 72 54 100 44 Z" fill="#F2C94C" stroke="#141414" stroke-width="6" stroke-linejoin="round"/>
+<path d="M100 56 C124 64 142 66 154 66 L154 118 C154 156 128 180 100 192" fill="none" stroke="#D9A92B" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+<rect x="56" y="82" width="88" height="48" rx="24" fill="#141414"/>
+<path d="M70 108 q10 -14 20 0 M110 108 q10 -14 20 0" stroke="#fff" stroke-width="6" fill="none" stroke-linecap="round"/>
+<circle cx="62" cy="142" r="7" fill="#F28B82" opacity="0.55"/><circle cx="138" cy="142" r="7" fill="#F28B82" opacity="0.55"/>
+<path d="M84 146 q16 22 32 0 z" fill="#141414"/><path d="M92 153 q8 6 16 0" fill="#E9616A"/>
+<path d="M86 172 l10 10 l18 -18" stroke="#141414" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M56 42 C52 12 148 12 144 42 Z" fill="#F7F7F2" stroke="#141414" stroke-width="5" stroke-linejoin="round"/>
+<rect x="56" y="33" width="88" height="8" rx="3" fill="#3B6CFF"/>
+<rect x="48" y="40" width="104" height="13" rx="6.5" fill="#141414"/>
+<circle cx="100" cy="27" r="9" fill="#F2C94C" stroke="#141414" stroke-width="3"/>
+<path d="M95.5 27 l3 3 l6 -6" stroke="#141414" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<g fill="#F2C94C" stroke="#141414" stroke-width="2.5" stroke-linejoin="round"><path d="M22 40 l4 9 9 4 -9 4 -4 9 -4 -9 -9 -4 9 -4z"/><path d="M174 30 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z"/></g>
+</g><text x="48" y="170" fill="#F2C94C" font-family="Arial, sans-serif" font-size="34" font-weight="700">IBM Db2 at the core</text><foreignObject x="48" y="190" width="330" height="120"><div xmlns="http://www.w3.org/1999/xhtml" style="color:#E6E6E6;font:20px/1.4 Arial,sans-serif">Real SQL checks, policy vectors, team memory.</div></foreignObject><text x="48" y="352" fill="#8A8A8A" font-family="Arial, sans-serif" font-size="16">ShipSafe for IBM Bob · Shippy</text></svg>

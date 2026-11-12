@@ -1,0 +1,616 @@
+{
+  "name": "shipsafe",
+  "displayName": "ShipSafe for IBM Bob",
+  "description": "Shippy keeps AI-written code production-ready: checks every file before it is written, verified IBM Granite fixes, SQL validated on the real IBM Db2, and team memory in Db2. Sets itself up. Works in IBM Bob, VS Code and any MCP-capable AI IDE.",
+  "version": "3.1.0",
+  "publisher": "shipsafe",
+  "license": "Apache-2.0",
+  "icon": "media/icon.png",
+  "engines": {
+    "vscode": "^1.101.0"
+  },
+  "categories": [
+    "Linters",
+    "AI",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "ibm bob",
+    "ibm db2",
+    "db2",
+    "mcp",
+    "security",
+    "granite",
+    "ollama",
+    "ai code review",
+    "sql injection",
+    "secrets",
+    "production readiness",
+    "langchain",
+    "crewai"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "shipsafe.checkFile",
+        "title": "Check this file",
+        "category": "ShipSafe",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "shipsafe.fixFile",
+        "title": "Fix this file with Granite (verified)",
+        "category": "ShipSafe",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "shipsafe.askBob",
+        "title": "Ask Bob to build something (guarded by ShipSafe)",
+        "category": "ShipSafe",
+        "icon": "$(hubot)"
+      },
+      {
+        "command": "shipsafe.checkWorkspace",
+        "title": "Check the whole workspace",
+        "category": "ShipSafe",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "shipsafe.checkSql",
+        "title": "Check SQL against Db2",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.askStandards",
+        "title": "Ask the team standards",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.remember",
+        "title": "Remember a project decision",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.recall",
+        "title": "Recall project decisions",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.readiness",
+        "title": "Run the full readiness check",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.sessionReport",
+        "title": "Show what ShipSafe caught",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.tryDemo",
+        "title": "Try it on a demo file",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.setup",
+        "title": "Set everything up (engine, IBM Db2, Granite)",
+        "category": "ShipSafe",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "shipsafe.installEngine",
+        "title": "Install or update the engine",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.setupGranite",
+        "title": "Set up IBM Granite (Ollama)",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.setupDb2",
+        "title": "Connect IBM Db2",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.connectBob",
+        "title": "Connect to IBM Bob (this workspace)",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.connectClaude",
+        "title": "Connect to Claude Code (this workspace)",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.openSettings",
+        "title": "Open settings",
+        "category": "ShipSafe",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "shipsafe.walkthrough",
+        "title": "Open the guided tour",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.trustFolder",
+        "title": "Trust this folder so ShipSafe can run",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.ignoreRule",
+        "title": "Stop reporting a rule",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.revealLine",
+        "title": "Go to line",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.status",
+        "title": "Show status",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.restart",
+        "title": "Restart the ShipSafe server",
+        "category": "ShipSafe",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "shipsafe.checkSql",
+          "when": "editorHasSelection",
+          "group": "shipsafe@1"
+        },
+        {
+          "command": "shipsafe.checkFile",
+          "group": "shipsafe@2"
+        },
+        {
+          "command": "shipsafe.fixFile",
+          "group": "shipsafe@3"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "shipsafe.checkWorkspace",
+          "when": "view == shipsafe.findings",
+          "group": "navigation@1"
+        },
+        {
+          "command": "shipsafe.restart",
+          "when": "view == shipsafe.home",
+          "group": "navigation@1"
+        },
+        {
+          "command": "shipsafe.openSettings",
+          "when": "view == shipsafe.home",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "shipsafe.fixFile",
+          "when": "view == shipsafe.findings && viewItem == shipsafeFile",
+          "group": "inline"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "shipsafe.askBob",
+          "when": "shipsafe.canAskBob"
+        },
+        {
+          "command": "shipsafe.ignoreRule",
+          "when": "false"
+        },
+        {
+          "command": "shipsafe.revealLine",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": [
+      {
+        "title": "Checks",
+        "order": 1,
+        "properties": {
+          "shipsafe.checkOnSave": {
+            "type": "boolean",
+            "default": true,
+            "order": 1,
+            "description": "Check supported files every time they are saved."
+          },
+          "shipsafe.checkOnType": {
+            "type": "boolean",
+            "default": false,
+            "order": 2,
+            "description": "Also check while you type (after a short pause)."
+          },
+          "shipsafe.checkOnTypeDelay": {
+            "type": "number",
+            "default": 1500,
+            "minimum": 300,
+            "maximum": 10000,
+            "order": 3,
+            "description": "Pause in milliseconds before a check-as-you-type runs."
+          },
+          "shipsafe.languages": {
+            "type": "array",
+            "order": 4,
+            "items": {
+              "type": "string",
+              "enum": [
+                "python",
+                "javascript",
+                "typescript",
+                "javascriptreact",
+                "typescriptreact"
+              ]
+            },
+            "uniqueItems": true,
+            "default": [
+              "python",
+              "javascript",
+              "typescript",
+              "javascriptreact",
+              "typescriptreact"
+            ],
+            "description": "Languages ShipSafe checks."
+          },
+          "shipsafe.exclude": {
+            "type": "array",
+            "order": 5,
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "**/node_modules/**",
+              "**/.venv/**",
+              "**/venv/**",
+              "**/dist/**",
+              "**/build/**"
+            ],
+            "description": "Glob patterns (relative to the workspace) that are never checked."
+          },
+          "shipsafe.minimumSeverity": {
+            "type": "string",
+            "order": 6,
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "default": "low",
+            "enumDescriptions": [
+              "Show everything",
+              "Hide low",
+              "Only high and critical",
+              "Only critical"
+            ],
+            "description": "Hide issues below this severity."
+          },
+          "shipsafe.blockAt": {
+            "type": "string",
+            "order": 7,
+            "enum": [
+              "medium",
+              "high",
+              "critical"
+            ],
+            "default": "high",
+            "description": "Lowest severity that makes the verdict BLOCK in the editor."
+          },
+          "shipsafe.ignoredRules": {
+            "type": "array",
+            "order": 8,
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "markdownDescription": "Rule ids to stop reporting, e.g. `B404-BLACKLIST`, or a prefix with `*`, e.g. `B4*`. The quick fix *Stop reporting* adds to this list."
+          },
+          "shipsafe.bandit": {
+            "type": "boolean",
+            "order": 9,
+            "default": true,
+            "description": "Run Bandit as well on Python files (deeper, slightly slower)."
+          },
+          "shipsafe.citePolicies": {
+            "type": "boolean",
+            "order": 10,
+            "default": true,
+            "description": "Attach the matching team policy from IBM Db2 to each issue."
+          },
+          "shipsafe.notifyOn": {
+            "type": "string",
+            "order": 11,
+            "enum": [
+              "block",
+              "warn",
+              "never"
+            ],
+            "default": "block",
+            "enumDescriptions": [
+              "Pop up when a file becomes blocked",
+              "Pop up for warnings too",
+              "Never pop up; use the Problems panel and the sidebar"
+            ],
+            "description": "When to show a notification after a check."
+          },
+          "shipsafe.readinessProfile": {
+            "type": "string",
+            "order": 12,
+            "enum": [
+              "quick",
+              "pre-pr",
+              "deep"
+            ],
+            "default": "pre-pr",
+            "description": "Profile used by the full readiness check."
+          }
+        }
+      },
+      {
+        "title": "AI fixes (IBM Granite)",
+        "order": 2,
+        "properties": {
+          "shipsafe.fix.maxRounds": {
+            "type": "number",
+            "default": 3,
+            "minimum": 1,
+            "maximum": 5,
+            "description": "How many fix-and-verify rounds Granite gets before giving up."
+          },
+          "shipsafe.fix.autoApplyVerified": {
+            "type": "boolean",
+            "default": false,
+            "description": "Apply a fix without asking when it passed every check (Ctrl+Z undoes it)."
+          },
+          "shipsafe.granite.chatModel": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "Ollama model for fixes and answers. Empty: `granite4:micro` (or the value in `~/.shipsafe/.env`)."
+          },
+          "shipsafe.granite.embedModel": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "Ollama embedding model. Empty: `granite-embedding:30m`."
+          },
+          "shipsafe.granite.host": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "Ollama address. Empty: `http://localhost:11434`."
+          }
+        }
+      },
+      {
+        "title": "Setup and connection",
+        "order": 3,
+        "properties": {
+          "shipsafe.autoSetup": {
+            "type": "string",
+            "enum": [
+              "ask",
+              "auto",
+              "off"
+            ],
+            "default": "ask",
+            "enumDescriptions": [
+              "Ask before installing the engine",
+              "Install the engine automatically on first start",
+              "Never install; I manage it myself"
+            ],
+            "description": "Install the ShipSafe engine (a Python package) into a private folder when it is missing."
+          },
+          "shipsafe.autoConnectAgent": {
+            "type": "string",
+            "enum": [
+              "ask",
+              "always",
+              "never"
+            ],
+            "default": "ask",
+            "description": "In IBM Bob: connect the Bob agent to ShipSafe in each folder you open."
+          },
+          "shipsafe.pythonPath": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "Use the ShipSafe installed in this Python instead of the private engine (e.g. a project virtual environment)."
+          },
+          "shipsafe.engineSource": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "Where to install the engine from (wheel URL, file path or package name). Empty: the official download. Useful behind a company mirror."
+          },
+          "shipsafe.envFile": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "Settings file with the Db2 and Ollama connection. Defaults to `~/.shipsafe/.env` (written by *ShipSafe: Connect IBM Db2*)."
+          }
+        }
+      },
+      {
+        "title": "Appearance",
+        "order": 4,
+        "properties": {
+          "shipsafe.mascot": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show Shippy in the ShipSafe sidebar."
+          },
+          "shipsafe.statusBar": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show the ShipSafe verdict in the status bar."
+          }
+        }
+      }
+    ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "shipsafe.mcp",
+        "label": "ShipSafe (IBM Db2 + Granite)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "shipsafe",
+          "title": "ShipSafe",
+          "icon": "media/activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "shipsafe": [
+        {
+          "type": "webview",
+          "id": "shipsafe.home",
+          "name": "Shippy"
+        },
+        {
+          "id": "shipsafe.findings",
+          "name": "Findings"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "shipsafe.findings",
+        "contents": "No findings yet. Save a file, or check everything at once.\n[Check workspace](command:shipsafe.checkWorkspace)\n[Try the demo file](command:shipsafe.tryDemo)"
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "shipsafe"
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "start",
+        "title": "Get started with ShipSafe",
+        "description": "Shippy sets up the engine and IBM Db2, adds local Granite, then connects your AI agent.",
+        "steps": [
+          {
+            "id": "engine",
+            "title": "Install the engine",
+            "description": "One click. ShipSafe installs into a private folder and never touches your projects.\n[Install the engine](command:shipsafe.installEngine)",
+            "media": {
+              "image": "media/walkthrough/engine.svg",
+              "altText": "Install the engine"
+            },
+            "completionEvents": [
+              "onCommand:shipsafe.installEngine"
+            ]
+          },
+          {
+            "id": "demo",
+            "title": "See it catch real mistakes",
+            "description": "Open a demo file with the mistakes AI assistants make: SQL built from strings, a hard-coded key, shell=True.\n[Try the demo](command:shipsafe.tryDemo)",
+            "media": {
+              "image": "media/walkthrough/demo.svg",
+              "altText": "See it catch real mistakes"
+            },
+            "completionEvents": [
+              "onCommand:shipsafe.tryDemo"
+            ]
+          },
+          {
+            "id": "db2",
+            "title": "Connect IBM Db2: the brain",
+            "description": "Team policies and project memory live in Db2 vector tables, SQL is prepared on the real database, team policies are cited from Db2 vector search, and decisions are remembered.\n[Connect Db2](command:shipsafe.setupDb2)",
+            "media": {
+              "image": "media/walkthrough/db2.svg",
+              "altText": "Connect IBM Db2: the brain"
+            },
+            "completionEvents": [
+              "onCommand:shipsafe.setupDb2"
+            ]
+          },
+          {
+            "id": "granite",
+            "title": "Add IBM Granite for verified fixes",
+            "description": "Runs locally with Ollama. Granite fixes the file, and the fix only counts if it passes the same checks.\n[Set up Granite](command:shipsafe.setupGranite)",
+            "media": {
+              "image": "media/walkthrough/granite.svg",
+              "altText": "Add IBM Granite for verified fixes"
+            },
+            "completionEvents": [
+              "onCommand:shipsafe.setupGranite"
+            ]
+          },
+          {
+            "id": "agent",
+            "title": "Let your AI agent use ShipSafe",
+            "description": "In IBM Bob this writes .bob/mcp.json and Bob rules for this folder. In VS Code agent mode ShipSafe is already registered.\n[Connect IBM Bob](command:shipsafe.connectBob)",
+            "media": {
+              "image": "media/walkthrough/agent.svg",
+              "altText": "Let your AI agent use ShipSafe"
+            },
+            "completionEvents": [
+              "onCommand:shipsafe.connectBob"
+            ]
+          },
+          {
+            "id": "customize",
+            "title": "Make it yours",
+            "description": "Severity floor, block threshold, ignored rules, languages, check as you type, auto-apply verified fixes and more.\n[Open ShipSafe settings](command:shipsafe.openSettings)",
+            "media": {
+              "image": "media/walkthrough/customize.svg",
+              "altText": "Make it yours"
+            },
+            "completionEvents": [
+              "onCommand:shipsafe.openSettings"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -watch -p .",
+    "test": "tsc -p . && node --test \"out/test/**/*.test.js\"",
+    "test:e2e": "tsc -p . && node out/e2e/runE2E.js",
+    "package": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.10",
+    "@types/vscode": "1.101.0",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "3.2.1",
+    "typescript": "5.7.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ddevSharma/IBM_Db2_TechX_Project_Submission"
+  },
+  "homepage": "https://shipsafe-bob.vercel.app",
+  "galleryBanner": {
+    "color": "#0B0B0B",
+    "theme": "dark"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "In Restricted Mode Shippy only explains how to trust the folder. Checks, the engine and AI fixes start once you trust it.",
+      "restrictedConfigurations": [
+        "shipsafe.pythonPath",
+        "shipsafe.engineSource",
+        "shipsafe.envFile",
+        "shipsafe.granite.host"
+      ]
+    }
+  }
+}
