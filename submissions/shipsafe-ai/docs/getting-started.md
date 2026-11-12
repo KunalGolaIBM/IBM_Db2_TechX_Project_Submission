@@ -34,7 +34,7 @@ ollama pull granite-embedding:30m   # embeddings, 62 MB, 384 dimensions
 
 ```bash
 python -m venv .venv && . .venv/bin/activate      # Windows: .venv\Scripts\activate
-pip install ./submissions/shipsafe-ai               # or the published wheel
+pip install https://shipsafe-bob.vercel.app/downloads/shipsafe-3.0.0-py3-none-any.whl   # or: pip install ./submissions/shipsafe-ai
 export DB2_HOST=127.0.0.1 DB2_PORT=50001 DB2_NAME=TESTDB DB2_USERNAME=db2inst1 DB2_PASSWORD=<yours>
 shipsafe setup
 ```
@@ -68,9 +68,12 @@ makes the agent call ShipSafe without being asked.
 
 **Extension (Problems panel, quick fix, commands):**
 
+Download `shipsafe-3.0.0.vsix` from [shipsafe-bob.vercel.app](https://shipsafe-bob.vercel.app/#get); this works from any folder
+(PowerShell, bash or zsh):
+
 ```bash
-code   --install-extension shipsafe-3.0.0.vsix
-bobide --install-extension shipsafe-3.0.0.vsix
+bobide --install-extension "$HOME/Downloads/shipsafe-3.0.0.vsix"
+code   --install-extension "$HOME/Downloads/shipsafe-3.0.0.vsix"
 ```
 
 Set `shipsafe.pythonPath` to the interpreter from step 3 if `shipsafe-mcp` is not on your PATH.

@@ -12,6 +12,9 @@ between sessions. Every check, fix, memory and policy lives in IBM Db2.
 
 **Live site, install guide and downloads: [shipsafe-bob.vercel.app](https://shipsafe-bob.vercel.app)**
 
+![ShipSafe inside IBM Bob: the shell injection is flagged in the Problems panel and the status bar shows 2 blocking](docs/screenshots/ide-bob.png)
+*Real IBM Bob window from our end-to-end test: ShipSafe flags `shell=True` (CMD-SHELL, policy POL-SEC-004) and the status bar shows "ShipSafe: 2 blocking".*
+
 | Read next | |
 |---|---|
 | [docs/INNOVATIONS.md](docs/INNOVATIONS.md) | What is new, and how each claim was proved |
@@ -151,8 +154,9 @@ shipsafe setup
 shipsafe connect bob        # or: vscode | claude | cursor
 ```
 
-Extension: `cd extension && npm ci && npm run package`, then
-`bobide --install-extension shipsafe-3.0.0.vsix` (or `code --install-extension ...`).
+Extension: download it from [shipsafe-bob.vercel.app](https://shipsafe-bob.vercel.app/#get) (or build it with
+`cd extension && npm ci && npm run package`), then
+`bobide --install-extension "$HOME/Downloads/shipsafe-3.0.0.vsix"` (or `code --install-extension ...`).
 Step-by-step guide with expected output: [docs/getting-started.md](docs/getting-started.md).
 
 ## Configuration
