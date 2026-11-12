@@ -4,7 +4,7 @@ from pathlib import Path
 
 from shipsafe.knowledge import HashingEmbeddings, parse_policy_file
 
-POLICIES = Path(__file__).resolve().parents[1] / "policies"
+POLICIES = Path(__file__).resolve().parents[1] / "src" / "shipsafe" / "team_policies"
 
 
 def cosine(a, b):

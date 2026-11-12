@@ -8,7 +8,7 @@ version = "3.0.0"
 description = "Production-readiness add-on for IBM Bob and other AI IDEs: checks code before it is written, verified Granite fixes, Db2 SQL validation and project memory, all on IBM Db2"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
-license = {text = "Apache-2.0"}
+license = "Apache-2.0"
 authors = [{name = "Devanshu Sharma", email = "devanshusharma2005@gmail.com"}]
 keywords = ["ibm-db2", "ibm-bob", "mcp", "granite", "langchain", "haystack", "crewai", "vector-search", "devsecops"]
 dependencies = [
@@ -42,7 +42,7 @@ shipsafe-mcp = "shipsafe.mcp_server:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-shipsafe = ["integrations/*.md"]
+shipsafe = ["integrations/*.md", "team_policies/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

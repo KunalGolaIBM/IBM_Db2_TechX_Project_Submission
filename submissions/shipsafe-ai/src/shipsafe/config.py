@@ -10,7 +10,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[2]  # submissions/shipsafe-ai
+PACKAGE_ROOT = Path(__file__).resolve().parents[2]  # source checkout root (fixtures, docs)
+POLICIES_DIR = Path(__file__).resolve().parent / "team_policies"  # shipped inside the package
 
 
 def env_files() -> List[Path]:
@@ -64,6 +65,13 @@ class Db2Config:
     password: str = ""
     security: str = "NONE"
     schema: str = "SHIPSAFE"
+    connect_timeout: int = 10
+
+    def __post_init__(self) -> None:
+        # "localhost" may resolve to IPv6 ::1 first, while Docker/WSL port forwards for Db2 listen on IPv4 only:
+        # every connect would then wait for the IPv6 attempt to time out. Use the IPv4 loopback directly.
+        if self.host.strip().lower() == "localhost":
+            self.host = "127.0.0.1"
 
     @classmethod
     def from_env(cls, prefix: str = "DB2_") -> "Db2Config":
@@ -80,7 +88,7 @@ class Db2Config:
     def connection_string(self) -> str:
         conn = (
             f"DATABASE={self.database};HOSTNAME={self.host};PORT={self.port};"
-            f"PROTOCOL=TCPIP;UID={self.username};PWD={self.password};"
+            f"PROTOCOL=TCPIP;UID={self.username};PWD={self.password};CONNECTTIMEOUT={int(self.connect_timeout)};"
         )
         if self.security == "SSL":
             conn += "SECURITY=SSL;"
@@ -118,7 +126,7 @@ class ShipSafeConfig:
     enable_mcp: bool = True
     embedding_provider: str = "ollama"         # ollama (Granite, default) | hashing (no-model fallback)
     embedding_dimension: int = 384
-    policies_dir: str = str(PACKAGE_ROOT / "policies")
+    policies_dir: str = str(POLICIES_DIR)
     # Scanners
     use_bandit: bool = True
     pip_audit: str = "deep"                    # deep (deep profile only) | always | off
@@ -143,7 +151,7 @@ class ShipSafeConfig:
             enable_mcp=_bool("SHIPSAFE_ENABLE_MCP", "true"),
             embedding_provider=os.getenv("SHIPSAFE_EMBEDDINGS", "ollama").lower(),
             embedding_dimension=int(os.getenv("SHIPSAFE_VECTOR_DIMENSION", "384")),
-            policies_dir=os.getenv("SHIPSAFE_POLICIES_DIR", str(PACKAGE_ROOT / "policies")),
+            policies_dir=os.getenv("SHIPSAFE_POLICIES_DIR", str(POLICIES_DIR)),
             use_bandit=_bool("SHIPSAFE_BANDIT", "true"),
             pip_audit=os.getenv("SHIPSAFE_PIP_AUDIT", "deep").lower(),
             api_host=os.getenv("SHIPSAFE_API_HOST", "127.0.0.1"),

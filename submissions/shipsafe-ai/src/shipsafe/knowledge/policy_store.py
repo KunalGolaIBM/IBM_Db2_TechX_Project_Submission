@@ -64,7 +64,7 @@ class PolicyKnowledgeBase:
         self._splitter = RecursiveCharacterTextSplitter(chunk_size=700, chunk_overlap=80)
 
     def chunk_count(self) -> int:
-        rows = self.repository._query(f"SELECT COUNT(*) AS N FROM {VECTOR_TABLE}")
+        rows = self.repository._query("SELECT COUNT(*) AS N FROM POLICY_VECTORS")  # == VECTOR_TABLE
         return int(rows[0]["N"])
 
     def ingest_directory(self, policies_dir: str) -> Dict[str, int]:

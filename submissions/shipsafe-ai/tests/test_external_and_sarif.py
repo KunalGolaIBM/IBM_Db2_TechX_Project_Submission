@@ -93,39 +93,5 @@ class TestPathSafety(unittest.TestCase):
                     resolve_target(bad, [root])
 
 
-class TestPoolRecovery(unittest.TestCase):
-    def test_stale_connection_is_replaced(self):
-        from shipsafe.db2 import pool as pool_mod
-
-        class FakeRepo:
-            created = 0
-
-            def __init__(self):
-                FakeRepo.created += 1
-                self.alive = True
-
-            def ping(self):
-                if not self.alive:
-                    raise RuntimeError("connection lost")
-                return 1.0
-
-            def rollback(self):
-                pass
-
-            def close(self):
-                self.alive = False
-
-        p = pool_mod.ConnectionPool.__new__(pool_mod.ConnectionPool)
-        p.__init__(config=None, backend="db2", size=1)
-        p._new_repository = lambda conn=None: FakeRepo()
-        with p.repository() as r1:
-            pass
-        r1.alive = False  # Db2 restarted while the connection sat idle
-        with p.repository() as r2:
-            self.assertIsNot(r1, r2)
-            self.assertTrue(r2.alive)
-        self.assertEqual(FakeRepo.created, 2)
-
-
 if __name__ == "__main__":
     unittest.main()

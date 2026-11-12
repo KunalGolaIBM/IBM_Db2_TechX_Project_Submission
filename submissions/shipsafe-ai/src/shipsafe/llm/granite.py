@@ -5,18 +5,12 @@ ShipSafe talks to one local Ollama server. Nothing leaves the machine.
 tests to report exactly which models are present.
 """
 
-import json
-import os
-import urllib.error
-import urllib.request
 from typing import Any, Dict, List
+
+import httpx
 
 from ..config import LlmConfig
 
-# CrewAI and LiteLLM send anonymous telemetry by default; ShipSafe keeps everything local.
-os.environ.setdefault("CREWAI_DISABLE_TELEMETRY", "true")
-os.environ.setdefault("OTEL_SDK_DISABLED", "true")
-os.environ.setdefault("LITELLM_TELEMETRY", "False")
 
 
 class ModelUnavailable(RuntimeError):
@@ -24,8 +18,11 @@ class ModelUnavailable(RuntimeError):
 
 
 def _get(url: str, timeout: float) -> Dict[str, Any]:
-    with urllib.request.urlopen(url, timeout=timeout) as resp:  # noqa: S310 - fixed local URL from config
-        return json.loads(resp.read().decode("utf-8"))
+    if not url.startswith(("http://", "https://")):
+        raise ValueError("OLLAMA_HOST must be an http(s) URL")
+    resp = httpx.get(url, timeout=timeout)
+    resp.raise_for_status()
+    return resp.json()
 
 
 def ollama_status(cfg: LlmConfig, timeout: float = 3.0) -> Dict[str, Any]:
@@ -33,7 +30,7 @@ def ollama_status(cfg: LlmConfig, timeout: float = 3.0) -> Dict[str, Any]:
     try:
         version = _get(f"{cfg.host}/api/version", timeout).get("version")
         models: List[str] = [m.get("name", "") for m in _get(f"{cfg.host}/api/tags", timeout).get("models", [])]
-    except (urllib.error.URLError, OSError, ValueError) as exc:
+    except (httpx.HTTPError, OSError, ValueError) as exc:
         return {"running": False, "host": cfg.host, "error": str(exc)[:200],
                 "chat_model": cfg.chat_model, "embed_model": cfg.embed_model,
                 "chat_model_ready": False, "embed_model_ready": False, "models": []}

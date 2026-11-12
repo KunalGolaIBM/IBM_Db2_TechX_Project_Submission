@@ -162,10 +162,19 @@ def cmd_remember(args) -> int:
 
 def cmd_recall(args) -> int:
     hits = _services(args).recall(args.query, top_k=args.top_k)
+    if args.json:
+        _print_json(hits)
+        return 0
     for h in hits:
         print(f"  [{h['kind']}] {h['text']}  (score {h['score']})")
     if not hits:
         print("No memories for this project yet.")
+    return 0
+
+
+def cmd_forget(args) -> int:
+    _services(args).memory.forget(args.memory_id)
+    print(f"[OK] removed {args.memory_id} from project memory")
     return 0
 
 
@@ -185,7 +194,7 @@ def cmd_hook(args) -> int:
         return 2
     hook.write_text(HOOK.format(python=Path(sys.executable).as_posix()), encoding="utf-8")
     try:
-        os.chmod(hook, 0o755)
+        os.chmod(hook, 0o700)  # executable by the owner only
     except OSError:
         pass
     print(f"[OK] installed {hook}")
@@ -221,8 +230,11 @@ def register(sub) -> dict:
     p = sub.add_parser("recall", help="Search project memory")
     p.add_argument("query")
     p.add_argument("--top-k", type=int, default=5)
+    p.add_argument("--json", action="store_true")
+    p = sub.add_parser("forget", help="Delete a project memory by id (ids are shown by recall --json)")
+    p.add_argument("memory_id")
     p = sub.add_parser("report", help="What ShipSafe caught per IDE (Db2 stored procedure)")
     p.add_argument("--since-minutes", type=int, default=1440)
     p = sub.add_parser("hook", help="Install a git pre-commit hook that runs `shipsafe check --staged`")
     return {"setup": cmd_setup, "connect": cmd_connect, "check": cmd_check, "fix": cmd_fix, "sql": cmd_sql,
-            "ask": cmd_ask, "remember": cmd_remember, "recall": cmd_recall, "report": cmd_report, "hook": cmd_hook}
+            "ask": cmd_ask, "remember": cmd_remember, "recall": cmd_recall, "forget": cmd_forget, "report": cmd_report, "hook": cmd_hook}

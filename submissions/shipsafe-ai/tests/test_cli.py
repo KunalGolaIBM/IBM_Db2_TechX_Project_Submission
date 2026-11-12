@@ -86,6 +86,10 @@ def test_memory_commands(monkeypatch, capsys, tmp_path):
     assert code == 0 and json.loads(out)["stored"]
     code, out = run(monkeypatch, capsys, "recall", "how do we store dates", cwd=proj)
     assert code == 0 and "[convention] Dates are stored as UTC TIMESTAMP" in out
+    code, out = run(monkeypatch, capsys, "recall", "how do we store dates", "--json", cwd=proj)
+    mem_id = json.loads(out)[0]["id"]
+    code, out = run(monkeypatch, capsys, "forget", mem_id, cwd=proj)
+    assert code == 0 and mem_id in out
     empty = tmp_path / "empty-proj"
     empty.mkdir()
     code, out = run(monkeypatch, capsys, "recall", "anything", cwd=empty)

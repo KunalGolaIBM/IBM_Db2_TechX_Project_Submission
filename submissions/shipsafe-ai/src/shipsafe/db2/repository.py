@@ -90,9 +90,11 @@ class Db2Repository:
         cur.close()
         return rows
 
-    def _limit(self, n: int, offset: int = 0) -> str:
-        n, offset = int(n), int(offset)  # integers only, never user text
-        return (f" OFFSET {offset} ROWS" if offset else "") + f" FETCH FIRST {n} ROWS ONLY"
+    @staticmethod
+    def _page(params: List[Any], n: int, offset: int = 0) -> str:
+        """Row-limit clause with parameter markers; appends the bound values to `params`."""
+        params.extend([max(0, int(offset)), max(1, int(n))])
+        return " OFFSET ? ROWS FETCH FIRST ? ROWS ONLY"
 
     def _commit(self, commit: bool) -> None:
         if commit:
@@ -288,7 +290,7 @@ class Db2Repository:
         if project_id:
             sql += " WHERE A.PROJECT_ID = ?"
             params.append(project_id)
-        sql += " ORDER BY A.STARTED_AT DESC" + self._limit(limit, offset)
+        sql += " ORDER BY A.STARTED_AT DESC" + self._page(params, limit, offset)
         return self._query(sql, params)
 
     @staticmethod
@@ -299,7 +301,8 @@ class Db2Repository:
 
     def get_findings(self, assessment_id: str) -> List[Dict[str, Any]]:
         rows = self._query(
-            f"SELECT * FROM FINDINGS WHERE ASSESSMENT_ID = ? ORDER BY {SEVERITY_ORDER_SQL}, FILE_PATH, LINE_START",
+            "SELECT * FROM FINDINGS WHERE ASSESSMENT_ID = ? ORDER BY "
+            "CASE SEVERITY WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END, FILE_PATH, LINE_START",
             (assessment_id,))
         return [self._decode_finding(r) for r in rows]
 
@@ -323,7 +326,7 @@ class Db2Repository:
         if project_id:
             sql += " WHERE PROJECT_ID = ?"
             params.append(project_id)
-        sql += " ORDER BY STARTED_AT DESC" + self._limit(limit)
+        sql += " ORDER BY STARTED_AT DESC" + self._page(params, limit)
         return self._query(sql, params)
 
     def project_posture(self) -> List[Dict[str, Any]]:
@@ -334,7 +337,8 @@ class Db2Repository:
         """Findings by category and severity across all assessments."""
         return self._query(
             "SELECT CATEGORY, SEVERITY, COUNT(*) AS TOTAL, COUNT(DISTINCT FINGERPRINT) AS UNIQUE_ISSUES "
-            f"FROM FINDINGS GROUP BY CATEGORY, SEVERITY ORDER BY CATEGORY, MIN({SEVERITY_ORDER_SQL})")
+            "FROM FINDINGS GROUP BY CATEGORY, SEVERITY ORDER BY CATEGORY, "
+            "MIN(CASE SEVERITY WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END)")
 
     def overview_stats(self) -> Dict[str, Any]:
         """Single-round-trip KPIs for the dashboard."""
@@ -449,7 +453,7 @@ class Db2Repository:
         if action:
             sql += " WHERE ACTION = ?"
             params.append(action)
-        sql += " ORDER BY TS DESC" + self._limit(limit)
+        sql += " ORDER BY TS DESC" + self._page(params, limit)
         return self._query(sql, params)
 
     # ------------------------------------------------------- IDE guard events
@@ -470,7 +474,8 @@ class Db2Repository:
         return event_id
 
     def list_guard_events(self, limit: int = 50) -> List[Dict[str, Any]]:
-        return self._query("SELECT * FROM GUARD_EVENTS ORDER BY TS DESC" + self._limit(limit))
+        return self._query("SELECT * FROM GUARD_EVENTS ORDER BY TS DESC OFFSET 0 ROWS FETCH FIRST ? ROWS ONLY",
+                           (max(1, int(limit)),))
 
     def record_fix_attempt(self, *, model: str, iterations: int, verified: bool, issues_before: int,
                            issues_after: int, duration_ms: int, patch: str, file_path: Optional[str] = None,
@@ -489,7 +494,8 @@ class Db2Repository:
     def list_fix_attempts(self, limit: int = 50) -> List[Dict[str, Any]]:
         return self._query(
             "SELECT FIX_ID, TS, FILE_PATH, LANGUAGE, MODEL, ITERATIONS, VERIFIED, ISSUES_BEFORE, ISSUES_AFTER, "
-            "RULE_IDS, DURATION_MS FROM FIX_ATTEMPTS ORDER BY TS DESC" + self._limit(limit))
+            "RULE_IDS, DURATION_MS FROM FIX_ATTEMPTS ORDER BY TS DESC OFFSET 0 ROWS FETCH FIRST ? ROWS ONLY",
+            (max(1, int(limit)),))
 
     # ------------------------------------------------------ stored procedures
     def project_risk(self, project_id: str) -> Dict[str, Any]:
