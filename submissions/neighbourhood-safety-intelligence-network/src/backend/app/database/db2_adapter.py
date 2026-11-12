@@ -69,8 +69,8 @@ class Db2Adapter:
                 native = ibm_db.conn_errormsg()
                 if native:
                     err_msg += f" [Db2: {native}]"
-            except Exception:
-                pass
+            except Exception as detail_error:  # the native message is optional extra detail
+                logger.debug("Could not read native Db2 error text: %s", detail_error)
             logger.error("Db2 connection test failed: %s", err_msg)
             return {"connected": False, "error": err_msg, "database": self.database, "host": self.host}
         finally:

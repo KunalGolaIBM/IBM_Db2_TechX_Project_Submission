@@ -110,4 +110,4 @@ app.include_router(ai.router, prefix=prefix)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("backend.app.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("backend.app.main:app", host="127.0.0.1", port=8000, reload=True)  # Docker passes --host 0.0.0.0

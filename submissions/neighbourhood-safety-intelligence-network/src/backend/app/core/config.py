@@ -19,7 +19,7 @@ def _load_env_file(path: Path) -> None:
 
 _load_env_file(BASE_DIR / ".env")
 
-DEV_JWT_SECRET = "local-development-only-jwt-secret-change-me"
+DEV_JWT_SECRET = "local-development-only-jwt-secret-change-me"  # nosec B105 - dev default; refused when APP_ENV=production
 
 
 def _env(*names: str, default: str = "") -> str:

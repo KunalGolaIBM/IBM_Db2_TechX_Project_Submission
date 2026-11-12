@@ -79,12 +79,12 @@ class Db2VectorStore:
 
     def _indexed_ids(self) -> set:
         with self.engine.connect() as conn:
-            return {r[0].strip() for r in conn.execute(text(f"SELECT id FROM {TABLE}"))}
+            return {r[0].strip() for r in conn.execute(text("SELECT id FROM INCIDENT_EMBEDDINGS"))}
 
-    def _backfill_incidents(self, batch: int = 500) -> int:
+    def _backfill_incidents(self) -> int:
         """Embed incidents that are not in the vector table yet (seed data, older rows)."""
         with self.engine.connect() as conn:
-            rows = conn.execute(text(f"SELECT id, title, description FROM incidents ORDER BY id FETCH FIRST {int(batch)} ROWS ONLY")).fetchall()
+            rows = conn.execute(text("SELECT id, title, description FROM incidents ORDER BY id FETCH FIRST 500 ROWS ONLY")).fetchall()
         indexed = self._indexed_ids()
         todo = [r for r in rows if _doc_id(r[0]) not in indexed]
         if todo:

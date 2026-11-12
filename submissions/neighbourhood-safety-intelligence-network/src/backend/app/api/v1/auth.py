@@ -20,7 +20,7 @@ def _token_response(user: User) -> TokenResponse:
     token = create_access_token({"sub": user.email, "role": user.role, "id": user.id})
     return TokenResponse(
         access_token=token,
-        token_type="bearer",
+        token_type="bearer",  # nosec B106 - OAuth token type label, not a credential
         user_id=user.id,
         email=user.email,
         full_name=user.full_name,
