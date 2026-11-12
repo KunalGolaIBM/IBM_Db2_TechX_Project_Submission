@@ -7,6 +7,7 @@
 ---
 
 ## Table of Contents
+- [Documentation](#documentation)
 - [Problem Statement](#problem-statement)
 - [Solution Overview](#solution-overview)
 - [IBM Db2 Integration](#ibm-db2-integration)
@@ -20,6 +21,18 @@
 - [Screenshots & Demo](#screenshots--demo)
 - [Known Limitations & Future Roadmap](#known-limitations--future-roadmap)
 - [Team Members & Credits](#team-members--credits)
+
+---
+
+## Documentation
+| Document | What's inside |
+|---|---|
+| [architecture.md](architecture.md) | Components, diagrams, data flow, Db2 schema and SQL |
+| [docs/DB2_DEEP_DIVE.md](docs/DB2_DEEP_DIVE.md) | Every IBM Db2 feature in use (vectors, JSON, analytics SQL, transactions, roles), with code locations |
+| [docs/AI_DESIGN.md](docs/AI_DESIGN.md) | Granite models, Haystack / CrewAI / LangChain pipelines, grounding and measured calibration |
+| [docs/SECURITY.md](docs/SECURITY.md) | Threat model mapped to code and tests, least privilege, privacy, scan results |
+| [docs/INNOVATION.md](docs/INNOVATION.md) | What is new, who benefits, and the evidence |
+| [docs/TESTING.md](docs/TESTING.md) | Real-infrastructure tests, what each file proves, bugs caught on Db2 |
 
 ---
 
