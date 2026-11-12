@@ -32,7 +32,19 @@ export async function runVisible(name: string, commandLine: string): Promise<num
   });
 }
 
-function portFree(port: number): Promise<boolean> {
+/** True when nothing answers on the port and it can be bound. Both checks matter on Windows, where Docker
+ *  (0.0.0.0) and WSL (127.0.0.1) can listen on the same port, e.g. a Db2 made by the IBM Db2 extension on 50001. */
+async function portFree(port: number): Promise<boolean> {
+  const answers = await new Promise<boolean>((resolve) => {
+    const sock = net.connect({ port, host: "127.0.0.1" });
+    sock.setTimeout(1500);
+    sock.once("connect", () => { sock.destroy(); resolve(true); });
+    sock.once("timeout", () => { sock.destroy(); resolve(false); });
+    sock.once("error", () => resolve(false));
+  });
+  if (answers) {
+    return false;
+  }
   return new Promise((resolve) => {
     const srv = net.createServer().once("error", () => resolve(false)).once("listening", () => srv.close(() => resolve(true)));
     srv.listen(port, "127.0.0.1");
@@ -337,7 +349,7 @@ export class Setup {
       void vscode.window.showErrorMessage("Docker could not start Db2; see the terminal.");
       return false;
     }
-    engine.writeSharedEnv({ DB2_HOST: "localhost", DB2_PORT: String(port), DB2_NAME: "TESTDB", DB2_USERNAME: "db2inst1", DB2_PASSWORD: password });
+    engine.writeSharedEnv({ DB2_HOST: "127.0.0.1", DB2_PORT: String(port), DB2_NAME: "TESTDB", DB2_USERNAME: "db2inst1", DB2_PASSWORD: password });
     void vscode.window.showInformationMessage("Db2 is starting (about 5 minutes the first time). Shippy will connect as soon as it is up.");
     return true;
   }

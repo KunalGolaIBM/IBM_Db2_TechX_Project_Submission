@@ -6,3 +6,4 @@ e2e-workspace/**
 node_modules/**
 tsconfig.json
 **/*.map
+scripts/**
