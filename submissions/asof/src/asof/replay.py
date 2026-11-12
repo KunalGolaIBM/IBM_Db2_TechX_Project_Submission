@@ -579,6 +579,8 @@ def record_only_indian_rail(settings, save: bool = True) -> int:
     """Add the Indian Railways domain to the shipped recording: its intake (asof/indianrail.py, both versions) and its
     playground scenarios, recorded live once in a fresh REPLAY_SCHEMA. Every output already recorded is left as it is,
     and the new keys are listed in scenarios["indian_rail"]["keys"] (tests/test_replay.py holds the rest unchanged).
+    Once the intake is recorded, a re-run loads it from the recording and records only the rail playground checks
+    that changed in ui/scenarios.json, dropping the recorded summary of any rail check no longer there.
     With save=False nothing is written: a dry run of the plumbing."""
     from . import indianrail
     from .embeddings import get_embeddings
@@ -589,19 +591,29 @@ def record_only_indian_rail(settings, save: bool = True) -> int:
     if live.info != recording.model:
         print(f"The shipped recording is from {recording.model}; set that model to add to it (now: {live.info}).")
         return 2
-    if "indian_rail" in recording.scenarios and save:
-        print("The Indian Railways domain is already recorded; nothing re-recorded.")
-        return 2
     emb = get_embeddings(settings.embedding_model)
     _fresh_schema(settings, emb)
     before = set(recording.entries)
-    intake_live = build_llm(settings, fallback=False, max_output_tokens=settings.asof_intake_max_output_tokens,
-                            deadline_s=settings.asof_intake_timeout_s)
-    summary = indianrail.load(settings, REPLAY_SCHEMA, Recorder(intake_live, recording), emb)
     doc = indianrail.doc_id()
-    have = {(c["doc_id"], c["question"], c["as_of"], c["draft"]) for c in recording.scenarios.get("checks", [])}
-    todo = [c for c in check_scenarios() if c["doc_id"] == doc and (c["doc_id"], c["question"], c["as_of"], c["draft"])
-            not in have]
+    shipped = recording.scenarios.get("indian_rail")
+    if shipped:  # the intake is recorded: load it from the recording and (re-)record only changed playground checks
+        if not indianrail.ensure(settings, REPLAY_SCHEMA, emb, log=lambda _m: None)["loaded"]:
+            print("The shipped Indian Railways intake did not load; nothing recorded.")
+            return 1
+        summary = {k: v for k, v in shipped.items() if k != "keys"}
+    else:
+        intake_live = build_llm(settings, fallback=False, max_output_tokens=settings.asof_intake_max_output_tokens,
+                                deadline_s=settings.asof_intake_timeout_s)
+        summary = indianrail.load(settings, REPLAY_SCHEMA, Recorder(intake_live, recording), emb)
+    wanted = [c for c in check_scenarios() if c["doc_id"] == doc]
+    ident = {(c["question"], c["as_of"], c["draft"]) for c in wanted}
+    checks = [c for c in recording.scenarios.get("checks", [])  # a rail check no longer in scenarios.json is dropped
+              if c["doc_id"] != doc or (c["question"], c["as_of"], c["draft"]) in ident]
+    have = {(c["question"], c["as_of"], c["draft"]) for c in checks if c["doc_id"] == doc}
+    todo = [c for c in wanted if (c["question"], c["as_of"], c["draft"]) not in have]
+    if shipped and not todo:
+        print("Every Indian Railways playground check is already recorded; nothing re-recorded.")
+        return 2
     done = _run_checks(settings, Recorder(live, recording), todo)
     if any(c["reason_code"] == "ERROR_FAIL_CLOSED" for c in done):
         print("A check failed closed on a live-model error; nothing saved. Run it again.")
@@ -609,8 +621,9 @@ def record_only_indian_rail(settings, save: bool = True) -> int:
     if not save:
         print("Dry run: nothing saved.")
         return 0
-    recording.scenarios.setdefault("checks", []).extend(done)
-    recording.scenarios["indian_rail"] = summary | {"keys": sorted(set(recording.entries) - before)}
+    recording.scenarios["checks"] = checks + done
+    keys = set(shipped["keys"]) if shipped else set()
+    recording.scenarios["indian_rail"] = summary | {"keys": sorted(keys | (set(recording.entries) - before))}
     recording.save()
     return 0
 

@@ -26,6 +26,22 @@
     ]
    }
   },
+  "058fa16645ba4274e4edec551440a86b9520290a8269b3fc7efb6208696c7779": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "CAN-001",
+      "quoted_span": "For a confirmed ticket cancelled between 12 hours and 4 hours before the scheduled departure, the charge is 50% of the fare, subject to the minimum flat charge for the class.",
+      "reason": "The clause states that cancelling between 12 and 4 hours before departure results in a 50% charge, not no refund.",
+      "situation_conflict": false,
+      "verdict": "CONTRADICTED"
+     }
+    ]
+   }
+  },
   "05bb32e2411c99b58048a6fe883ebc690da681c948713bf041d44c83a59cee90": {
    "kind": "structured",
    "name": "RailIntakeResult",
@@ -286,6 +302,30 @@
    "output": {
     "content": "<answer>\n<question>Can I get a bereavement fare after I have travelled?</question>\nYes. You can request the bereavement fare retroactively within 60 days of the date your ticket was issued. Send the required documentation (the name of the deceased or ill family member, their relationship to you, and either a death certificate or a letter from the attending physician or funeral home), and we will refund the fare difference to your original form of payment.\n</answer>",
     "tool_calls": []
+   }
+  },
+  "1dbc9d629ad4080ce59d3e5aa123c753403f7d17392120923214d78f1320c80e": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "CAN-001",
+      "quoted_span": "For a confirmed ticket cancelled between 12 hours and 4 hours before the scheduled departure, the charge is 50% of the fare",
+      "reason": "The clause explicitly states that for cancellations between 12 and 4 hours, the charge is 50% of the fare.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "CAN-001",
+      "quoted_span": "For a confirmed ticket cancelled between 12 hours and 4 hours before the scheduled departure, the charge is 50% of the fare, subject to the minimum flat charge for the class.",
+      "reason": "The clause confirms the 50% charge is subject to the minimum flat charge for the class, which is Rs 120 for Sleeper.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
    }
   },
   "2101943f2353dfc4a598df8780b2af6451237c13f52bdcf3ea28d27e556e431d": {
@@ -1549,6 +1589,19 @@
     ]
    }
   },
+  "a434c8f3c18d70667b8e8ef4c0fe77a39bd6cb4b6861999aef21d944237e5c99": {
+   "kind": "structured",
+   "name": "RailExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "refund",
+      "claim_type": "amount",
+      "text": "Cancelling within 8 hours gets no refund."
+     }
+    ]
+   }
+  },
   "a786b6118b3a3e6e9e38c3bde047ee63cffbd3b35306adca2a450c21a4d72f22": {
    "kind": "structured",
    "name": "ExtractionResult",
@@ -1565,6 +1618,13 @@
       "text": "There is a $25 processing fee for bereavement requests."
      }
     ]
+   }
+  },
+  "a7c19b3106b609fcc60055427d9e5b808691cec5349b1e4b987299851a66a0aa": {
+   "kind": "structured",
+   "name": "RewriteResult",
+   "output": {
+    "answer": "For a confirmed Sleeper Class ticket cancelled between 12 hours and 4 hours before the scheduled departure, the cancellation charge is 50% of the fare, subject to a minimum flat charge of Rs 120."
    }
   },
   "a832c131e2f3610274aac15673dd6e1eb3dd2177bd0a9280d91a8d8bdf56e285": {
@@ -1681,6 +1741,24 @@
       "reason": "The claim text matches the policy clause exactly.",
       "situation_conflict": false,
       "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "bbb5a5c5f3523dc420c94c5944a1c47805a9ecaced054a797dc9caf7e9843594": {
+   "kind": "structured",
+   "name": "RailExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "cancellation",
+      "claim_type": "amount",
+      "text": "For a confirmed Sleeper Class ticket cancelled between 12 hours and 4 hours before the scheduled departure, the cancellation charge is 50% of the fare."
+     },
+     {
+      "area": "cancellation",
+      "claim_type": "amount",
+      "text": "For a confirmed Sleeper Class ticket cancelled between 12 hours and 4 hours before the scheduled departure, the cancellation charge is subject to a minimum flat charge of Rs 120."
      }
     ]
    }
@@ -2417,14 +2495,14 @@
     "reason_code": "CORRECTED_FROM_CLAUSES"
    },
    {
-    "as_of": "2026-03-20",
-    "decision": "PASS",
+    "as_of": "2026-03-28",
+    "decision": "CORRECTED",
     "doc_id": "INDIAN-RAIL-REFUNDS",
-    "draft": "You get 50% back.",
-    "draft_checked": "You get 50% back.",
-    "label": "Indian Railways (summary, not official): travel 20 Mar 2026",
+    "draft": "Under the new rules, cancelling within 8 hours gets no refund.",
+    "draft_checked": "Under the new rules, cancelling within 8 hours gets no refund.",
+    "label": "Indian Railways (summary, not official): travel 28 Mar 2026",
     "question": "I cancel my confirmed Sleeper ticket 6 hours before departure; how much do I get back?",
-    "reason_code": "ALL_SUPPORTED"
+    "reason_code": "CORRECTED_FROM_CLAUSES"
    }
   ],
   "impact": [
@@ -2483,13 +2561,18 @@
   ],
   "indian_rail": {
    "keys": [
+    "058fa16645ba4274e4edec551440a86b9520290a8269b3fc7efb6208696c7779",
     "05bb32e2411c99b58048a6fe883ebc690da681c948713bf041d44c83a59cee90",
+    "1dbc9d629ad4080ce59d3e5aa123c753403f7d17392120923214d78f1320c80e",
     "3b55bbb33ae7d50c0eef32f060f66242f8ae289bff047fd10ad4337f2bf38d9e",
     "4193f72b679c67cbd2a44e0a3433faa1489f6574076ca7be48cf26fd5fc54aa9",
     "6fa7f112a77e842269d57c77ee68a840f1a0d5a978fd0c957af7c9ad4a27a4d4",
     "77b35fcfa9b526d5da1f14b20af802cdaad2767886232621868c334c5037c4db",
     "79bbfd36b3bc69a5d973fb02d77b509281d2b11b22775af2b101268d2334a1ca",
+    "a434c8f3c18d70667b8e8ef4c0fe77a39bd6cb4b6861999aef21d944237e5c99",
+    "a7c19b3106b609fcc60055427d9e5b808691cec5349b1e4b987299851a66a0aa",
     "a832c131e2f3610274aac15673dd6e1eb3dd2177bd0a9280d91a8d8bdf56e285",
+    "bbb5a5c5f3523dc420c94c5944a1c47805a9ecaced054a797dc9caf7e9843594",
     "f0c4b820bf409e21e7f1dae4d013d0668e90ccb4fce7d6bd261a4aab2ca1ad55"
    ],
    "loaded": true,

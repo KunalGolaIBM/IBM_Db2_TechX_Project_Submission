@@ -21,7 +21,7 @@ OLD_ENTRIES = (121, "ac8b112ac4af60e4e55b795534474bc2d4f4d7631def6a70d1f24171e66
 OLD_CHECKS = (17, "ff827c6ac54f08f2009a02f9756ff6f46959d06492e2d7e66087bda4928ebf86")
 OLD_OTHERS = "912d160f55760c917c633913338cb118db3ab28298c2d25d5a6030b11be9f040"
 SCENARIO_LABELS = ("Indian Railways (summary, not official): travel 2 May 2026",
-                   "Indian Railways (summary, not official): travel 20 Mar 2026")
+                   "Indian Railways (summary, not official): travel 28 Mar 2026")
 
 
 def _sha(obj) -> str:
@@ -120,7 +120,7 @@ def test_both_scenarios_are_recorded_with_the_expected_decisions():
     data = json.loads(replay.RECORDING_PATH.read_text(encoding="utf-8"))
     got = {c["label"]: (c["decision"], c["as_of"]) for c in data["scenarios"]["checks"]
            if c["doc_id"] == INDIAN_RAIL.doc_id}
-    assert got == {SCENARIO_LABELS[0]: ("CORRECTED", "2026-05-02"), SCENARIO_LABELS[1]: ("PASS", "2026-03-20")}
+    assert got == {SCENARIO_LABELS[0]: ("CORRECTED", "2026-05-02"), SCENARIO_LABELS[1]: ("CORRECTED", "2026-03-28")}
     assert data["scenarios"]["indian_rail"]["loaded"] is True
 
 
@@ -147,11 +147,14 @@ def test_the_domain_loads_from_the_recording_and_both_scenarios_replay(settings,
         assert [v["from"] for v in in_force] == [date(2020, 1, 1), date(2026, 4, 15)]
         assert all("Sources: https://" in v["change_note"] for v in in_force)
         gate = Gate(replay.ReplayLLM(replay.Recording.load()), embeddings, lambda: db.connect(settings, "app"), name)
-        draft = "You get 50% back."
-        may = gate.check(GateRequest(Q, draft, date(2026, 5, 2), INDIAN_RAIL.doc_id, "demo"))
-        march = gate.check(GateRequest(Q, draft, date(2026, 3, 20), INDIAN_RAIL.doc_id, "demo"))
-        assert (may.decision, march.decision) == ("CORRECTED", "PASS")
+        may = gate.check(GateRequest(Q, "You get 50% back.", date(2026, 5, 2), INDIAN_RAIL.doc_id, "demo"))
+        # announced 24 Mar, in force 15 Apr: on 28 Mar the 2015 rule still applies (12 to 4 hours, 50% charged)
+        march = gate.check(GateRequest(Q, "Under the new rules, cancelling within 8 hours gets no refund.",
+                                       date(2026, 3, 28), INDIAN_RAIL.doc_id, "demo"))
+        assert (may.decision, march.decision) == ("CORRECTED", "CORRECTED")
+        assert all(c.clause and c.clause.bus_start == date(2026, 4, 15) for c in may.claims)
         assert all(c.clause and c.clause.bus_start == date(2020, 1, 1) for c in march.claims)
+        assert "50% of the fare" in march.final_answer and "CAN-001 v2" in march.final_answer
     finally:
         schema.drop(admin_conn, name)
 

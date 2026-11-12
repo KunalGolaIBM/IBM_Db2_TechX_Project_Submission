@@ -37,7 +37,9 @@ Two Playground scenarios, recorded live once with `openrouter:google/gemini-3.1-
 | Scenario label | Travel date | Draft | Decision | Why |
 |---|---|---|---|---|
 | Indian Railways (summary, not official): travel 2 May 2026 | 2026-05-02 | You get 50% back. | **CORRECTED** (CORRECTED_FROM_CLAUSES) | v2 applies (from 2026-04-15): under 8 hours, no refund. The judge and the band check both found the draft contradicted; the rewrite, "For a confirmed ticket cancelled less than 8 hours before the scheduled departure, no refund is given.", passed its re-check, citing CAN-001 v4. |
-| Indian Railways (summary, not official): travel 20 Mar 2026 | 2026-03-20 | You get 50% back. | **PASS** (ALL_SUPPORTED) | v1 applies: 12 to 4 hours, 50% charged, so 50% back. Released as written, citing CAN-001 v2 (in effect from 2020-01-01). |
+| Indian Railways (summary, not official): travel 28 Mar 2026 | 2026-03-28 | Under the new rules, cancelling within 8 hours gets no refund. | **CORRECTED** (CORRECTED_FROM_CLAUSES) | The new slabs were announced on 24 Mar but are not in force until 15 Apr, so v1 still applies on 28 Mar: 12 to 4 hours, 50% charged, so half back. The judge and the band check both found the draft contradicted; the rewrite, "For a confirmed Sleeper Class ticket cancelled between 12 hours and 4 hours before the scheduled departure, the cancellation charge is 50% of the fare, subject to a minimum flat charge of Rs 120.", passed its re-check, citing CAN-001 v2 (in effect from 2020-01-01). |
+
+The 28 Mar scenario was re-recorded live on 12 Nov 2026 (it replaced a 20 Mar scenario whose draft matched the old rule).
 
 Question for both: "I cancel my confirmed Sleeper ticket 6 hours before departure; how much do I get back?"
 

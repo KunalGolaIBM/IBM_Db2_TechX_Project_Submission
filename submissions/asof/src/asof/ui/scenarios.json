@@ -85,12 +85,12 @@
       "draft": "You get 50% back."
     },
     {
-      "label": "Indian Railways (summary, not official): travel 20 Mar 2026",
+      "label": "Indian Railways (summary, not official): travel 28 Mar 2026",
       "mode": "draft",
       "doc": "INDIAN-RAIL-REFUNDS",
       "question": "I cancel my confirmed Sleeper ticket 6 hours before departure; how much do I get back?",
-      "as_of": "2026-03-20",
-      "draft": "You get 50% back."
+      "as_of": "2026-03-28",
+      "draft": "Under the new rules, cancelling within 8 hours gets no refund."
     }
   ],
   "presets": [
