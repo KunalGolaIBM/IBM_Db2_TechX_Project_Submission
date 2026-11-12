@@ -6,6 +6,11 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import com.example.BuildConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.Request
+import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
@@ -16,6 +21,9 @@ object ApiClient {
             retrofitInstance = null
             apiServiceInstance = null
         }
+
+    /** True once the user typed a URL in Settings; then live discovery never overrides it. */
+    var userOverride: Boolean = false
 
     var authToken: String? = null
 
@@ -55,5 +63,21 @@ object ApiClient {
 
     fun getAuthHeader(): String {
         return if (!authToken.isNullOrEmpty()) "Bearer $authToken" else ""
+    }
+
+    /**
+     * Reads the current demo backend URL from the hosted live.json (the same file the web demo uses).
+     * Falls back to the emulator address when the phone is offline or no tunnel is open.
+     */
+    suspend fun resolveLiveBaseUrl() {
+        if (userOverride) return
+        val url = withContext(Dispatchers.IO) {
+            runCatching {
+                okHttpClient.newCall(Request.Builder().url(BuildConfig.LIVE_CONFIG_URL).build()).execute().use { res ->
+                    if (!res.isSuccessful) null else JSONObject(res.body?.string() ?: "{}").optString("apiUrl")
+                }
+            }.getOrNull()
+        }
+        if (!url.isNullOrBlank() && url.startsWith("https://")) baseUrl = url
     }
 }

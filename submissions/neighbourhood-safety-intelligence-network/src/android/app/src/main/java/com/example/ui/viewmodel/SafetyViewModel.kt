@@ -56,7 +56,16 @@ class SafetyViewModel(
     private val _apiBaseUrl = MutableStateFlow<String>(ApiClient.baseUrl)
     val apiBaseUrl: StateFlow<String> = _apiBaseUrl.asStateFlow()
 
+    init {
+        // Find the live demo backend at start-up so a real phone works without typing an IP.
+        viewModelScope.launch {
+            ApiClient.resolveLiveBaseUrl()
+            _apiBaseUrl.value = ApiClient.baseUrl
+        }
+    }
+
     fun updateApiBaseUrl(newUrl: String) {
+        ApiClient.userOverride = true
         ApiClient.baseUrl = newUrl
         _apiBaseUrl.value = ApiClient.baseUrl
     }
@@ -70,6 +79,8 @@ class SafetyViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             clearMessages()
+            ApiClient.resolveLiveBaseUrl()
+            _apiBaseUrl.value = ApiClient.baseUrl
             val result = repository.login(LoginRequest(email.trim(), password))
             result.onSuccess {
                 fetchProfile()

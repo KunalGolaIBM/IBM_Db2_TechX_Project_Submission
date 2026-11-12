@@ -16,6 +16,8 @@ android {
     versionName = "1.0"
 
     buildConfigField("String", "DEFAULT_API_BASE_URL", "\"http://10.0.2.2:8000\"")
+    // The hosted demo publishes the current backend URL here, so the APK works on a real phone.
+    buildConfigField("String", "LIVE_CONFIG_URL", "\"https://ibm-db2-tech-x-project-submission-n.vercel.app/live.json\"")
     // Plain HTTP is only needed for the emulator/LAN backend; release builds require HTTPS.
     manifestPlaceholders["usesCleartextTraffic"] = "false"
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
