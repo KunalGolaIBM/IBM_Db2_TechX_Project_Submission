@@ -3,7 +3,11 @@ import {
   ElderCheckIn, AssistanceRequest, CommunityInsights, CommunityHazard, 
   AIAnalysisResult, SimilarIncident } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+/** API base URL. A hosted build (VITE_LIVE_CONFIG set) reads it at start-up from live.json, so a new tunnel needs no rebuild. */
+let API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+export function setApiBaseUrl(url: string) {
+  if (url) API_BASE_URL = url.replace(/\/+$/, '');
+}
 
 class ApiService {
   private token: string | null = null;
