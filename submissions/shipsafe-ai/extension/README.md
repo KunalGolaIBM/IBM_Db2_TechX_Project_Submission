@@ -4,6 +4,8 @@ ShipSafe keeps code written by AI assistants production-ready. It works in **IBM
 editor that can install a VS Code extension, and it shares one MCP server with Bob's agent, so the editor and
 the agent always get the same answers.
 
+Install guide and downloads: **[https://shipsafe-bob.vercel.app](https://shipsafe-bob.vercel.app)**
+
 ## What you get
 
 - **Problems on save.** Python, JavaScript and TypeScript files are checked when you save them: SQL built

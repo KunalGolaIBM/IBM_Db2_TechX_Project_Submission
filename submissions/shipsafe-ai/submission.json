@@ -5,7 +5,7 @@
     "slug": "shipsafe-ai",
     "short_description": "An MCP add-on for IBM Bob and other AI IDEs. The assistant checks every file before writing it (AST rules, secrets, Bandit), fixes problems with a CrewAI crew on local IBM Granite that must pass the same checks, validates SQL by PREPARE on the real Db2 database, remembers team decisions in a Db2 vector table (Haystack) and answers team-standard questions from Db2 vector search (LangChain). Every check, fix and memory is stored in IBM Db2.",
     "category": "AI Developer Tooling / IDE Add-on / Vector Search",
-    "demo_url": "https://github.com/ddevSharma/IBM_Db2_TechX_Project_Submission_ShipSafe_AI_Landing_Page",
+    "demo_url": "https://shipsafe-bob.vercel.app",
     "video_url": "",
     "repo_url": "https://github.com/ddevSharma/IBM_Db2_TechX_Project_Submission/tree/submission/shipsafe-ai/submissions/shipsafe-ai"
   },

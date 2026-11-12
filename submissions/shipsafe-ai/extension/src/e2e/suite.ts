@@ -46,6 +46,14 @@ export async function run(): Promise<void> {
   assert.match(shell!.message, /POL-SEC-004/);
   log(`diagnostics: ${diags.map((d) => `${d.code}@L${d.range.start.line + 1}`).join(", ")}`);
 
+  // Optional pause so the real editor window can be recorded for the demo video.
+  const hold = Number(process.env.SHIPSAFE_E2E_HOLD_MS || 0);
+  if (hold > 0) {
+    await vscode.commands.executeCommand("workbench.actions.view.problems");
+    log("HOLD_START");
+    await new Promise((r) => setTimeout(r, hold));
+  }
+
   const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
     "vscode.executeCodeActionProvider", doc.uri, shell!.range);
   assert.ok(actions.some((a) => a.title.includes("fix with Granite")), "quick fix offered");

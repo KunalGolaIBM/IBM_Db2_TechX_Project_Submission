@@ -1,6 +1,6 @@
 # Getting started
 
-About ten minutes, most of it downloading the Granite models once.
+About ten minutes, most of it downloading the Granite models once. All downloads are also on **[https://shipsafe-bob.vercel.app](https://shipsafe-bob.vercel.app)**.
 
 **You need:** Python 3.11–3.13 · Docker Desktop or WSL 2 · about 3 GB free disk · VS Code or IBM Bob.
 

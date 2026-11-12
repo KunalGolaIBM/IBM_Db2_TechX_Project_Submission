@@ -22,6 +22,18 @@ async function main(): Promise<void> {
     "workbench.startupEditor": "none",
     "security.workspace.trust.enabled": false,
   }, null, 2));
+  // IBM Bob shows a first-run import screen on a fresh profile; mark it done like a returning user's profile.
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { DatabaseSync } = require("node:sqlite");
+    fs.mkdirSync(path.join(userData, "User", "globalStorage"), { recursive: true });
+    const db = new DatabaseSync(path.join(userData, "User", "globalStorage", "state.vscdb"));
+    db.exec("CREATE TABLE IF NOT EXISTS ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB)");
+    db.prepare("INSERT INTO ItemTable (key, value) VALUES (?, ?)").run("bob-ide.onboarding.completed", "true");
+    db.close();
+  } catch {
+    /* older Node without node:sqlite: the onboarding screen simply stays */
+  }
   await runTests({
     vscodeExecutablePath: process.argv[2] || undefined,
     version: process.argv[2] ? undefined : "stable",
