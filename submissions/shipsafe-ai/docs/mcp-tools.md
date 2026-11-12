@@ -57,7 +57,8 @@ Response (shortened):
 | `DEBUG-ENABLED` | medium | `app.run(debug=True)` |
 | `TEMPFILE-MKTEMP` | medium | `tempfile.mktemp()` |
 | `JS-EVAL`, `JS-INNERHTML`, `JS-CHILD-EXEC` | critical / high | `eval`, `new Function`, `innerHTML =`, `child_process.exec` with dynamic input (JS/TS) |
-| `SEC-001` … `SEC-005` | critical / high | AWS keys, Db2 passwords, GitHub tokens, private keys, API secrets |
+| `SEC-001` … `SEC-005` | critical / high | AWS keys, Db2 passwords, GitHub tokens, private keys, and any api_key / client_secret / access_token / password assigned a literal (placeholders and environment lookups are ignored) |
+| `SEC-006` | critical | Known token formats: Stripe `sk_live_`, OpenAI `sk-`, GitHub `github_pat_`, GitLab `glpat-`, Slack `xox*-`, Google `AIza`, npm `npm_` |
 | `PY-SYNTAX` | high | Python that does not parse |
 | Bandit `Bxxx` | as rated | Every Bandit check, merged with the rules above by line and family |
 
