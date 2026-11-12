@@ -1,256 +1,168 @@
-"""IBM Bob Model Context Protocol (MCP) Server for ShipSafe AI."""
+"""ShipSafe MCP server: production-readiness tools for IBM Bob and any MCP-capable AI IDE.
+
+Run:  shipsafe-mcp            (stdio; this is what Bob / Claude Code / Cursor / VS Code launch)
+
+The assistant is expected to call `shipsafe_check_code` before it writes a file,
+`shipsafe_fix_code` when a check blocks, `shipsafe_check_sql` before it ships a
+query, and `shipsafe_recall` / `shipsafe_remember` to keep project decisions in
+IBM Db2 across sessions. The bundled Bob rules file tells Bob exactly that.
+"""
 
 import json
-import sys
+import logging
 import os
-from typing import Dict, Any, List
+import sys
+import threading
+from typing import Any, List, Optional
 
-from .discovery import ProjectDiscovery
-from .reports import ReportGenerator
-from .runtime import build_runtime
+from mcp.server.fastmcp import Context, FastMCP
 
+from . import __version__
+from .services import ShipSafeServices
 
-# Typed MCP tool definitions exposed to IBM Bob IDE
-MCP_TOOLS = [
-    {
-        "name": "shipsafe_discover_project",
-        "description": "Discover project languages, manifests, test suites, Git diff, and applicable release checks.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "workspace_path": {
-                    "type": "string",
-                    "description": "Path to workspace repository root",
-                    "default": "."
-                }
-            }
-        }
-    },
-    {
-        "name": "shipsafe_run_assessment",
-        "description": "Run deterministic pre-PR production-readiness assessment, persist to IBM Db2, and evaluate release gate.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "workspace_root": {"type": "string", "default": "."},
-                "profile": {"type": "string", "enum": ["quick", "pre-pr", "deep"], "default": "pre-pr"},
-                "base_commit": {"type": "string", "description": "Optional Git base commit for diff scoping"}
-            }
-        }
-    },
-    {
-        "name": "shipsafe_get_assessment",
-        "description": "Retrieve full assessment details and gate status by Assessment ID from IBM Db2.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "assessment_id": {"type": "string", "description": "Unique assessment identifier"}
-            },
-            "required": ["assessment_id"]
-        }
-    },
-    {
-        "name": "shipsafe_get_finding",
-        "description": "Retrieve normalized evidence, location, and remediation for a specific finding.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "finding_id": {"type": "string", "description": "Finding identifier"}
-            },
-            "required": ["finding_id"]
-        }
-    },
-    {
-        "name": "shipsafe_retrieve_guidance",
-        "description": "Semantic search over engineering policies stored as vectors in IBM Db2 (langchain-db2).",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "question": {"type": "string", "description": "Question or finding topic to search"},
-                "category": {"type": "string", "description": "Optional policy category filter"}
-            },
-            "required": ["question"]
-        }
-    },
-    {
-        "name": "shipsafe_compare_assessments",
-        "description": "Compare previous and current assessments to detect new, resolved, and regressed issues.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "previous_id": {"type": "string"},
-                "current_id": {"type": "string"}
-            },
-            "required": ["previous_id", "current_id"]
-        }
-    },
-    {
-        "name": "shipsafe_export_report",
-        "description": "Export Markdown or JSON production-readiness report for an assessment.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "assessment_id": {"type": "string"},
-                "format": {"type": "string", "enum": ["markdown", "json"], "default": "markdown"}
-            },
-            "required": ["assessment_id"]
-        }
-    }
-]
+log = logging.getLogger("shipsafe.mcp")
+
+INSTRUCTIONS = (
+    "ShipSafe keeps code production-ready while you write it. Before writing or editing a source file, call "
+    "shipsafe_check_code with the full new content. If the verdict is 'block', fix the issues (or call "
+    "shipsafe_fix_code) and check again before writing. Validate every SQL statement for IBM Db2 with "
+    "shipsafe_check_sql. At the start of a task call shipsafe_recall for project decisions; when the user "
+    "makes a decision worth keeping, call shipsafe_remember. Use shipsafe_ask_standards for team rules."
+)
+
+mcp = FastMCP("shipsafe", instructions=INSTRUCTIONS)
+_services: Optional[ShipSafeServices] = None
 
 
-class ShipSafeMcpServer:
-    """STDIO JSON-RPC 2.0 MCP server for IBM Bob and other MCP clients."""
-
-    def __init__(self, runtime=None):
-        self._runtime = runtime
-        self._last_result = None
-
-    @property
-    def runtime(self):
-        # Connect to Db2 lazily so `initialize` / `tools/list` answer instantly.
-        if self._runtime is None:
-            self._runtime = build_runtime()
-        return self._runtime
-
-    @property
-    def repository(self):
-        return self.runtime.repository
-
-    def handle_call_tool(self, name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Dispatch typed MCP tool calls."""
-        if name == "shipsafe_discover_project":
-            ws = arguments.get("workspace_path", ".")
-            discovery = ProjectDiscovery(ws).discover()
-            return {"content": [{"type": "text", "text": json.dumps(discovery.to_dict(), indent=2)}]}
-
-        elif name == "shipsafe_run_assessment":
-            ws = arguments.get("workspace_root", ".")
-            profile = arguments.get("profile", "pre-pr")
-            base = arguments.get("base_commit")
-            result = self.runtime.orchestrator.run_assessment(ws, profile=profile, base_commit=base)
-            self._last_result = result
-            summary = {
-                "assessment_id": result.assessment.assessment_id,
-                "project_id": result.assessment.project_id,
-                "status": result.gate.status.value,
-                "gate_reason": result.gate.reason,
-                "critical_count": result.assessment.critical_count,
-                "high_count": result.assessment.high_count,
-                "medium_count": result.assessment.medium_count,
-                "findings_count": len(result.findings),
-                "persisted_in_db2": result.persisted,
-                "policies": [f"{p['doc_id']}: {p['title']}" for p in result.retrieved_policies],
-            }
-            return {"content": [{"type": "text", "text": json.dumps(summary, indent=2)}]}
-
-        elif name == "shipsafe_get_assessment":
-            asm_id = arguments["assessment_id"]
-            asm = self.repository.get_assessment(asm_id)
-            if not asm:
-                return {"isError": True, "content": [{"type": "text", "text": f"Assessment '{asm_id}' not found in Db2."}]}
-            findings = self.repository.get_findings(asm_id)
-            tool_runs = self.repository.get_tool_runs(asm_id)
-            return {"content": [{"type": "text", "text": json.dumps({"assessment": asm, "findings": findings, "tool_runs": tool_runs}, indent=2, default=str)}]}
-
-        elif name == "shipsafe_get_finding":
-            fnd = self.repository.get_finding(arguments["finding_id"])
-            if not fnd:
-                return {"isError": True, "content": [{"type": "text", "text": f"Finding '{arguments['finding_id']}' not found in Db2."}]}
-            return {"content": [{"type": "text", "text": json.dumps(fnd, indent=2, default=str)}]}
-
-        elif name == "shipsafe_retrieve_guidance":
-            kb = self.runtime.knowledge_base
-            if kb is None:
-                return {"isError": True, "content": [{"type": "text", "text": "Policy search requires the IBM Db2 backend."}]}
-            results = kb.retrieve(arguments["question"], top_k=3, category=arguments.get("category"))
-            return {"content": [{"type": "text", "text": json.dumps(results, indent=2)}]}
-
-        elif name == "shipsafe_compare_assessments":
-            prev_id = arguments["previous_id"]
-            curr_id = arguments["current_id"]
-            diff = self.repository.compare_assessments(prev_id, curr_id)
-            return {"content": [{"type": "text", "text": json.dumps(diff, indent=2, default=str)}]}
-
-        elif name == "shipsafe_export_report":
-            asm_id = arguments["assessment_id"]
-            fmt = arguments.get("format", "markdown")
-            asm = self.repository.get_assessment(asm_id)
-            if not asm:
-                return {"isError": True, "content": [{"type": "text", "text": f"Assessment '{asm_id}' not found in Db2."}]}
-            if self._last_result and self._last_result.assessment.assessment_id == asm_id:
-                if fmt == "markdown":
-                    text = ReportGenerator.to_markdown(self._last_result)
-                else:
-                    text = ReportGenerator.to_json(self._last_result)
-            else:
-                findings = self.repository.get_findings(asm_id)
-                text = json.dumps({"assessment": asm, "findings": findings}, indent=2, default=str)
-            return {"content": [{"type": "text", "text": text}]}
-
-        else:
-            return {"isError": True, "content": [{"type": "text", "text": f"Unknown tool: {name}"}]}
-
-    def run_stdio(self) -> None:
-        """Standard JSON-RPC 2.0 loop reading from stdin and writing to stdout."""
-        for line in sys.stdin:
-            if not line.strip():
-                continue
-            try:
-                req = json.loads(line)
-                method = req.get("method")
-                req_id = req.get("id")
-                if "id" not in req:
-                    continue  # JSON-RPC notification (e.g. notifications/initialized): no response
-
-                if method == "initialize":
-                    res = {
-                        "jsonrpc": "2.0",
-                        "id": req_id,
-                        "result": {
-                            "protocolVersion": "2024-11-05",
-                            "serverInfo": {"name": "shipsafe", "version": "1.1.0"},
-                            "capabilities": {"tools": {}}
-                        }
-                    }
-                elif method == "tools/list":
-                    res = {
-                        "jsonrpc": "2.0",
-                        "id": req_id,
-                        "result": {"tools": MCP_TOOLS}
-                    }
-                elif method == "tools/call":
-                    params = req.get("params", {})
-                    tool_name = params.get("name")
-                    arguments = params.get("arguments", {})
-                    tool_res = self.handle_call_tool(tool_name, arguments)
-                    res = {
-                        "jsonrpc": "2.0",
-                        "id": req_id,
-                        "result": tool_res
-                    }
-                else:
-                    res = {
-                        "jsonrpc": "2.0",
-                        "id": req_id,
-                        "error": {"code": -32601, "message": f"Method not found: {method}"}
-                    }
-
-                sys.stdout.write(json.dumps(res) + "\n")
-                sys.stdout.flush()
-            except Exception as e:
-                err_res = {
-                    "jsonrpc": "2.0",
-                    "id": req.get("id") if "req" in locals() and isinstance(req, dict) else None,
-                    "error": {"code": -32603, "message": str(e)}
-                }
-                sys.stdout.write(json.dumps(err_res) + "\n")
-                sys.stdout.flush()
+def services() -> ShipSafeServices:
+    global _services
+    if _services is None:
+        _services = ShipSafeServices(workspace_root=os.getenv("SHIPSAFE_WORKSPACE") or os.getcwd())
+    return _services
 
 
-def main():
-    server = ShipSafeMcpServer()
-    server.run_stdio()
+def _client(ctx: Optional[Context]) -> str:
+    """Name of the calling IDE as it introduced itself in `initialize` (e.g. 'bob', 'claude-code')."""
+    try:
+        info = ctx.session.client_params.clientInfo  # type: ignore[union-attr]
+        return (info.name or "unknown")[:32]
+    except Exception:
+        return "unknown"
+
+
+def _json(data: Any) -> str:
+    return json.dumps(data, indent=2, default=str)
+
+
+@mcp.tool()
+def shipsafe_check_code(code: str, filename: str, ctx: Context = None) -> str:
+    """Check code BEFORE writing it to a file. Returns verdict clean|warn|block, each issue with line, why,
+    how to fix and the team policy (from IBM Db2) it violates. Pass the complete new file content and its
+    path (the extension selects the language). Do not write the file while the verdict is 'block'."""
+    return _json(services().check_code(code, filename, client=_client(ctx)))
+
+
+@mcp.tool()
+def shipsafe_check_files(paths: List[str], ctx: Context = None) -> str:
+    """Check existing files in the workspace (paths relative to the workspace root, max 50)."""
+    return _json(services().check_files(paths, client=_client(ctx)))
+
+
+@mcp.tool()
+def shipsafe_fix_code(code: str, filename: str, ctx: Context = None) -> str:
+    """Fix the issues ShipSafe found, using a CrewAI crew on local IBM Granite. The result is re-checked
+    with the same deterministic checks; only use fixed_code when verified is true. Returns a unified diff."""
+    return _json(services().fix_code(code, filename, client=_client(ctx)))
+
+
+@mcp.tool()
+def shipsafe_check_sql(sql: str) -> str:
+    """Validate one SQL statement against the live IBM Db2 database without executing it: syntax, unknown
+    tables or columns (with 'did you mean' suggestions), result columns, plus risky patterns such as
+    UPDATE/DELETE without WHERE or string-formatted values instead of ? parameter markers."""
+    return _json(services().check_sql(sql))
+
+
+@mcp.tool()
+def shipsafe_db2_schema(schema: Optional[str] = None, tables: Optional[List[str]] = None) -> str:
+    """Describe tables, columns, keys and indexes of an IBM Db2 schema so the SQL you write matches the
+    real database. Defaults to the ShipSafe schema; pass `tables` to limit the output."""
+    return _json(services().db2_schema(schema, tables))
+
+
+@mcp.tool()
+def shipsafe_ask_standards(question: str, category: Optional[str] = None) -> str:
+    """Ask what the team's engineering standard is (e.g. 'how must we store API keys?'). Answered by IBM
+    Granite from policies retrieved with IBM Db2 vector search, with citations."""
+    return _json(services().ask_standards(question, category))
+
+
+@mcp.tool()
+def shipsafe_remember(text: str, kind: str = "decision", tags: Optional[List[str]] = None,
+                      project: Optional[str] = None, ctx: Context = None) -> str:
+    """Save a project decision, convention, gotcha or todo to long-term memory in IBM Db2 (vector store),
+    so it is available in later sessions. kind: decision | convention | gotcha | todo."""
+    return _json(services().remember(text, kind=kind, project=project, tags=tags, client=_client(ctx)))
+
+
+@mcp.tool()
+def shipsafe_recall(query: str, project: Optional[str] = None, top_k: int = 5, kind: Optional[str] = None) -> str:
+    """Find earlier project decisions and conventions relevant to the current task (semantic search in
+    IBM Db2). Call this at the start of a task."""
+    return _json(services().recall(query, project=project, top_k=top_k, kind=kind))
+
+
+@mcp.tool()
+def shipsafe_readiness_check(workspace: str = ".", profile: str = "pre-pr") -> str:
+    """Full production-readiness gate for the workspace (secrets, code rules, Bandit, dependencies with
+    known CVEs, tests). Saved to IBM Db2 with a risk trend computed by a Db2 stored procedure.
+    profile: quick | pre-pr | deep."""
+    return _json(services().readiness_check(workspace, profile))
+
+
+@mcp.tool()
+def shipsafe_session_report(since_minutes: int = 1440) -> str:
+    """What ShipSafe caught for each IDE in the given window (checks, blocks, issues, verified fixes),
+    computed by a Db2 stored procedure."""
+    return _json(services().session_report(since_minutes))
+
+
+@mcp.tool()
+def shipsafe_status() -> str:
+    """Health of the IBM Db2 connection and the local Granite models."""
+    return _json(services().status())
+
+
+def preload_native_modules() -> None:
+    """Import every module that loads native DLLs before the stdio transport starts.
+
+    On Windows, loading some native libraries (numpy/OpenBLAS, ibm_db's CLI driver) can block for as
+    long as another thread has a pending read on the stdin pipe, and the MCP transport always has one.
+    Importing them up front, while nothing reads stdin yet, removes that deadlock."""
+    import ibm_db  # noqa: F401
+    import ibm_db_dbi  # noqa: F401
+    import numpy  # noqa: F401
+    import langchain_db2.db2vs  # noqa: F401
+    import haystack_integrations.document_stores.ibm_db  # noqa: F401
+    import sqlalchemy  # noqa: F401
+
+
+def main() -> None:
+    logging.basicConfig(level=os.getenv("SHIPSAFE_LOG_LEVEL", "WARNING"), stream=sys.stderr,
+                        format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    log.info("ShipSafe MCP %s starting", __version__)
+    preload_native_modules()
+    threading.Thread(target=warm_up, name="shipsafe-warmup", daemon=True).start()
+    mcp.run("stdio")
+
+
+def warm_up() -> None:
+    """Connect to Db2 and load the policy index in the background so the first check is fast.
+    Failures are only logged: each tool reports its own errors when it is called."""
+    try:
+        services().knowledge_base
+    except Exception as exc:  # pragma: no cover - depends on the environment
+        log.warning("warm-up skipped: %s", exc)
 
 
 if __name__ == "__main__":

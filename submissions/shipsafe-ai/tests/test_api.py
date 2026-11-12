@@ -1,11 +1,10 @@
-"""HTTP API tests: auth, roles, allowlisting, rate limiting, scan jobs, exports.
-
-Runs on the offline SQLite backend so it needs no database; the same routes run
-against IBM Db2 in test_db2_integration.py.
-"""
+"""HTTP API tests on the live IBM Db2 test schema: auth, roles, allowlisting,
+rate limiting, scan jobs, exports, audit trail and Db2 vector search."""
 import time
 import unittest
 from pathlib import Path
+
+import pytest
 
 from fastapi.testclient import TestClient
 
@@ -17,12 +16,22 @@ from shipsafe.security import issue_token
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 
 
+@pytest.fixture(scope="class")
+def live(request, config, db2_schema):
+    request.cls.base_config = config
+    request.cls._setup()
+    yield
+    request.cls.pool.close()
+
+
+@pytest.mark.usefixtures("live")
 class TestApi(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):
-        cls.config = ShipSafeConfig(backend="sqlite", allowed_roots=[str(FIXTURES)], scan_rate_per_minute=3,
-                                    use_bandit=False, pip_audit="off")
-        cls.pool = ConnectionPool(cls.config.db2, backend="sqlite")
+    def _setup(cls):
+        from dataclasses import replace
+
+        cls.config = replace(cls.base_config, scan_rate_per_minute=3, use_bandit=False)
+        cls.pool = ConnectionPool(cls.config.db2, size=2)
         cls.tokens = {}
         with cls.pool.repository() as repo:
             for role in ("viewer", "operator", "admin"):
@@ -89,7 +98,11 @@ class TestApi(unittest.TestCase):
 
         detail = self.client.get(f"/api/assessments/{aid}", headers=self.h("viewer")).json()
         rules = {f["RULE_ID"] for f in detail["findings"]}
-        self.assertTrue({"SEC-001", "B608-SQLI", "CVE-2020-14343"} <= rules)
+        self.assertTrue({"SEC-001", "SQLI-DYNAMIC", "CVE-2020-14343"} <= rules, rules)
+        cited = [f for f in detail["findings"] if (f["EVIDENCE"] or {}).get("policy")]
+        self.assertEqual(len(cited), len(detail["findings"]))  # every finding carries a Db2-retrieved policy
+        actions = {e["ACTION"] for e in self.client.get("/api/audit", headers=self.h("admin")).json()["items"]}
+        self.assertTrue({"scan.requested", "scan.completed"} <= actions)
         self.assertTrue(detail["dependencies"])
 
         sarif = self.client.get(f"/api/assessments/{aid}/report?format=sarif", headers=self.h("viewer")).json()
@@ -102,9 +115,10 @@ class TestApi(unittest.TestCase):
         self.assertGreaterEqual(overview["stats"]["assessments"], 1)
 
     def test_rate_limit(self):
-        cfg = ShipSafeConfig(backend="sqlite", allowed_roots=[str(FIXTURES)], scan_rate_per_minute=1,
-                             use_bandit=False, pip_audit="off")
-        pool = ConnectionPool(cfg.db2, backend="sqlite")
+        from dataclasses import replace
+
+        cfg = replace(self.base_config, scan_rate_per_minute=1, use_bandit=False)
+        pool = ConnectionPool(cfg.db2, size=1)
         with pool.repository() as repo:
             tid, tok, digest = issue_token()
             repo.create_token(tid, "rl", "operator", digest)
@@ -129,6 +143,12 @@ class TestApi(unittest.TestCase):
         r = self.client.post("/api/tokens", json={"name": "<script>", "role": "admin"}, headers=self.h("admin"))
         self.assertEqual(r.status_code, 422)
 
+    def test_ready_reports_db2_and_vectors(self):
+        body = self.client.get("/api/ready").json()
+        self.assertEqual(body["db2"]["engine"], "IBM Db2")
+        self.assertGreater(body["db2"]["policy_chunks"], 0)
 
-if __name__ == "__main__":
-    unittest.main()
+    def test_policy_search_uses_db2_vectors(self):
+        r = self.client.post("/api/policies/search", json={"query": "where do I keep the Db2 password"},
+                             headers=self.h("viewer"))
+        self.assertEqual(r.json()["results"][0]["doc_id"], "POL-SEC-002")

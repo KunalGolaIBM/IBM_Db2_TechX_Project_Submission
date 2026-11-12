@@ -19,12 +19,12 @@ class Runtime:
 def build_runtime(config: Optional[ShipSafeConfig] = None, with_knowledge: bool = True) -> Runtime:
     """Connect to IBM Db2, ensure the schema and policy vectors exist, and wire services."""
     config = config or ShipSafeConfig.load()
-    repository = Db2Repository(config.db2, backend=config.backend)
+    repository = Db2Repository(config.db2)
     knowledge_base = None
-    if with_knowledge and repository.is_db2:
+    if with_knowledge:
         from .knowledge import PolicyKnowledgeBase
 
-        knowledge_base = PolicyKnowledgeBase(repository, config.embedding_provider, config.embedding_dimension)
+        knowledge_base = PolicyKnowledgeBase(repository, config.embedding_provider, config.embedding_dimension, config.llm)
         knowledge_base.ensure_ingested(config.policies_dir)
     orchestrator = AssessmentOrchestrator(config, repository, knowledge_base)
     return Runtime(config, repository, knowledge_base, orchestrator)

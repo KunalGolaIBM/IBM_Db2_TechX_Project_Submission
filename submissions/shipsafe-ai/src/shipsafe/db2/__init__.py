@@ -1,6 +1,5 @@
-"""IBM Db2 integration package for ShipSafe AI."""
+"""IBM Db2 integration package for ShipSafe."""
 
 from .repository import Db2Repository
-from .schema import SQLITE_DDL
 
-__all__ = ["Db2Repository", "SQLITE_DDL"]
+__all__ = ["Db2Repository"]

@@ -9,6 +9,7 @@ Security model
 """
 
 import logging
+import threading
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -69,7 +70,7 @@ def _jsonable(obj: Any) -> Any:
 
 def create_app(config: Optional[ShipSafeConfig] = None, pool: Optional[ConnectionPool] = None) -> FastAPI:
     config = config or ShipSafeConfig.load()
-    pool = pool or ConnectionPool(config.db2, backend=config.backend, size=config.pool_size)
+    pool = pool or ConnectionPool(config.db2, size=config.pool_size)
     @asynccontextmanager
     async def lifespan(app_: FastAPI):
         yield
@@ -80,12 +81,16 @@ def create_app(config: Optional[ShipSafeConfig] = None, pool: Optional[Connectio
                   openapi_url="/api/openapi.json", lifespan=lifespan)
     limiter = RateLimiter(config.scan_rate_per_minute)
 
+    policies_ready = threading.Event()
+
     def kb_factory(repo):
-        if not repo.is_db2:
-            return None
         from ..knowledge import PolicyKnowledgeBase
 
-        return PolicyKnowledgeBase(repo, config.embedding_provider, config.embedding_dimension)
+        kb = PolicyKnowledgeBase(repo, config.embedding_provider, config.embedding_dimension, config.llm)
+        if not policies_ready.is_set():  # first use on a fresh schema: index the policies once
+            kb.ensure_ingested(config.policies_dir)
+            policies_ready.set()
+        return kb
 
     def audit(actor: str, action: str, outcome: str, **kw) -> None:
         try:
@@ -271,14 +276,12 @@ def create_app(config: Optional[ShipSafeConfig] = None, pool: Optional[Connectio
     def policies(p: Principal = Depends(viewer)):
         with pool.repository() as repo:
             kb = kb_factory(repo)
-            return _jsonable({"items": repo.list_knowledge_docs(), "chunks": kb.chunk_count() if kb else 0})
+            return _jsonable({"items": repo.list_knowledge_docs(), "chunks": kb.chunk_count()})
 
     @app.post("/api/policies/search")
     def search(body: SearchRequest, p: Principal = Depends(viewer)):
         with pool.repository() as repo:
             kb = kb_factory(repo)
-            if kb is None:
-                raise HTTPException(503, "Policy search requires the IBM Db2 backend")
             t0 = time.perf_counter()
             hits = kb.retrieve(body.query, top_k=body.top_k, category=body.category)
             return {"query": body.query, "results": hits, "latency_ms": round((time.perf_counter() - t0) * 1000, 1)}
@@ -287,8 +290,6 @@ def create_app(config: Optional[ShipSafeConfig] = None, pool: Optional[Connectio
     def reindex(request: Request, p: Principal = Depends(admin)):
         with pool.repository() as repo:
             kb = kb_factory(repo)
-            if kb is None:
-                raise HTTPException(503, "Policy search requires the IBM Db2 backend")
             stats = kb.ingest_directory(config.policies_dir)
             repo.audit(p.name, "policies.reindexed", "success", role=p.role, detail=str(stats)[:500],
                        client_ip=request.client.host if request.client else None)

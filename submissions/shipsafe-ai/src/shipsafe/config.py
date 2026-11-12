@@ -13,17 +13,27 @@ from typing import List
 PACKAGE_ROOT = Path(__file__).resolve().parents[2]  # submissions/shipsafe-ai
 
 
+def env_files() -> List[Path]:
+    """Settings files, highest priority first: $SHIPSAFE_ENV_FILE, ./.env, ~/.shipsafe/.env.
+
+    The IDE launches ShipSafe inside the *user's* project, so the per-user file in
+    ~/.shipsafe is what normally carries the Db2 connection."""
+    candidates = []
+    if os.getenv("SHIPSAFE_ENV_FILE"):
+        candidates.append(Path(os.environ["SHIPSAFE_ENV_FILE"]).expanduser())
+    candidates += [Path.cwd() / ".env", Path.home() / ".shipsafe" / ".env"]
+    return [p for p in candidates if p.is_file()]
+
+
 def _load_dotenv() -> None:
-    """Load KEY=VALUE pairs from ./.env without overriding real environment variables."""
-    env_file = Path.cwd() / ".env"
-    if not env_file.is_file():
-        return
-    for raw in env_file.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+    """Load KEY=VALUE pairs without overriding real environment variables or a higher-priority file."""
+    for env_file in env_files():
+        for raw in env_file.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
 _load_dotenv()
@@ -37,12 +47,19 @@ def _list(name: str, default: str) -> List[str]:
     return [p.strip() for p in os.getenv(name, default).split(os.pathsep) if p.strip()]
 
 
+def _security_from_env() -> str:
+    """DB2_SSL=true|false (preferred) or DB2_SECURITY=SSL|NONE."""
+    if os.getenv("DB2_SSL") is not None:
+        return "SSL" if _bool("DB2_SSL", "false") else "NONE"
+    return os.getenv("DB2_SECURITY", "NONE").upper()
+
+
 @dataclass
 class Db2Config:
-    """IBM Db2 connection settings."""
+    """IBM Db2 connection settings (defaults match the IBM Db2 VS Code extension's local instance)."""
     host: str = "localhost"
-    port: int = 50000
-    database: str = "SAMPLE"
+    port: int = 50001
+    database: str = "TESTDB"
     username: str = "db2inst1"
     password: str = ""
     security: str = "NONE"
@@ -52,11 +69,11 @@ class Db2Config:
     def from_env(cls, prefix: str = "DB2_") -> "Db2Config":
         return cls(
             host=os.getenv("DB2_HOST", "localhost"),
-            port=int(os.getenv("DB2_PORT", "50000")),
-            database=os.getenv("DB2_DATABASE", "SAMPLE"),
+            port=int(os.getenv("DB2_PORT", "50001")),
+            database=os.getenv("DB2_NAME", os.getenv("DB2_DATABASE", "TESTDB")),
             username=os.getenv(f"{prefix}USERNAME", os.getenv("DB2_USERNAME", "db2inst1")),
             password=os.getenv(f"{prefix}PASSWORD", os.getenv("DB2_PASSWORD", "")),
-            security=os.getenv("DB2_SECURITY", "NONE").upper(),
+            security=_security_from_env(),
             schema=os.getenv("DB2_SCHEMA", "SHIPSAFE").upper(),
         )
 
@@ -71,13 +88,35 @@ class Db2Config:
 
 
 @dataclass
+class LlmConfig:
+    """Local IBM Granite models served by Ollama."""
+    host: str = "http://localhost:11434"
+    chat_model: str = "granite4:micro"
+    embed_model: str = "granite-embedding:30m"
+    embed_dimension: int = 384
+    timeout_s: int = 180
+    temperature: float = 0.1
+
+    @classmethod
+    def from_env(cls) -> "LlmConfig":
+        return cls(
+            host=os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/"),
+            chat_model=os.getenv("SHIPSAFE_CHAT_MODEL", "granite4:micro"),
+            embed_model=os.getenv("SHIPSAFE_EMBED_MODEL", "granite-embedding:30m"),
+            embed_dimension=int(os.getenv("SHIPSAFE_VECTOR_DIMENSION", "384")),
+            timeout_s=int(os.getenv("SHIPSAFE_LLM_TIMEOUT", "180")),
+            temperature=float(os.getenv("SHIPSAFE_LLM_TEMPERATURE", "0.1")),
+        )
+
+
+@dataclass
 class ShipSafeConfig:
     """Master configuration for ShipSafe AI."""
     env: str = "development"
-    backend: str = "db2"                       # db2 (default) | sqlite (offline tests only)
     db2: Db2Config = field(default_factory=Db2Config.from_env)
+    llm: LlmConfig = field(default_factory=LlmConfig.from_env)
     enable_mcp: bool = True
-    embedding_provider: str = "hashing"        # hashing (offline) | huggingface
+    embedding_provider: str = "ollama"         # ollama (Granite, default) | hashing (no-model fallback)
     embedding_dimension: int = 384
     policies_dir: str = str(PACKAGE_ROOT / "policies")
     # Scanners
@@ -99,10 +138,10 @@ class ShipSafeConfig:
     def load(cls) -> "ShipSafeConfig":
         return cls(
             env=os.getenv("SHIPSAFE_ENV", "development"),
-            backend=os.getenv("SHIPSAFE_DB_BACKEND", "db2").lower(),
             db2=Db2Config.from_env(),
+            llm=LlmConfig.from_env(),
             enable_mcp=_bool("SHIPSAFE_ENABLE_MCP", "true"),
-            embedding_provider=os.getenv("SHIPSAFE_EMBEDDINGS", "hashing").lower(),
+            embedding_provider=os.getenv("SHIPSAFE_EMBEDDINGS", "ollama").lower(),
             embedding_dimension=int(os.getenv("SHIPSAFE_VECTOR_DIMENSION", "384")),
             policies_dir=os.getenv("SHIPSAFE_POLICIES_DIR", str(PACKAGE_ROOT / "policies")),
             use_bandit=_bool("SHIPSAFE_BANDIT", "true"),
@@ -122,10 +161,12 @@ class ShipSafeConfig:
     def validate(self) -> List[str]:
         """Return a list of configuration problems (empty when valid)."""
         problems = []
-        if self.backend not in ("db2", "sqlite"):
-            problems.append("SHIPSAFE_DB_BACKEND must be 'db2' or 'sqlite'")
-        if self.backend == "db2" and not self.db2.password:
+        if not self.db2.password:
             problems.append("DB2_PASSWORD is not set")
+        if self.embedding_provider not in ("ollama", "hashing"):
+            problems.append("SHIPSAFE_EMBEDDINGS must be ollama or hashing")
+        if not self.llm.host.startswith(("http://", "https://")):
+            problems.append("OLLAMA_HOST must start with http:// or https://")
         if self.db2.security not in ("NONE", "SSL"):
             problems.append("DB2_SECURITY must be NONE or SSL")
         if not self.db2.schema.replace("_", "").isalnum():

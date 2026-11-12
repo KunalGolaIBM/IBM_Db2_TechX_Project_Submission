@@ -45,14 +45,13 @@ def parse_policy_file(path: Path) -> Dict[str, Any]:
 class PolicyKnowledgeBase:
     """Ingests and retrieves engineering policies using langchain-db2 (DB2VS)."""
 
-    def __init__(self, repository: Db2Repository, embedding_provider: str = "hashing", dimension: int = 384):
-        if not repository.is_db2:
-            raise RuntimeError("The policy vector store requires the IBM Db2 backend (VECTOR type, Db2 12.1.2+).")
-        from langchain_community.vectorstores.utils import DistanceStrategy
+    def __init__(self, repository: Db2Repository, embedding_provider: str = "ollama", dimension: int = 384,
+                 llm: Optional[Any] = None):
+        from langchain_db2.db2vs import DistanceStrategy
         from langchain_db2 import DB2VS
 
         self.repository = repository
-        self.embeddings = build_embeddings(embedding_provider, dimension)
+        self.embeddings = build_embeddings(embedding_provider, dimension, llm)
         self.store = DB2VS(
             embedding_function=self.embeddings,
             table_name=VECTOR_TABLE,

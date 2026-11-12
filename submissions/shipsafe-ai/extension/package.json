@@ -1,0 +1,158 @@
+{
+  "name": "shipsafe",
+  "displayName": "ShipSafe for IBM Bob",
+  "description": "Keeps AI-written code production-ready: checks code before it is written, verified Granite fixes, Db2 SQL validation and project memory in IBM Db2. Works in IBM Bob, VS Code and any MCP-capable AI IDE.",
+  "version": "3.0.0",
+  "publisher": "shipsafe",
+  "license": "Apache-2.0",
+  "icon": "media/icon.png",
+  "engines": {
+    "vscode": "^1.101.0"
+  },
+  "categories": [
+    "Linters",
+    "AI",
+    "Other"
+  ],
+  "keywords": [
+    "ibm bob",
+    "db2",
+    "mcp",
+    "security",
+    "granite",
+    "production readiness"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "shipsafe.checkFile",
+        "title": "Check this file",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.fixFile",
+        "title": "Fix this file with Granite (verified)",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.checkSql",
+        "title": "Check selected SQL against Db2",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.askStandards",
+        "title": "Ask the team standards",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.remember",
+        "title": "Remember a project decision",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.recall",
+        "title": "Recall project decisions",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.readiness",
+        "title": "Run the full readiness check",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.sessionReport",
+        "title": "Show what ShipSafe caught",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.connectBob",
+        "title": "Connect to IBM Bob (this workspace)",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.connectClaude",
+        "title": "Connect to Claude Code (this workspace)",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.status",
+        "title": "Show status",
+        "category": "ShipSafe"
+      },
+      {
+        "command": "shipsafe.restart",
+        "title": "Restart the ShipSafe server",
+        "category": "ShipSafe"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "shipsafe.checkSql",
+          "when": "editorHasSelection",
+          "group": "shipsafe@1"
+        },
+        {
+          "command": "shipsafe.checkFile",
+          "group": "shipsafe@2"
+        },
+        {
+          "command": "shipsafe.fixFile",
+          "group": "shipsafe@3"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "ShipSafe",
+      "properties": {
+        "shipsafe.pythonPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Python interpreter that has ShipSafe installed. Leave empty to use `shipsafe-mcp` from PATH."
+        },
+        "shipsafe.envFile": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Optional settings file with the Db2 and Ollama connection. Defaults to `~/.shipsafe/.env`."
+        },
+        "shipsafe.checkOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Check Python, JavaScript and TypeScript files every time they are saved."
+        },
+        "shipsafe.citePolicies": {
+          "type": "boolean",
+          "default": true,
+          "description": "Attach the matching team policy from IBM Db2 to each problem."
+        }
+      }
+    },
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "shipsafe.mcp",
+        "label": "ShipSafe (IBM Db2 + Granite)"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -watch -p .",
+    "test": "tsc -p . && node --test \"out/test/**/*.test.js\"",
+    "package": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.10",
+    "@types/vscode": "1.101.0",
+    "@vscode/vsce": "3.2.1",
+    "typescript": "5.7.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ddevSharma/IBM_Db2_TechX_Project_Submission"
+  },
+  "homepage": "https://github.com/ddevSharma/IBM_Db2_TechX_Project_Submission_ShipSafe_AI_Landing_Page"
+}

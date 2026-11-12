@@ -57,6 +57,16 @@ DETECTION_RULES = [
     },
 ]
 
+def find_secrets(text: str) -> List[Tuple[dict, int, str]]:
+    """Return (rule, line_number, redacted_line) for every secret pattern found in `text`."""
+    hits = []
+    for line_idx, line in enumerate(text.splitlines(), 1):
+        for rule in DETECTION_RULES:
+            if rule["regex"].search(line):
+                hits.append((rule, line_idx, redact_secrets(line.strip())))
+    return hits
+
+
 SKIP_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".pdf", ".zip", ".tar", ".gz", ".lock", ".pyc"}
 SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", "dist", "build"}
 
@@ -152,29 +162,23 @@ class SecretAnalyzer:
                 if path.stat().st_size > 500_000:
                     continue
                 content = path.read_text(encoding="utf-8", errors="ignore")
-                lines = content.splitlines()
-
-                for line_idx, line in enumerate(lines, 1):
-                    for rule in DETECTION_RULES:
-                        match = rule["regex"].search(line)
-                        if match:
-                            redacted_snippet = redact_secrets(line.strip())
-                            findings.append(Finding.create(
-                                assessment_id=assessment_id,
-                                source_tool=tool_name,
-                                rule_id=rule["id"],
-                                category=rule["category"],
-                                severity=rule["severity"],
-                                confidence=rule["confidence"],
-                                title=rule["name"],
-                                description=f"Potential secret or credential pattern identified in {rel_path}:{line_idx}",
-                                file_path=rel_path,
-                                line_start=line_idx,
-                                line_end=line_idx,
-                                evidence={"snippet": redacted_snippet},
-                                remediation=rule["remediation"],
-                                references=["https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html"],
-                            ))
+                for rule, line_idx, redacted_snippet in find_secrets(content):
+                    findings.append(Finding.create(
+                        assessment_id=assessment_id,
+                        source_tool=tool_name,
+                        rule_id=rule["id"],
+                        category=rule["category"],
+                        severity=rule["severity"],
+                        confidence=rule["confidence"],
+                        title=rule["name"],
+                        description=f"Potential secret or credential pattern identified in {rel_path}:{line_idx}",
+                        file_path=rel_path,
+                        line_start=line_idx,
+                        line_end=line_idx,
+                        evidence={"snippet": redacted_snippet},
+                        remediation=rule["remediation"],
+                        references=["https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html"],
+                    ))
             except Exception:
                 continue
 

@@ -1,20 +1,22 @@
-"""Embedding providers for the Db2 policy vector store.
+"""Embedding providers for the Db2 vector stores.
 
-`HashingEmbeddings` is the default: a deterministic, offline feature-hashing
-embedder (word unigrams + bigrams + character trigrams, signed hashing, L2
-normalised). It needs no model download and no network, which keeps ShipSafe
-local-first and makes retrieval results reproducible in tests and demos.
+Default: IBM Granite embeddings (`granite-embedding:30m`, 384 dimensions) served
+locally by Ollama, through LangChain's `OllamaEmbeddings`.
 
-Set SHIPSAFE_EMBEDDINGS=huggingface to use a sentence-transformers model through
-`langchain-huggingface` instead (optional dependency).
+`HashingEmbeddings` is a deterministic feature-hashing embedder used only when
+the operator explicitly sets SHIPSAFE_EMBEDDINGS=hashing (for example on a CI
+runner with no model server). It is never chosen silently.
 """
 
 import hashlib
 import math
 import re
-from typing import List
+from typing import TYPE_CHECKING, List, Optional
 
 from langchain_core.embeddings import Embeddings
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ..config import LlmConfig
 
 _TOKEN = re.compile(r"[a-z0-9_]+")
 _STOP = {
@@ -57,9 +59,15 @@ class HashingEmbeddings(Embeddings):
         return self._embed(text)
 
 
-def build_embeddings(provider: str = "hashing", dimension: int = 384) -> Embeddings:
-    if provider == "huggingface":
-        from langchain_huggingface import HuggingFaceEmbeddings  # optional extra
+def build_embeddings(provider: str = "ollama", dimension: int = 384, llm: Optional["LlmConfig"] = None) -> Embeddings:
+    """Return the configured LangChain embeddings. Raises if the provider is unknown."""
+    if provider == "ollama":
+        from langchain_ollama import OllamaEmbeddings
 
-        return HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-    return HashingEmbeddings(dimension=dimension)
+        from ..config import LlmConfig
+
+        cfg = llm or LlmConfig.from_env()
+        return OllamaEmbeddings(model=cfg.embed_model, base_url=cfg.host)
+    if provider == "hashing":
+        return HashingEmbeddings(dimension=dimension)
+    raise ValueError(f"Unknown embedding provider {provider!r}; use 'ollama' or 'hashing'.")

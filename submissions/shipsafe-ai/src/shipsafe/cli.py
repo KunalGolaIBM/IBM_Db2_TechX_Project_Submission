@@ -1,4 +1,4 @@
-"""Command line interface for ShipSafe AI."""
+"""Command line interface for ShipSafe."""
 
 import argparse
 import json
@@ -20,22 +20,19 @@ def _ts(ms) -> str:
 
 
 def cmd_doctor(args) -> int:
-    print(LINE + "\nShipSafe AI - environment check\n" + LINE)
+    print(LINE + "\nShipSafe - environment check\n" + LINE)
     config = ShipSafeConfig.load()
     print(f"Python runtime : {sys.version.split()[0]}")
-    print(f"Storage backend: {config.backend}")
+    print(f"Granite (Ollama): {config.llm.chat_model} / {config.llm.embed_model} at {config.llm.host}")
     try:
         rt = build_runtime(config)
     except Exception as exc:  # report the real connection error, never pretend
         print(f"[FAIL] IBM Db2 connection: {exc}")
-        print("       Check DB2_HOST / DB2_PORT / DB2_DATABASE / DB2_USERNAME / DB2_PASSWORD.")
+        print("       Check DB2_HOST / DB2_PORT / DB2_NAME / DB2_USERNAME / DB2_PASSWORD in .env.")
         return 1
     st = rt.repository.check_connection()
-    if rt.repository.is_db2:
-        print(f"[OK]   IBM Db2 {st['version']} at {st['host']}:{st['port']} / {st['database']}")
-        print(f"       Schema {st['schema']}: {st['tables_in_schema']} tables, {st['views_in_schema']} view(s)")
-    else:
-        print(f"[WARN] {st['engine']} - use SHIPSAFE_DB_BACKEND=db2 for real persistence")
+    print(f"[OK]   IBM Db2 {st['version']} at {st['host']}:{st['port']} / {st['database']}")
+    print(f"       Schema {st['schema']}: {st['tables_in_schema']} tables, {st['views_in_schema']} view(s)")
     if rt.knowledge_base:
         print(f"[OK]   langchain-db2 vector store: {rt.knowledge_base.chunk_count()} policy chunks in POLICY_VECTORS")
     print(f"[OK]   MCP server: {'enabled' if config.enable_mcp else 'disabled'} (python -m shipsafe.mcp_server)")
@@ -55,7 +52,7 @@ def cmd_init_db(args) -> int:
 
     config = ShipSafeConfig.load()
     db2 = Db2Config.from_env("DB2_ADMIN_") if os.getenv("DB2_ADMIN_PASSWORD") else config.db2
-    repo = Db2Repository(db2, backend=config.backend, init_schema=False)
+    repo = Db2Repository(db2, init_schema=False)
     created = repo.initialize_schema(replace_views=True)
     print(f"Schema {repo.schema} ready as {db2.username}. Newly created: {', '.join(created) or 'none (already present)'}")
     return 0
@@ -80,15 +77,15 @@ def cmd_serve(args) -> int:
         return 2
     configure_logging(config.log_format, config.log_level)
 
-    pool = ConnectionPool(config.db2, backend=config.backend, size=config.pool_size)
+    pool = ConnectionPool(config.db2, size=config.pool_size)
     try:
         with pool.repository() as repo:
             st = repo.check_connection()
             print(f"[OK] {st['engine']} {st.get('version', '')} · schema {st.get('schema', '-')} · {st['latency_ms']} ms")
-            if repo.is_db2:
-                from .knowledge import PolicyKnowledgeBase
+            from .knowledge import PolicyKnowledgeBase
 
-                PolicyKnowledgeBase(repo, config.embedding_provider, config.embedding_dimension).ensure_ingested(config.policies_dir)
+            PolicyKnowledgeBase(repo, config.embedding_provider, config.embedding_dimension,
+                                config.llm).ensure_ingested(config.policies_dir)
             if config.auth_enabled and repo.count_active_admins() == 0:
                 from .security import issue_token
 
@@ -244,9 +241,6 @@ def cmd_history(args) -> int:
 
 def cmd_knowledge_query(args) -> int:
     rt = build_runtime()
-    if not rt.knowledge_base:
-        print("Policy search requires the IBM Db2 backend.")
-        return 1
     hits = rt.knowledge_base.retrieve(args.query, top_k=args.top_k)
     print(LINE + f"\nDb2 vector search (VECTOR_DISTANCE, COSINE): {args.query!r}\n" + LINE)
     for i, h in enumerate(hits, 1):
@@ -257,8 +251,11 @@ def cmd_knowledge_query(args) -> int:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="shipsafe", description="ShipSafe AI - pre-PR production-readiness gate backed by IBM Db2")
+    parser = argparse.ArgumentParser(prog="shipsafe", description="ShipSafe - production-readiness add-on for IBM Bob and other AI IDEs, on IBM Db2")
     sub = parser.add_subparsers(dest="command")
+    from .cli_ide import register
+
+    ide_handlers = register(sub)
 
     sub.add_parser("doctor", help="Check Db2 connectivity, vector store and scanners")
     sub.add_parser("init-db", help="Create the ShipSafe schema in IBM Db2")
@@ -313,6 +310,7 @@ def main() -> None:
         "doctor": cmd_doctor, "init-db": cmd_init_db, "ingest": cmd_ingest, "discover": cmd_discover,
         "scan": cmd_scan, "history": cmd_history, "serve": cmd_serve, "token": cmd_token, "audit": cmd_audit,
     }
+    handlers.update(ide_handlers)
     if args.command in handlers:
         sys.exit(handlers[args.command](args))
     if args.command == "assessment" and args.asm_cmd == "show":

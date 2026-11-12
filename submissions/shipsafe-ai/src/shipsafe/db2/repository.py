@@ -1,9 +1,8 @@
 """IBM Db2 persistence layer for ShipSafe AI.
 
-The repository speaks DB-API 2.0. In production it uses `ibm_db_dbi` against a
-real IBM Db2 server (autocommit off, explicit transactions); the `sqlite`
-backend exists only so unit tests run without a database. There is no silent
-fallback: if Db2 is selected and unreachable after retries, the error surfaces.
+The repository speaks DB-API 2.0 through `ibm_db_dbi` against a real IBM Db2
+server (autocommit off, explicit transactions). There is no other backend and
+no silent fallback: if Db2 is unreachable after retries, the error surfaces.
 
 Every statement uses `?` parameter markers. The only identifiers ever placed in
 SQL text are the validated schema name and integer row limits.
@@ -17,7 +16,7 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from ..config import Db2Config
 from ..models import Assessment, Finding, ToolRun
-from .schema import DB2_INDEXES, DB2_TABLES, DB2_VIEWS, SQLITE_DDL
+from .schema import DB2_INDEXES, DB2_PROCEDURES, DB2_TABLES, DB2_VIEWS
 
 log = logging.getLogger("shipsafe.db2")
 
@@ -58,33 +57,25 @@ class Db2Repository:
     def __init__(
         self,
         config: Optional[Db2Config] = None,
-        backend: str = "db2",
-        sqlite_path: str = ":memory:",
         conn: Any = None,
         init_schema: bool = True,
         retries: int = 3,
     ):
         self.config = config or Db2Config.from_env()
-        self.backend = backend
-        if backend == "db2":
-            self.conn = conn if conn is not None else connect_db2(self.config, retries=retries)
-            self.schema = self.config.schema
-            if not self.schema.replace("_", "").isalnum():
-                raise ValueError(f"Invalid DB2_SCHEMA identifier: {self.schema!r}")
-            self._execute(f"SET SCHEMA {self.schema}").close()
-        elif backend == "sqlite":
-            import sqlite3
-
-            self.conn = conn if conn is not None else sqlite3.connect(sqlite_path, check_same_thread=False)
-            self.schema = None
-        else:
-            raise ValueError(f"Unknown backend '{backend}'. Use 'db2' or 'sqlite'.")
+        self.schema = self.config.schema
+        if not self.schema.replace("_", "").isalnum():
+            raise ValueError(f"Invalid DB2_SCHEMA identifier: {self.schema!r}")
+        self.conn = conn if conn is not None else connect_db2(self.config, retries=retries)
+        self._ensure_schema_exists()
+        self._execute(f"SET SCHEMA {self.schema}").close()
         if init_schema:
             self.initialize_schema()
 
-    @property
-    def is_db2(self) -> bool:
-        return self.backend == "db2"
+    def _ensure_schema_exists(self) -> None:
+        """Create the schema on first use (needs CREATEIN/DBADM; skipped silently if it exists)."""
+        if not self._query("SELECT 1 AS X FROM SYSCAT.SCHEMATA WHERE SCHEMANAME = ?", (self.schema,)):
+            self._execute(f"CREATE SCHEMA {self.schema}").close()
+            self.conn.commit()
 
     # ------------------------------------------------------------------ helpers
     def _execute(self, sql: str, params: Sequence[Any] = ()) -> Any:
@@ -101,9 +92,7 @@ class Db2Repository:
 
     def _limit(self, n: int, offset: int = 0) -> str:
         n, offset = int(n), int(offset)  # integers only, never user text
-        if self.is_db2:
-            return (f" OFFSET {offset} ROWS" if offset else "") + f" FETCH FIRST {n} ROWS ONLY"
-        return f" LIMIT {n}" + (f" OFFSET {offset}" if offset else "")
+        return (f" OFFSET {offset} ROWS" if offset else "") + f" FETCH FIRST {n} ROWS ONLY"
 
     def _commit(self, commit: bool) -> None:
         if commit:
@@ -112,8 +101,7 @@ class Db2Repository:
     def ping(self) -> float:
         """Round-trip a trivial query; returns latency in milliseconds."""
         t0 = time.perf_counter()
-        sql = "SELECT 1 FROM SYSIBM.SYSDUMMY1" if self.is_db2 else "SELECT 1"
-        self._execute(sql).close()
+        self._execute("SELECT 1 FROM SYSIBM.SYSDUMMY1").close()
         return round((time.perf_counter() - t0) * 1000, 2)
 
     def rollback(self) -> None:
@@ -135,16 +123,17 @@ class Db2Repository:
         return bool(self._query(
             "SELECT 1 AS X FROM SYSCAT.VIEWS WHERE VIEWSCHEMA = ? AND VIEWNAME = ?", (self.schema, name)))
 
+    def _procedure_exists(self, name: str) -> bool:
+        return bool(self._query(
+            "SELECT 1 AS X FROM SYSCAT.ROUTINES WHERE ROUTINESCHEMA = ? AND ROUTINENAME = ? AND ROUTINETYPE = 'P'",
+            (self.schema, name)))
+
     def initialize_schema(self, replace_views: bool = False) -> List[str]:
-        """Create tables, indexes and views idempotently. Returns created objects.
+        """Create tables, indexes, views and stored procedures idempotently. Returns created objects.
 
         Only creates what is missing, so the runtime can use a least-privilege user that
         has DML rights but no DDL rights once `shipsafe init-db` has run as an admin."""
         created: List[str] = []
-        if not self.is_db2:
-            self.conn.executescript(SQLITE_DDL)
-            self.conn.commit()
-            return created
         try:
             for name, ddl in DB2_TABLES.items():
                 if not self._table_exists(name):
@@ -158,6 +147,10 @@ class Db2Repository:
                 if replace_views or not self._view_exists(name):
                     self._execute(ddl).close()
                     created.append(name)
+            for name, ddl in DB2_PROCEDURES.items():
+                if replace_views or not self._procedure_exists(name):
+                    self._execute(ddl).close()
+                    created.append(name)
             self.conn.commit()
         except Exception:
             self.rollback()
@@ -167,8 +160,6 @@ class Db2Repository:
     def check_connection(self) -> Dict[str, Any]:
         """Diagnostic probe used by `shipsafe doctor` and the readiness endpoint."""
         latency = self.ping()
-        if not self.is_db2:
-            return {"connected": True, "engine": "SQLite (unit-test backend)", "latency_ms": latency}
         try:
             row = self._query(
                 "SELECT SERVICE_LEVEL, CURRENT SERVER AS DB_NAME, CURRENT SCHEMA AS SCHEMA_NAME "
@@ -199,8 +190,7 @@ class Db2Repository:
     def save_project(self, project_id: str, repo_root_hash: str, name: str,
                      default_branch: str = "main", commit: bool = True) -> None:
         now = int(time.time() * 1000)
-        if self.is_db2:
-            sql = """
+        sql = """
             MERGE INTO PROJECTS T
             USING (VALUES (CAST(? AS VARCHAR(96)), CAST(? AS VARCHAR(64)), CAST(? AS VARCHAR(128)),
                            CAST(? AS VARCHAR(64)), CAST(? AS BIGINT)))
@@ -209,12 +199,6 @@ class Db2Repository:
             WHEN MATCHED THEN UPDATE SET NAME = S.NAME, DEFAULT_BRANCH = S.DEFAULT_BRANCH
             WHEN NOT MATCHED THEN INSERT (PROJECT_ID, REPO_ROOT_HASH, NAME, DEFAULT_BRANCH, CREATED_AT)
                  VALUES (S.PROJECT_ID, S.REPO_ROOT_HASH, S.NAME, S.DEFAULT_BRANCH, S.CREATED_AT)
-            """
-        else:
-            sql = """
-            INSERT INTO PROJECTS (PROJECT_ID, REPO_ROOT_HASH, NAME, DEFAULT_BRANCH, CREATED_AT)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(PROJECT_ID) DO UPDATE SET NAME = excluded.NAME, DEFAULT_BRANCH = excluded.DEFAULT_BRANCH
             """
         self._execute(sql, (project_id, repo_root_hash, name, default_branch, now)).close()
         self._commit(commit)
@@ -333,34 +317,18 @@ class Db2Repository:
 
     def get_assessment_history(self, limit: int = 10, project_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """Recent assessments with the risk delta computed in Db2 (V_RISK_TREND)."""
-        if self.is_db2:
-            sql = ("SELECT PROJECT_ID, PROJECT_NAME, ASSESSMENT_ID, STATUS, STARTED_AT, CRITICAL_COUNT, HIGH_COUNT, "
-                   "MEDIUM_COUNT, LOW_COUNT, RISK_SCORE, RISK_DELTA FROM V_RISK_TREND")
-            where = " WHERE PROJECT_ID = ?"
-        else:
-            sql = ("SELECT A.PROJECT_ID, P.NAME AS PROJECT_NAME, A.ASSESSMENT_ID, A.STATUS, A.STARTED_AT, A.CRITICAL_COUNT, "
-                   "A.HIGH_COUNT, A.MEDIUM_COUNT, A.LOW_COUNT, "
-                   "(A.CRITICAL_COUNT*10 + A.HIGH_COUNT*5 + A.MEDIUM_COUNT*2 + A.LOW_COUNT) AS RISK_SCORE, "
-                   "NULL AS RISK_DELTA FROM ASSESSMENTS A JOIN PROJECTS P ON P.PROJECT_ID = A.PROJECT_ID")
-            where = " WHERE A.PROJECT_ID = ?"
+        sql = ("SELECT PROJECT_ID, PROJECT_NAME, ASSESSMENT_ID, STATUS, STARTED_AT, CRITICAL_COUNT, HIGH_COUNT, "
+               "MEDIUM_COUNT, LOW_COUNT, RISK_SCORE, RISK_DELTA FROM V_RISK_TREND")
         params: List[Any] = []
         if project_id:
-            sql += where
+            sql += " WHERE PROJECT_ID = ?"
             params.append(project_id)
         sql += " ORDER BY STARTED_AT DESC" + self._limit(limit)
         return self._query(sql, params)
 
     def project_posture(self) -> List[Dict[str, Any]]:
         """Latest assessment per project (Db2 view V_PROJECT_POSTURE)."""
-        if self.is_db2:
-            return self._query("SELECT * FROM V_PROJECT_POSTURE ORDER BY RISK_SCORE DESC, STARTED_AT DESC")
-        return self._query(
-            "SELECT A.PROJECT_ID, P.NAME AS PROJECT_NAME, A.ASSESSMENT_ID, A.STATUS, A.STARTED_AT, A.CRITICAL_COUNT, "
-            "A.HIGH_COUNT, A.MEDIUM_COUNT, A.LOW_COUNT, "
-            "(A.CRITICAL_COUNT*10 + A.HIGH_COUNT*5 + A.MEDIUM_COUNT*2 + A.LOW_COUNT) AS RISK_SCORE, NULL AS RISK_DELTA "
-            "FROM ASSESSMENTS A JOIN PROJECTS P ON P.PROJECT_ID = A.PROJECT_ID "
-            "WHERE A.STARTED_AT = (SELECT MAX(B.STARTED_AT) FROM ASSESSMENTS B WHERE B.PROJECT_ID = A.PROJECT_ID) "
-            "ORDER BY RISK_SCORE DESC")
+        return self._query("SELECT * FROM V_PROJECT_POSTURE ORDER BY RISK_SCORE DESC, STARTED_AT DESC")
 
     def severity_breakdown(self) -> List[Dict[str, Any]]:
         """Findings by category and severity across all assessments."""
@@ -376,8 +344,7 @@ class Db2Repository:
             "(SELECT COUNT(*) FROM ASSESSMENTS WHERE STATUS = 'BLOCKED') AS BLOCKED_RUNS, "
             "(SELECT COUNT(*) FROM FINDINGS) AS FINDINGS, "
             "(SELECT COUNT(DISTINCT FINGERPRINT) FROM FINDINGS) AS UNIQUE_ISSUES, "
-            "(SELECT COUNT(*) FROM KNOWLEDGE_DOCS) AS POLICY_DOCS"
-            + (" FROM SYSIBM.SYSDUMMY1" if self.is_db2 else ""))[0]
+            "(SELECT COUNT(*) FROM KNOWLEDGE_DOCS) AS POLICY_DOCS FROM SYSIBM.SYSDUMMY1")[0]
         posture = self.project_posture()
         stats = {k.lower(): int(v or 0) for k, v in row.items()}
         stats["open_critical"] = sum(int(p["CRITICAL_COUNT"] or 0) for p in posture)
@@ -484,6 +451,81 @@ class Db2Repository:
             params.append(action)
         sql += " ORDER BY TS DESC" + self._limit(limit)
         return self._query(sql, params)
+
+    # ------------------------------------------------------- IDE guard events
+    def record_guard_event(self, *, client: str, tool: str, verdict: str, findings_count: int,
+                           duration_ms: int, project: Optional[str] = None, file_path: Optional[str] = None,
+                           language: Optional[str] = None, max_severity: Optional[str] = None,
+                           rule_ids: Sequence[str] = ()) -> str:
+        """One row per check made from the IDE (Bob, VS Code, Claude...)."""
+        event_id = uuid.uuid4().hex
+        self._execute(
+            "INSERT INTO GUARD_EVENTS (EVENT_ID, TS, CLIENT, TOOL, PROJECT, FILE_PATH, LANGUAGE, FINDINGS_COUNT, "
+            "MAX_SEVERITY, RULE_IDS, VERDICT, DURATION_MS) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (event_id, int(time.time() * 1000), client[:32], tool[:48], (project or None) and project[:128],
+             (file_path or None) and file_path[:512], language, int(findings_count), max_severity,
+             ",".join(sorted(set(rule_ids)))[:1024] or None, verdict, int(duration_ms)),
+        ).close()
+        self.conn.commit()
+        return event_id
+
+    def list_guard_events(self, limit: int = 50) -> List[Dict[str, Any]]:
+        return self._query("SELECT * FROM GUARD_EVENTS ORDER BY TS DESC" + self._limit(limit))
+
+    def record_fix_attempt(self, *, model: str, iterations: int, verified: bool, issues_before: int,
+                           issues_after: int, duration_ms: int, patch: str, file_path: Optional[str] = None,
+                           language: Optional[str] = None, rule_ids: Sequence[str] = ()) -> str:
+        fix_id = uuid.uuid4().hex
+        self._execute(
+            "INSERT INTO FIX_ATTEMPTS (FIX_ID, TS, FILE_PATH, LANGUAGE, MODEL, ITERATIONS, VERIFIED, ISSUES_BEFORE, "
+            "ISSUES_AFTER, RULE_IDS, DURATION_MS, PATCH) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (fix_id, int(time.time() * 1000), (file_path or None) and file_path[:512], language, model[:96],
+             int(iterations), 1 if verified else 0, int(issues_before), int(issues_after),
+             ",".join(sorted(set(rule_ids)))[:1024] or None, int(duration_ms), patch),
+        ).close()
+        self.conn.commit()
+        return fix_id
+
+    def list_fix_attempts(self, limit: int = 50) -> List[Dict[str, Any]]:
+        return self._query(
+            "SELECT FIX_ID, TS, FILE_PATH, LANGUAGE, MODEL, ITERATIONS, VERIFIED, ISSUES_BEFORE, ISSUES_AFTER, "
+            "RULE_IDS, DURATION_MS FROM FIX_ATTEMPTS ORDER BY TS DESC" + self._limit(limit))
+
+    # ------------------------------------------------------ stored procedures
+    def project_risk(self, project_id: str) -> Dict[str, Any]:
+        """CALL SP_PROJECT_RISK: latest risk score, delta vs the previous run and a trend label."""
+        cur = self.conn.cursor()
+        try:
+            out = cur.callproc(f"{self.schema}.SP_PROJECT_RISK", (project_id, 0, 0, " " * 16, 0))
+        finally:
+            cur.close()
+        _, score, delta, trend, runs = out
+        return {"project_id": project_id, "risk_score": score, "risk_delta": delta,
+                "trend": (trend or "").strip(), "runs": int(runs or 0)}
+
+    def purge_history(self, keep_days: int) -> Dict[str, int]:
+        """CALL SP_PURGE_HISTORY: retention for assessments (cascading) and IDE events."""
+        cur = self.conn.cursor()
+        try:
+            out = cur.callproc(f"{self.schema}.SP_PURGE_HISTORY", (int(keep_days), 0, 0))
+            self.conn.commit()
+        except Exception:
+            self.rollback()
+            raise
+        finally:
+            cur.close()
+        return {"assessments_deleted": int(out[1] or 0), "events_deleted": int(out[2] or 0)}
+
+    def guard_summary(self, since_ms: int = 0) -> List[Dict[str, Any]]:
+        """CALL SP_GUARD_SUMMARY: per-IDE-client totals returned as a Db2 result set."""
+        cur = self.conn.cursor()
+        try:
+            cur.callproc(f"{self.schema}.SP_GUARD_SUMMARY", (int(since_ms),))
+            cols = [d[0].upper() for d in (cur.description or [])]
+            rows = [dict(zip(cols, r)) for r in cur.fetchall()] if cols else []
+        finally:
+            cur.close()
+        return [{k: (v.strip() if isinstance(v, str) else int(v or 0)) for k, v in r.items()} for r in rows]
 
     def close(self) -> None:
         try:

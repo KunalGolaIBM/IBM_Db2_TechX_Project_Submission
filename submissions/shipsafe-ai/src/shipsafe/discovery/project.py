@@ -90,6 +90,7 @@ class ProjectDiscovery:
                     capture_output=True,
                     text=True,
                     timeout=5,
+                    stdin=subprocess.DEVNULL,
                 )
                 if res.returncode == 0:
                     current_branch = res.stdout.strip()
@@ -101,6 +102,7 @@ class ProjectDiscovery:
                     capture_output=True,
                     text=True,
                     timeout=5,
+                    stdin=subprocess.DEVNULL,
                 )
                 if res.returncode == 0:
                     head_commit = res.stdout.strip()[:12]
@@ -112,6 +114,7 @@ class ProjectDiscovery:
                     capture_output=True,
                     text=True,
                     timeout=5,
+                    stdin=subprocess.DEVNULL,
                 )
                 if res.returncode == 0:
                     for line in res.stdout.splitlines():

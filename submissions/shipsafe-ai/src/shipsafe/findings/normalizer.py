@@ -10,10 +10,13 @@ SEVERITY_RANK = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
 # Rule families shared by different tools. Two findings in the same file, on the
 # same line and in the same family describe one issue and are merged.
 _FAMILIES = [
-    ("sql-injection", re.compile(r"^(B608|B611|B610)")),
-    ("shell-injection", re.compile(r"^(B602|B604|B605|B606|B607|B609)")),
-    ("dynamic-code", re.compile(r"^(B307|B102)")),
-    ("deserialization", re.compile(r"^(B301|B302|B506)")),
+    ("sql-injection", re.compile(r"^(B608|B611|B610|SQLI-)")),
+    ("shell-injection", re.compile(r"^(B602|B604|B605|B606|B607|B609|CMD-SHELL)")),
+    ("dynamic-code", re.compile(r"^(B307|B102|CODE-EVAL)")),
+    ("deserialization", re.compile(r"^(B301|B302|B403|B506|DESER-)")),
+    ("tls-verify", re.compile(r"^(B501|TLS-VERIFY)")),
+    ("debug-mode", re.compile(r"^(B201|DEBUG-ENABLED)")),
+    ("insecure-temp", re.compile(r"^(B306|TEMPFILE-)")),
     ("hardcoded-secret", re.compile(r"^(SEC-\d+|B105|B106|B107)")),
 ]
 

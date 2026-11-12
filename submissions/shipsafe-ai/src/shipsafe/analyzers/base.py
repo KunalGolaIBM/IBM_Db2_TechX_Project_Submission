@@ -76,6 +76,7 @@ class SafeExecutionBoundary:
                 text=True,
                 timeout=effective_timeout,
                 shell=False,
+                stdin=subprocess.DEVNULL,  # never inherit the MCP stdio pipe
             )
             duration_ms = int((time.time() - start_time) * 1000)
             stdout = proc.stdout[:self.max_output_bytes]

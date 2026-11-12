@@ -106,17 +106,16 @@ class AssessmentOrchestrator:
         raw.extend(fnd)
 
         python = "sast_bandit" in discovery.applicable_checks
-        step("sast", "Static analysis: SQL injection, shell=True, eval/exec, unsafe deserialization")
-        if python:
-            tr, fnd = SecurityAnalyzer(boundary).scan(assessment_id, target_scope=scope)
+        step("sast", "Code rules: SQL injection, shell=True, eval/exec, unsafe deserialization, XSS sinks")
+        tr, fnd = SecurityAnalyzer(boundary).scan(assessment_id, target_scope=scope)
+        tool_runs.append(tr)
+        raw.extend(fnd)
+        if python and self.config.use_bandit:
+            tr, fnd = run_bandit(boundary, assessment_id)
             tool_runs.append(tr)
-            raw.extend(fnd)
-            if self.config.use_bandit:
-                tr, fnd = run_bandit(boundary, assessment_id)
-                tool_runs.append(tr)
-                raw.extend(f for f in fnd if not scope or f.file_path in scope)
-        else:
-            tool_runs.append(_skipped(assessment_id, "sast", discovery.skipped_checks.get("sast_bandit", "Not applicable")))
+            raw.extend(f for f in fnd if not scope or f.file_path in scope)
+        elif not python:
+            tool_runs.append(_skipped(assessment_id, "bandit", discovery.skipped_checks.get("sast_bandit", "No Python files")))
 
         step("dependencies", "Checking dependencies against known vulnerabilities")
         dep_analyzer = DependencyAnalyzer(boundary)
