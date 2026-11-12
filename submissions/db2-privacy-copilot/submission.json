@@ -3,7 +3,7 @@
   "project": {
     "title": "Db2 Privacy Copilot",
     "slug": "db2-privacy-copilot",
-    "short_description": "A Db2-connected privacy operations demo for finding personal-data candidates, managing consent history, and preparing reviewable data-rights plans with human approval and deterministic SQL guardrails.",
+    "short_description": "A Db2-connected privacy operations application for finding personal-data candidates, managing consent history, and preparing reviewable data-rights plans with human approval and deterministic SQL guardrails.",
     "category": "AI / Data Engineering / Privacy",
     "demo_url": "",
     "video_url": "",
@@ -21,7 +21,7 @@
     ]
   },
   "ibm_db2": {
-    "edition": "Db2 Community Edition (Docker), verified with Db2 12.1.5.0",
+    "edition": "Db2 Community Edition in Docker; live integration is verified by GitHub Actions CI",
     "connector": "ibm_db / ibm_db_dbi; LangChain langchain-db2 DB2VS integration",
     "features_used": [
       "Relational tables and transactions",

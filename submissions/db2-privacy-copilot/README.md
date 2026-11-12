@@ -2,7 +2,9 @@
 
 > **Find personal data in IBM Db2, plan privacy actions, and keep people in control of approval.**
 
-Db2 Privacy Copilot is a working privacy-operations demo for teams that use IBM Db2. It brings database discovery, personal-data classification, consent history, and data-removal planning into one web application. AI-assisted tools can suggest what to review; deterministic guardrails and human approval control sensitive execution.
+Db2 Privacy Copilot is a privacy-operations workspace for teams that use IBM Db2. It brings database discovery, personal-data classification, consent history, and data-removal planning into one web application. AI-assisted tools can suggest what to review; deterministic guardrails and human approval control sensitive execution.
+
+[![CI](https://github.com/dreameterftw/db2-privacy-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/dreameterftw/db2-privacy-copilot/actions/workflows/ci.yml)
 
 ![Architecture of Db2 Privacy Copilot](docs/screenshots/architecture.svg)
 
@@ -27,9 +29,9 @@ Agents are planning assistants. They do not receive an erasure-execution tool. A
 
 ## IBM Db2 integration
 
-The demo runs against IBM Db2 Community Edition in Docker. The Python connector (`ibm_db` and `ibm_db_dbi`) handles database connections. The app reads Db2 catalog views to discover schema metadata and stores clinic records, consent history, requests, PII classifications, retention rules, and audit events in Db2 tables.
+The standard local application stack runs against IBM Db2 Community Edition in Docker. The Python connector (`ibm_db` and `ibm_db_dbi`) handles database connections. The app reads Db2 catalog views to discover schema metadata and stores clinic records, consent history, requests, PII classifications, retention rules, and audit events in Db2 tables.
 
-For semantic classification, LangChain's `langchain-db2` integration uses Db2's DB2VS vector store to compare column-name embeddings with privacy-taxonomy labels. Sentence Transformers creates embeddings locally. This vector workflow requires Db2 12.1.2 or newer. The local demo was verified with Db2 12.1.5.0.
+For semantic classification, LangChain's `langchain-db2` integration uses Db2's DB2VS vector store to compare column-name embeddings with privacy-taxonomy labels. Sentence Transformers creates embeddings locally. This vector workflow requires Db2 12.1.2 or newer. The CI workflow runs the integration job against a Db2 container. See the [latest verified run](https://github.com/dreameterftw/db2-privacy-copilot/actions/runs/42799280571), which passed on commit `be74dc2` on Nov 10, 2026.
 
 ## Technology
 
@@ -69,11 +71,11 @@ docker compose exec api python -m eval.seed
 
 Open the Streamlit workspace at <http://localhost:8501>. API docs are at <http://localhost:8001/docs>; <http://localhost:8001/healthz> reports the connected Db2 version. Seeding adds 100 synthetic patients and related records. Run it once on a fresh database; each run adds more rows.
 
-Stop the stack while preserving database data with `docker compose --profile app down`. To delete the local demo database too, use `docker compose --profile app down -v`.
+Stop the stack while preserving database data with `docker compose --profile app down`. To delete the local database too, use `docker compose --profile app down -v`.
 
 ## Testing
 
-For database-independent tests on Windows, install the development environment from `src` and run the mock-mode quality subset:
+For database-independent tests on Windows, install the development environment from `src` and explicitly enable the in-memory test backend:
 
 ```powershell
 Set-Location src
@@ -83,17 +85,17 @@ $env:DB_MOCK = "1"
 pytest -m "not integration" -q
 ```
 
-Real Db2 connectivity was tested through the Linux application container because the native Windows Db2 driver can fail with an IBMOSauthclient authentication error even when the same credentials work from the container. During preparation, the API health endpoint returned Db2 12.1.5.0 and the Streamlit page returned HTTP 200.
+The GitHub Actions integration job exercised the application against a Db2 container for commit `be74dc2`. This does not verify later local edits or claim a live Db2 connection during this presentation.
 
 ## Limitations
 
-- This is a prototype for selected privacy workflows, not legal advice or a complete compliance solution.
-- Demo sign-in roles are not production-grade identity and access management.
+- This application supports selected privacy workflows. It is not legal advice or a complete compliance solution.
+- The current role selector is not an organization identity provider.
 - Retention rules start as unverified and must be reviewed by qualified owners.
-- Use only synthetic demo data; do not point this setup at production or real personal or health data.
+- Use only synthetic sample data; do not point this setup at production or real personal or health data.
 - No public demo URL or video is included.
 
 ## Source layout
 
-The application and tests are in [src/](src/). Use [src/DEMO_GUIDE.md](src/DEMO_GUIDE.md) for the pitch walkthrough and fallback-mode notes. Production Compose and HTTPS configuration are in [src/deploy/README.md](src/deploy/README.md). See [architecture.md](architecture.md) for the component diagram and Db2 data flow. The project is distributed under the MIT License; see [src/LICENSE](src/LICENSE).
+The application and tests are in [src/](src/). Use [src/DEMO_GUIDE.md](src/DEMO_GUIDE.md) for the pitch walkthrough. The [pitch deck](src/pitch/Db2_Privacy_Copilot_Pitch_Aryan_Rane.pptx) includes speaker notes. Production Compose and HTTPS configuration are in [src/deploy/README.md](src/deploy/README.md). See [architecture.md](architecture.md) for the component diagram and Db2 data flow. The project is distributed under the MIT License; see [src/LICENSE](src/LICENSE).
 
