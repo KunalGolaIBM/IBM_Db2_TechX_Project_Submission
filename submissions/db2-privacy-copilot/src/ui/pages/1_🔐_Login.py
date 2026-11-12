@@ -158,13 +158,12 @@ st.markdown("<br><br>", unsafe_allow_html=True)
 
 # Demo notice
 st.info("""
-**Demo Mode**: This is a demonstration system with mock authentication.
+**Demo personas**: Choose a role to demonstrate the workflow. The API checks a
+separate role token for every request; set unique `VIEWER_TOKEN`,
+`ANALYST_TOKEN`, and `DPO_TOKEN` values in `.env` before exposing the app.
 
-In production:
-- Use OAuth2/JWT tokens
-- Integrate with corporate SSO (SAML)
-- Multi-factor authentication for DPO role
-- Audit all login attempts
+This role selector is not an identity provider. Do not use the demo personas
+to protect real personal data.
 """)
 
 st.markdown("<br>", unsafe_allow_html=True)

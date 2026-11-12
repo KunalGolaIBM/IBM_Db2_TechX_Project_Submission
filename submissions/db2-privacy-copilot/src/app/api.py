@@ -22,6 +22,7 @@ Security Recommendations for Production:
 10. Enable audit logging for all sensitive operations
 """
 from datetime import datetime, timedelta
+import os
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Security, status
@@ -29,10 +30,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
+from dotenv import load_dotenv
 
 from app import agents, audit, consent, erasure
 from app.config import settings
 from app.db import query
+
+load_dotenv()
 
 # FastAPI app
 app = FastAPI(
@@ -41,11 +45,19 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# CORS middleware (configure for production)
+# CORS is configurable for deployments. Streamlit calls the API server-to-server,
+# so only the local development origins are enabled by default.
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ORIGINS", "http://localhost:8501,http://127.0.0.1:8501"
+    ).split(",")
+    if origin.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure properly for production
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -55,9 +67,15 @@ security = HTTPBearer()
 
 # Mock users (replace with real user database)
 USERS = {
-    "viewer_token": {"email": "viewer@example.com", "role": "VIEWER"},
-    "analyst_token": {"email": "analyst@example.com", "role": "ANALYST"},
-    "dpo_token": {"email": "dpo@example.com", "role": "DPO"},
+    os.getenv("VIEWER_TOKEN", "viewer_token"): {
+        "email": "viewer@example.com", "role": "VIEWER"
+    },
+    os.getenv("ANALYST_TOKEN", "analyst_token"): {
+        "email": "analyst@example.com", "role": "ANALYST"
+    },
+    os.getenv("DPO_TOKEN", "dpo_token"): {
+        "email": "dpo@example.com", "role": "DPO"
+    },
 }
 
 
@@ -508,13 +526,23 @@ def approve_request(
         """, (user["email"], approval.approval_id, request_id))
         
         # Execute
-        erasure.execute(
-            steps,
-            subject_id,
-            user["email"],
-            approval.approval_id,
-            plan_hash
-        )
+        try:
+            erasure.execute(
+                steps,
+                subject_id,
+                user["email"],
+                approval.approval_id,
+                plan_hash
+            )
+        except Exception:
+            # Allow a DPO to correct the underlying issue and retry approval.
+            query(
+                "UPDATE REQUESTS SET STATUS = 'PENDING_APPROVAL', "
+                "APPROVED_BY = NULL, APPROVED_AT = NULL, APPROVAL_ID = NULL "
+                "WHERE ID = ? AND STATUS = 'APPROVED'",
+                (request_id,),
+            )
+            raise
         
         return {
             "status": "completed",
@@ -612,12 +640,9 @@ if __name__ == "__main__":
     print("Starting Db2 Privacy Copilot API")
     print("=" * 60)
     print(f"\nAPI Documentation: http://localhost:{settings.api_port}/docs")
-    print("\nTest tokens:")
-    print("  Viewer:  viewer_token")
-    print("  Analyst: analyst_token")
-    print("  DPO:     dpo_token")
+    print("\nRole tokens are configured through VIEWER_TOKEN, ANALYST_TOKEN, and DPO_TOKEN.")
     print("\nExample:")
-    print('  curl -H "Authorization: Bearer viewer_token" http://localhost:8000/health')
+    print('  curl -H "Authorization: Bearer $VIEWER_TOKEN" http://localhost:8000/requests')
     print("\n" + "=" * 60)
     
     uvicorn.run(

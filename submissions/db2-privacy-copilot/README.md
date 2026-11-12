@@ -44,7 +44,7 @@ For semantic classification, LangChain's `langchain-db2` integration uses Db2's 
 
 Docker Desktop provides the Linux-container environment used by the Db2 and Python images. You do not need to install Ubuntu separately. The first image build downloads large dependencies and may take several minutes and multiple gigabytes of disk space.
 
-From this submission folder, create a local environment file and set unique values for `DB2_PASSWORD` and `API_SECRET_KEY`:
+From this submission folder, create a local environment file. Set a unique `DB2_PASSWORD`, a long random `API_SECRET_KEY`, and distinct random `VIEWER_TOKEN`, `ANALYST_TOKEN`, and `DPO_TOKEN` values:
 
 ```powershell
 Copy-Item .env.example src/.env
@@ -95,5 +95,5 @@ Real Db2 connectivity was tested through the Linux application container because
 
 ## Source layout
 
-The application and tests are in [src/](src/). See [architecture.md](architecture.md) for the component diagram and Db2 data flow. The project is distributed under the MIT License; see [src/LICENSE](src/LICENSE).
+The application and tests are in [src/](src/). Use [src/DEMO_GUIDE.md](src/DEMO_GUIDE.md) for the pitch walkthrough and fallback-mode notes. Production Compose and HTTPS configuration are in [src/deploy/README.md](src/deploy/README.md). See [architecture.md](architecture.md) for the component diagram and Db2 data flow. The project is distributed under the MIT License; see [src/LICENSE](src/LICENSE).
 

@@ -8,8 +8,10 @@ All data is in-memory and resets on restart — for demo/development only.
 """
 from __future__ import annotations
 
-import json
+import copy
 import hashlib
+import json
+import re
 from datetime import datetime, date
 from typing import Any, Optional
 from unittest.mock import MagicMock
@@ -108,6 +110,14 @@ def _mock_query(sql: str, params: tuple = ()) -> Optional[list[tuple]]:
         schema = params[0].upper() if params else "DB2INST1"
         if schema != "DB2INST1":
             return []
+        if "COLNAME = ?" in sql_up and len(params) >= 3:
+            _, table_name, column_name = params[:3]
+            return [
+                (row[4],)
+                for row in _DB["_SYSCAT_COLUMNS"]
+                if row[0].upper() == table_name.upper()
+                and row[1].upper() == column_name.upper()
+            ]
         return _DB["_SYSCAT_COLUMNS"]
 
     # --- SYSCAT.TABLES ---
@@ -175,7 +185,23 @@ def _mock_query(sql: str, params: tuple = ()) -> Optional[list[tuple]]:
             pending = [r for r in _DB["REQUESTS"] if r.get("STATUS") == "PENDING_APPROVAL"]
             return [(len(pending),)]
         rows = _DB["REQUESTS"]
-        if params:
+        if "WHERE ID = ?" in sql_up:
+            rows = [r for r in rows if r.get("ID") == params[0]]
+            if "SELECT SUBJECT_ID, PLAN_JSON, PLAN_HASH, STATUS" in sql_up:
+                return [
+                    (r["SUBJECT_ID"], r.get("PLAN_JSON"), r.get("PLAN_HASH"), r["STATUS"])
+                    for r in rows
+                ]
+            return [
+                (
+                    r["ID"], r.get("REQUEST_TYPE", "ERASURE"), r["SUBJECT_ID"],
+                    r["STATUS"], r.get("PLAN_JSON"), r.get("PLAN_HASH"),
+                    r.get("RECEIVED_AT"), r.get("DUE_AT"), r.get("APPROVED_BY"),
+                    r.get("APPROVED_AT"),
+                )
+                for r in rows
+            ]
+        if "WHERE STATUS = ?" in sql_up and params:
             rows = [r for r in rows if r.get("STATUS") == params[0]]
         return [
             (r["ID"], r.get("REQUEST_TYPE","ERASURE"), r["SUBJECT_ID"],
@@ -258,6 +284,9 @@ def _mock_execute(sql: str, params: tuple = ()) -> int:
             "DUE_AT": params[1] if len(params) > 1 else "",
             "PLAN_JSON": params[2] if len(params) > 2 else None,
             "PLAN_HASH": params[3] if len(params) > 3 else "",
+            "APPROVED_BY": None,
+            "APPROVED_AT": None,
+            "APPROVAL_ID": None,
         })
         return 1
 
@@ -312,11 +341,84 @@ def _mock_execute(sql: str, params: tuple = ()) -> int:
 
     # UPDATE REQUESTS
     if "UPDATE REQUESTS" in sql_up:
-        return 1
+        if "APPROVED_BY = ?" in sql_up:
+            actor, approval_id, request_id = params
+            matches = [r for r in _DB["REQUESTS"] if r.get("ID") == request_id]
+            for request in matches:
+                request.update({
+                    "STATUS": "APPROVED",
+                    "APPROVED_BY": actor,
+                    "APPROVED_AT": datetime.now().isoformat(),
+                    "APPROVAL_ID": approval_id,
+                })
+            return len(matches)
 
-    # DELETE (erasure)
+        if "STATUS = 'PENDING_APPROVAL'" in sql_up:
+            request_id = params[0]
+            matches = [
+                r for r in _DB["REQUESTS"]
+                if r.get("ID") == request_id and r.get("STATUS") == "APPROVED"
+            ]
+            for request in matches:
+                request.update({
+                    "STATUS": "PENDING_APPROVAL",
+                    "APPROVED_BY": None,
+                    "APPROVED_AT": None,
+                    "APPROVAL_ID": None,
+                })
+            return len(matches)
+
+        if "STATUS = 'COMPLETED'" in sql_up:
+            subject_id = params[0]
+            matches = [
+                r for r in _DB["REQUESTS"]
+                if r.get("SUBJECT_ID") == subject_id and r.get("STATUS") == "APPROVED"
+            ]
+            for request in matches:
+                request.update({
+                    "STATUS": "COMPLETED",
+                    "COMPLETED_AT": datetime.now().isoformat(),
+                })
+            return len(matches)
+        return 0
+
+    # UPDATE table: emulate nullable-column anonymisation in demo mode.
+    if sql_up.startswith("UPDATE "):
+        match = re.search(
+            r'UPDATE\s+(?:"[^".]+"\.)?"?(\w+)"?\s+SET\s+(.*?)\s+'
+            r'WHERE\s+"?(\w+)"?\s*=\s*\?',
+            sql.strip(),
+            flags=re.IGNORECASE,
+        )
+        if not match or not params:
+            return 0
+        table_name, assignments, filter_column = match.groups()
+        columns = re.findall(r'"?(\w+)"?\s*=\s*NULL', assignments, re.IGNORECASE)
+        affected = 0
+        for row in _DB.get(table_name.upper(), []):
+            if row.get(filter_column.upper()) == params[0]:
+                for column in columns:
+                    if column.upper() in row:
+                        row[column.upper()] = None
+                affected += 1
+        return affected
+
+    # DELETE table: emulate child-row erasure in demo mode.
     if sql_up.startswith("DELETE"):
-        return 0  # Mock: nothing to delete in demo
+        match = re.search(
+            r'DELETE\s+FROM\s+(?:"[^".]+"\.)?"?(\w+)"?\s+'
+            r'WHERE\s+"?(\w+)"?\s*=\s*\?',
+            sql.strip(),
+            flags=re.IGNORECASE,
+        )
+        if not match or not params:
+            return 0
+        table_name, filter_column = match.groups()
+        rows = _DB.get(table_name.upper(), [])
+        retained = [row for row in rows if row.get(filter_column.upper()) != params[0]]
+        affected = len(rows) - len(retained)
+        _DB[table_name.upper()] = retained
+        return affected
 
     return 0
 
@@ -363,20 +465,29 @@ class _MockCursor:
 class _MockConnection:
     def __init__(self):
         self._autocommit = True
+        self._snapshot = None
 
     def cursor(self):
         return _MockCursor()
 
     def commit(self):
-        pass
+        self._snapshot = None
 
     def rollback(self):
-        pass
+        if self._snapshot is not None:
+            saved_data, saved_counters = self._snapshot
+            _DB.clear()
+            _DB.update(saved_data)
+            _id_counters.clear()
+            _id_counters.update(saved_counters)
+            self._snapshot = None
 
     def close(self):
         pass
 
     def set_autocommit(self, val: bool):
+        if self._autocommit and not val:
+            self._snapshot = (copy.deepcopy(_DB), copy.deepcopy(_id_counters))
         self._autocommit = val
 
 
@@ -389,6 +500,10 @@ def conn() -> _MockConnection:
 
 
 def query(sql: str, params: tuple = ()) -> Optional[list[tuple]]:
+    sql_up = sql.lstrip().upper()
+    if sql_up.startswith(("INSERT", "UPDATE", "DELETE", "MERGE")):
+        _mock_execute(sql, params)
+        return None
     return _mock_query(sql, params)
 
 

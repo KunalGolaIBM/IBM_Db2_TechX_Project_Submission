@@ -8,6 +8,11 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends gcc g++ libxml2 libaio1t64 \
     && rm -rf /var/lib/apt/lists/*
 
+# The service runs on CPU-only containers; install the CPU wheel to avoid
+# pulling hundreds of megabytes of unused CUDA libraries from the default index.
+RUN pip install --no-cache-dir --retries 10 --timeout 120 \
+    --index-url https://download.pytorch.org/whl/cpu torch
+
 WORKDIR /srv
 COPY pyproject.toml ./
 COPY app ./app

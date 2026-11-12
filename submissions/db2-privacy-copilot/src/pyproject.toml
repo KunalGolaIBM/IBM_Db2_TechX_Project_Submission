@@ -98,7 +98,11 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --cov=app --cov-report=html --cov-report=term-missing"
-markers = ["integration: requires a live IBM Db2 database"]
+markers = [
+    "integration: requires a live IBM Db2 database",
+    "slow: long-running tests",
+]
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.run]
 source = ["app"]

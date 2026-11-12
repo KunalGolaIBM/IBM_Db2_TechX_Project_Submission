@@ -223,6 +223,10 @@ def plan(
         elif action == "ANONYMISE":
             # Get PII columns that are nullable
             pii_cols = get_pii_columns(table)
+            if not pii_cols and table.upper() == root.upper():
+                raise ErasureError(
+                    f"No PII classification for {table}. Run classification first."
+                )
             nullable_pii = [c for c in pii_cols if is_nullable(schema, table, c)]
             
             if nullable_pii:
@@ -316,7 +320,7 @@ def execute(
         if step.sql:
             guardrail.check(step.sql, allowed_tables, approved=True)
     
-    print("All statements passed guardrail ✓")
+    print("All statements passed guardrail [OK]")
     
     # Execute in a single transaction
     c = conn()
@@ -355,9 +359,8 @@ def execute(
             ],
         }
         
-        # Note: audit.append uses a separate connection, will commit independently
-        # This is OK - audit record is separate from data changes
-        audit.append(approver, "ERASURE", subject_id, detail)
+        # Include the audit row in the same transaction as the data changes.
+        audit.append(approver, "ERASURE", subject_id, detail, connection=c)
         
         # Update request status (if request exists)
         cur.execute("""
@@ -368,11 +371,11 @@ def execute(
         
         # Commit transaction
         c.commit()
-        print("✓ Transaction committed")
+        print("Transaction committed [OK]")
         
     except Exception as e:
         c.rollback()
-        print(f"✗ Transaction rolled back: {e}")
+        print(f"[ERROR] Transaction rolled back: {e}")
         raise ErasureError(f"Execution failed: {e}")
     
     finally:

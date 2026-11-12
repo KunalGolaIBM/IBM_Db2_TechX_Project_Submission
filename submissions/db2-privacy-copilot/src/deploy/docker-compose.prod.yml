@@ -1,0 +1,82 @@
+name: copilot
+
+services:
+  db2:
+    image: icr.io/db2_community/db2
+    privileged: true
+    restart: unless-stopped
+    environment:
+      LICENSE: accept
+      DB2INSTANCE: db2inst1
+      DB2INST1_PASSWORD: ${DB2_PASSWORD}
+      DBNAME: clinic
+    volumes:
+      - db2data:/database
+    networks:
+      - database
+    healthcheck:
+      test: ["CMD-SHELL", "su - db2inst1 -c 'db2 connect to clinic'"]
+      interval: 30s
+      timeout: 20s
+      retries: 30
+      start_period: 300s
+
+  api:
+    image: ghcr.io/${GH_OWNER}/copilot-api:${TAG:-latest}
+    restart: unless-stopped
+    env_file: ../.env
+    depends_on:
+      db2:
+        condition: service_healthy
+    networks:
+      - database
+      - frontend
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5)"
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+
+  ui:
+    image: ghcr.io/${GH_OWNER}/copilot-ui:${TAG:-latest}
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      API_BASE_URL: http://api:8000
+    depends_on:
+      db2:
+        condition: service_healthy
+    networks:
+      - frontend
+      - database
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      - api
+      - ui
+    networks:
+      - frontend
+
+networks:
+  database:
+    internal: true
+  frontend: {}
+
+volumes:
+  db2data: {}
+  caddy_data: {}

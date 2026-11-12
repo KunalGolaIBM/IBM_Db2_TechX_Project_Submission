@@ -2,6 +2,7 @@ services:
   db2:
     image: icr.io/db2_community/db2
     privileged: true
+    restart: unless-stopped
     ports:
       - "50000:50000"
     environment:
@@ -34,6 +35,10 @@ services:
       DB2_SCHEMA: DB2INST1
       DB_MOCK: "0"
       API_SECRET_KEY: ${API_SECRET_KEY:?Set API_SECRET_KEY in .env}
+      VIEWER_TOKEN: ${VIEWER_TOKEN:?Set VIEWER_TOKEN in .env}
+      ANALYST_TOKEN: ${ANALYST_TOKEN:?Set ANALYST_TOKEN in .env}
+      DPO_TOKEN: ${DPO_TOKEN:?Set DPO_TOKEN in .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8501,http://127.0.0.1:8501}
       API_HOST: 0.0.0.0
       API_PORT: "8000"
     depends_on:
@@ -68,6 +73,10 @@ services:
       DB2_SCHEMA: DB2INST1
       DB_MOCK: "0"
       API_SECRET_KEY: ${API_SECRET_KEY:?Set API_SECRET_KEY in .env}
+      API_BASE_URL: http://api:8000
+      VIEWER_TOKEN: ${VIEWER_TOKEN:?Set VIEWER_TOKEN in .env}
+      ANALYST_TOKEN: ${ANALYST_TOKEN:?Set ANALYST_TOKEN in .env}
+      DPO_TOKEN: ${DPO_TOKEN:?Set DPO_TOKEN in .env}
     depends_on:
       db2:
         condition: service_healthy

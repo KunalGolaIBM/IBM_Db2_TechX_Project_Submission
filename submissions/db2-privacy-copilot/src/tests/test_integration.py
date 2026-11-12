@@ -284,14 +284,23 @@ class TestErrorHandling:
         # Generate plan
         steps = erasure.plan(patient_id)
         
-        # Use a valid guarded UPDATE shape that fails only at Db2 execution.
-        for step in steps:
-            if step.sql and 'APPOINTMENT' in step.sql:
-                step.sql = (
-                    'UPDATE "DB2INST1"."APPOINTMENT" '
+        patient_step = next(s for s in steps if s.table == "PATIENT")
+        assert patient_step.sql, "PATIENT step has no SQL: PII_MAP is empty"
+
+        # Children run before PATIENT. Append a syntactically valid guarded
+        # UPDATE that Db2 rejects, then verify the earlier changes roll back.
+        steps.append(
+            erasure.Step(
+                table="APPOINTMENT",
+                action="ANONYMISE",
+                sql=(
+                    f'UPDATE "{settings.db2_schema}"."APPOINTMENT" '
                     'SET "NO_SUCH_COLUMN" = NULL WHERE "PATIENT_ID" = ?'
-                )
-                break
+                ),
+                reason="injected failure for rollback test",
+                est_rows=0,
+            )
+        )
         
         plan_hash_value = erasure.plan_hash(steps)
         
@@ -301,7 +310,7 @@ class TestErrorHandling:
         patient_count_before = cur.fetchone()[0]
         
         # Try to execute (should fail and rollback)
-        with pytest.raises(Exception):
+        with pytest.raises(erasure.ErasureError):
             erasure.execute(
                 steps,
                 patient_id,
@@ -314,8 +323,10 @@ class TestErrorHandling:
         cur.execute("SELECT COUNT(*) FROM PATIENT WHERE ID = ?", (patient_id,))
         patient_count_after = cur.fetchone()[0]
         assert patient_count_after == patient_count_before  # Still there!
-        cur.execute("SELECT FULL_NM FROM PATIENT WHERE ID = ?", (patient_id,))
-        assert cur.fetchone()[0] == "Integration Test"
+        cur.execute(
+            "SELECT FULL_NM, CUST_MAIL_ID FROM PATIENT WHERE ID = ?", (patient_id,)
+        )
+        assert cur.fetchone() == ("Integration Test", "integration@test.com")
 
 
 class TestEndToEndDemo:

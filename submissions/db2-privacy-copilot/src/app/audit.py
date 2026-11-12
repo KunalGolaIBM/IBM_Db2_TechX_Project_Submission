@@ -79,18 +79,21 @@ def compute_hash(
     return hashlib.sha256(hash_input.encode()).hexdigest()
 
 
-def get_latest_hash() -> str:
+def get_latest_hash(connection=None) -> str:
     """
     Get the hash of the most recent audit record.
     
     Returns:
         Hash string, or "GENESIS" if no records exist
     """
-    result = query(
-        "SELECT HASH FROM AUDIT_LOG ORDER BY ID DESC FETCH FIRST 1 ROW ONLY"
-    )
-    
-    if result and len(result) > 0:
+    if connection is not None:
+        cur = connection.cursor()
+        cur.execute("SELECT HASH FROM AUDIT_LOG ORDER BY ID DESC FETCH FIRST 1 ROW ONLY")
+        row = cur.fetchone()
+        return row[0] if row else "GENESIS"
+
+    result = query("SELECT HASH FROM AUDIT_LOG ORDER BY ID DESC FETCH FIRST 1 ROW ONLY")
+    if result:
         return result[0][0]
     
     return "GENESIS"
@@ -101,6 +104,7 @@ def append(
     action: str,
     subject: Optional[int] = None,
     detail: Optional[dict[str, Any]] = None,
+    connection=None,
 ) -> int:
     """
     Append a new audit record to the chain.
@@ -116,12 +120,15 @@ def append(
         
     Raises:
         Exception: If insertion fails
+
+    Passing an existing connection makes the audit row part of that
+    connection's transaction. The caller then owns commit and rollback.
     """
     if detail is None:
         detail = {}
     
     # Get previous hash
-    prev_hash = get_latest_hash()
+    prev_hash = get_latest_hash(connection)
     
     # Compute new hash
     new_hash = compute_hash(prev_hash, actor, action, subject, detail)
@@ -130,7 +137,8 @@ def append(
     detail_json = json.dumps(detail, sort_keys=True)
     
     # Insert record
-    c = conn()
+    owns_connection = connection is None
+    c = connection or conn()
     try:
         cur = c.cursor()
         cur.execute("""
@@ -142,10 +150,12 @@ def append(
         cur.execute("VALUES IDENTITY_VAL_LOCAL()")
         record_id = int(cur.fetchone()[0])
         
-        c.commit()
+        if owns_connection:
+            c.commit()
         return record_id
     finally:
-        c.close()
+        if owns_connection:
+            c.close()
 
 
 def get_all_records() -> list[AuditRecord]:

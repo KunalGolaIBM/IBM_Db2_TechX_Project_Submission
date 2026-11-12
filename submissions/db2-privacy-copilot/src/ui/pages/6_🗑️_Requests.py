@@ -1,80 +1,142 @@
-"""
-Rights Requests Page
-"""
-import streamlit as st
-import sys
+"""Create rights requests and review human approvals."""
+
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+import secrets
+import sys
 
-from app import agents
+import streamlit as st
 
-st.set_page_config(page_title="Requests", page_icon="🗑️", layout="wide")
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+from api_client import call_api  # noqa: E402
 
-if 'authenticated' not in st.session_state or not st.session_state.authenticated:
-    st.warning("Please log in first")
-    if st.button("Go to Login"):
+
+st.set_page_config(page_title="Rights requests", page_icon="🗑️", layout="wide")
+
+if not st.session_state.get("authenticated"):
+    st.warning("Please log in first.")
+    if st.button("Go to login"):
         st.switch_page("pages/1_🔐_Login.py")
     st.stop()
 
-st.title("🗑️ Rights Requests")
-st.markdown("Create and manage data subject rights requests (erasure, access)")
+role = st.session_state.get("user_role", "VIEWER")
+st.title("Rights requests")
+st.caption("Create a reviewable plan, then let an authorized DPO approve execution.")
 
-tab1, tab2 = st.tabs(["Create Request", "Approve Requests"])
+create_tab, approve_tab = st.tabs(["Create request", "Review approvals"])
 
-with tab1:
-    st.subheader("Create Erasure Request")
-    
-    subject_id = st.number_input("Subject ID (Patient ID)", min_value=1, step=1)
-    
-    if st.button("📋 Generate Plan", type="primary"):
-        with st.spinner("Generating erasure plan..."):
-            try:
-                result = agents.plan_erasure(subject_id)
-                
-                if 'error' in result:
-                    st.error(result['error'])
-                else:
-                    sim = result['simulation']
-                    
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("Total Steps", sim['total_steps'])
-                    with col2:
-                        st.metric("Total Rows", sim['total_rows'])
-                    with col3:
-                        if sim['has_unverified']:
-                            st.warning(f"⚠️ {sim['unverified_rules']} unverified rules")
-                        else:
-                            st.success("✓ All rules verified")
-                    
-                    st.markdown("### 📋 Execution Plan")
-                    
-                    for i, step in enumerate(result['steps'], 1):
-                        verified_icon = "✓" if step['rule_verified'] else "⚠️"
-                        
-                        with st.expander(f"{i}. {step['action']} {step['table']} ({step['est_rows']} rows)"):
-                            st.write(f"**Action:** {step['action']}")
-                            st.write(f"**Reason:** {step['reason']}")
-                            st.write(f"**Estimated Rows:** {step['est_rows']}")
-                            st.write(f"**Rule Verified:** {verified_icon}")
-                    
-                    st.info(f"**Plan Hash:** `{result['plan_hash']}`")
-                    st.warning("⚠️ This is a DRY RUN - no data has been modified")
-                    
-            except Exception as e:
-                st.error(f"Error: {e}")
-
-with tab2:
-    st.subheader("Approve Requests")
-    
-    if st.session_state.user_role != "DPO":
-        st.warning("DPO role required to approve requests")
+with create_tab:
+    st.subheader("Request erasure review")
+    if role == "VIEWER":
+        st.info("Analyst or DPO access is required to submit a request.")
     else:
-        st.info("In a production system, pending requests would be listed here for approval.")
-        st.markdown("""
-        **Approval Workflow:**
-        1. DPO reviews the plan
-        2. Guardrail validates SQL
-        3. Execution in single transaction
-        4. Audit trail records everything
-        """)
+        with st.form("create_erasure_request"):
+            subject_id = st.number_input("Patient ID", min_value=1, step=1)
+            submitted = st.form_submit_button(
+                "Create request for DPO review", type="primary"
+            )
+
+        if submitted:
+            try:
+                result = call_api(
+                    "POST",
+                    "/requests",
+                    role,
+                    {"subject_id": int(subject_id)},
+                )
+                st.session_state["last_request_plan"] = result
+                st.success("Request created. It is now waiting for DPO approval.")
+            except RuntimeError as error:
+                st.error(str(error))
+
+        result = st.session_state.get("last_request_plan")
+        if result:
+            st.markdown("#### Dry-run plan")
+            metrics = st.columns(3)
+            metrics[0].metric("Plan steps", result.get("total_steps", 0))
+            metrics[1].metric("Estimated rows", result.get("total_rows", 0))
+            metrics[2].metric(
+                "Retention review",
+                "Needed" if result.get("has_unverified") else "Verified",
+            )
+            for index, step in enumerate(result.get("steps", []), start=1):
+                with st.expander(
+                    f"{index}. {step['action']} {step['table']} "
+                    f"({step['est_rows']} estimated rows)"
+                ):
+                    st.write(step.get("reason", ""))
+                    st.caption(
+                        "Retention rule: "
+                        + ("verified" if step.get("rule_verified") else "unverified")
+                    )
+            st.caption(f"Plan hash: `{result.get('plan_hash', 'unavailable')}`")
+
+with approve_tab:
+    st.subheader("Pending DPO approvals")
+    if role != "DPO":
+        st.info("Pending requests can be reviewed here. DPO access is required to approve.")
+
+    try:
+        pending = call_api("GET", "/requests?status_filter=PENDING_APPROVAL", role)
+        requests = pending.get("requests", [])
+        if not requests:
+            st.success("There are no requests waiting for approval.")
+
+        for request in requests:
+            request_id = request["id"]
+            details = call_api("GET", f"/requests/{request_id}", role)
+            with st.container(border=True):
+                heading = st.columns([2, 1, 1])
+                heading[0].markdown(f"**Request #{request_id}** · {details['type']}")
+                heading[1].write(f"Subject ID: `{details['plan']['subject_id']}`")
+                heading[2].write(f"Due: {details['due_at']}")
+
+                plan = details.get("plan") or {}
+                steps = plan.get("steps", [])
+                st.caption(f"Plan hash: `{details.get('plan_hash', '')}`")
+                if plan.get("simulation", {}).get("has_unverified"):
+                    st.warning("This plan includes unverified retention rules.")
+                for step in steps:
+                    st.write(
+                        f"**{step['action']} {step['table']}** · "
+                        f"{step['est_rows']} estimated rows · {step['reason']}"
+                    )
+
+                if role == "DPO":
+                    token_key = f"approval_id_{request_id}"
+                    st.session_state.setdefault(token_key, secrets.token_hex(16))
+                    with st.form(f"approve_request_{request_id}"):
+                        approval_id = st.text_input(
+                            "Approval reference",
+                            value=st.session_state[token_key],
+                            help="A unique reference is recorded with this approval.",
+                        )
+                        confirmed = st.checkbox(
+                            "I reviewed this plan and approve the listed actions."
+                        )
+                        approve = st.form_submit_button(
+                            "Approve and execute", type="primary"
+                        )
+
+                    if approve:
+                        if not confirmed:
+                            st.error("Confirm that you reviewed the plan before approving.")
+                        elif not approval_id.strip():
+                            st.error("Enter an approval reference.")
+                        else:
+                            try:
+                                outcome = call_api(
+                                    "POST",
+                                    f"/requests/{request_id}/approve",
+                                    role,
+                                    {"approval_id": approval_id.strip()},
+                                )
+                                st.success(
+                                    f"Request completed for subject "
+                                    f"{outcome['subject_id']}. The action was audited."
+                                )
+                                st.rerun()
+                            except RuntimeError as error:
+                                st.error(str(error))
+    except RuntimeError as error:
+        st.error(str(error))
