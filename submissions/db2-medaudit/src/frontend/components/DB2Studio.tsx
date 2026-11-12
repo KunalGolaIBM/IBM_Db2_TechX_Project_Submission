@@ -184,10 +184,10 @@ export const DB2Studio: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSqlQuery('SELECT * FROM LAB_COMMISSION_CONTRACTS WHERE COMMISSION_PCT >= 30.0')}
+                  onClick={() => setSqlQuery('SELECT * FROM LAB_COMMISSION_CONTRACTS WHERE COMMISSION_PCT >= 30.0 ORDER BY COMMISSION_PCT DESC')}
                   className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px]"
                 >
-                  High Kickbacks &gt;= 30%
+                  High Kickbacks ≥ 30%
                 </button>
                 <button
                   type="button"
@@ -198,10 +198,24 @@ export const DB2Studio: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSqlQuery('SELECT * FROM TEST_CATALOG WHERE CATEGORY = \'Radiology\'')}
+                  onClick={() => setSqlQuery("SELECT * FROM TEST_CATALOG WHERE CATEGORY = 'Radiology' ORDER BY BENCHMARK_PRICE DESC")}
                   className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px]"
                 >
                   Radiology Benchmarks
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSqlQuery("SELECT D.FULL_NAME, D.SUSPICION_SCORE, C.LAB_NAME, C.COMMISSION_PCT, C.KICKBACK_TYPE\nFROM DOCTORS D\nJOIN LAB_COMMISSION_CONTRACTS C ON D.DOCTOR_ID = C.DOCTOR_ID\nWHERE C.COMMISSION_PCT >= 35.0\nORDER BY C.COMMISSION_PCT DESC")}
+                  className="px-2 py-1 bg-sky-100 hover:bg-sky-200 text-sky-800 rounded text-[11px] font-semibold"
+                >
+                  JOIN: Doctor ↔ Kickback
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSqlQuery('SELECT * FROM DIAGNOSTIC_LABS ORDER BY AVG_MARKUP_PCT DESC')}
+                  className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px]"
+                >
+                  Labs by Markup
                 </button>
               </div>
             </div>

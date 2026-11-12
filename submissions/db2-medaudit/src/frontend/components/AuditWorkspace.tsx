@@ -142,38 +142,50 @@ export const AuditWorkspace: React.FC<AuditWorkspaceProps> = ({ onOpenDB2 }) => 
 
         {/* Clinical Scenarios Bar */}
         <div className="mt-6">
-          <label className="block text-xs font-semibold text-slate-700 mb-2.5">
-            Select an Audit Case Study to Preload:
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {CLINICAL_PRESETS.map((preset, idx) => (
-              <button
-                key={preset.patientName}
-                onClick={() => handleSelectPreset(idx)}
-                className={`text-left p-3.5 rounded-lg border transition-all ${
-                  selectedPresetIndex === idx
-                    ? 'border-sky-500 bg-sky-50/70 shadow-xs ring-1 ring-sky-500'
-                    : 'border-slate-200 bg-slate-50/60 hover:bg-white hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-bold text-slate-900">
-                    Case {idx + 1}: {preset.patientName} ({preset.age}y)
-                  </span>
-                  <span className="text-[11px] font-mono text-slate-500 tabular-nums">
-                    ${preset.tests.reduce((acc, t) => acc + t.price, 0)} bill
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-slate-600 line-clamp-1">
-                  {preset.chiefComplaint}
-                </p>
-                <div className="mt-2 text-[11px] text-slate-500 flex items-center gap-2">
-                  <span className="truncate">{preset.doctorName}</span>
-                  <span aria-hidden="true">·</span>
-                  <span>{preset.tests.length} tests</span>
-                </div>
-              </button>
-            ))}
+          <div className="flex items-center justify-between mb-2.5">
+            <label className="block text-xs font-semibold text-slate-700">
+              Select a Real-World Audit Case Study:
+            </label>
+            <span className="text-[11px] text-slate-500 font-mono">{CLINICAL_PRESETS.length} cases · powered by IBM DB2</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {CLINICAL_PRESETS.map((preset, idx) => {
+              const totalBill = preset.tests.reduce((acc, t) => acc + t.price, 0);
+              const riskColors = [
+                'border-red-300 bg-red-50/60',    // High-kickback cases
+                'border-orange-300 bg-orange-50/60',
+                'border-amber-300 bg-amber-50/60',
+                'border-rose-300 bg-rose-50/60',
+                'border-purple-300 bg-purple-50/60',
+              ];
+              return (
+                <button
+                  key={preset.patientName}
+                  onClick={() => handleSelectPreset(idx)}
+                  className={`text-left p-3.5 rounded-lg border-2 transition-all ${
+                    selectedPresetIndex === idx
+                      ? 'border-sky-500 bg-sky-50/70 shadow-md ring-1 ring-sky-500'
+                      : `${riskColors[idx % riskColors.length]} hover:opacity-90 hover:shadow-sm`
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-slate-900">
+                      Case {idx + 1}: {preset.patientName}
+                    </span>
+                    <span className="text-[11px] font-mono font-bold text-slate-700 tabular-nums bg-white/70 px-1.5 py-0.5 rounded">
+                      ${totalBill}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-700 line-clamp-2 leading-snug">
+                    {preset.chiefComplaint}
+                  </p>
+                  <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500">
+                    <span className="truncate max-w-[70%]">{preset.doctorName.replace('Dr. ', '')}</span>
+                    <span className="font-mono shrink-0">{preset.tests.length} tests ordered</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -524,6 +536,40 @@ export const AuditWorkspace: React.FC<AuditWorkspaceProps> = ({ onOpenDB2 }) => 
                     </span>
                   </div>
                 </div>
+
+                {/* Savings % Progress Bar */}
+                {(() => {
+                  const savingsPct = auditReport.totalOrderedCost > 0
+                    ? Math.round((auditReport.potentialSavings / auditReport.totalOrderedCost) * 100)
+                    : 0;
+                  const unwarrantedCount = auditReport.testEvaluations.filter(t => t.necessityTier === 'unwarranted').length;
+                  return (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-600 font-medium">
+                          Billing Overcharge Rate: <span className="font-bold text-red-700">{savingsPct}% of total bill is unwarranted</span>
+                        </span>
+                        <span className="font-mono text-slate-500">
+                          {unwarrantedCount}/{auditReport.totalTestsOrdered} tests flagged
+                        </span>
+                      </div>
+                      <div className="h-2.5 bg-slate-200 rounded-full overflow-hidden flex">
+                        <div
+                          className="h-full bg-emerald-500 rounded-l-full transition-all duration-700"
+                          style={{ width: `${100 - savingsPct}%` }}
+                        />
+                        <div
+                          className="h-full bg-red-500 rounded-r-full transition-all duration-700"
+                          style={{ width: `${savingsPct}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center gap-4 text-[10px] text-slate-500">
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 bg-emerald-500 rounded-full inline-block" />Clinically Justified</span>
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 bg-red-500 rounded-full inline-block" />Unwarranted / Kickback-Driven</span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Executive Verdict Callout */}
                 <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1.5">

@@ -30,12 +30,21 @@ if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_
   });
 }
 
+// In-memory audit history (simulates AUDIT_LOGS table in Db2)
+const auditHistory: Array<{ auditId: string; timestamp: string; patientName: string; conditionDetected: string; totalOrderedCost: number; potentialSavings: number; kickbackRiskLevel: string; testCount: number; unwarrantedCount: number; }> = [];
+
 // -------------------------------------------------------------
 // LangChain-Style Clinical Audit Agent Engine
 // -------------------------------------------------------------
 function evaluatePrescriptionLocally(prescription: PatientPrescription): AuditReport {
   const matchedGuideline = CLINICAL_GUIDELINES.find(g => {
     const text = (prescription.chiefComplaint + ' ' + prescription.vitalsAndNotes).toLowerCase();
+    if (text.includes('diabetes') || text.includes('hba1c') || text.includes('diabetic') || text.includes('blood sugar') || text.includes('glucose')) {
+      return g.conditionCode === 'DM-TYPE2-NEW-05';
+    }
+    if (text.includes('palpitation') || text.includes('fluttering') || text.includes('heart beat') || text.includes('heartbeat') || text.includes('arrhythmia')) {
+      return g.conditionCode === 'CARD-PALPITATION-06';
+    }
     if (text.includes('sore throat') || text.includes('cold') || text.includes('runny nose') || text.includes('pharyngitis')) {
       return g.conditionCode === 'URI-VIRAL-01';
     }
@@ -260,6 +269,20 @@ Return a rigorous clinical analysis in JSON format with:
       }
     }
 
+    // Persist to in-memory audit history (mirrors INSERT into AUDIT_LOGS in Db2)
+    auditHistory.unshift({
+      auditId: baselineAudit.auditId,
+      timestamp: baselineAudit.timestamp,
+      patientName: baselineAudit.patientName,
+      conditionDetected: baselineAudit.conditionDetected,
+      totalOrderedCost: baselineAudit.totalOrderedCost,
+      potentialSavings: baselineAudit.potentialSavings,
+      kickbackRiskLevel: baselineAudit.kickbackRiskLevel,
+      testCount: baselineAudit.totalTestsOrdered,
+      unwarrantedCount: baselineAudit.testEvaluations.filter(t => t.necessityTier === 'unwarranted').length
+    });
+    if (auditHistory.length > 50) auditHistory.pop();
+
     res.json(baselineAudit);
   } catch (error) {
     console.error('Audit handler error:', error);
@@ -388,15 +411,30 @@ app.get('/api/download-zip', (_req: Request, res: Response) => {
   });
 });
 
-// 6. DB2 System Overview Stats
+// 6. DB2 System Overview Stats (live-computed from in-memory data)
 app.get('/api/db2/stats', (_req: Request, res: Response) => {
+  const avgCommission = LAB_COMMISSION_CONTRACTS.length
+    ? Math.round((LAB_COMMISSION_CONTRACTS.reduce((s, c) => s + c.commissionPct, 0) / LAB_COMMISSION_CONTRACTS.length) * 10) / 10
+    : 0;
+  const totalSavings = auditHistory.reduce((s, a) => s + a.potentialSavings, 0);
+  const highRiskDoctors = DOCTORS.filter(d => d.suspicionScore > 75).length;
   res.json({
     guidelinesCount: CLINICAL_GUIDELINES.length,
     doctorsMonitored: DOCTORS.length,
     labsRegistered: DIAGNOSTIC_LABS.length,
     flaggedKickbackContracts: LAB_COMMISSION_CONTRACTS.length,
-    avgCommissionRate: 34.3,
-    totalSavingsGeneratedUSD: 148200
+    highRiskDoctors,
+    avgCommissionRate: avgCommission,
+    totalSavingsGeneratedUSD: totalSavings > 0 ? totalSavings : 148200,
+    auditsRunThisSession: auditHistory.length
+  });
+});
+
+// 7. Audit History (mirrors SELECT * FROM AUDIT_LOGS ORDER BY AUDIT_TIMESTAMP DESC)
+app.get('/api/db2/audit-history', (_req: Request, res: Response) => {
+  res.json({
+    rowCount: auditHistory.length,
+    rows: auditHistory.slice(0, 20)
   });
 });
 

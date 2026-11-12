@@ -21,6 +21,33 @@ export const KickbackMatrix: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       
+      {/* Financial Impact Summary Banner */}
+      {(() => {
+        const totalDoctors = DOCTORS.length;
+        const highRiskDoctors = DOCTORS.filter(d => d.suspicionScore > 75).length;
+        const totalContracts = LAB_COMMISSION_CONTRACTS.length;
+        const avgCommission = Math.round(LAB_COMMISSION_CONTRACTS.reduce((s, c) => s + c.commissionPct, 0) / totalContracts * 10) / 10;
+        const maxCommission = Math.max(...LAB_COMMISSION_CONTRACTS.map(c => c.commissionPct));
+        const unaccreditedLabs = DIAGNOSTIC_LABS.filter(l => l.accreditation === 'Unaccredited').length;
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              { label: 'Doctors Monitored', value: totalDoctors, color: 'text-slate-900', bg: 'bg-white border-slate-200' },
+              { label: 'High-Risk Physicians', value: highRiskDoctors, color: 'text-red-700', bg: 'bg-red-50 border-red-200' },
+              { label: 'Active Kickback Ties', value: totalContracts, color: 'text-rose-700', bg: 'bg-rose-50 border-rose-200' },
+              { label: 'Avg Commission Rate', value: `${avgCommission}%`, color: 'text-orange-700', bg: 'bg-orange-50 border-orange-200' },
+              { label: 'Max Commission Found', value: `${maxCommission}%`, color: 'text-red-800', bg: 'bg-red-100 border-red-300' },
+              { label: 'Unaccredited Labs', value: unaccreditedLabs, color: 'text-slate-700', bg: 'bg-slate-50 border-slate-200' },
+            ].map(stat => (
+              <div key={stat.label} className={`p-3.5 rounded-xl border ${stat.bg} text-center`}>
+                <span className={`text-xl font-extrabold font-mono tabular-nums block ${stat.color}`}>{stat.value}</span>
+                <span className="text-[10px] text-slate-500 mt-0.5 block leading-tight">{stat.label}</span>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* Header & Context */}
       <div className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-100">
@@ -42,7 +69,7 @@ export const KickbackMatrix: React.FC = () => {
             <AlertOctagon className="w-5 h-5 text-rose-600 shrink-0" />
             <div>
               <span className="font-bold text-rose-900 block">Avg Flagged Referral Commission</span>
-              <span className="font-mono text-base font-extrabold text-rose-700 tabular-nums">34.3% per test</span>
+              <span className="font-mono text-base font-extrabold text-rose-700 tabular-nums">{Math.round(LAB_COMMISSION_CONTRACTS.reduce((s, c) => s + c.commissionPct, 0) / LAB_COMMISSION_CONTRACTS.length * 10) / 10}% per test</span>
             </div>
           </div>
         </div>

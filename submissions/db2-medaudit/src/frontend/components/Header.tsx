@@ -1,5 +1,5 @@
-import React from 'react';
-import { ShieldAlert, Database, Stethoscope, FileCode2, Network, Download } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ShieldAlert, Database, Stethoscope, FileCode2, Network, Download, Activity } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'audit' | 'matrix' | 'db2' | 'setup';
@@ -8,8 +8,34 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ activeTab, onSelectTab, onQuickAuditClick }) => {
+  const [stats, setStats] = useState<{ guidelinesCount: number; doctorsMonitored: number; flaggedKickbackContracts: number; highRiskDoctors: number; avgCommissionRate: number; auditsRunThisSession: number } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/db2/stats')
+      .then(r => r.json())
+      .then(setStats)
+      .catch(() => null);
+  }, []);
+
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
+      {/* DB2 Live Stats Ribbon */}
+      {stats && (
+        <div className="bg-slate-900 text-slate-300 text-[10px] font-mono border-b border-slate-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-7 flex items-center gap-6 overflow-x-auto">
+            <span className="flex items-center gap-1.5 text-sky-400 font-semibold whitespace-nowrap shrink-0">
+              <Activity className="w-3 h-3" />
+              IBM DB2 LIVE
+            </span>
+            <span className="whitespace-nowrap shrink-0">Guidelines: <span className="text-white font-bold">{stats.guidelinesCount}</span></span>
+            <span className="whitespace-nowrap shrink-0">Doctors Monitored: <span className="text-white font-bold">{stats.doctorsMonitored}</span></span>
+            <span className="whitespace-nowrap shrink-0">High-Risk Physicians: <span className="text-red-400 font-bold">{stats.highRiskDoctors}</span></span>
+            <span className="whitespace-nowrap shrink-0">Kickback Contracts: <span className="text-rose-400 font-bold">{stats.flaggedKickbackContracts}</span></span>
+            <span className="whitespace-nowrap shrink-0">Avg Commission: <span className="text-orange-400 font-bold">{stats.avgCommissionRate}%</span></span>
+            <span className="whitespace-nowrap shrink-0">Audits This Session: <span className="text-emerald-400 font-bold">{stats.auditsRunThisSession}</span></span>
+          </div>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-8">
         
         {/* Zone 1: Single text element wordmark with icon */}

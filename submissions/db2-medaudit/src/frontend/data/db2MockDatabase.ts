@@ -86,6 +86,56 @@ export const CLINICAL_GUIDELINES: ClinicalGuideline[] = [
     clinicalRationale: 'Young patients presenting with typical reflux or dyspepsia should be managed with lifestyle modification, H. pylori testing, and empiric PPI therapy. Directing them to immediate multi-slice abdominal CT scans or tumor markers is unwarranted and heavily prone to kickback arrangements.'
   },
   {
+    guidelineId: 'CG-DIAB-05',
+    conditionCode: 'DM-TYPE2-NEW-05',
+    conditionName: 'Newly Diagnosed Type 2 Diabetes Mellitus (HbA1c 6.5–8.5%, No Complications)',
+    authority: 'American Diabetes Association (ADA Standards of Care 2024) & WHO Diabetes Programme',
+    indicatedTests: [
+      'HbA1c (Glycated Haemoglobin)',
+      'Fasting Plasma Glucose',
+      'Serum Creatinine & eGFR',
+      'Urine Albumin-to-Creatinine Ratio (UACR)',
+      'Fasting Lipid Profile',
+      'Resting ECG (if age > 40 or cardiac risk factors)',
+      'Dilated Fundoscopy at baseline'
+    ],
+    conditionalTests: [
+      'Thyroid Function Tests (TSH) — if symptoms of thyroid dysfunction',
+      'Liver Function Tests (LFT) — if starting metformin with hepatic risk'
+    ],
+    unwarrantedOrContraindicated: [
+      'Coronary CT Angiography (CCTA) — in asymptomatic newly diagnosed without cardiac symptoms',
+      'Comprehensive Whole Exome Genetic Panel — for standard T2DM without MODY suspicion',
+      'Brain MRI / Cognitive Battery — in uncomplicated newly diagnosed diabetes',
+      'Gastric Emptying Scintigraphy — without symptoms of gastroparesis'
+    ],
+    clinicalRationale: 'Newly diagnosed Type 2 Diabetes requires a focused baseline metabolic, renal, lipid, and ophthalmological work-up per ADA standards. Advanced cardiac imaging and genetic sequencing in the absence of clinical indication generate no actionable diagnostic change and represent a documented high-value kickback opportunity in diabetology practices.'
+  },
+  {
+    guidelineId: 'CG-CARD-06',
+    conditionCode: 'CARD-PALPITATION-06',
+    conditionName: 'Intermittent Palpitations with Normal Resting ECG (Age < 45, No Structural Heart Disease)',
+    authority: 'European Heart Rhythm Association (EHRA) & Heart Rhythm Society (HRS) Consensus 2023',
+    indicatedTests: [
+      'Resting 12-Lead ECG',
+      'Holter Monitor (24–48 hour ambulatory ECG)',
+      'Serum Electrolytes (K+, Mg2+)',
+      'Thyroid Function Tests (TSH, Free T4)',
+      'Complete Blood Count (CBC) — to rule out anaemia-related palpitations'
+    ],
+    conditionalTests: [
+      '2D Transthoracic Echocardiogram — if ECG shows pre-excitation, LBBB, or structural abnormality suspected',
+      'Event Monitor / Implantable Loop Recorder — if palpitations infrequent and Holter non-diagnostic'
+    ],
+    unwarrantedOrContraindicated: [
+      'Cardiac MRI with Gadolinium — without structural disease on Echo',
+      'Coronary CT Angiography (CCTA) — without anginal symptoms or ischaemia evidence',
+      'Electrophysiology Study (EPS) — as first-line in non-sustained low-risk palpitations',
+      'Cardiac PET Perfusion Scan'
+    ],
+    clinicalRationale: 'Palpitations in young adults with normal resting ECG are overwhelmingly benign ectopic beats. A structured 24-48hr Holter monitor with basic metabolic and thyroid testing identifies clinically significant arrhythmias in 95% of cases. Cardiac MRI or CCTA without structural evidence represents overutilization driven by imaging center referral incentives.'
+  },
+  {
     guidelineId: 'CG-CARD-05',
     conditionCode: 'CARD-HTN-05',
     conditionName: 'Essential Hypertension (Routine Stage 1 Follow-Up)',
@@ -169,6 +219,22 @@ export const DIAGNOSTIC_LABS: DiagnosticLab[] = [
     city: 'Academic Health Corridor',
     avgMarkupPct: 8,
     activeKickbackContracts: 0
+  },
+  {
+    labId: 'LAB-SUGAR-05',
+    name: 'GlucoMax Specialty Diagnostics & Genomics Center',
+    accreditation: 'NABL',
+    city: 'Diabetes Care District',
+    avgMarkupPct: 62,
+    activeKickbackContracts: 18
+  },
+  {
+    labId: 'LAB-HEART-06',
+    name: 'CardioVision Advanced Cardiac Imaging Suite',
+    accreditation: 'Unaccredited',
+    city: 'Cardiac Sciences Hub',
+    avgMarkupPct: 80,
+    activeKickbackContracts: 11
   }
 ];
 
@@ -212,6 +278,36 @@ export const DOCTORS: DoctorProfile[] = [
     activeContractsCount: 2,
     totalPrescriptionsAudited: 280,
     unnecessaryPrescriptionRate: 51.5
+  },
+  {
+    doctorId: 'DOC-REDDY-105',
+    name: 'Dr. Preethi Reddy',
+    specialty: 'Diabetology & Endocrinology',
+    hospital: 'SugarCare Diabetes & Metabolic Clinic',
+    suspicionScore: 91,
+    activeContractsCount: 4,
+    totalPrescriptionsAudited: 490,
+    unnecessaryPrescriptionRate: 72.8
+  },
+  {
+    doctorId: 'DOC-BOSE-106',
+    name: 'Dr. Aniket Bose',
+    specialty: 'Cardiology',
+    hospital: 'HeartFirst Cardiac Sciences',
+    suspicionScore: 68,
+    activeContractsCount: 2,
+    totalPrescriptionsAudited: 188,
+    unnecessaryPrescriptionRate: 44.1
+  },
+  {
+    doctorId: 'DOC-NAIR-107',
+    name: 'Dr. Meera Nair',
+    specialty: 'General Practice & Preventive Medicine',
+    hospital: 'Greenfield Community Clinic',
+    suspicionScore: 8,
+    activeContractsCount: 0,
+    totalPrescriptionsAudited: 634,
+    unnecessaryPrescriptionRate: 4.2
   }
 ];
 
@@ -259,6 +355,39 @@ export const LAB_COMMISSION_CONTRACTS: LabCommissionContract[] = [
     commissionPct: 32.5,
     kickbackType: 'Sponsored Conference / Gift',
     lastAuditDate: '2026-07-28'
+  },
+  {
+    contractId: 'KICK-2025-05',
+    doctorId: 'DOC-REDDY-105',
+    doctorName: 'Dr. Preethi Reddy',
+    labId: 'LAB-SUGAR-05',
+    labName: 'GlucoMax Specialty Diagnostics & Genomics Center',
+    testCategory: 'Genetics',
+    commissionPct: 45.0,
+    kickbackType: 'Direct Fee Per Referral',
+    lastAuditDate: '2026-10-05'
+  },
+  {
+    contractId: 'KICK-2025-06',
+    doctorId: 'DOC-REDDY-105',
+    doctorName: 'Dr. Preethi Reddy',
+    labId: 'LAB-METRO-01',
+    labName: 'MetroScan Premium Diagnostics & Advanced Imaging',
+    testCategory: 'Radiology',
+    commissionPct: 38.0,
+    kickbackType: 'End-of-Month Volume Rebate',
+    lastAuditDate: '2026-10-12'
+  },
+  {
+    contractId: 'KICK-2025-07',
+    doctorId: 'DOC-BOSE-106',
+    doctorName: 'Dr. Aniket Bose',
+    labId: 'LAB-HEART-06',
+    labName: 'CardioVision Advanced Cardiac Imaging Suite',
+    testCategory: 'Cardiology',
+    commissionPct: 42.0,
+    kickbackType: 'Direct Fee Per Referral',
+    lastAuditDate: '2026-09-30'
   }
 ];
 
@@ -314,6 +443,45 @@ export const CLINICAL_PRESETS: PatientPrescription[] = [
       { testName: 'Brain MRI with Contrast', category: 'Radiology', price: 380 },
       { testName: 'Whole Abdomen CT with IV Contrast', category: 'Radiology', price: 340 },
       { testName: 'Full Blood Allergy IgE Battery (32 Allergens Panel)', category: 'Biochemistry', price: 250 }
+    ]
+  },
+  {
+    patientName: 'Sunita Desai',
+    age: 44,
+    gender: 'Female',
+    chiefComplaint: 'Newly diagnosed diabetes (HbA1c 7.2%). Referred for baseline screening panel.',
+    symptomDuration: '2 weeks since diagnosis',
+    vitalsAndNotes: 'BMI 27.4, BP 128/82, HR 78, no retinopathy on fundoscopy. Asymptomatic. No family history of cardiac disease. eGFR 88.',
+    doctorName: 'Dr. Preethi Reddy',
+    doctorSpecialty: 'Diabetology & Endocrinology',
+    hospitalName: 'SugarCare Diabetes & Metabolic Clinic',
+    recommendedLabName: 'GlucoMax Specialty Diagnostics & Genomics Center',
+    tests: [
+      { testName: 'HbA1c (Glycated Haemoglobin)', category: 'Biochemistry', price: 35 },
+      { testName: 'Fasting Lipid Profile', category: 'Biochemistry', price: 28 },
+      { testName: 'Renal Function Test (BUN, Creatinine, Electrolytes)', category: 'Biochemistry', price: 32 },
+      { testName: 'Coronary CT Angiography (64-Slice)', category: 'Radiology', price: 520 },
+      { testName: 'Comprehensive Whole Exome Metabolic Panel', category: 'Genetics', price: 680 },
+      { testName: 'Multiplex Tumor Marker Battery (CEA, CA-125, PSA, AFP)', category: 'Biochemistry', price: 310 }
+    ]
+  },
+  {
+    patientName: 'Rohan Pillai',
+    age: 33,
+    gender: 'Male',
+    chiefComplaint: 'Occasional heart palpitations — 10–15 second episodes of "fluttering" 2–3 times per week. No syncope.',
+    symptomDuration: '3 weeks',
+    vitalsAndNotes: 'Normal resting 12-lead ECG. HR 72 bpm, BP 120/78. No murmur, no peripheral oedema. No exertional dyspnoea. No family history of sudden cardiac death.',
+    doctorName: 'Dr. Aniket Bose',
+    doctorSpecialty: 'Cardiology',
+    hospitalName: 'HeartFirst Cardiac Sciences',
+    recommendedLabName: 'CardioVision Advanced Cardiac Imaging Suite',
+    tests: [
+      { testName: 'Resting 12-Lead Electrocardiogram', category: 'Cardiology', price: 28 },
+      { testName: 'Resting 12-Lead Electrocardiogram', category: 'Cardiology', price: 28 },
+      { testName: 'Cardiac MRI with Gadolinium Contrast', category: 'Radiology', price: 580 },
+      { testName: 'Coronary CT Angiography (64-Slice)', category: 'Radiology', price: 490 },
+      { testName: 'Full Blood Allergy IgE Battery (32 Allergens Panel)', category: 'Biochemistry', price: 240 }
     ]
   }
 ];
