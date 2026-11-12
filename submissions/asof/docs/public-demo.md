@@ -12,7 +12,7 @@ Each request to `POST /api/gate` (the Playground's "Check my own draft") and `PO
 | Anything else, and a live check can start | A live check by OpenRouter, the full check graph, recorded in the ledger like any other decision (`MODEL_INFO` names the live model) | About four to eight model calls |
 | Anything else, and a live check cannot start | Refused with the reason (below). Nothing is checked, recorded or sent | Nothing |
 
-The recorded inputs are read from the recording's own list of checks (`scenarios.checks`), so the routing and the replay keys agree; a test checks that every one of them routes to replay. The specialist inbox's reply check, Ask the ledger and policy intake stay replay-only, and the routing agent stays off (`doc_id: "auto"` routes by Db2's vote alone and sends close calls to a person).
+The recorded inputs are read from the recording's own list of checks (`scenarios.checks`), so the routing and the replay keys agree; a test checks that every one of them routes to replay. The specialist inbox's reply check, Ask the ledger and policy intake stay replay-only, and for `doc_id: "auto"` Db2's vote decides clear cases while a close call on new input is looked at again by the routing agent on the live model (the measured one), inside the same capped, metered live check, so it counts toward the day's cap and the visitor's limits.
 
 ## The layers, in the order a live check meets them
 

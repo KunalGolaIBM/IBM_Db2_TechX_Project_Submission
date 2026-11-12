@@ -103,6 +103,10 @@ class LiveGate:
         return GateResult("rid", "PASS", "NO_POLICY_CLAIMS", req.draft_answer, [], [], None, 3, self.llm.info,
                           ledger_id=8)
 
+    def hold(self, req, reason, model):
+        self.seen.append(req)
+        return GateResult("rid", "ESCALATED", reason, HOLDING_REPLY, [], [], None, 0, model, ledger_id=9, released=False)
+
 
 class LiveAssistant:
     def __init__(self, llm, seen):
@@ -479,3 +483,52 @@ def test_outside_live_mode_the_demo_is_unchanged(no_db):
     assert c.post("/api/gate", json=long_draft).status_code == 200  # the replay gate; no live limits apply
     h = c.get("/healthz").json()
     assert h["live_checks"] is None and h["live_model"] is None
+
+
+# ---------- routing a close call on the public demo ----------
+
+class FakeRouter:
+    """The replay router (no model) sees a close call; the routing agent, given the live model, picks a document."""
+
+    built: list = []
+
+    def __init__(self, embeddings, connect, schema, llm=None):
+        self.llm = llm
+        FakeRouter.built.append(llm)
+
+    def route(self, question, draft, as_of):
+        from asof.router import Route
+        if self.llm is None:
+            return Route(None, "ask", "a close call and no model", "INDIAN-RAIL-REFUNDS",
+                         {"INDIAN-RAIL-REFUNDS": 0.34, "AURELIA-CSP": 0.36}, 0.02)
+        return Route("INDIAN-RAIL-REFUNDS", "db2+agent", "the agent picked the rail rules", "INDIAN-RAIL-REFUNDS",
+                     {"INDIAN-RAIL-REFUNDS": 0.34, "AURELIA-CSP": 0.36}, 0.02)
+
+
+def test_a_close_call_on_new_input_is_routed_by_the_live_agent_inside_a_capped_check(no_db, monkeypatch):
+    FakeRouter.built = []
+    monkeypatch.setattr("asof.router.Router", FakeRouter)
+    monkeypatch.setattr("asof.api.get_embeddings", lambda name: None)
+    monkeypatch.setattr("asof.router.agent_runs", lambda mode, info: info.startswith("openrouter:"))
+    spend, seen = FakeSpend(), []
+    c = app_with(make_live(spend=spend, seen=seen))
+    r = c.post("/api/gate", headers=ip("203.0.113.40"),
+               json={"question": "I cancel my train ticket 30 hours before departure. What do I get back?",
+                     "draft_answer": "Only the flat charge is deducted.", "as_of_date": "2026-06-10", "doc_id": "auto"})
+    assert r.status_code == 200, r.text
+    assert r.json()["route"]["doc_id"] == "INDIAN-RAIL-REFUNDS" and r.json()["route"]["method"] == "db2+agent"
+    assert [req.doc_id for req in seen] == ["INDIAN-RAIL-REFUNDS"]          # checked live, against the rail rules
+    assert FakeRouter.built[-1] is not None                                    # the agent had the metered live model
+    assert spend.used == 1                                                     # one live check, under the Db2 cap
+
+
+def test_a_close_call_is_held_when_the_live_model_is_not_a_measured_one(no_db, monkeypatch):
+    FakeRouter.built = []
+    monkeypatch.setattr("asof.router.Router", FakeRouter)
+    monkeypatch.setattr("asof.api.get_embeddings", lambda name: None)
+    monkeypatch.setattr("asof.router.agent_runs", lambda mode, info: False)
+    c = app_with(make_live())
+    r = c.post("/api/gate", headers=ip("203.0.113.41"),
+               json={"question": "I cancel my train ticket 30 hours before departure. What do I get back?",
+                     "draft_answer": "Only the flat charge is deducted.", "as_of_date": "2026-06-10", "doc_id": "auto"})
+    assert r.status_code == 503 and r.json()["reason_code"] == "ROUTE_UNCERTAIN"

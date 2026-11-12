@@ -599,9 +599,23 @@ def create_app(settings: Settings | None = None, *, gate: Gate | None = None, as
             return respond(run_gate(g, GateRequest(body.question, body.draft_answer, body.as_of_date, body.doc_id,
                                                    body.channel, requested_by(request)), request))
         r = doc_router().route(body.question, body.draft_answer, body.as_of_date)
-        req = GateRequest(body.question, body.draft_answer, body.as_of_date, r.doc_id or r.leader, body.channel,
-                          requested_by(request), r.as_json())
-        result = run_gate(g, req, request) if r.doc_id else g.hold(req, "ROUTE_UNCERTAIN", f"router:{r.method}")
+        if r.doc_id is None and live is not None:
+            # A close call on the public demo (its replay router has no model): look again with the live, measured
+            # model as the routing agent, inside one capped and metered live check, so the routing call counts toward
+            # the day's cap and the visitor's limits like any other live call.
+            with live.check(client_address(request)) as session:
+                meter = session.meter
+                if meter is not None and router.agent_runs(settings.asof_router_agent, meter.info):
+                    r = router.Router(get_embeddings(settings.embedding_model), app_conn, schema, meter).route(
+                        body.question, body.draft_answer, body.as_of_date)
+                req = GateRequest(body.question, body.draft_answer, body.as_of_date, r.doc_id or r.leader, body.channel,
+                                  requested_by(request), r.as_json())
+                result = (session.gate.check(req) if r.doc_id
+                          else session.gate.hold(req, "ROUTE_UNCERTAIN", f"router:{r.method}"))
+        else:
+            req = GateRequest(body.question, body.draft_answer, body.as_of_date, r.doc_id or r.leader, body.channel,
+                              requested_by(request), r.as_json())
+            result = run_gate(g, req, request) if r.doc_id else g.hold(req, "ROUTE_UNCERTAIN", f"router:{r.method}")
         out = gate_out(result).model_dump(mode="json") | {"route": jsonable_encoder(router.describe(r))}
         return JSONResponse(out, status_code=200 if result.released else 503)
 
