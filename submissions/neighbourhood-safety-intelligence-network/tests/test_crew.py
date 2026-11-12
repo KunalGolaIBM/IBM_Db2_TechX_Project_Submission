@@ -1,13 +1,19 @@
 """CrewAI multi-agent briefing on IBM Granite (Ollama) grounded in IBM Db2. Real calls, no mocks."""
-from backend.app.ai.crewai.crew import Db2ProtocolSearchTool, format_protocols, is_grounded
+from backend.app.ai.crewai.crew import format_protocols, granite_embedding, is_grounded, protocol_search_tool
 from backend.app.core.config import settings
 
 API = "/api/v1"
 
 
-def test_db2_protocol_search_tool_returns_cited_passages():
-    out = Db2ProtocolSearchTool()._run("elderly neighbour not answering the door")
-    assert out.startswith("[1] ") and "Senior Citizen Wellness" in out
+def test_ibm_db2_vector_search_tool_finds_protocol_passages():
+    tool = protocol_search_tool()
+    assert type(tool).__name__ == "DB2VectorSearchTool"          # IBM's tool from crewai-tools
+    out = tool.run(query="elderly neighbour not answering the door")
+    assert "senior" in out.lower() or "elder" in out.lower(), out[:300]
+
+
+def test_granite_embedding_dimensions():
+    assert len(granite_embedding("streetlight broken")) == settings.EMBEDDING_DIM
 
 
 def test_format_and_grounding_helpers():

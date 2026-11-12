@@ -20,6 +20,10 @@ ollama>=0.4.0
 
 # CrewAI: Flow orchestration + multi-agent crew on Granite (telemetry disabled in code)
 crewai[litellm]>=0.100.0
+# IBM's Db2 tools for agent frameworks: CrewAI DB2VectorSearchTool, LangChain DB2VS
+crewai-tools>=1.0.0
+langchain-db2>=1.0.0
+langchain-ollama>=1.0.0
 
 # Tests
 pytest>=8.1.0

@@ -61,9 +61,9 @@ Web and Android share one REST API, so an SOS raised on a phone appears in the w
 
 | Db2 feature | Where it's used |
 |---|---|
-| `VECTOR(384, FLOAT32)` + `VECTOR_DISTANCE(..., COSINE)` | Protocol passages via IBM's `IBMDb2DocumentStore` / `IBMDb2EmbeddingRetriever` ([`rag_pipeline.py`](src/backend/app/ai/haystack/rag_pipeline.py)); related-incident search ([`db2_vector_store.py`](src/backend/app/ai/semantic/db2_vector_store.py)) |
+| `VECTOR(384, FLOAT32)` + `VECTOR_DISTANCE(..., COSINE)` | Protocol passages via IBM's `IBMDb2DocumentStore` / `IBMDb2EmbeddingRetriever` ([`rag_pipeline.py`](src/backend/app/ai/haystack/rag_pipeline.py)); related-incident search with `langchain-db2` `DB2VS` ([`db2_vector_store.py`](src/backend/app/ai/semantic/db2_vector_store.py)) |
 | `JSON_VALUE(SYSTOOLS.BSON2JSON(meta), ...)` | Metadata filters (category, audience) on protocol passages, translated by the IBM Haystack store |
-| `MERGE INTO ... USING (VALUES ...)` | Idempotent upsert of incident embeddings |
+| IBM's agent-framework packages | `crewai-tools` **`DB2VectorSearchTool`** (CrewAI agents search protocol passages in Db2) and `langchain-db2` **`DB2VS`** (related-incident vector store), both on Granite embeddings |
 | CTEs, `SECONDS_BETWEEN`, `MEDIAN`, `PERCENTILE_CONT(0.9) WITHIN GROUP` | Time-to-acknowledge statistics per priority ([`insights.py`](src/backend/app/analytics/insights.py)) |
 | `RANK() OVER (ORDER BY COUNT(*) DESC)`, `HOUR()` | Hotspot ranking and hourly distribution |
 | `SYSCAT.TABLES`, `SYSCAT.COLUMNS`, `CURRENT SCHEMA` | Catalog-driven DDL (create only what's missing) and schema tests |
@@ -96,7 +96,7 @@ Web and Android share one REST API, so an SOS raised on a phone appears in the w
 
     With an `incident_id`, the analysis is upserted into `ai_analysis_records` and audited.
   - **Related reports:** each new incident is embedded into `incident_embeddings`, and `GET /incidents/{id}/similar` returns related reports, same address first.
-  - **Multi-agent briefing (CrewAI Crew on Granite):** `POST /ai/crew-briefing` runs a *Triage Analyst* and a *Protocol Advisor* agent. The advisor has a CrewAI tool that searches the protocol passages in Db2. Retrieved passages go into the task context; the answer is checked for a cited protocol (`grounded`), and the rule-based priority stays authoritative.
+  - **Multi-agent briefing (CrewAI Crew on Granite):** `POST /ai/crew-briefing` runs a *Triage Analyst* and a *Protocol Advisor* agent. The advisor uses IBM's **`DB2VectorSearchTool`** (from `crewai-tools`) to search the protocol passages in Db2. Retrieved passages go into the task context; the answer is checked for a cited protocol (`grounded`), and the rule-based priority stays authoritative.
 - **If Ollama is down**, retrieval keeps answering with the BM25 branch and the briefing endpoint returns the rule-based triage with `briefing_error`; `/health` reports why.
 
 Output is advisory. Humans make every dispatch decision.
@@ -106,7 +106,7 @@ Output is advisory. Humans make every dispatch decision.
 ## Tech Stack
 - **Backend / Core:** Python 3.11, FastAPI, SQLAlchemy 2, Pydantic 2, python-jose (JWT), bcrypt
 - **Database:** IBM Db2 12.1 only (`ibm_db`, `ibm_db_sa`, `ibm-db-haystack`): relational tables, `VECTOR` columns, BSON/JSON metadata
-- **AI / Retrieval:** Haystack 2 + `ibm-db-haystack` + `ollama-haystack`, CrewAI (Flow + Crew), Ollama with IBM Granite models
+- **AI / Retrieval:** IBM's Db2 packages for **Haystack** (`ibm-db-haystack`), **CrewAI** (`crewai-tools` `DB2VectorSearchTool`) and **LangChain** (`langchain-db2` `DB2VS`); `ollama-haystack`, `langchain-ollama`; CrewAI (Flow + Crew); Ollama with IBM Granite models
 - **Frontend / UI:** React 19 + TypeScript + Vite + Tailwind CSS 4 (web); Kotlin + Jetpack Compose + Material 3 + Retrofit (Android)
 - **Libraries & Tools:** Docker Compose, pytest + pytest-cov, Robolectric, ruff, oxlint, Gradle wrapper
 

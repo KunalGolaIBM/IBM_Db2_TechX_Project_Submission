@@ -105,8 +105,8 @@ sequenceDiagram
      - **Query:** `OllamaTextEmbedder` → `IBMDb2EmbeddingRetriever`, plus `InMemoryBM25Retriever`, with the same metadata filters on both branches (Db2 runs them as `JSON_VALUE` predicates).
      - **Fusion:** passages collapse to protocols, then `DocumentJoiner` applies reciprocal rank fusion, with a category prior from triage.
      - **Trust:** distance/margin gating on the vector branch, and every answer cites its passage. Without Db2 the BM25 branch runs alone.
-   - `semantic/db2_vector_store.py`: incident embeddings and the related-report self-join.
-   - `crewai/crew.py`: a **CrewAI Crew** on `granite3.3:2b` (via Ollama) with a *Triage Analyst* and a *Protocol Advisor*. The advisor has a CrewAI tool that searches the Db2 protocol passages; retrieved passages go into the task context, and the answer is checked for a cited protocol. Served by `POST /ai/crew-briefing`; if Ollama is down, the rule-based triage is still returned with `briefing_error`.
+   - `semantic/db2_vector_store.py`: related reports through IBM's **`langchain-db2`** (`DB2VS` vector store in Db2, Granite embeddings via `langchain-ollama`).
+   - `crewai/crew.py`: a **CrewAI Crew** on `granite3.3:2b` (via Ollama) with a *Triage Analyst* and a *Protocol Advisor*. The advisor uses IBM's **`DB2VectorSearchTool`** from `crewai-tools` (Granite embeddings) over the Db2 protocol passages; retrieved passages go into the task context, and the answer is checked for a cited protocol. Served by `POST /ai/crew-briefing`; if Ollama is down, the rule-based triage is still returned with `briefing_error`.
    - Everything is local (Ollama on the same machine): resident text never leaves the deployment, and output is advisory.
 
 ---

@@ -22,7 +22,7 @@
   },
   "ibm_db2": {
     "edition": "Db2 12.1 Community Edition (local instance, e.g. created by the IBM Db2 VS Code extension; bundled container in docker-compose)",
-    "connector": "ibm_db_sa (SQLAlchemy) + ibm_db (native) + ibm-db-haystack (IBMDb2DocumentStore / IBMDb2EmbeddingRetriever)",
+    "connector": "ibm_db_sa + ibm_db + ibm-db-haystack (Haystack) + crewai-tools DB2VectorSearchTool (CrewAI) + langchain-db2 DB2VS (LangChain)",
     "features_used": [
       "VECTOR(768, FLOAT32) columns with VECTOR_DISTANCE (COSINE) for semantic retrieval and related-incident search",
       "MERGE upserts for embeddings",
@@ -54,7 +54,10 @@
       "Vite",
       "Tailwind CSS",
       "Jetpack Compose",
-      "Retrofit"
+      "Retrofit",
+      "crewai-tools (DB2VectorSearchTool)",
+      "langchain-db2 (DB2VS)",
+      "langchain-ollama"
     ],
     "ai_models": [
       "IBM Granite granite3.3:2b (chat, CrewAI agents) via Ollama",
