@@ -1,6 +1,6 @@
 # Testing
 
-**219 tests, 99% line and branch coverage, no mocks.** Every test that needs a database uses the real
+**220 tests, 99% line and branch coverage, no mocks.** Every test that needs a database uses the real
 IBM Db2 from `.env`, and every test that needs a model uses the real Granite models in Ollama.
 
 ## How it works

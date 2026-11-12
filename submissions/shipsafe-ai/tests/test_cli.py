@@ -172,3 +172,11 @@ def test_tokens_and_audit(monkeypatch, capsys):
     assert code == 0
     code, out = run(monkeypatch, capsys, "audit", "--limit", "5")
     assert code == 0
+
+
+def test_check_without_db2_still_answers_with_one_hint(monkeypatch, capsys):
+    """A fresh machine with no Db2 yet: the verdict still comes back, plus one actionable note."""
+    monkeypatch.setenv("DB2_PORT", "1")
+    code, out = run(monkeypatch, capsys, "check", "vulnerable_project/src/api.py", cwd=FIXTURES)
+    assert code == 1 and "Verdict: BLOCK" in out
+    assert out.count("note: IBM Db2 is not reachable") == 1 and "shipsafe setup" in out
