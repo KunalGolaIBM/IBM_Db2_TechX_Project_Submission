@@ -179,7 +179,8 @@ async function status() {
 const QUESTION_MOFFATT = "My grandmother just died. Can I get the bereavement fare after I travel?";
 const AIRLINE = "AURELIA-CSP";
 const BANK = "FERNHOLLOW-FEES";
-const DOC_NAME = { [AIRLINE]: "Aurelia Air", [BANK]: "Fernhollow Bank" };
+const RAIL = "INDIAN-RAIL-REFUNDS";  // a summary of public rules, not an official IRCTC or Indian Railways statement
+const DOC_NAME = { [AIRLINE]: "Aurelia Air", [BANK]: "Fernhollow Bank", [RAIL]: "Indian Railways refunds (summary)" };
 let SCENARIOS = [];  // the playground chips, from scenarios.json (replay mode has recordings for exactly these)
 const play = { mode: "ask", doc: AIRLINE, question: QUESTION_MOFFATT, draft: "", as_of: "2026-03-10", scenario: 0, result: null };
 
@@ -248,8 +249,9 @@ function renderPlayground() {
         </div>
         <div class="field" ${s.mode === "ask" ? raw("hidden") : ""}>
           <label for="doc">Policy document</label>
-          <select id="doc">${[AIRLINE, BANK].map((d) => html`<option value="${d}" ${d === s.doc ? raw("selected") : ""}>${DOC_NAME[d]} (${d})</option>`)}
+          <select id="doc">${[AIRLINE, BANK, RAIL].map((d) => html`<option value="${d}" ${d === s.doc ? raw("selected") : ""}>${DOC_NAME[d]} (${d})</option>`)}
             <option value="auto" ${s.doc === "auto" ? raw("selected") : ""}>Let AsOf decide (routing)</option></select>
+          ${s.doc === RAIL ? html`<p class="small muted">Summary of public rules, not an official IRCTC or Indian Railways statement.</p>` : ""}
         </div>
         <div class="field" ${s.mode === "ask" ? raw("hidden") : ""}>
           <label for="d">Assistant draft to check</label>
@@ -366,6 +368,7 @@ function resultView(r, asOf) {
 const AREAS = {
   [AIRLINE]: ["bereavement", "cancellation", "change_fee", "baggage", "refund", "delay", "travel_credit", "pets"],
   [BANK]: ["overdraft", "fee_refund", "monthly_fee", "foreign_transaction", "wire_transfer", "atm", "dispute", "account_closure", "checks"],
+  [RAIL]: ["cancellation", "refund", "delay"],
 };
 const AREA_LABEL = { bereavement: "Bereavement", cancellation: "Cancellation", change_fee: "Changes", baggage: "Baggage",
   refund: "Refunds", delay: "Delays", travel_credit: "Travel credits", pets: "Pets", other: "Other",
@@ -437,7 +440,7 @@ function renderTimeline() {
       <div><h1>Policy timeline</h1>
         <p>Every clause version on its business-time period, straight from the bitemporal <code>POLICY_CLAUSE</code> table. Key numbers come out of <code>RULE_JSON</code> through the Db2 view <code>V_POLICY_TIMELINE</code> (<code>JSON_TABLE</code>). Click a version for its text and its system-time history.</p></div>
       <div class="tl-controls">
-        <div class="seg">${[AIRLINE, BANK].map((d) => html`<button type="button" data-doc="${d}" class="${tl.doc === d ? "on" : ""}">${DOC_NAME[d]}</button>`)}</div>
+        <div class="seg">${[AIRLINE, BANK, RAIL].map((d) => html`<button type="button" data-doc="${d}" class="${tl.doc === d ? "on" : ""}">${DOC_NAME[d]}</button>`)}</div>
         <div class="seg">
           <button type="button" data-filter="changed" class="${tl.filter === "changed" ? "on" : ""}">Changed clauses (${changed.length})</button>
           <button type="button" data-filter="all" class="${tl.filter === "all" ? "on" : ""}">All clauses (${data.length})</button>
@@ -795,7 +798,7 @@ async function renderReview() {
       <div class="card-head"><h2>Reply to the customer</h2><span class="sub">checked against the policy in force on ${fmtDate(d.as_of_date)} before it is sent</span></div>
       ${suggested ? html`<div class="field"><div class="chips"><button type="button" class="chip" id="use-suggested">Use the suggested reply for this scenario</button></div></div>` : ""}
       ${d.reason_code === "ROUTE_UNCERTAIN" ? html`<div class="field"><label for="reply-doc">Policy document to check the reply against</label>
-        <select id="reply-doc">${[AIRLINE, BANK].map((x) => html`<option value="${x}" ${x === (inb.doc || d.doc_id) ? raw("selected") : ""}>${DOC_NAME[x]}</option>`)}</select>
+        <select id="reply-doc">${[AIRLINE, BANK, RAIL].map((x) => html`<option value="${x}" ${x === (inb.doc || d.doc_id) ? raw("selected") : ""}>${DOC_NAME[x]}</option>`)}</select>
         <div class="hint">The router could not tell; you decide. The reply is checked against this document's clauses for ${fmtDate(d.as_of_date)}.</div></div>` : ""}
       <div class="field"><label for="reply">Reply</label><textarea id="reply" rows="5" maxlength="3500" required>${inb.reply}</textarea>
         <div class="hint">Policy statements in the reply are checked like the assistant's. ${d.rewrite ? "Started from AsOf's rewrite, which did not pass on its own." : ""}</div></div>

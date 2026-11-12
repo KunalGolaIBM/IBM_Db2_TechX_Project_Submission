@@ -76,12 +76,14 @@ def test_the_review_and_notice_triggers_are_secured():
 
 
 def test_every_domain_gets_a_role_and_the_shipped_domains_have_users():
-    assert {rowaccess.role_for(d) for d in DOMAINS.values()} == {"ASOF_DOMAIN_AIRLINE", "ASOF_DOMAIN_BANK"}
+    # The third public domain (Indian Railways) gets its role and DOMAIN_ACCESS row, but ships with no users of its own.
+    assert {rowaccess.role_for(d) for d in DOMAINS.values()} == {"ASOF_DOMAIN_AIRLINE", "ASOF_DOMAIN_BANK",
+                                                                  "ASOF_DOMAIN_INDIAN_RAIL"}
     s = Settings(_env_file=None)
     assert rowaccess.domain_users(s) == rowaccess.DEFAULT_DOMAIN_USERS == {"airline": ("airread", "airrev"),
                                                                            "bank": ("bankread", "bankrev")}
     assert [(x.key, x.user, x.connection, x.doc_ids) for x in rowaccess.scopes(s)] == [
-        ("all", "asofread", "analyst", ("AURELIA-CSP", "FERNHOLLOW-FEES")),
+        ("all", "asofread", "analyst", ("AURELIA-CSP", "FERNHOLLOW-FEES", "INDIAN-RAIL-REFUNDS")),
         ("airline", "airread", "analyst_airline", ("AURELIA-CSP",)),
         ("bank", "bankread", "analyst_bank", ("FERNHOLLOW-FEES",))]
 
@@ -123,7 +125,7 @@ def test_the_api_lists_the_scopes_and_refuses_an_unknown_one():
     c = TestClient(create_app(Settings(_env_file=None), gate=FakeGate(), assistant=FakeAssistant(), asker=asker))
     listed = c.get("/api/ledger/ask/scopes").json()
     assert [(x["key"], x["user"], x["doc_ids"]) for x in listed] == [
-        ("all", "asofread", ["AURELIA-CSP", "FERNHOLLOW-FEES"]), ("airline", "airread", ["AURELIA-CSP"]),
+        ("all", "asofread", ["AURELIA-CSP", "FERNHOLLOW-FEES", "INDIAN-RAIL-REFUNDS"]), ("airline", "airread", ["AURELIA-CSP"]),
         ("bank", "bankread", ["FERNHOLLOW-FEES"])]
     assert c.post("/api/ledger/ask", json={"question": "How many?", "scope": "bank"}).json()["scope"] == "bank"
     assert c.post("/api/ledger/ask", json={"question": "How many?", "scope": "railway"}).status_code == 422

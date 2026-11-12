@@ -1,0 +1,125 @@
+{
+ "note": "The only place the Indian Railways numbers live: the summary text of each version, its sources and its time bands, as verified on 12 Nov 2026. asof/indianrail.py makes the PDFs and loads them through Policy intake.",
+ "provisional": false,
+ "label": "Summary of public rules, not an official IRCTC or Indian Railways statement.",
+ "doc": {
+  "doc_id": "INDIAN-RAIL-REFUNDS",
+  "title": "Indian Railways ticket cancellation refunds (summary of public rules, not an official IRCTC or Indian Railways statement)",
+  "owner_team": "AsOf demo",
+  "source_note": "Summary of public rules, not an official IRCTC or Indian Railways statement. Each version's sources are in its clauses' change notes."
+ },
+ "versions": [
+  {
+   "version": 1,
+   "effective": "2015-11-12",
+   "effective_words": "12 November 2015",
+   "basis": "Railway Passengers (Cancellation of Ticket and Refund of Fare) Rules, 2015, G.S.R. 836(E), dated 4 November 2015, in force from 12 November 2015.",
+   "sources": [
+    "https://www.indianrail.gov.in/refund_Rules.html",
+    "https://contents.irctc.co.in/en/RefundCancellationRules.pdf"
+   ],
+   "sections": [
+    {
+     "heading": "Cancellation of confirmed tickets",
+     "text": "For a confirmed ticket cancelled more than 48 hours before the scheduled departure of the train, the cancellation charge is a flat amount per passenger, plus GST on AC classes: Rs 240 for AC First Class and Executive Class, Rs 200 for AC 2-tier and First Class, Rs 180 for AC 3-tier, AC Chair Car and AC 3 Economy, Rs 120 for Sleeper Class and Rs 60 for Second Class. For a confirmed ticket cancelled between 48 hours and 12 hours before the scheduled departure, the charge is 25% of the fare, subject to the minimum flat charge for the class. For a confirmed ticket cancelled between 12 hours and 4 hours before the scheduled departure, the charge is 50% of the fare, subject to the minimum flat charge for the class. For a confirmed ticket cancelled less than 4 hours before the scheduled departure, no refund is given."
+    }
+   ],
+   "time_bands": [
+    {
+     "from_h": 48,
+     "from_strict": true,
+     "charge_inr": {
+      "1A": 240,
+      "EC": 240,
+      "2A": 200,
+      "FC": 200,
+      "3A": 180,
+      "CC": 180,
+      "3E": 180,
+      "SL": 120,
+      "2S": 60
+     }
+    },
+    {
+     "from_h": 12,
+     "to_h": 48,
+     "to_inclusive": true,
+     "charge_pct": 25,
+     "min_charge_inr": {
+      "1A": 240,
+      "EC": 240,
+      "2A": 200,
+      "FC": 200,
+      "3A": 180,
+      "CC": 180,
+      "3E": 180,
+      "SL": 120,
+      "2S": 60
+     }
+    },
+    {
+     "from_h": 4,
+     "to_h": 12,
+     "charge_pct": 50,
+     "min_charge_inr": {
+      "1A": 240,
+      "EC": 240,
+      "2A": 200,
+      "FC": 200,
+      "3A": 180,
+      "CC": 180,
+      "3E": 180,
+      "SL": 120,
+      "2S": 60
+     }
+    },
+    {
+     "to_h": 4,
+     "refund": false
+    }
+   ]
+  },
+  {
+   "version": 2,
+   "effective": "2026-04-15",
+   "effective_words": "15 April 2026",
+   "basis": "Railway Minister Ashwini Vaishnaw's announcement of 24 March 2026: an announcement, not a gazette notification; phased in between 1 and 15 April 2026 per press reports; this summary applies it from 15 April 2026.",
+   "sources": [
+    "https://www.newsonair.gov.in/railways-minister-ashwini-vaishnaw-launches-five-reforms-in-railways-52-reforms-in-52-weeks-drive",
+    "https://newindiasamachar.pib.gov.in/WriteReadData/flipbook/2026/Apr/2nd/English/files/basic-html/page7.html"
+   ],
+   "sections": [
+    {
+     "heading": "Cancellation of confirmed tickets",
+     "text": "For a confirmed ticket cancelled more than 72 hours before the scheduled departure of the train, only the minimum flat cancellation charge per passenger applies. For a confirmed ticket cancelled between 72 hours and 24 hours before the scheduled departure, 25% of the fare is charged. For a confirmed ticket cancelled between 24 hours and 8 hours before the scheduled departure, 50% of the fare is charged and 50% is refunded. For a confirmed ticket cancelled less than 8 hours before the scheduled departure, no refund is given."
+    }
+   ],
+   "time_bands": [
+    {
+     "from_h": 72,
+     "from_strict": true,
+     "flat_charge": true
+    },
+    {
+     "from_h": 24,
+     "to_h": 72,
+     "to_inclusive": true,
+     "charge_pct": 25
+    },
+    {
+     "from_h": 8,
+     "to_h": 24,
+     "charge_pct": 50
+    },
+    {
+     "to_h": 8,
+     "refund": false
+    }
+   ]
+  }
+ ],
+ "limitations": [
+  "IRCTC's refund page still shows the 2015 slabs (48, 12 and 4 hours) as of 12 November 2026.",
+  "G.S.R. 41(E) of 16 January 2026, a separate gazette rule for Vande Bharat Sleeper and Amrit Bharat II trains only, is not modelled."
+ ]
+}

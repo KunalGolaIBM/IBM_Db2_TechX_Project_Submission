@@ -440,10 +440,19 @@ def check(claim: str, clause: RuleClause, candidates: Sequence[RuleClause] = (),
 # includes 12 h 00 min), to_h exclusive, either may be left out for an open end. A band states one outcome: a flat
 # charge per class ("charge_inr"), a charge as a percentage of the fare ("charge_pct"), or "refund": false. Added
 # after the first unseen-domain run (SPR's fare tables); a clause without "time_bands" is never checked here.
-BAND_KEYS = {"from_h", "to_h", "charge_inr", "charge_pct", "refund"}
-CLASSES = {"1a": "1A", "ac first": "1A", "first ac": "1A", "2a": "2A", "ac two tier": "2A", "ac 2 tier": "2A",
-           "two tier": "2A", "sl": "SL", "sleeper": "SL", "2s": "2S", "second sitting": "2S"}
-_CLASS = re.compile(r"\b(1a|2a|sl|2s|ac first|first ac|ac two tier|ac 2 tier|two tier|sleeper|second sitting)\b", re.I)
+# A percentage band may also carry "min_charge_inr" per class (the charge is the percentage, but at least that), and
+# either edge may flip: "from_strict" (T > from_h, for "more than 48 hours") and "to_inclusive" (T <= to_h).
+# "flat_charge": true is a band whose charge is a flat amount the source does not state: no percentage applies, and a
+# refund is due, but rupee amounts are not checked.
+BAND_KEYS = {"from_h", "to_h", "charge_inr", "charge_pct", "refund", "min_charge_inr", "from_strict", "to_inclusive",
+             "flat_charge"}
+CLASSES = {"1a": "1A", "ac first": "1A", "first ac": "1A", "ac first class": "1A", "2a": "2A", "ac two tier": "2A",
+           "ac 2 tier": "2A", "ac 2-tier": "2A", "two tier": "2A", "sl": "SL", "sleeper": "SL", "sleeper class": "SL",
+           "2s": "2S", "second sitting": "2S", "second class": "2S", "3a": "3A", "ac 3 tier": "3A", "ac 3-tier": "3A",
+           "ac three tier": "3A", "three tier": "3A", "cc": "CC", "chair car": "CC", "ac chair car": "CC",
+           "ec": "EC", "executive class": "EC", "executive chair car": "EC", "fc": "FC", "first class": "FC",
+           "3e": "3E", "ac 3 economy": "3E", "ac three economy": "3E"}
+_CLASS = re.compile(r"\b(" + "|".join(re.escape(k) for k in sorted(CLASSES, key=len, reverse=True)) + r")\b", re.I)
 _HM = r"(\d+(?:\.\d+)?)\s*(?:h|hrs?|hours?)(?:\s*(?:and\s*)?(\d+)\s*(?:m|mins?|minutes?))?"
 _T_PATTERN = re.compile(
     rf"\b(?:{_HM}|(\d+)\s*(?:mins?|minutes?)|(\d+)\s*(?:days?))\b"
@@ -470,15 +479,23 @@ def validate_time_bands(value: Any) -> None:
         for k in ("from_h", "to_h", "charge_pct"):
             if k in band and (isinstance(band[k], bool) or not isinstance(band[k], (int, float)) or band[k] < 0):
                 raise ValueError(f"time band {k} must be a number of at least 0")
-        outcomes = [k for k in ("charge_inr", "charge_pct", "refund") if k in band]
+        outcomes = [k for k in ("charge_inr", "charge_pct", "refund", "flat_charge") if k in band]
         if len(outcomes) != 1:
-            raise ValueError("a time band states exactly one of charge_inr, charge_pct, refund")
+            raise ValueError("a time band states exactly one of charge_inr, charge_pct, refund, flat_charge")
+        if "flat_charge" in band and band["flat_charge"] is not True:
+            raise ValueError("time band flat_charge may only be true")
         if "refund" in band and band["refund"] is not False:
             raise ValueError("time band refund may only be false")
-        if "charge_inr" in band and not (isinstance(band["charge_inr"], dict) and band["charge_inr"] and all(
-                k in CLASSES.values() and isinstance(v, (int, float)) and not isinstance(v, bool) and v >= 0
-                for k, v in band["charge_inr"].items())):
-            raise ValueError(f"time band charge_inr maps a class ({sorted(set(CLASSES.values()))}) to an amount")
+        if "min_charge_inr" in band and "charge_pct" not in band:
+            raise ValueError("time band min_charge_inr goes with charge_pct")
+        for k in ("from_strict", "to_inclusive"):
+            if k in band and band[k] is not True:
+                raise ValueError(f"time band {k} may only be true")
+        for k in ("charge_inr", "min_charge_inr"):
+            if k in band and not (isinstance(band[k], dict) and band[k] and all(
+                    c in CLASSES.values() and isinstance(v, (int, float)) and not isinstance(v, bool) and v >= 0
+                    for c, v in band[k].items())):
+                raise ValueError(f"time band {k} maps a class ({sorted(set(CLASSES.values()))}) to an amount")
 
 
 def _amount(token: str) -> float:
@@ -511,18 +528,32 @@ def _one(values: list[Any]) -> Any:
 def band_for(bands: list[dict[str, Any]], hours: float) -> dict[str, Any] | None:
     """The band T falls in: from_h <= T < to_h, minutes counted exactly, so 2 h 59 min is below a 3 h edge."""
     eps = 1e-9
-    return next((b for b in bands if (b.get("from_h") is None or hours >= b["from_h"] - eps)
-                 and (b.get("to_h") is None or hours < b["to_h"] - eps)), None)
+
+    def above(b: dict[str, Any]) -> bool:
+        lo = b.get("from_h")
+        return lo is None or (hours > lo + eps if b.get("from_strict") else hours >= lo - eps)
+
+    def below(b: dict[str, Any]) -> bool:
+        hi = b.get("to_h")
+        return hi is None or (hours <= hi + eps if b.get("to_inclusive") else hours < hi - eps)
+
+    return next((b for b in bands if above(b) and below(b)), None)
 
 
 def _describe(band: dict[str, Any]) -> str:
     lo, hi = band.get("from_h"), band.get("to_h")
-    span = (f"{lo:g} <= T < {hi:g} h" if lo is not None and hi is not None else
-            f"T >= {lo:g} h" if lo is not None else f"T < {hi:g} h" if hi is not None else "any T")
+    ge, le = ("<" if band.get("from_strict") else "<="), ("<=" if band.get("to_inclusive") else "<")
+    span = (f"{lo:g} {ge} T {le} {hi:g} h" if lo is not None and hi is not None else
+            f"T {'>' if band.get('from_strict') else '>='} {lo:g} h" if lo is not None else
+            f"T {le} {hi:g} h" if hi is not None else "any T")
     if "refund" in band:
         return f"{span}: no refund"
+    if "flat_charge" in band:
+        return f"{span}: a flat charge (amount not stated)"
     if "charge_pct" in band:
-        return f"{span}: a {band['charge_pct']:g}% charge"
+        least = band.get("min_charge_inr")
+        return f"{span}: a {band['charge_pct']:g}% charge" + (
+            ", at least " + ", ".join(f"{c} INR {v:g}" for c, v in least.items()) if least else "")
     return f"{span}: charge " + ", ".join(f"{c} INR {v:g}" for c, v in band["charge_inr"].items())
 
 
@@ -572,10 +603,21 @@ def band_check(claim: str, question: str, rule: dict[str, Any], clause_id: str =
         elif pcts or any(a != fare and cue(span) == "refund" for a, span in rupees):
             return RuleResult("MISMATCH", (f"{where}; the claim states a charge or refund",))
         return RuleResult(statuses[0] if statuses else "NOT_APPLICABLE", (where,))
+    if "flat_charge" in band:  # a refund is due, less a flat amount nobody states: only "no refund" and percentages
+        if said_none:
+            return RuleResult("MISMATCH", (f"{where}; the claim says there is no refund",))
+        if pcts:
+            return RuleResult("MISMATCH", (f"{where}; the claim states a percentage",))
+        return RuleResult("NOT_APPLICABLE", (where,))
     if "charge_pct" in band:
         p = float(band["charge_pct"])
         expected = {"charge": p, "refund": 100 - p}
-        money = None if fare is None else {"charge": fare * p / 100, "refund": fare * (100 - p) / 100}
+        least = (band.get("min_charge_inr") or {}).get(cls) if cls else None
+        if fare is None or ("min_charge_inr" in band and least is None):
+            money = None  # without the fare, or the class a minimum charge depends on, rupees are not checked
+        else:
+            charge = min(fare, max(fare * p / 100, float(least or 0)))
+            money = {"charge": charge, "refund": fare - charge}
     else:
         flat = band["charge_inr"].get(cls) if cls else None
         expected = {}

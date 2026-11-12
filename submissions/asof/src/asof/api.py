@@ -160,7 +160,7 @@ def _in_range(value: date) -> date:
 Question = Annotated[str, Field(min_length=1, max_length=2000), AfterValidator(_text(2000))]
 Draft = Annotated[str, Field(min_length=1, max_length=4000), AfterValidator(_text(4000))]
 AsOfDate = Annotated[date, AfterValidator(_in_range)]
-DocId = Literal["AURELIA-CSP", "FERNHOLLOW-FEES"]  # the policy documents in domains.DOMAINS
+DocId = Literal["AURELIA-CSP", "FERNHOLLOW-FEES", "INDIAN-RAIL-REFUNDS"]  # the policy documents in domains.DOMAINS
 Channel = Literal["chat", "email", "faq", "api", "demo"]
 
 

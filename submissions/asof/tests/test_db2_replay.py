@@ -14,7 +14,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from asof import db, impactagent, ledger, policy, replay, schema, seed
+from asof import db, impactagent, indianrail, ledger, policy, replay, schema, seed
 from asof.askledger import LedgerAsker
 from asof.assistant import DemoAssistant
 from asof.gate import HOLDING_REPLY, Gate, GateRequest
@@ -37,6 +37,7 @@ def replayed(admin_conn, embeddings, settings):
         seed.seed_faq(admin_conn, embeddings, name)
         schema.apply_grants(admin_conn, settings.asof_app_user, settings.asof_editor_user, name,
                             analyst_user=settings.asof_analyst_user)
+        indianrail.ensure(settings, name, embeddings, log=lambda _m: None)  # the third domain, from the recording
     except Exception:
         schema.drop(admin_conn, name)
         raise

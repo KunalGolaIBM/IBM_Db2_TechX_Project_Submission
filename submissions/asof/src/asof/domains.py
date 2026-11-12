@@ -50,7 +50,13 @@ AIRLINE = Domain("airline", "Aurelia Air", "AURELIA-CSP", prompts.EXTRACT_SYSTEM
 BANK = Domain("bank", "Fernhollow Bank", "FERNHOLLOW-FEES", prompts.BANK_EXTRACT_SYSTEM, prompts.BANK_JUDGE_SYSTEM,
               prompts.BANK_REWRITE_SYSTEM, prompts.BANK_INVESTIGATE_SYSTEM, prompts.BANK_IMPACT_SYSTEM,
               prompts.BANK_PROMPT_VERSION, BankExtractionResult, prompts.BANK_NOTICE_SYSTEM)
-DOMAINS = {d.doc_id: d for d in (AIRLINE, BANK)}
+# The third public domain (asof/indianrail.py): a summary of public Indian Railways refund rules, in AsOf's own words
+# and labelled as such. Neutral check prompts, the rail claim areas, and its own intake rules.
+INDIAN_RAIL = Domain("indian_rail", "Indian Railways refunds", "INDIAN-RAIL-REFUNDS", prompts.GENERIC_EXTRACT_SYSTEM,
+                     prompts.GENERIC_JUDGE_SYSTEM, prompts.GENERIC_REWRITE_SYSTEM, prompts.GENERIC_INVESTIGATE_SYSTEM,
+                     prompts.GENERIC_IMPACT_SYSTEM, prompts.GENERIC_PROMPT_VERSION, RailExtractionResult,
+                     prompts.GENERIC_NOTICE_SYSTEM, RailIntakeResult, prompts.INDIAN_RAIL_INTAKE_SYSTEM)
+DOMAINS = {d.doc_id: d for d in (AIRLINE, BANK, INDIAN_RAIL)}
 DOC_IDS = tuple(DOMAINS)
 
 

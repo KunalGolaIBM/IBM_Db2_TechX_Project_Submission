@@ -33,7 +33,7 @@ import ibm_db_dbi
 from langchain_core.embeddings import Embeddings
 from pydantic import SecretStr
 
-from . import db, indb, rowaccess, schema, seed, trusted
+from . import db, indb, indianrail, rowaccess, schema, seed, trusted
 from .anchor import AnchorLog
 from .config import DEFAULT_ENV_FILE, PROJECT_ROOT, ConfigError, Settings, get_settings
 from .embeddings import get_embeddings
@@ -377,6 +377,10 @@ def run(reset: bool = False, target: str = db.SCHEMA, reset_ledger: bool = False
             say("  trusted context: " + trusted.describe(trusted.sync(conn, settings, target)))
         except trusted.TrustedContextError as exc:
             raise SetupError(f"trusted context: {exc}") from None
+
+        say("  Indian Railways refunds (a summary of public rules, not official): loaded from the shipped recording")
+        rail = indianrail.ensure(settings, target, embeddings, log=say)
+        say(f"  {'loaded' if rail.get('loaded') else rail.get('reason')}")
 
     say("8/9 Optimizer statistics (RUNSTATS)")
     say("  " + collect_statistics(settings, target))

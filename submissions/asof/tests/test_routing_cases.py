@@ -27,7 +27,8 @@ def test_the_test_split_covers_both_documents_and_the_ask_cases():
     cases = rc.load("routing-test")
     assert len(cases) == 40
     by = {e: sum(c.expected == e for c in cases) for e in (*DOC_IDS, rc.ASK)}
-    assert by == {"AURELIA-CSP": 15, "FERNHOLLOW-FEES": 15, rc.ASK: 10}
+    # The split was pinned with two documents; the third (Indian Railways) has no cases in it.
+    assert by == {"AURELIA-CSP": 15, "FERNHOLLOW-FEES": 15, "INDIAN-RAIL-REFUNDS": 0, rc.ASK: 10}
 
 
 def test_routing_outcomes_separate_the_dangerous_error_from_the_safe_one():

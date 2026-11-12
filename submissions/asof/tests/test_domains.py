@@ -61,7 +61,8 @@ def test_the_bank_has_its_own_wording_and_areas():
 
 
 def test_every_document_the_api_accepts_has_a_domain_and_nothing_else_does():
-    assert set(typing.get_args(api.DocId)) == set(domains.DOC_IDS) == {"AURELIA-CSP", "FERNHOLLOW-FEES"}
+    assert set(typing.get_args(api.DocId)) == set(domains.DOC_IDS) == {"AURELIA-CSP", "FERNHOLLOW-FEES",
+                                                                       "INDIAN-RAIL-REFUNDS"}
     with pytest.raises(ValueError):
         domain_for("SOMEONE-ELSE")
     assert Gate.domain("SOMEONE-ELSE") is AIRLINE  # direct callers: airline wording, and nothing to retrieve

@@ -215,7 +215,7 @@ def test_a_domain_scope_runs_as_that_domains_analyst_and_reports_what_db2_applie
     assert (r.status, r.scope, r.scope_label, rec.scopes_used) == ("ANSWERED", "airline", "Aurelia Air", ["airline"])
     assert r.scope_applied == ["AURELIA-CSP"] and r.runs_as.startswith("airread (roles ASOF_ANALYST and ASOF_DOMAIN_AIRLINE")
     everything = Recorder(ScriptedLLM(sql=[sql(COUNT_SQL)], answer=[LedgerAnswer(answer="ok")])).ask("How many?")
-    assert (everything.scope, everything.scope_applied) == ("all", ["AURELIA-CSP", "FERNHOLLOW-FEES"])
+    assert (everything.scope, everything.scope_applied) == ("all", ["AURELIA-CSP", "FERNHOLLOW-FEES", "INDIAN-RAIL-REFUNDS"])
     assert everything.runs_as.startswith("asofread (role ASOF_ANALYST")
 
 

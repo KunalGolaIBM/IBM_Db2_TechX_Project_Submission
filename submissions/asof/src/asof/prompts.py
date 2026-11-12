@@ -533,3 +533,18 @@ out the document's first two lines, which only name the excerpt and its dates.
 - effective_to: null for every proposal. Each version of this document is loaded in turn, and loading the next \
 version is what ends this one."""
 REAL_INTAKE_SYSTEM = LONG_INTAKE_SYSTEM.replace(_RESTATED, _RESTATED + REAL_INTAKE_RULES + "\n")  # cap 16
+
+
+# Indian Railways refunds (the third public demo domain, asof/indianrail.py): the shipped intake prompt plus four rules
+# for a summary loaded one dated version at a time. Two came from its first live intakes: one named every rupee amount
+# _usd (intake's checks blocked it; SPR needed the same rule), the next split the section into one proposal per
+# sentence. Nothing else changes.
+INDIAN_RAIL_INTAKE_RULES = """\
+- The document's first lines name it, say when the version is in force and give its basis and sources: they are \
+not a section. Each heading below them starts one section: make one proposal per section, with every sentence \
+of it, not one per sentence.
+- effective_from: the date the document says the version is loaded into AsOf as in force from.
+- effective_to: null for every section. Each version of this document is loaded in turn, and loading the next \
+version is what ends this one.
+- Amounts in this document are in Indian rupees (Rs): end an amount's key with _inr, never _usd."""
+INDIAN_RAIL_INTAKE_SYSTEM = INTAKE_SYSTEM.replace(_RESTATED, _RESTATED + INDIAN_RAIL_INTAKE_RULES + "\n")

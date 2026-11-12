@@ -309,6 +309,8 @@ Db2 tests run in throwaway schemas as the real least-privilege users ([what they
 
 **Real regulation.** A demonstration, not a blind evaluation and not legal advice: the US DOT airline refund rules (14 CFR 259.5(b)(5) and part 260), fetched from the eCFR point-in-time API and pinned by SHA-256, went in through Policy intake as three dated versions. Five questions, each asked on a date before and after the 2024 rule with the same draft, written after reading the rule: in 9 of the 10 checks AsOf's outcome matched what the text in force on that date says, and it held one draft the 2025 text supports. [docs/eval/real-regulation.md](docs/eval/real-regulation.md).
 
+**Indian Railways refunds (public demo).** A third demo domain, `INDIAN-RAIL-REFUNDS`: a summary of public rules (not an official IRCTC or Indian Railways statement), loaded through Policy intake in two dated versions with fare-table bands the rule check reads; the same Sleeper-ticket question is corrected for a May 2026 trip and passed for a March 2026 one. [docs/indian-rail.md](docs/indian-rail.md).
+
 ---
 
 ## Screenshots & Demo

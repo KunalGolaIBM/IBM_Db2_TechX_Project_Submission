@@ -77,6 +77,9 @@ def prepare(settings: Settings, embeddings: Embeddings) -> None:
         seed.seed_policy(conn, embeddings, ROUTE_SCHEMA)
         seed.seed_faq(conn, embeddings, ROUTE_SCHEMA)  # the grants name every table, the FAQ store too
         schema.apply_grants(conn, settings.asof_app_user, settings.asof_editor_user, ROUTE_SCHEMA)
+    from .. import indianrail  # the third public document, from the shipped recording, as the demo has it
+
+    indianrail.ensure(settings, ROUTE_SCHEMA, embeddings, log=lambda _m: None)
 
 
 def run(router: Router, cases: list[rc.RoutingCase]) -> list[dict[str, Any]]:

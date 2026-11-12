@@ -75,6 +75,22 @@
       "question": "How much is the overdraft fee?",
       "as_of": "2026-08-03",
       "draft": "The overdraft fee is $35 for each item we pay."
+    },
+    {
+      "label": "Indian Railways (summary, not official): travel 2 May 2026",
+      "mode": "draft",
+      "doc": "INDIAN-RAIL-REFUNDS",
+      "question": "I cancel my confirmed Sleeper ticket 6 hours before departure; how much do I get back?",
+      "as_of": "2026-05-02",
+      "draft": "You get 50% back."
+    },
+    {
+      "label": "Indian Railways (summary, not official): travel 20 Mar 2026",
+      "mode": "draft",
+      "doc": "INDIAN-RAIL-REFUNDS",
+      "question": "I cancel my confirmed Sleeper ticket 6 hours before departure; how much do I get back?",
+      "as_of": "2026-03-20",
+      "draft": "You get 50% back."
     }
   ],
   "presets": [

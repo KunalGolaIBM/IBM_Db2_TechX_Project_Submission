@@ -575,11 +575,51 @@ def record_only_intake(settings) -> int:
     return 0
 
 
+def record_only_indian_rail(settings, save: bool = True) -> int:
+    """Add the Indian Railways domain to the shipped recording: its intake (asof/indianrail.py, both versions) and its
+    playground scenarios, recorded live once in a fresh REPLAY_SCHEMA. Every output already recorded is left as it is,
+    and the new keys are listed in scenarios["indian_rail"]["keys"] (tests/test_replay.py holds the rest unchanged).
+    With save=False nothing is written: a dry run of the plumbing."""
+    from . import indianrail
+    from .embeddings import get_embeddings
+    from .llm import build_llm
+
+    recording = Recording.load()
+    live = build_llm(settings, fallback=False)
+    if live.info != recording.model:
+        print(f"The shipped recording is from {recording.model}; set that model to add to it (now: {live.info}).")
+        return 2
+    if "indian_rail" in recording.scenarios and save:
+        print("The Indian Railways domain is already recorded; nothing re-recorded.")
+        return 2
+    emb = get_embeddings(settings.embedding_model)
+    _fresh_schema(settings, emb)
+    before = set(recording.entries)
+    intake_live = build_llm(settings, fallback=False, max_output_tokens=settings.asof_intake_max_output_tokens,
+                            deadline_s=settings.asof_intake_timeout_s)
+    summary = indianrail.load(settings, REPLAY_SCHEMA, Recorder(intake_live, recording), emb)
+    doc = indianrail.doc_id()
+    have = {(c["doc_id"], c["question"], c["as_of"], c["draft"]) for c in recording.scenarios.get("checks", [])}
+    todo = [c for c in check_scenarios() if c["doc_id"] == doc and (c["doc_id"], c["question"], c["as_of"], c["draft"])
+            not in have]
+    done = _run_checks(settings, Recorder(live, recording), todo)
+    if any(c["reason_code"] == "ERROR_FAIL_CLOSED" for c in done):
+        print("A check failed closed on a live-model error; nothing saved. Run it again.")
+        return 1
+    if not save:
+        print("Dry run: nothing saved.")
+        return 0
+    recording.scenarios.setdefault("checks", []).extend(done)
+    recording.scenarios["indian_rail"] = summary | {"keys": sorted(set(recording.entries) - before)}
+    recording.save()
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m asof.replay", description=__doc__.split("\n\n")[0])
     parser.add_argument("command", choices=["record", "show"], help="record: re-record with the live model; "
                         "show: list what the shipped recording covers")
-    parser.add_argument("--only", choices=["intake", "chat", "reviews", "ask"],
+    parser.add_argument("--only", choices=["intake", "chat", "reviews", "ask", "indian-rail"],
                         help="record only these scenarios and add them to the "
                         "shipped recording, leaving every other recorded output as it is")
     args = parser.parse_args(argv)
@@ -602,6 +642,8 @@ def main(argv: list[str] | None = None) -> int:
             return record_only_reviews(get_settings())
         if args.only == "ask":
             return record_only_ask(get_settings())
+        if args.only == "indian-rail":
+            return record_only_indian_rail(get_settings())
         return record(get_settings())
     except (ConfigError, LLMError, db.DatabaseError) as exc:
         print(f"Recording failed: {exc}")
