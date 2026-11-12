@@ -62,6 +62,9 @@ class Db2VectorStore:
                 raise RuntimeError(f"{settings.OLLAMA_EMBED_MODEL} does not return {settings.EMBEDDING_DIM} dims")
             self.engine = engine
             client = ibm_db_dbi.connect(Db2Adapter().build_connection_string(), "", "")
+            # Each DB2VS write commits on its own; otherwise its open transaction would hold locks on
+            # INCIDENT_EMBEDDINGS and block other connections (Db2's default lock timeout is infinite).
+            client.set_autocommit(True)
             self.store = DB2VS(embedding_function=embeddings, table_name=TABLE, client=client,
                                distance_strategy=DistanceStrategy.COSINE)
             self.enabled = True
