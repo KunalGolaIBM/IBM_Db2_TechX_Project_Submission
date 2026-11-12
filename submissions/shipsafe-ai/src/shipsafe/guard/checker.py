@@ -85,7 +85,7 @@ def _verdict(issues: List[GuardIssue]) -> str:
 
 def _bandit_on_text(code: str, timeout: int = 60) -> List[GuardIssue]:
     """Run Bandit on a temporary copy of the code. Returns [] if Bandit is not installed."""
-    if not tool_available("bandit"):
+    if not tool_available("bandit"):  # pragma: no cover - bandit is a declared dependency
         return []
     with tempfile.TemporaryDirectory(prefix="shipsafe-guard-") as tmp:
         target = Path(tmp) / "snippet.py"
@@ -95,7 +95,7 @@ def _bandit_on_text(code: str, timeout: int = 60) -> List[GuardIssue]:
                               stdin=subprocess.DEVNULL)
     try:
         data = json.loads(proc.stdout or "{}")
-    except json.JSONDecodeError:
+    except json.JSONDecodeError:  # pragma: no cover - only if a bandit release breaks its JSON format
         return []
     issues = []
     for r in data.get("results", []):

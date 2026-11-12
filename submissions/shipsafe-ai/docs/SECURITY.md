@@ -43,6 +43,9 @@ These were found because every test runs against the real Db2 and real Granite, 
    now gets an empty stdin, a fixed argument list, `shell=False` and a timeout.
 4. **Anonymous telemetry.** CrewAI, LiteLLM and Haystack (PostHog) send usage data by default. ShipSafe
    switches all three off at import time.
+5. **A trace-sharing prompt.** After a crew run, CrewAI asked "Share this execution trace with CrewAI? [y/N]"
+   and waited 20 s; inside the MCP server it would have read Bob's stdin. ShipSafe sets
+   `CREWAI_TRACING_ENABLED=false` and builds the crew with `tracing=False`, so traces never leave the machine.
 
 ## Controls in the product
 

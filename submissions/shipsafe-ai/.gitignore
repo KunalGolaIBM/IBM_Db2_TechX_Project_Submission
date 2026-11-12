@@ -15,3 +15,4 @@ extension/node_modules/
 extension/out/
 *.vsix
 site/node_modules/
+extension/.vscode-test/

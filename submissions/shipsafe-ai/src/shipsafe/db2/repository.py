@@ -167,7 +167,7 @@ class Db2Repository:
                 "SELECT SERVICE_LEVEL, CURRENT SERVER AS DB_NAME, CURRENT SCHEMA AS SCHEMA_NAME "
                 "FROM SYSIBMADM.ENV_INST_INFO"
             )[0]
-        except Exception:  # least-privilege users may not read SYSIBMADM
+        except Exception:  # pragma: no cover - needs a least-privilege Db2 user without SYSIBMADM access
             self.rollback()
             row = self._query(
                 "SELECT 'IBM Db2' AS SERVICE_LEVEL, CURRENT SERVER AS DB_NAME, CURRENT SCHEMA AS SCHEMA_NAME "
@@ -375,7 +375,7 @@ class Db2Repository:
                                       it["FINGERPRINT"], change, it["TITLE"], it["SEVERITY"]))
             cur.close()
             self.conn.commit()
-        except Exception:
+        except Exception:  # pragma: no cover - needs Db2 to fail between two inserts of one diff
             self.rollback()
             raise
         return {
@@ -536,5 +536,5 @@ class Db2Repository:
     def close(self) -> None:
         try:
             self.conn.close()
-        except Exception:
+        except Exception:  # pragma: no cover - ibm_db_dbi accepts a second close; kept for other drivers
             pass

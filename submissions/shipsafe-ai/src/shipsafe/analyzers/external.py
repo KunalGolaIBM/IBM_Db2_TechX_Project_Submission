@@ -70,13 +70,13 @@ def parse_bandit(data: dict, assessment_id: str, version: str = "") -> List[Find
 
 
 def run_bandit(boundary: SafeExecutionBoundary, assessment_id: str) -> Tuple[ToolRun, List[Finding]]:
-    if not tool_available("bandit"):
+    if not tool_available("bandit"):  # pragma: no cover - bandit is a declared dependency
         return _skipped(assessment_id, "bandit", "Bandit not installed (pip install bandit)"), []
     cmd = [sys.executable, "-m", "bandit", "-r", ".", "-f", "json", "-q", "-x", EXCLUDES]
     ret, out, err, dur = boundary.run_command(cmd, timeout=120, redact=False)
     try:
         data = json.loads(out or "{}")
-    except json.JSONDecodeError:
+    except json.JSONDecodeError:  # pragma: no cover - only if a bandit release breaks its JSON format
         return ToolRun(f"{assessment_id}_bandit", assessment_id, "bandit", "-", ret, dur, "failed",
                        f"Could not parse Bandit output: {(err or '')[:200]}"), []
     findings = parse_bandit(data, assessment_id)
@@ -142,7 +142,7 @@ def _line_of(manifest: str, package: str, data: dict) -> int:
 
 
 def run_pip_audit(boundary: SafeExecutionBoundary, assessment_id: str) -> Tuple[ToolRun, List[Finding]]:
-    if not tool_available("pip_audit"):
+    if not tool_available("pip_audit"):  # pragma: no cover - pip-audit ships with the scanners extra
         return _skipped(assessment_id, "pip-audit", "pip-audit not installed (pip install pip-audit)"), []
     root = boundary.workspace_root
     manifests = [p for p in root.rglob("requirements*.txt")

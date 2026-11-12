@@ -121,7 +121,7 @@ class ProjectDiscovery:
                         parts = line.strip().split(maxsplit=1)
                         if len(parts) == 2:
                             changed_files.append(parts[1])
-            except Exception as e:
+            except Exception as e:  # pragma: no cover - git binary missing or hung past its timeout
                 warnings.append(f"Git inspection warning: {str(e)}")
         else:
             warnings.append("Workspace is not a Git repository. Scan will target all discoverable project files.")

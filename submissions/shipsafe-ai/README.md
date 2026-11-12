@@ -7,7 +7,7 @@ assistant works, it checks every file *before* it is written, fixes problems wit
 proves each fix, validates SQL against your real **IBM Db2** database, and remembers your team's decisions
 between sessions. Every check, fix, memory and policy lives in IBM Db2.
 
-> 11 MCP tools · 3 Db2 stored procedures · 2 Db2 vector stores · 181 tests, 91% coverage, no mocks ·
+> 11 MCP tools · 3 Db2 stored procedures · 2 Db2 vector stores · 218 tests, 99% coverage, no mocks ·
 > everything runs on your machine
 
 | Read next | |
@@ -187,7 +187,7 @@ shipsafe doctor                     # Db2, vectors, Granite and scanner health
 ## Testing & Verification
 
 ```bash
-pytest --cov=shipsafe               # 181 tests, 91% coverage, real Db2 + Granite, no mocks
+pytest --cov=shipsafe               # 218 tests, 99% coverage, real Db2 + Granite, no mocks
 cd extension && npm test            # extension unit tests
 ```
 
@@ -202,6 +202,24 @@ issue) are in [docs/SECURITY.md](docs/SECURITY.md). [docs/testing.md](docs/testi
 real-infrastructure tests found.
 
 ## Screenshots & Demo
+
+Every image below is the real output of the command shown, run against IBM Db2 12.1.5 and local Granite.
+
+**The guard blocks an SQL injection and a hardcoded secret, citing team policies from Db2**
+![shipsafe check](docs/screenshots/cli-check.png)
+
+**Granite fixes it; the same checks verify the fix (2 rounds, saved to Db2 `FIX_ATTEMPTS`)**
+![shipsafe fix](docs/screenshots/cli-fix.png)
+
+**Db2 itself rejects a wrong column name (SQL0206N) and the catalog suggests the right one**
+![shipsafe sql](docs/screenshots/cli-sql.png)
+
+**Project memory recalled from a Db2 vector table**
+![shipsafe recall](docs/screenshots/cli-recall.png)
+
+**Health check: Db2, vector store, Granite models and scanners**
+![shipsafe doctor](docs/screenshots/cli-doctor.png)
+
 
 - **Landing page:** [ShipSafe landing repository](https://github.com/ddevSharma/IBM_Db2_TechX_Project_Submission_ShipSafe_AI_Landing_Page) (install guide and downloads)
 - **Team dashboard** (`shipsafe serve`):

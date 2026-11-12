@@ -1,6 +1,6 @@
 # Testing
 
-**181 tests, 91% line and branch coverage, no mocks.** Every test that needs a database uses the real
+**218 tests, 99% line and branch coverage, no mocks.** Every test that needs a database uses the real
 IBM Db2 from `.env`, and every test that needs a model uses the real Granite models in Ollama.
 
 ## How it works
@@ -36,6 +36,21 @@ cd extension && npm ci && npm test         # VS Code / Bob extension
 | Platform | `test_platform.py` | Pool replaces a killed Db2 connection; unreachable Db2 fails fast; live pip-audit against PyPI/OSV; git discovery; log redaction |
 | IDE configs | `test_integrations_config.py` | Bob / Claude / Cursor / VS Code config files merged without losing other servers |
 | Extension | `extension/src/test` | Diagnostics, status text, config merge, Bob rules identical to the Python copy |
+
+## What coverage does not include, and why
+
+A few lines are marked `# pragma: no cover`, each with its reason in the code. They need software or
+privileges a single developer machine does not have, and we would rather list them than fake them:
+
+| Code path | Why it is not exercised |
+|---|---|
+| gitleaks branch of the secret scanner | Runs only where the `gitleaks` binary is installed |
+| "Bandit / pip-audit not installed" and "tool printed invalid JSON" | Both tools are declared dependencies |
+| SYSIBMADM fallback in `check_connection` | Needs a least-privilege Db2 user without SYSIBMADM access |
+| Rollback inside `compare_assessments` | Needs Db2 to fail between two inserts of the same diff |
+| `os.chmod` failure | Only happens on file systems without POSIX modes |
+| Git binary missing or hung | Discovery reports a warning; every test machine has git |
+| The blocking `uvicorn.run` call | Start-up logic is in `bootstrap_server()`, tested in-process; `shipsafe serve` itself is tested as a real subprocess |
 
 ## Bugs the real-infrastructure tests found
 

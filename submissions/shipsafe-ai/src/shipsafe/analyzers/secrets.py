@@ -86,7 +86,7 @@ class SecretAnalyzer:
         ret, stdout, stderr, dur = self.boundary.run_command(["gitleaks", "version"])
         use_gitleaks = (ret == 0)
 
-        if use_gitleaks:
+        if use_gitleaks:  # pragma: no cover - runs only where the gitleaks binary is installed
             tool_name = "gitleaks"
             version = stdout.strip() or "8.x"
             # Run gitleaks with json report to temporary location

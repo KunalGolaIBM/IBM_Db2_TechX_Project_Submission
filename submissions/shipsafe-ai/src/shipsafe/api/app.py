@@ -110,10 +110,7 @@ def create_app(config: Optional[ShipSafeConfig] = None, pool: Optional[Connectio
     async def request_context(request: Request, call_next):
         rid = request.headers.get("x-request-id", uuid.uuid4().hex[:16])[:64]
         t0 = time.perf_counter()
-        try:
-            response = await call_next(request)
-        except Db2Unavailable as exc:
-            response = JSONResponse({"error": "db2_unavailable", "detail": str(exc)[:300]}, status_code=503)
+        response = await call_next(request)
         dur = round((time.perf_counter() - t0) * 1000, 1)
         response.headers.update({
             "X-Request-ID": rid, "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY",

@@ -3,9 +3,10 @@
 import os as _os
 
 # Everything stays on this machine: switch off the anonymous usage telemetry that
-# CrewAI, LiteLLM and Haystack (PostHog) send by default. Users can still opt in.
+# CrewAI, LiteLLM and Haystack (PostHog) send by default, and CrewAI's "share this trace" prompt
+# (which would also block on stdin inside the MCP server). Users can still opt in.
 for _key, _value in (("CREWAI_DISABLE_TELEMETRY", "true"), ("OTEL_SDK_DISABLED", "true"),
-                     ("LITELLM_TELEMETRY", "False"), ("HAYSTACK_TELEMETRY_ENABLED", "False"),
+                     ("LITELLM_TELEMETRY", "False"), ("CREWAI_TRACING_ENABLED", "false"), ("HAYSTACK_TELEMETRY_ENABLED", "False"),
                      ("ANONYMIZED_TELEMETRY", "False")):
     _os.environ.setdefault(_key, _value)
 

@@ -50,7 +50,7 @@ def cmd_setup(args) -> int:
                       + "".join(f"{k}={values[k]}\n" for k in SETUP_KEYS), encoding="utf-8")
     try:
         os.chmod(target, 0o600)
-    except OSError:
+    except OSError:  # pragma: no cover - chmod only fails on file systems without POSIX modes
         pass
     print(f"[OK]   Settings saved to {target}")
 
@@ -73,10 +73,10 @@ def cmd_setup(args) -> int:
     from .services import ShipSafeServices
 
     svc = ShipSafeServices(config)
-    created = svc.repository.initialize_schema(replace_views=True)
+    svc.repository.initialize_schema(replace_views=True)
     st_db = svc.repository.check_connection()
-    print(f"[OK]   IBM Db2 {st_db['version']} {st_db['host']}:{st_db['port']}/{st_db['database']} schema {st_db['schema']}"
-          f" ({len(created)} objects created)")
+    print(f"[OK]   IBM Db2 {st_db['version']} {st_db['host']}:{st_db['port']}/{st_db['database']}, schema {st_db['schema']}: "
+          f"{st_db['tables_in_schema']} tables, {st_db['views_in_schema']} views, 3 stored procedures")
     print(f"[OK]   Policy vectors in Db2: {svc.knowledge_base.chunk_count()} chunks")
     print(f"[OK]   Project memory store: {svc.memory.count()} memories")
     print("\nNext: run `shipsafe connect bob` inside a project folder.")
@@ -195,7 +195,7 @@ def cmd_hook(args) -> int:
     hook.write_text(HOOK.format(python=Path(sys.executable).as_posix()), encoding="utf-8")
     try:
         os.chmod(hook, 0o700)  # executable by the owner only
-    except OSError:
+    except OSError:  # pragma: no cover - chmod only fails on file systems without POSIX modes
         pass
     print(f"[OK] installed {hook}")
     return 0

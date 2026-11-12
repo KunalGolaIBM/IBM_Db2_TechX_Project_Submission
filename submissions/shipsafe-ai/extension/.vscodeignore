@@ -1,5 +1,8 @@
 src/**
 out/test/**
+out/e2e/**
+e2e-workspace/**
+.vscode-test/**
 node_modules/**
 tsconfig.json
 **/*.map

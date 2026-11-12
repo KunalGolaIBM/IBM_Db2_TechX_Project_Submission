@@ -113,7 +113,8 @@ class FixCrew:
                 "Code:\n```{language}\n{code}\n```"),
             expected_output="The complete corrected file in one fenced code block, and nothing else.",
             agent=engineer, context=[plan])
-        return Crew(agents=[analyst, engineer], tasks=[plan, fix], process=Process.sequential, verbose=False)
+        return Crew(agents=[analyst, engineer], tasks=[plan, fix], process=Process.sequential, verbose=False,
+                    tracing=False)
 
     def _standards(self, issues: List[GuardIssue]) -> (str, List[Dict[str, Any]]):
         if not self.policy_lookup:

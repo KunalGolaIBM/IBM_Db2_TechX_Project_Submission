@@ -144,19 +144,3 @@ class Assessment:
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
-
-
-@dataclass
-class KnowledgeChunk:
-    """Retrieved policy / remediation guidance from Db2 vector knowledge store."""
-    doc_id: str
-    title: str
-    content: str
-    source: str
-    category: str
-    version: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    similarity: float = 0.0
-
-    def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)

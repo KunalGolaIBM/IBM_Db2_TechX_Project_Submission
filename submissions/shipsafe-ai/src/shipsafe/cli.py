@@ -35,6 +35,11 @@ def cmd_doctor(args) -> int:
     print(f"       Schema {st['schema']}: {st['tables_in_schema']} tables, {st['views_in_schema']} view(s)")
     if rt.knowledge_base:
         print(f"[OK]   langchain-db2 vector store: {rt.knowledge_base.chunk_count()} policy chunks in POLICY_VECTORS")
+    from .llm import ollama_status
+
+    ol = ollama_status(config.llm)
+    for model, ready in ((config.llm.chat_model, ol["chat_model_ready"]), (config.llm.embed_model, ol["embed_model_ready"])):
+        print(f"{'[OK]  ' if ready else '[FAIL]'} Granite model {model} via Ollama at {config.llm.host}")
     print(f"[OK]   MCP server: {'enabled' if config.enable_mcp else 'disabled'} (python -m shipsafe.mcp_server)")
     print("\nOptional external scanners (built-in rules are used when absent):")
     for name in ("git", "gitleaks", "bandit", "ruff"):
@@ -78,6 +83,15 @@ def cmd_serve(args) -> int:
     configure_logging(config.log_format, config.log_level)
 
     pool = ConnectionPool(config.db2, size=config.pool_size)
+    bootstrap_server(config, pool)
+    print(f"ShipSafe web UI: http://{config.api_host}:{config.api_port}  (API docs: /api/docs)")
+    uvicorn.run(create_app(config, pool), host=config.api_host, port=config.api_port,  # pragma: no cover - blocks until stopped
+                log_level=config.log_level.lower(), access_log=False, proxy_headers=True)
+    return 0  # pragma: no cover
+
+
+def bootstrap_server(config: ShipSafeConfig, pool) -> None:
+    """Check Db2, index policies and create the first admin token. Never stops the server from starting."""
     try:
         with pool.repository() as repo:
             st = repo.check_connection()
@@ -96,10 +110,6 @@ def cmd_serve(args) -> int:
                       f"    {token}\n\nPaste it into the web UI sign-in. Create more with: shipsafe token create\n" + LINE + "\n")
     except Exception as exc:
         print(f"[WARN] IBM Db2 not reachable yet ({exc}). The UI will start in degraded mode and reconnect automatically.")
-    print(f"ShipSafe AI web UI: http://{config.api_host}:{config.api_port}  (API docs: /api/docs)")
-    uvicorn.run(create_app(config, pool), host=config.api_host, port=config.api_port,
-                log_level=config.log_level.lower(), access_log=False, proxy_headers=True)
-    return 0
 
 
 def cmd_token(args) -> int:

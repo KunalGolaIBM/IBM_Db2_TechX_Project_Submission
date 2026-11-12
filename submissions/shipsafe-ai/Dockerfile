@@ -24,7 +24,6 @@ RUN apt-get update \
 WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY src ./src
-COPY policies ./policies
 COPY fixtures ./fixtures
 RUN pip install -e ".[scanners]"
 COPY --from=web /web/dist ./web/dist

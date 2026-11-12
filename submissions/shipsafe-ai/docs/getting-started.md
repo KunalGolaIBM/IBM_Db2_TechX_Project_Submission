@@ -47,7 +47,7 @@ vectors and opens the project-memory store. Expected output:
 [OK]   Settings saved to ~/.shipsafe/.env
 [OK]   Granite model granite4:micro is installed
 [OK]   Granite model granite-embedding:30m is installed
-[OK]   IBM Db2 DB2 v12.1.5.0 127.0.0.1:50001/TESTDB schema SHIPSAFE (26 objects created)
+[OK]   IBM Db2 DB2 v12.1.5.0 127.0.0.1:50001/TESTDB, schema SHIPSAFE: 11 tables, 2 views, 3 stored procedures
 [OK]   Policy vectors in Db2: 13 chunks
 [OK]   Project memory store: 0 memories
 ```

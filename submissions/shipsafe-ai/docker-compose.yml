@@ -4,9 +4,9 @@
 #   docker compose logs shipsafe    # the first start prints a one-time admin token
 #   open http://localhost:8080
 #
-# Already running Db2 (for example one created with the VS Code Db2 extension)?
-#   set DB2_HOST=host.docker.internal in .env, then:
-#   docker compose up -d --build --no-deps shipsafe
+# Already running Db2 (for example TESTDB created with the VS Code Db2 extension)?
+#   COMPOSE_DB2_HOST=host.docker.internal COMPOSE_DB2_PORT=50001 COMPOSE_DB2_NAME=TESTDB #     docker compose up -d --build --no-deps shipsafe
+# Granite runs in Ollama on the host; the container reaches it at host.docker.internal:11434.
 services:
   db2:
     image: icr.io/db2_community/db2:latest
@@ -38,13 +38,17 @@ services:
     ports:
       - "8080:8080"
     environment:
-      DB2_HOST: ${DB2_HOST:-db2}
-      DB2_PORT: ${DB2_PORT:-50000}
-      DB2_DATABASE: ${DB2_DATABASE:-SAMPLE}
+      # Compose-only names, so a local .env aimed at another Db2 cannot redirect the container.
+      DB2_HOST: ${COMPOSE_DB2_HOST:-db2}
+      DB2_PORT: ${COMPOSE_DB2_PORT:-50000}
+      DB2_NAME: ${COMPOSE_DB2_NAME:-SAMPLE}
       DB2_USERNAME: ${DB2_USERNAME:-db2inst1}
       DB2_PASSWORD: ${DB2_PASSWORD:?set DB2_PASSWORD in .env}
       DB2_SCHEMA: ${DB2_SCHEMA:-SHIPSAFE}
       SHIPSAFE_PIP_AUDIT: ${SHIPSAFE_PIP_AUDIT:-deep}
+      OLLAMA_HOST: ${COMPOSE_OLLAMA_HOST:-http://host.docker.internal:11434}
+      SHIPSAFE_CHAT_MODEL: ${SHIPSAFE_CHAT_MODEL:-granite4:micro}
+      SHIPSAFE_EMBED_MODEL: ${SHIPSAFE_EMBED_MODEL:-granite-embedding:30m}
     volumes:
       # Projects to scan. Read-only: ShipSafe never modifies scanned code.
       - ./workspaces:/workspaces:ro
