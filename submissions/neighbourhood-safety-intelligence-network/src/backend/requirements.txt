@@ -1,0 +1,33 @@
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
+PyJWT>=2.10.1
+# Security floor for a transitive dependency (CVE fixes)
+filelock>=4.2.1
+bcrypt>=4.1.2
+python-multipart>=0.0.9
+sqlalchemy>=2.0.28
+
+# IBM Db2: native driver + SQLAlchemy dialect (the only database)
+ibm-db>=3.2.8
+ibm-db-sa>=0.4.0
+
+# Haystack 2 + IBM's Db2 document store / embedding retriever (VECTOR columns, BSON metadata)
+haystack-ai>=2.28.0
+ibm-db-haystack>=1.0.0
+# IBM Granite models served locally by Ollama: embeddings (Haystack) and chat (CrewAI)
+ollama-haystack>=3.0.0
+ollama>=0.4.0
+
+# CrewAI: Flow orchestration + multi-agent crew on Granite (telemetry disabled in code)
+crewai[litellm]>=0.100.0
+# IBM's Db2 tools for agent frameworks: CrewAI DB2VectorSearchTool, LangChain DB2VS
+crewai-tools>=1.0.0
+langchain-db2>=1.0.0
+langchain-ollama>=1.0.0
+
+# Tests
+pytest>=8.1.0
+pytest-cov>=5.0.0
+httpx>=0.27.0

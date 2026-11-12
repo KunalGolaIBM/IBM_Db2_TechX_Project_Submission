@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Neighbourhood Safety Intelligence Network (NSIN)",
+    "slug": "neighbourhood-safety-intelligence-network",
+    "short_description": "A neighbourhood emergency and safety platform (React web, native Android, FastAPI) with IBM Db2 as the system of record: transactional SOS and incident lifecycle with an append-only audit trail, semantic protocol retrieval and duplicate-report detection with native Db2 VECTOR columns and VECTOR_DISTANCE, and response-time and hotspot analytics computed in Db2 SQL. Runs on a least-privilege Db2 role.",
+    "category": "Civic Safety / Hybrid RAG / Analytics / Full-Stack (Web + Android)",
+    "demo_url": "https://ibm-db2-tech-x-project-submission-n.vercel.app",
+    "video_url": "",
+    "repo_url": "https://github.com/KunalGolaIBM/IBM_Db2_TechX_Project_Submission/tree/main/submissions/neighbourhood-safety-intelligence-network"
+  },
+  "team": {
+    "name": "Yagnik Sharma",
+    "members": [
+      {
+        "name": "Yagnik Sharma",
+        "github": "YagnikSharma",
+        "email": "yagniksharma47@gmail.com",
+        "role": "Full stack: backend, IBM Db2 integration, triage pipeline, web and Android"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 12.1 Community Edition (local instance, e.g. created by the IBM Db2 VS Code extension; bundled container in docker-compose)",
+    "connector": "ibm_db_sa + ibm_db + ibm-db-haystack (Haystack) + crewai-tools DB2VectorSearchTool (CrewAI) + langchain-db2 DB2VS (LangChain)",
+    "features_used": [
+      "VECTOR(768, FLOAT32) columns with VECTOR_DISTANCE (COSINE) for semantic retrieval and related-incident search",
+      "MERGE upserts for embeddings",
+      "Analytics in SQL: CTEs, SECONDS_BETWEEN, MEDIAN, PERCENTILE_CONT WITHIN GROUP, RANK() OVER, HOUR()",
+      "14 tables with primary, foreign and unique keys, identity columns and 11 secondary indexes",
+      "ACID transactions (SOS writes incident, location, history and audit atomically)",
+      "Least-privilege role NSIN_APP (data access only, append-only audit table) with CURRENTSCHEMA",
+      "SYSCAT catalog queries for schema checks; db2look DDL export",
+      "Prepared, parameterised statements via ibm_db.prepare / execute; SYSIBM.SYSDUMMY1 health probe",
+      "BSON metadata filtered with JSON_VALUE(SYSTOOLS.BSON2JSON(meta)) via ibm-db-haystack"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "TypeScript",
+      "Kotlin",
+      "SQL"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "SQLAlchemy",
+      "Pydantic",
+      "Haystack 2 (haystack-ai)",
+      "ibm-db-haystack",
+      "ollama-haystack",
+      "CrewAI (Flow + Crew)",
+      "React",
+      "Vite",
+      "Tailwind CSS",
+      "Jetpack Compose",
+      "Retrofit",
+      "crewai-tools (DB2VectorSearchTool)",
+      "langchain-db2 (DB2VS)",
+      "langchain-ollama"
+    ],
+    "ai_models": [
+      "IBM Granite granite3.3:2b (chat, CrewAI agents) via Ollama",
+      "IBM Granite granite-embedding:278m (768-dim embeddings stored in Db2 VECTOR columns) via Ollama"
+    ]
+  }
+}

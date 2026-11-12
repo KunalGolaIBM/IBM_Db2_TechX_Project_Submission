@@ -1,0 +1,14 @@
+.env
+*.db
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+node_modules/
+dist/
+*.apk
+src/android/.gradle/
+src/android/app/build/
+src/android/local.properties
+.coverage
+htmlcov/

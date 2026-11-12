@@ -1,0 +1,80 @@
+# NSIN stack: FastAPI backend + React web app on IBM Db2, with IBM Granite models served by Ollama on the host.
+#
+# Use an existing Db2 (for example the instance created by the Db2 VS Code extension):
+#   DB2_PASSWORD=<password> docker compose up --build
+#
+# No Db2 yet? Start a bundled Db2 Community Edition container as well:
+#   DB2_HOST=db2 DB2_PASSWORD=<choose-one> docker compose --profile bundled-db2 up --build
+#
+# Ollama must run on the host with the models pulled:
+#   ollama pull granite3.3:2b && ollama pull granite-embedding:278m
+
+services:
+  db2:
+    profiles: ["bundled-db2"]
+    image: icr.io/db2_community/db2:latest
+    container_name: nsin_db2
+    privileged: true
+    ports:
+      - "50000:50000"
+    environment:
+      LICENSE: accept
+      DB2INSTANCE: db2inst1
+      DB2INST1_PASSWORD: ${DB2_PASSWORD:-change_me_db2}
+      DBNAME: ${DB2_DATABASE:-TESTDB}
+      BLU: "false"
+      ARCHIVE_LOGS: "false"
+      PERSISTENT_HOME: "true"
+    volumes:
+      - db2-data:/database
+    healthcheck:
+      test: ["CMD-SHELL", "su - db2inst1 -c \"db2 connect to $${DBNAME}\" > /dev/null"]
+      interval: 30s
+      timeout: 20s
+      retries: 20
+      start_period: 180s
+
+  backend:
+    build:
+      context: ./src
+      dockerfile: backend/Dockerfile
+    container_name: nsin_backend
+    ports:
+      - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      APP_ENV: development
+      DB2_HOST: ${DB2_HOST:-host.docker.internal}
+      DB2_PORT: ${DB2_PORT:-50000}
+      DB2_DATABASE: ${DB2_DATABASE:-TESTDB}
+      DB2_USER: ${DB2_USER:-db2inst1}
+      DB2_PASSWORD: ${DB2_PASSWORD:-change_me_db2}
+      DB2_SECURITY: ${DB2_SECURITY:-}
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+      JWT_SECRET: ${JWT_SECRET:-local_dev_only_change_me}
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+    depends_on:
+      db2:
+        condition: service_healthy
+        required: false
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  web-app:
+    build:
+      context: ./src/web-app
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
+    container_name: nsin_webapp
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  db2-data:
