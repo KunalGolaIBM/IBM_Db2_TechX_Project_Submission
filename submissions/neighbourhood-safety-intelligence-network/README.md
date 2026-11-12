@@ -117,7 +117,7 @@ Output is advisory. Humans make every dispatch decision.
 ---
 
 ## Tech Stack
-- **Backend / Core:** Python 3.11, FastAPI, SQLAlchemy 2, Pydantic 2, python-jose (JWT), bcrypt
+- **Backend / Core:** Python 3.11, FastAPI, SQLAlchemy 2, Pydantic 2, PyJWT (HS256), bcrypt
 - **Database:** IBM Db2 12.1 only (`ibm_db`, `ibm_db_sa`, `ibm-db-haystack`): relational tables, `VECTOR` columns, BSON/JSON metadata
 - **AI / Retrieval:** IBM's Db2 packages for **Haystack** (`ibm-db-haystack`), **CrewAI** (`crewai-tools` `DB2VectorSearchTool`) and **LangChain** (`langchain-db2` `DB2VS`); `ollama-haystack`, `langchain-ollama`; CrewAI (Flow + Crew); Ollama with IBM Granite models
 - **Frontend / UI:** React 19 + TypeScript + Vite + Tailwind CSS 4 (web); Kotlin + Jetpack Compose + Material 3 + Retrofit (Android)
