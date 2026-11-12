@@ -1,3 +1,4 @@
+import Mark from './Mark';
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ShieldAlert, Shield, LogOut, Menu, X, Smartphone, Activity, UserCheck } from 'lucide-react';
@@ -23,17 +24,10 @@ export const Navbar: React.FC = () => {
         
         {/* Brand */}
         <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-10 h-10 rounded-xl bg-teal-600/30 border border-teal-500/40 p-2 flex items-center justify-center group-hover:bg-teal-600/40 transition">
-            <Shield className="w-6 h-6 text-teal-400" />
-          </div>
-          <div>
-            <span className="font-bold text-lg tracking-tight text-white flex items-center gap-1.5">
-              Neighbourhood Safety
-              <span className="text-[10px] font-semibold bg-teal-500/20 text-teal-300 border border-teal-500/30 px-1.5 py-0.5 rounded">
-                INTEL
-              </span>
-            </span>
-            <span className="text-[11px] text-slate-400 block -mt-1">Civic Assistance Network</span>
+          <Mark className="w-9 h-9 transition group-hover:scale-105" />
+          <div className="leading-none">
+            <span className="block text-lg font-semibold tracking-tight text-white">nsin</span>
+            <span className="block text-[10px] uppercase tracking-[0.16em] text-slate-400">safety network</span>
           </div>
         </Link>
 

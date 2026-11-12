@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Shield, Lock, Mail, User, Phone, MapPin, AlertCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
+import Mark from '../components/Mark';
 
 export const AuthPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -83,11 +84,9 @@ export const AuthPage: React.FC = () => {
         
         {/* Header */}
         <div className="bg-slate-900 p-6 text-white text-center">
-          <div className="w-12 h-12 rounded-xl bg-teal-600/30 border border-teal-500/40 p-2 mx-auto mb-3 flex items-center justify-center">
-            <Shield className="w-6 h-6 text-teal-400" />
-          </div>
+          <Mark className="w-12 h-12 mx-auto mb-3" />
           <h2 className="text-xl font-bold">
-            {isRegister ? 'Join Neighbourhood Safety' : 'Sign In to Network'}
+            {isRegister ? 'Join nsin' : 'Sign In to Network'}
           </h2>
           <p className="text-xs text-slate-300 mt-1">
             Privacy-first emergency assistance & incident intelligence

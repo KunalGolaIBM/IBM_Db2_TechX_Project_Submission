@@ -1,3 +1,4 @@
+import Mark from './Mark';
 import React from 'react';
 import { Shield, PhoneCall, Lock, Heart, Database, Code2 } from 'lucide-react';
 
@@ -26,10 +27,8 @@ export const Footer: React.FC = () => {
           
           <div className="md:col-span-2 space-y-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-teal-600/30 border border-teal-500/40 p-1.5 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-teal-400" />
-              </div>
-              <span className="font-bold text-lg text-white">Neighbourhood Safety Intelligence</span>
+              <Mark className="w-9 h-9" />
+              <span className="font-semibold text-lg text-white">nsin <span className="font-normal text-slate-400">· Neighbourhood Safety Intelligence Network</span></span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed max-w-md">
               A privacy-first, community-driven civic safety network connecting residents, vulnerable citizens, 
