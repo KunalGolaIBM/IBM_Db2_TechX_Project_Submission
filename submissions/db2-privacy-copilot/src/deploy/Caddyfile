@@ -1,0 +1,17 @@
+{$DOMAIN} {
+    encode gzip
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+    }
+
+    handle_path /api/* {
+        reverse_proxy api:8000
+    }
+
+    handle {
+        reverse_proxy ui:8501
+    }
+}

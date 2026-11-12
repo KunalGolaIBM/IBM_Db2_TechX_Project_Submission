@@ -1,0 +1,84 @@
+services:
+  db2:
+    image: icr.io/db2_community/db2
+    privileged: true
+    restart: unless-stopped
+    ports:
+      - "50000:50000"
+    environment:
+      LICENSE: accept
+      DB2INSTANCE: db2inst1
+      DB2INST1_PASSWORD: ${DB2_PASSWORD}
+      DBNAME: clinic
+    volumes:
+      - ./db2data:/database
+    healthcheck:
+      test: ["CMD", "su", "-", "db2inst1", "-c", "db2 connect to clinic"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+
+  api:
+    profiles: ["app"]
+    image: db2-privacy-copilot-api:local
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    restart: unless-stopped
+    environment:
+      DB2_HOST: db2
+      DB2_PORT: "50000"
+      DB2_DB: clinic
+      DB2_USER: db2inst1
+      DB2_PASSWORD: ${DB2_PASSWORD:?Set DB2_PASSWORD in .env}
+      DB2_SCHEMA: DB2INST1
+      DB_MOCK: "0"
+      API_SECRET_KEY: ${API_SECRET_KEY:?Set API_SECRET_KEY in .env}
+      VIEWER_TOKEN: ${VIEWER_TOKEN:?Set VIEWER_TOKEN in .env}
+      ANALYST_TOKEN: ${ANALYST_TOKEN:?Set ANALYST_TOKEN in .env}
+      DPO_TOKEN: ${DPO_TOKEN:?Set DPO_TOKEN in .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8501,http://127.0.0.1:8501}
+      API_HOST: 0.0.0.0
+      API_PORT: "8000"
+    depends_on:
+      db2:
+        condition: service_healthy
+    ports:
+      - "${API_PORT_HOST:-8001}:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5)"
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+
+  ui:
+    profiles: ["app"]
+    image: db2-privacy-copilot-ui:local
+    build:
+      context: .
+      dockerfile: ui/Dockerfile
+    restart: unless-stopped
+    environment:
+      DB2_HOST: db2
+      DB2_PORT: "50000"
+      DB2_DB: clinic
+      DB2_USER: db2inst1
+      DB2_PASSWORD: ${DB2_PASSWORD:?Set DB2_PASSWORD in .env}
+      DB2_SCHEMA: DB2INST1
+      DB_MOCK: "0"
+      API_SECRET_KEY: ${API_SECRET_KEY:?Set API_SECRET_KEY in .env}
+      API_BASE_URL: http://api:8000
+      VIEWER_TOKEN: ${VIEWER_TOKEN:?Set VIEWER_TOKEN in .env}
+      ANALYST_TOKEN: ${ANALYST_TOKEN:?Set ANALYST_TOKEN in .env}
+      DPO_TOKEN: ${DPO_TOKEN:?Set DPO_TOKEN in .env}
+    depends_on:
+      db2:
+        condition: service_healthy
+    ports:
+      - "8501:8501"
