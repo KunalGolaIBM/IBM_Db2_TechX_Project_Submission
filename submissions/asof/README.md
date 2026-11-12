@@ -3,7 +3,7 @@
 > **What did the policy say on that date, and what did your AI tell the customer?**
 > AsOf checks each policy claim in an AI assistant's answer against the policy version in force on the customer's date, stops answers that contradict it, and keeps a tamper-evident Db2 record of what was said and why. Db2 itself refuses to record a release the policy in force does not back, for every user, the owner included.
 
-| [**1 of 121** wrong drafts released (frozen)](docs/evaluation.md#the-frozen-test-splits) | [**0 of 65** on blind sets](docs/evaluation.md#the-frozen-test-splits) | [**30/40 vs 6/40** on another AI's policy](docs/eval/unseen-results.md) | [**9 of 10** on real US DOT rules](docs/eval/real-regulation.md) | [**1,331 tests**, CI on IBM's Db2 image](https://github.com/JustJay7/asof/actions/workflows/ci.yml) | [**Live demo**, spend-capped by Db2](docs/public-demo.md) |
+| [**1 of 121** wrong drafts released (frozen)](docs/evaluation.md#the-frozen-test-splits) | [**0 of 65** on blind sets](docs/evaluation.md#the-frozen-test-splits) | [**30/40 vs 6/40** on another AI's policy](docs/eval/unseen-results.md) | [**9 of 10** on real US DOT rules](docs/eval/real-regulation.md) | [**1,344 tests**, CI on IBM's Db2 image](https://github.com/JustJay7/asof/actions/workflows/ci.yml) | [**Live demo**, spend-capped by Db2](docs/public-demo.md) |
 |:---:|:---:|:---:|:---:|:---:|:---:|
 
 ![The Playground on a March booking: the demo assistant promised a retroactive bereavement refund; AsOf found 3 claims contradicted by BRV-002 v1, the version in force on 10 March 2026, and released a corrected answer that passed a full re-check](docs/screenshots/01a-playground-corrected.png)
@@ -27,7 +27,7 @@
 | **Db2 does the work** | `FOR BUSINESS_TIME AS OF` with `VECTOR_DISTANCE` in one statement, a hash-chained ledger in SQL PL, `JSON_TABLE`, column masks, in-database embeddings, partitions and MQTs measured at 1,000,000 decisions; `python -m asof.db2check` runs 34 feature checks. |
 | **Tamper evidence** | Triggers stop even the owner; `VERIFY_CHAIN` finds an edited row; receipts and anchors kept outside Db2 catch a rebuilt ledger. |
 | **People where the check stops** | Held answers go to a specialist inbox, and Db2 records a reply only if it passes the same check; customers told a rule that later changed get a checked correction notice a specialist approves. |
-| **Engineering** | A LangGraph check with fixed edges that fails closed, five least-privilege Db2 users, 1331 tests (80% line coverage), mypy, and three CI jobs including IBM's stock Db2 image. |
+| **Engineering** | A LangGraph check with fixed edges that fails closed, five least-privilege Db2 users, 1344 tests (80% line coverage), mypy, and three CI jobs including IBM's stock Db2 image. |
 
 > **Fictional data.** "Aurelia Air", "Fernhollow Bank" and every policy, fee schedule, FAQ and help-centre answer in this repository are invented for the demo. The airline is modelled on the kind of policy at issue in *Moffatt v. Air Canada*; neither describes a real company.
 
@@ -281,7 +281,7 @@ python -m asof.demo          # optional: thirteen sample decisions, three of the
 ## Testing & Verification
 
 ```bash
-pytest -q                                 # 1331 tests; 10 need an opt-in flag, 3 need TLS on and 1 the watsonx.ai extra (CI provides both)
+pytest -q                                 # 1344 tests; 10 need an opt-in flag, 3 need TLS on and 1 the watsonx.ai extra (CI provides both)
 pytest -q -m "not db2"                    # unit tests only, no database needed
 python scripts/audit_deps.py && mypy      # dependency audit, type check
 python -m asof.eval --split test          # the frozen airline split (needs a model)
