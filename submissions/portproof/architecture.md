@@ -21,6 +21,19 @@ authority and the model is an untrusted string generator.
 
 ## Architecture Diagram
 
+![PortProof architecture](docs/architecture/portproof-architecture.png)
+
+Every prover stage sits on the same baseline as the Db2 object it talks to, so
+each crossing arrow is horizontal: work happens in the middle column, judgement
+happens in the right one. Arrow labels are tinted by the kind of operation
+(judgement, recall, execution, repair, federation, record) and the labels down
+the prover spine by severity, so the run of red is the argument of the project
+in one glance. The drawing still reads in greyscale: colour is a second,
+redundant layer over the structure, never the only carrier of meaning.
+
+Source: [`docs/architecture/portproof-architecture.svg`](docs/architecture/portproof-architecture.svg).
+The same structure as Mermaid, for anyone who would rather read it as text:
+
 ```mermaid
 graph TD
     subgraph UI["Interface"]
