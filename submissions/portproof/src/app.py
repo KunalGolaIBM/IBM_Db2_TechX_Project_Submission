@@ -291,7 +291,7 @@ c4.metric(
     # rewrite rule set, and calling that a mock on screen understates it: these
     # are the rules that repaired all fourteen rejected statements.
     "rules" if cfg.is_mock else cfg.provider,
-    "deterministic, no API key" if cfg.is_mock else cfg.model,
+    "deterministic, no API key" if cfg.is_mock else cfg.label,
     delta_color="off",
 )
 

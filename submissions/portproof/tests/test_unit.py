@@ -7,7 +7,8 @@ import pytest
 
 from src.corpus import CORPUS, FIXTURE_TABLES, VARIANTS
 from src.counterexample import canon_rows, canon_value
-from src.llm import RuleRepairLLM, apply_rules
+from src.config import llm_config
+from src.llm import RuleRepairLLM, apply_rules, build_llm
 from src.repair import clean_sql
 from src.safety import UnsafeSql, check_read_only, is_read_only
 from src.translate import normalise, translate
@@ -281,3 +282,80 @@ def test_variants_have_consistent_column_counts():
                 widths.setdefault(table, set()).add(len(row))
     for table, found in widths.items():
         assert len(found) == 1, f"{table} has rows of differing width: {found}"
+
+
+# ---------------------------------------------------------------------------
+# repair-provider configuration
+#
+# The proposer is swappable and the verdict must not depend on which one
+# answered, so what is pinned here is only that each provider resolves to a
+# usable endpoint and that none of them can be selected without a key.
+# ---------------------------------------------------------------------------
+LLM_ENV_VARS = (
+    "LLM_PROVIDER",
+    "LLM_API_KEY",
+    "LLM_BASE_URL",
+    "LLM_MODEL",
+    "GEMINI_API_KEY",
+    "GOOGLE_API_KEY",
+    "GROQ_API_KEY",
+)
+
+
+@pytest.fixture
+def clean_llm_env(monkeypatch):
+    """A blank slate: .env and .env.local are already loaded at import time."""
+    for name in LLM_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
+    return monkeypatch
+
+
+def test_default_provider_needs_no_key(clean_llm_env):
+    cfg = llm_config()
+    assert cfg.is_mock
+    assert cfg.label == "deterministic rules"
+    assert isinstance(build_llm(cfg), RuleRepairLLM)
+
+
+@pytest.mark.parametrize("alias", ["mock", "rules", ""])
+def test_rule_engine_aliases_all_count_as_mock(clean_llm_env, alias):
+    clean_llm_env.setenv("LLM_PROVIDER", alias)
+    assert llm_config().is_mock
+
+
+def test_gemini_fills_in_url_and_model_from_a_key_alone(clean_llm_env):
+    clean_llm_env.setenv("LLM_PROVIDER", "gemini")
+    clean_llm_env.setenv("GEMINI_API_KEY", "test-key")
+    cfg = llm_config()
+    assert not cfg.is_mock
+    assert cfg.api_key == "test-key"
+    assert "generativelanguage.googleapis.com" in cfg.base_url
+    assert cfg.model
+    assert cfg.label == cfg.model
+
+
+def test_explicit_settings_beat_provider_defaults(clean_llm_env):
+    clean_llm_env.setenv("LLM_PROVIDER", "gemini")
+    clean_llm_env.setenv("LLM_API_KEY", "explicit")
+    clean_llm_env.setenv("GEMINI_API_KEY", "fallback")
+    clean_llm_env.setenv("LLM_BASE_URL", "http://localhost:1234/v1")
+    clean_llm_env.setenv("LLM_MODEL", "my-model")
+    cfg = llm_config()
+    assert (cfg.api_key, cfg.base_url, cfg.model) == (
+        "explicit",
+        "http://localhost:1234/v1",
+        "my-model",
+    )
+
+
+@pytest.mark.parametrize("provider", ["gemini", "http"])
+def test_a_real_provider_without_a_key_is_refused(clean_llm_env, provider):
+    clean_llm_env.setenv("LLM_PROVIDER", provider)
+    with pytest.raises(RuntimeError, match="API key"):
+        build_llm(llm_config())
+
+
+def test_an_unknown_provider_is_refused_rather_than_silently_mocked(clean_llm_env):
+    clean_llm_env.setenv("LLM_PROVIDER", "nope")
+    with pytest.raises(RuntimeError, match="Unknown LLM_PROVIDER"):
+        build_llm(llm_config())

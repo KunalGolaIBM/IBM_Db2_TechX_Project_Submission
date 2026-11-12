@@ -13,6 +13,14 @@ from dotenv import find_dotenv, load_dotenv
 
 load_dotenv(find_dotenv(usecwd=True), override=False)
 
+# A personal, never-committed overlay for API keys, loaded after ``.env`` and
+# without override: anything already set in the environment or in ``.env`` wins,
+# so this only fills in what those leave blank. It exists so a key can live in
+# one file that no tooling reads for any other purpose.
+_local_env = find_dotenv(".env.local", usecwd=True)
+if _local_env:
+    load_dotenv(_local_env, override=False)
+
 #: Marks PortProof's own connections so a Db2 WLM workload can leash them.
 APPL_NAME = "portproof-prover"
 
@@ -179,17 +187,52 @@ class LlmConfig:
 
     @property
     def is_mock(self) -> bool:
-        return self.provider == "mock"
+        return self.provider in ("mock", "rules", "")
+
+    @property
+    def label(self) -> str:
+        """What to show a reader: the model, not the transport."""
+        return "deterministic rules" if self.is_mock else self.model
+
+
+#: Per-provider defaults, so supplying a key is the only required step.
+#: Each entry is (base URL, model, environment variables to read the key from).
+#: ``gemini`` points at Google's OpenAI-compatible surface, which means the same
+#: :class:`src.llm.HttpRepairLLM` serves Gemini, Groq, watsonx and a local
+#: server with no branching anywhere in the repair loop.
+_PROVIDER_DEFAULTS: dict[str, tuple[str, str, tuple[str, ...]]] = {
+    "gemini": (
+        "https://generativelanguage.googleapis.com/v1beta/openai",
+        # The dated ids (gemini-2.5-flash) are not all exposed on every key,
+        # measured 2026-11-10: the floating alias is. Pin it in LLM_MODEL if you
+        # want a fixed one.
+        "gemini-flash-latest",
+        ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
+    ),
+    "http": (
+        "https://api.groq.com/openai/v1",
+        "llama-3.3-70b-versatile",
+        ("GROQ_API_KEY",),
+    ),
+}
 
 
 def llm_config() -> LlmConfig:
     """LLM settings. ``mock`` is the default so the project runs with no keys."""
     provider = os.getenv("LLM_PROVIDER", "mock").strip().lower()
+    base_default, model_default, key_vars = _PROVIDER_DEFAULTS.get(
+        provider, ("", "llama-3.3-70b-versatile", ())
+    )
+    api_key = os.getenv("LLM_API_KEY", "").strip()
+    for var in key_vars:
+        if api_key:
+            break
+        api_key = os.getenv(var, "").strip()
     return LlmConfig(
         provider=provider,
-        model=os.getenv("LLM_MODEL", "llama-3.3-70b-versatile"),
-        api_key=os.getenv("LLM_API_KEY", ""),
-        base_url=os.getenv("LLM_BASE_URL", ""),
+        model=os.getenv("LLM_MODEL", "").strip() or model_default,
+        api_key=api_key,
+        base_url=os.getenv("LLM_BASE_URL", "").strip() or base_default,
         max_repair_attempts=int(os.getenv("MAX_REPAIR_ATTEMPTS", "3")),
     )
 
