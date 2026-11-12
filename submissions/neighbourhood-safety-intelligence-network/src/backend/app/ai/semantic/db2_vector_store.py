@@ -6,7 +6,7 @@ Table ``incident_embeddings`` (raw DDL, because VECTOR is a Db2-specific type) h
 per incident, upserted with MERGE, so responders can find related reports, for example several
 residents reporting the same broken streetlight.
 
-Embeddings come from a small local ONNX model (fastembed, BAAI/bge-small-en-v1.5), so no
+Embeddings come from IBM Granite (granite-embedding:30m) served locally by Ollama, so no
 resident text ever leaves the deployment. Active only in DATABASE_MODE=db2.
 """
 import logging
@@ -89,19 +89,26 @@ class Db2VectorStore:
             self.enabled = True
             self.error = None
             logger.info("Db2 vector search enabled (%s, %d dims); embedded %d existing incident(s).",
-                        settings.EMBEDDING_MODEL, settings.EMBEDDING_DIM, backfilled)
+                        settings.OLLAMA_EMBED_MODEL, settings.EMBEDDING_DIM, backfilled)
         except Exception as exc:  # pragma: no cover - depends on environment
             self.enabled = False
             self.error = str(exc)[:300]
             logger.warning("Db2 vector search unavailable, falling back to BM25 only: %s", exc)
 
     def _load_model(self):
+        """Connect to the local Ollama server and check that the Granite embedding model answers."""
         with self._lock:
             if self._model is None:
-                from fastembed import TextEmbedding
-                kwargs = {"cache_dir": settings.EMBEDDING_CACHE_DIR} if settings.EMBEDDING_CACHE_DIR else {}
-                self._model = TextEmbedding(settings.EMBEDDING_MODEL, **kwargs)
+                import ollama
+                client = ollama.Client(host=settings.OLLAMA_HOST, timeout=settings.LLM_TIMEOUT_SECONDS)
+                probe = client.embed(model=settings.OLLAMA_EMBED_MODEL, input=["ping"]).embeddings[0]
+                if len(probe) != settings.EMBEDDING_DIM:
+                    raise RuntimeError(f"{settings.OLLAMA_EMBED_MODEL} returns {len(probe)} dims, expected {settings.EMBEDDING_DIM}")
+                self._model = client
         return self._model
+
+    def embed(self, texts: List[str]) -> List[List[float]]:
+        return list(self._model.embed(model=settings.OLLAMA_EMBED_MODEL, input=texts).embeddings)
 
     def _ensure_tables(self) -> None:
         with self.engine.begin() as conn:
@@ -126,12 +133,12 @@ class Db2VectorStore:
             )).fetchall()
         if not rows:
             return 0
-        vectors = list(self._model.embed([f"{r[1]}. {r[2]}" for r in rows]))
+        vectors = self.embed([f"{r[1]}. {r[2]}" for r in rows])
         sql = text(UPSERT_INCIDENT.format(dim=settings.EMBEDDING_DIM))
         with self.engine.begin() as conn:
             for r, v in zip(rows, vectors, strict=True):
                 conn.execute(sql, {"incident_id": int(r[0]), "embedding": to_vector_literal(v),
-                                   "model": settings.EMBEDDING_MODEL})
+                                   "model": settings.OLLAMA_EMBED_MODEL})
         return len(rows)
 
     # ---- incidents -----------------------------------------------------------------------
@@ -139,11 +146,11 @@ class Db2VectorStore:
         if not self.enabled:
             return False
         try:
-            vector = next(iter(self._model.embed([f"{title}. {description}"])))
+            vector = self.embed([f"{title}. {description}"])[0]
             with self.engine.begin() as conn:
                 conn.execute(text(UPSERT_INCIDENT.format(dim=settings.EMBEDDING_DIM)), {
                     "incident_id": int(incident_id), "embedding": to_vector_literal(vector),
-                    "model": settings.EMBEDDING_MODEL,
+                    "model": settings.OLLAMA_EMBED_MODEL,
                 })
             return True
         except Exception as exc:  # embedding must never block an emergency report
@@ -162,7 +169,7 @@ class Db2VectorStore:
     def status(self) -> Dict[str, object]:
         return {
             "enabled": self.enabled,
-            "model": settings.EMBEDDING_MODEL if self.enabled else None,
+            "model": settings.OLLAMA_EMBED_MODEL if self.enabled else None,
             "dimensions": settings.EMBEDDING_DIM if self.enabled else None,
             "reason": None if self.enabled else (self.error or "requires DATABASE_MODE=db2"),
         }

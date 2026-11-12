@@ -1,12 +1,14 @@
 import json
 from typing import Any, Dict, Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from backend.app.database.base import get_db
 from backend.app.schemas.safety_schemas import AIIncidentAssistanceRequest, AIIncidentAssistanceResponse
 from backend.app.api.deps import get_current_user, is_staff
 from backend.app.api.v1.incidents import _get_visible_incident
 from backend.app.core.audit import record_audit
+from backend.app.core.config import settings
 from backend.app.models.entities import User, AIAnalysisRecord
 from backend.app.ai.crewai.agents import crew_orchestrator
 from backend.app.ai.haystack.rag_pipeline import retrieve_safety_guidance
@@ -85,3 +87,38 @@ def query_knowledge_base(
     """Hybrid retrieval (Haystack BM25 + IBM Db2 vector search) with metadata filters; every result
     cites the passage that matched."""
     return retrieve_safety_guidance(query=query, category=category, audience=audience)
+
+
+class CrewBriefingRequest(BaseModel):
+    raw_text: str = Field(..., min_length=3, max_length=2000)
+    incident_type: Optional[str] = Field(default=None, max_length=50)
+
+
+@router.post("/crew-briefing", response_model=Dict[str, Any])
+def crew_briefing(
+    req: CrewBriefingRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Rule-based triage (CrewAI Flow) plus a multi-agent briefing written by IBM Granite through a
+    CrewAI Crew, grounded in protocols retrieved from IBM Db2. If the local LLM is unavailable the
+    rule-based result is still returned, with ``briefing_error`` explaining why."""
+    from backend.app.ai.crewai.crew import run_briefing
+
+    triage = crew_orchestrator.run_incident_assistance_workflow(req.raw_text, reported_category=req.incident_type)
+    protocols = [{"title": p["title"], "source": p["source"], "cited_passage": p["protocol_snippet"], "excerpt": p["protocol_snippet"]}
+                 for p in triage["retrieved_civic_protocols"]]
+    briefing, error = None, None
+    if settings.ENABLE_LLM_BRIEFING:
+        try:
+            briefing = run_briefing(req.raw_text, triage, protocols)
+        except Exception as exc:  # degrade gracefully: the rule-based triage is always available
+            error = f"LLM briefing unavailable: {type(exc).__name__}"
+    else:
+        error = "LLM briefing disabled by ENABLE_LLM_BRIEFING"
+    record_audit(db, "ai_crew_briefing", "triage", None, user_id=current_user.id, request=request,
+                 details={"priority": triage["suggested_priority"], "llm": briefing is not None,
+                          "grounded": bool(briefing and briefing["grounded"])})
+    db.commit()
+    return {"triage": triage, "briefing": briefing, "briefing_error": error}

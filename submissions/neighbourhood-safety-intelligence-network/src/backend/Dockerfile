@@ -3,7 +3,6 @@ FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    EMBEDDING_CACHE_DIR=/srv/models \
     HAYSTACK_TELEMETRY_ENABLED=False \
     HOME=/home/nsin
 
@@ -14,14 +13,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl libxml2 \
 COPY backend/requirements.txt backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
 
-# Bake the embedding model into the image so Db2 vector search works offline from the first start.
-RUN python -c "from fastembed import TextEmbedding; TextEmbedding('BAAI/bge-small-en-v1.5', cache_dir='/srv/models')"
-
 COPY backend/ backend/
 
 # Run as an unprivileged user (with a home directory for library caches).
 RUN useradd --system --uid 10001 --create-home --home-dir /home/nsin nsin \
-    && mkdir -p /data && chown -R nsin /srv /data
+    && chown -R nsin /srv
 USER nsin
 
 EXPOSE 8000

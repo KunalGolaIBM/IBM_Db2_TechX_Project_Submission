@@ -1,9 +1,9 @@
 """Hybrid retrieval of approved safety protocols with Haystack 2 and IBM Db2.
 
-Indexing pipeline (Db2 mode)
-    DocumentSplitter -> FastembedDocumentEmbedder -> DocumentWriter(IBMDb2DocumentStore)
-Query pipeline (Db2 mode)
-    FastembedTextEmbedder -> IBMDb2EmbeddingRetriever --\
+Indexing pipeline
+    DocumentSplitter -> OllamaDocumentEmbedder (IBM Granite) -> DocumentWriter(IBMDb2DocumentStore)
+Query pipeline
+    OllamaTextEmbedder (Granite) -> IBMDb2EmbeddingRetriever --\
     InMemoryBM25Retriever --------------------------------> DocumentJoiner(reciprocal_rank_fusion)
 
 * IBMDb2DocumentStore / IBMDb2EmbeddingRetriever come from IBM's `ibm-db-haystack` package: passages
@@ -11,7 +11,7 @@ Query pipeline (Db2 mode)
 * The same Haystack metadata filters (category, audience) are applied to both retrievers.
 * Passages are retrieved, then grouped back to their protocol, so every answer cites the exact
   passage that matched.
-* Without Db2 (SQLite tests, local development) the BM25 branch runs on its own.
+* If Ollama is unavailable the BM25 branch keeps answering on its own (reported in /health).
 """
 import logging
 import os
@@ -36,11 +36,11 @@ from backend.app.core.config import settings  # noqa: E402
 logger = logging.getLogger("neighbourhood_safety.haystack")
 
 PASSAGE_TABLE = "NSIN_PROTOCOL_PASSAGES"
-# Calibrated with bge-small on the protocol passages: on-topic questions put the right passage first
-# with a clear margin over the runner-up; off-topic questions produce near-ties at larger distances.
-STRONG_MATCH = 0.40
-MAX_DISTANCE = 0.48
-MIN_MARGIN = 0.012  # measured: relevant top-2 gaps >= 0.016, off-topic gaps <= 0.007
+# Calibrated on the protocol passages with IBM granite-embedding:278m (cosine distance in Db2):
+# relevant questions put the right protocol first at <= 0.435, off-topic questions start at >= 0.488.
+STRONG_MATCH = 0.46
+MAX_DISTANCE = 0.46
+MIN_MARGIN = 0.02  # passages within this distance of the best one also count as vector hits
 
 # Who each protocol is written for (metadata used by audience filters).
 PROTOCOL_AUDIENCE = {
@@ -140,15 +140,15 @@ class SafetyProtocolRetriever:
             return
         try:
             from haystack.utils import Secret
-            from haystack_integrations.components.embedders.fastembed import (
-                FastembedDocumentEmbedder, FastembedTextEmbedder,
+            from haystack_integrations.components.embedders.ollama import (
+                OllamaDocumentEmbedder, OllamaTextEmbedder,
             )
             from haystack_integrations.components.retrievers.ibm_db import IBMDb2EmbeddingRetriever
             from haystack_integrations.document_stores.ibm_db import IBMDb2DocumentStore
 
-            embed_kwargs = {"model": settings.EMBEDDING_MODEL}
-            if settings.EMBEDDING_CACHE_DIR:
-                embed_kwargs["cache_dir"] = settings.EMBEDDING_CACHE_DIR
+            # IBM Granite embeddings (768 dims) served locally by Ollama.
+            embed_kwargs = {"model": settings.OLLAMA_EMBED_MODEL, "url": settings.OLLAMA_HOST,
+                            "timeout": settings.LLM_TIMEOUT_SECONDS}
 
             self.db2_store = IBMDb2DocumentStore(
                 database=settings.DB2_DATABASE, hostname=settings.DB2_HOST, port=settings.DB2_PORT,
@@ -157,13 +157,13 @@ class SafetyProtocolRetriever:
                 table_name=PASSAGE_TABLE, embedding_dim=settings.EMBEDDING_DIM, distance_metric="COSINE",
             )
             indexing = Pipeline()
-            indexing.add_component("embedder", FastembedDocumentEmbedder(**embed_kwargs, meta_fields_to_embed=["title"], progress_bar=False))
+            indexing.add_component("embedder", OllamaDocumentEmbedder(**embed_kwargs, meta_fields_to_embed=["title"], progress_bar=False))
             indexing.add_component("writer", DocumentWriter(document_store=self.db2_store, policy=DuplicatePolicy.OVERWRITE))
             indexing.connect("embedder.documents", "writer.documents")
             indexing.run({"embedder": {"documents": self.passages}})
 
             hybrid = Pipeline()
-            hybrid.add_component("text_embedder", FastembedTextEmbedder(**embed_kwargs, progress_bar=False))
+            hybrid.add_component("text_embedder", OllamaTextEmbedder(**embed_kwargs))
             hybrid.add_component("db2_retriever", IBMDb2EmbeddingRetriever(document_store=self.db2_store, top_k=12))
             hybrid.add_component("bm25_retriever", InMemoryBM25Retriever(document_store=self.memory_store, top_k=12))
             hybrid.connect("text_embedder.embedding", "db2_retriever.query_embedding")
@@ -268,7 +268,7 @@ class SafetyProtocolRetriever:
 
     def status(self) -> Dict[str, Any]:
         return {"hybrid": self.hybrid, "passages": len(self.passages), "db2_table": PASSAGE_TABLE if self.hybrid else None,
-                "reason": None if self.hybrid else (self.error or "requires DATABASE_MODE=db2")}
+                "reason": None if self.hybrid else (self.error or "not initialised")}
 
 
 protocol_retriever = SafetyProtocolRetriever()

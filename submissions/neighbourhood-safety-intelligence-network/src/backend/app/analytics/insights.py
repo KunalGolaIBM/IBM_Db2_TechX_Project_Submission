@@ -1,21 +1,12 @@
-"""Response-time and hotspot analytics.
-
-In DATABASE_MODE=db2 every metric is computed inside IBM Db2 with native SQL: CTEs,
-SECONDS_BETWEEN, MEDIAN, PERCENTILE_CONT ... WITHIN GROUP, RANK() OVER and HOUR(). Other
-databases (SQLite for tests and local development) use an equivalent Python path, and the
-test suite checks that both produce the same numbers.
-"""
+"""Response-time and hotspot analytics, computed inside IBM Db2 with native SQL: CTEs,
+SECONDS_BETWEEN, MEDIAN, PERCENTILE_CONT ... WITHIN GROUP, RANK() OVER and HOUR()."""
 import datetime
-import statistics
-from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 from typing import Dict, List, Optional
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from backend.app.core.config import settings
-from backend.app.models.entities import Incident, IncidentStatusHistory
 
 ACTIVE_STATUSES = ("reported", "acknowledged", "responder_en_route", "on_scene", "resolving")
 CLOSED_STATUSES = ("resolved", "false_alarm")
@@ -145,76 +136,12 @@ def _db2_metrics(db: Session, since: datetime.datetime, now: datetime.datetime) 
             "by_hour": by_hour, "sla_breaches": breaches}
 
 
-# ---------------------------------------------------------------------------------------------
-# Portable path (SQLite / PostgreSQL): same metrics, computed in Python
-# ---------------------------------------------------------------------------------------------
-def _percentile_cont(values: List[float], q: float) -> Optional[float]:
-    if not values:
-        return None
-    ordered = sorted(values)
-    pos = (len(ordered) - 1) * q
-    lo, hi = int(pos), min(int(pos) + 1, len(ordered) - 1)
-    return ordered[lo] + (ordered[hi] - ordered[lo]) * (pos - lo)
-
-
-def _python_metrics(db: Session, since: datetime.datetime, now: datetime.datetime) -> Dict:
-    incidents = db.query(Incident).filter(Incident.created_at >= since).all()
-    ids = [i.id for i in incidents]
-    first: Dict[str, Dict[int, datetime.datetime]] = {"ack": {}, "close": {}}
-    if ids:
-        for h in db.query(IncidentStatusHistory).filter(IncidentStatusHistory.incident_id.in_(ids)):
-            kind = "ack" if h.status == "acknowledged" else "close" if h.status in CLOSED_STATUSES else None
-            if kind and (h.incident_id not in first[kind] or h.created_at < first[kind][h.incident_id]):
-                first[kind][h.incident_id] = h.created_at
-
-    groups: Dict[str, List[Incident]] = defaultdict(list)
-    for inc in incidents:
-        groups[inc.priority].append(inc)
-
-    def secs(a: Dict[int, datetime.datetime], inc: Incident) -> Optional[float]:
-        t = a.get(inc.id)
-        return None if t is None else (t - inc.created_at).total_seconds()
-
-    priorities, all_ack = [], []
-    for prio in sorted(groups):
-        ack = [s for s in (secs(first["ack"], i) for i in groups[prio]) if s is not None]
-        res = [s for s in (secs(first["close"], i) for i in groups[prio]) if s is not None]
-        all_ack.extend(ack)
-        priorities.append(PriorityResponse(
-            priority=prio, incidents=len(groups[prio]), acknowledged=len(ack),
-            avg_ack_minutes=_minutes(statistics.fmean(ack)) if ack else None,
-            median_ack_minutes=_minutes(statistics.median(ack)) if ack else None,
-            p90_ack_minutes=_minutes(_percentile_cont(ack, 0.9)),
-            avg_resolve_minutes=_minutes(statistics.fmean(res)) if res else None,
-            ack_target_minutes=ACK_TARGET_SECONDS.get(prio, 86400) / 60,
-        ))
-
-    located = [i for i in incidents if i.location_address and i.location_address not in GENERIC_LOCATIONS]
-    counts = Counter(i.location_address for i in located)
-    ordered = sorted(counts, key=lambda loc: (-counts[loc],
-                                              -max(i.created_at for i in located if i.location_address == loc).timestamp()))
-    hotspots, rank, prev = [], 0, None
-    for pos, loc in enumerate(ordered, start=1):
-        if counts[loc] != prev:
-            rank, prev = pos, counts[loc]
-        mine = [i for i in located if i.location_address == loc]
-        hotspots.append(Hotspot(rank=rank, location=loc, incidents=counts[loc],
-                                open_incidents=sum(i.status in ACTIVE_STATUSES for i in mine),
-                                last_reported=max(i.created_at for i in mine)))
-    breaches = sum(1 for i in incidents if i.status == "reported"
-                   and (now - i.created_at).total_seconds() > ACK_TARGET_SECONDS.get(i.priority, 86400))
-    return {"priorities": priorities, "overall_ack_s": statistics.fmean(all_ack) if all_ack else None,
-            "hotspots": hotspots[:5], "by_hour": dict(sorted(Counter(i.created_at.hour for i in incidents).items())),
-            "sla_breaches": breaches}
-
-
 def compute_insights(db: Session, now: Optional[datetime.datetime] = None) -> Dict:
     now = now or datetime.datetime.utcnow()
     since = now - datetime.timedelta(days=WINDOW_DAYS)
-    use_db2 = settings.DATABASE_MODE == "db2"
-    m = _db2_metrics(db, since, now) if use_db2 else _python_metrics(db, since, now)
+    m = _db2_metrics(db, since, now)
     return {
-        "analytics_engine": "IBM Db2 SQL (MEDIAN, PERCENTILE_CONT, RANK OVER)" if use_db2 else "Python (portable mode)",
+        "analytics_engine": "IBM Db2 SQL (MEDIAN, PERCENTILE_CONT, RANK OVER)",
         "window_days": WINDOW_DAYS,
         "average_response_time_minutes": _minutes(m["overall_ack_s"]),
         "response_times": [asdict(p) for p in m["priorities"]],

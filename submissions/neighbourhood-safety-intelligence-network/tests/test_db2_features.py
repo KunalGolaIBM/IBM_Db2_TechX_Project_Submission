@@ -1,7 +1,6 @@
 """Analytics, semantic search and schema checks.
 
-Analytics tests run everywhere. Tests marked ``db2_only`` need a live IBM Db2 (NSIN_TEST_DB2=1);
-on Db2 they also prove that the native-SQL analytics agree with the portable implementation.
+All tests run against a real IBM Db2 database; vector tests also need the local Ollama server.
 """
 import datetime
 import uuid
@@ -19,9 +18,6 @@ from backend.app.models.entities import Incident, IncidentStatusHistory
 from conftest import auth_headers
 
 API = "/api/v1"
-db2_only = pytest.mark.skipif(settings.DATABASE_MODE != "db2", reason="requires IBM Db2 (NSIN_TEST_DB2=1)")
-needs_vectors = pytest.mark.skipif(settings.DATABASE_MODE != "db2" or not settings.ENABLE_VECTOR_SEARCH,
-                                   reason="requires IBM Db2 with vector search")
 
 
 def _create(client, headers, **kw):
@@ -83,40 +79,30 @@ def test_unacknowledged_critical_incident_counts_as_sla_breach(client, resident)
     assert after == before + 1
 
 
-@db2_only
-def test_db2_sql_analytics_match_portable_implementation(client, resident, responder):
+def test_db2_sql_analytics_compute_exact_median_and_p90(client, resident, responder):
+    """Known timeline: 4 P4 incidents, 3 acknowledged after 2, 7 and 11 minutes, 1 unacknowledged.
+    Db2 must return median 7, PERCENTILE_CONT(0.9) = 7 + 0.8 * (11 - 7) = 10.2, average 6.67."""
     for minutes_ago, ack_after in ((50, 2), (40, 7), (35, 11), (20, None)):
-        inc = _create(client, resident, priority="P2_HIGH", location_address="Parity Lane")
+        inc = _create(client, resident, priority="P4_ADVISORY", location_address="Parity Lane")
         if ack_after is not None:
             client.post(f"{API}/incidents/{inc['id']}/acknowledge", headers=responder)
         _shift_times(inc["id"], minutes_ago, ack_after)
 
     now = datetime.datetime.utcnow()
-    since = now - datetime.timedelta(days=analytics.WINDOW_DAYS)
     db = db_base.SessionLocal()
     try:
-        native = analytics._db2_metrics(db, since, now)
-        portable = analytics._python_metrics(db, since, now)
+        m = analytics._db2_metrics(db, now - datetime.timedelta(days=analytics.WINDOW_DAYS), now)
     finally:
         db.close()
-
-    def by_prio(m):
-        return {p.priority: p for p in m["priorities"]}
-
-    for prio, n in by_prio(native).items():
-        p = by_prio(portable)[prio]
-        assert (n.incidents, n.acknowledged) == (p.incidents, p.acknowledged)
-        for field in ("avg_ack_minutes", "median_ack_minutes", "p90_ack_minutes", "avg_resolve_minutes"):
-            a, b = getattr(n, field), getattr(p, field)
-            assert (a is None and b is None) or abs(a - b) < 0.02, (prio, field, a, b)
-    assert native["sla_breaches"] == portable["sla_breaches"]
-    assert [(h.location, h.incidents) for h in native["hotspots"]] == \
-           [(h.location, h.incidents) for h in portable["hotspots"]]
+    p4 = next(p for p in m["priorities"] if p.priority == "P4_ADVISORY")
+    assert (p4.incidents, p4.acknowledged) == (4, 3)
+    assert p4.median_ack_minutes == 7.0
+    assert abs(p4.p90_ack_minutes - 10.2) < 0.01
+    assert abs(p4.avg_ack_minutes - 6.67) < 0.01
 
 
 # --- Db2 schema -------------------------------------------------------------------------------
 
-@db2_only
 def test_db2_catalog_contains_schema_and_vector_columns():
     expected = {"USERS", "TRUSTED_CONTACTS", "RESPONDERS", "INCIDENTS", "INCIDENT_STATUS_HISTORY",
                 "LOCATION_EVENTS", "CHILD_JOURNEYS", "ELDER_CHECKINS", "ASSISTANCE_REQUESTS",
@@ -131,7 +117,6 @@ def test_db2_catalog_contains_schema_and_vector_columns():
             assert {("NSIN_PROTOCOL_PASSAGES", "EMBEDDING"), ("INCIDENT_EMBEDDINGS", "EMBEDDING")} <= vectors
 
 
-@db2_only
 def test_health_reports_live_db2_connection(client):
     db = client.get("/health").json()["database"]
     assert db["mode"] == "db2" and db["connected"] is True and db["details"]["server_time"]
@@ -139,7 +124,6 @@ def test_health_reports_live_db2_connection(client):
 
 # --- Semantic search with Db2 VECTOR_DISTANCE ---------------------------------------------------
 
-@needs_vectors
 def test_semantic_retrieval_finds_protocols_without_shared_keywords():
     assert vector_store.enabled, vector_store.error
     res = retrieve_safety_guidance("my grandmother is not answering her phone")
@@ -148,13 +132,11 @@ def test_semantic_retrieval_finds_protocols_without_shared_keywords():
     assert "vector" in res["results"][0]["matched_by"]
 
 
-@needs_vectors
 def test_semantic_retrieval_rejects_off_topic_queries():
     assert not retrieve_safety_guidance("quantum astrophysics spaceship orbit")["found"]
     assert not retrieve_safety_guidance("what is the recipe for pasta")["found"]
 
 
-@needs_vectors
 def test_similar_incidents_link_duplicate_reports(client, resident, responder):
     tag = uuid.uuid4().hex[:5]
     place = f"Lane {tag}, Green Glen"
@@ -175,7 +157,7 @@ def test_similar_incidents_link_duplicate_reports(client, resident, responder):
 
 
 least_privilege_only = pytest.mark.skipif(
-    settings.DATABASE_MODE != "db2" or not settings.DB2_SCHEMA or settings.DB2_SCHEMA.upper() == settings.DB2_USER.upper(),
+    not settings.DB2_SCHEMA or settings.DB2_SCHEMA.upper() == settings.DB2_USER.upper(),
     reason="requires the least-privilege Db2 login (DB2_USER=nsinapp, DB2_SCHEMA=DB2INST1)",
 )
 

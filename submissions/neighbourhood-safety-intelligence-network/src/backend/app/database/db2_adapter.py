@@ -135,7 +135,7 @@ class Db2Adapter:
     def get_session_factory(self):
         """Engine and session factory bound to Db2. Creates missing tables (a least-privilege
         user skips this, because the tables already exist) and seeds the demo data on first run."""
-        from backend.app.database.sqlite_adapter import seed_data
+        from backend.app.database.seed import seed_data
         from backend.app.models.entities import Base
 
         engine = create_engine(self.sqlalchemy_url(), pool_pre_ping=True, pool_size=5, max_overflow=10)

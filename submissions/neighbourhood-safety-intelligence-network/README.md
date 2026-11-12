@@ -50,7 +50,7 @@ Web and Android share one REST API, so an SOS raised on a phone appears in the w
 
 ## IBM Db2 Integration
 
-- **Db2 Edition & Environment:** IBM Db2 12.1 Community Edition in Docker (`icr.io/db2_community/db2`, see [`docker-compose.db2.yml`](docker-compose.db2.yml)). Db2 on IBM Cloud works by setting `DB2_SECURITY=SSL`.
+- **Db2 Edition & Environment:** IBM Db2 12.1 Community Edition (`icr.io/db2_community/db2`), e.g. the instance created by the IBM Db2 VS Code extension, or the bundled container in [`docker-compose.yml`](docker-compose.yml). Db2 on IBM Cloud works by setting `DB2_SECURITY=SSL`.
 - **Connector / Driver Used:**
   - `ibm_db_sa` (SQLAlchemy dialect) for all application reads and writes.
   - `ibm_db` (native driver) for the health probe (`SYSIBM.SYSDUMMY1`, `server_info()`) and parameterised `prepare` / `execute` with explicit commit / rollback ([`db2_adapter.py`](src/backend/app/database/db2_adapter.py)).
@@ -71,19 +71,18 @@ Web and Android share one REST API, so an SOS raised on a phone appears in the w
 | Roles and grants | `NSIN_APP` role with data access only; `audit_events` is append-only for the app ([`db/least_privilege.sql`](db/least_privilege.sql)) |
 
 - **Least privilege, proven:** the full test suite also runs as a restricted login (`nsinapp`), and tests assert that `CREATE`, `DROP`, `ALTER` and `UPDATE` / `DELETE` on `audit_events` are rejected with `SQL0551N`.
-- **Fail-fast:** in `DATABASE_MODE=db2` an unreachable Db2 stops startup instead of silently falling back to SQLite.
-- **Other modes:** SQLite (tests and zero-setup development) and PostgreSQL share the same SQLAlchemy models. Analytics then use an equivalent Python path, and a Db2 test proves both paths return the same numbers.
+- **Db2 only:** there is no fallback database. If Db2 is unreachable the backend refuses to start, and every test runs against a real Db2.
 
 ---
 
 ## AI / LLM Architecture (if applicable)
 - **Frameworks:**
-  - **Haystack 2** with IBM's **`ibm-db-haystack`** integration (`IBMDb2DocumentStore`, `IBMDb2EmbeddingRetriever`) and **`fastembed-haystack`** embedders. A `DocumentSplitter` turns the protocols into passages, and `DocumentJoiner` fuses the keyword and vector branches by reciprocal rank fusion ([`rag_pipeline.py`](src/backend/app/ai/haystack/rag_pipeline.py)).
+  - **Haystack 2** with IBM's **`ibm-db-haystack`** integration (`IBMDb2DocumentStore`, `IBMDb2EmbeddingRetriever`) and **`ollama-haystack`** embedders (IBM Granite). A `DocumentSplitter` turns the protocols into passages, and `DocumentJoiner` fuses the keyword and vector branches by reciprocal rank fusion ([`rag_pipeline.py`](src/backend/app/ai/haystack/rag_pipeline.py)).
   - **CrewAI Flows** orchestrate the triage agents with typed state and a router (`@start` → `@listen` → `@router` → critical / standard branch) ([`agents.py`](src/backend/app/ai/crewai/agents.py)).
-- **Model Provider & Model:** No hosted LLM. Embeddings come from **BAAI/bge-small-en-v1.5**, running locally with ONNX (384 dimensions); the model is baked into the Docker image. This is deliberate for a safety product: resident reports never leave the deployment, there's no per-request cost, it works offline, and output can't be prompt-injected. CrewAI and Haystack telemetry are disabled.
+- **Model Provider & Model:** **IBM Granite**, served locally by **Ollama**: `granite-embedding:278m` (768-dim embeddings stored in Db2 `VECTOR` columns) and `granite3.3:2b` (chat model for the CrewAI crew). Resident reports never leave the machine. CrewAI and Haystack telemetry are disabled.
 - **Pipelines:**
-  - **Indexing** (Db2 mode): `DocumentSplitter` → `FastembedDocumentEmbedder` → `DocumentWriter` into `IBMDb2DocumentStore`. Passages carry metadata (category, audience, source, updated date), stored as BSON in Db2.
-  - **Query:** `FastembedTextEmbedder` → `IBMDb2EmbeddingRetriever` (Db2 `VECTOR_DISTANCE`), alongside `InMemoryBM25Retriever`. The same metadata filters apply to both branches.
+  - **Indexing** (Db2 mode): `DocumentSplitter` → `OllamaDocumentEmbedder` (Granite) → `DocumentWriter` into `IBMDb2DocumentStore`. Passages carry metadata (category, audience, source, updated date), stored as BSON in Db2.
+  - **Query:** `OllamaTextEmbedder` (Granite) → `IBMDb2EmbeddingRetriever` (Db2 `VECTOR_DISTANCE`), alongside `InMemoryBM25Retriever`. The same metadata filters apply to both branches.
   - **Fusion and trust:**
     - The vector branch is gated by a calibrated distance and top-2 margin, so off-topic questions return nothing.
     - The keyword branch needs real word overlap.
@@ -97,7 +96,8 @@ Web and Android share one REST API, so an SOS raised on a phone appears in the w
 
     With an `incident_id`, the analysis is upserted into `ai_analysis_records` and audited.
   - **Related reports:** each new incident is embedded into `incident_embeddings`, and `GET /incidents/{id}/similar` returns related reports, same address first.
-- **Without Db2** (SQLite tests or local development), the same pipeline runs with the BM25 branch only, and `/health` reports why.
+  - **Multi-agent briefing (CrewAI Crew on Granite):** `POST /ai/crew-briefing` runs a *Triage Analyst* and a *Protocol Advisor* agent. The advisor has a CrewAI tool that searches the protocol passages in Db2. Retrieved passages go into the task context; the answer is checked for a cited protocol (`grounded`), and the rule-based priority stays authoritative.
+- **If Ollama is down**, retrieval keeps answering with the BM25 branch and the briefing endpoint returns the rule-based triage with `briefing_error`; `/health` reports why.
 
 Output is advisory. Humans make every dispatch decision.
 
@@ -105,17 +105,17 @@ Output is advisory. Humans make every dispatch decision.
 
 ## Tech Stack
 - **Backend / Core:** Python 3.11, FastAPI, SQLAlchemy 2, Pydantic 2, python-jose (JWT), bcrypt
-- **Database:** IBM Db2 12.1 (`ibm_db`, `ibm_db_sa`); SQLite for tests and local development; PostgreSQL optional
-- **AI / Retrieval:** Haystack 2 + `ibm-db-haystack` + `fastembed-haystack`, CrewAI Flows, fastembed (local ONNX), Db2 `VECTOR`
+- **Database:** IBM Db2 12.1 only (`ibm_db`, `ibm_db_sa`, `ibm-db-haystack`): relational tables, `VECTOR` columns, BSON/JSON metadata
+- **AI / Retrieval:** Haystack 2 + `ibm-db-haystack` + `ollama-haystack`, CrewAI (Flow + Crew), Ollama with IBM Granite models
 - **Frontend / UI:** React 19 + TypeScript + Vite + Tailwind CSS 4 (web); Kotlin + Jetpack Compose + Material 3 + Retrofit (Android)
 - **Libraries & Tools:** Docker Compose, pytest + pytest-cov, Robolectric, ruff, oxlint, Gradle wrapper
 
 ---
 
 ## Prerequisites
-- **Docker** with Docker Compose v2 (Db2 Community Edition needs about 4 GB of RAM; the first Db2 start takes 3–5 minutes)
-- **Python ≥ 3.11** (to run the backend or tests without Docker)
-- **Node.js ≥ 18** (web app without Docker)
+- **IBM Db2 12.1:** for example the instance created by the **IBM Db2 VS Code extension** ("Create Db2 instance"), any Db2 Community Edition container, or Db2 on IBM Cloud
+- **Ollama** with the IBM Granite models: `ollama pull granite3.3:2b` and `ollama pull granite-embedding:278m`
+- **Docker** with Docker Compose v2 (to run the stack in containers), or **Python ≥ 3.11** + **Node.js ≥ 18** (to run it directly)
 - **JDK 17 + Android SDK 36**, or Android Studio (optional, Android app)
 
 ---
@@ -125,6 +125,9 @@ Output is advisory. Humans make every dispatch decision.
 ```bash
 git clone https://github.com/KunalGolaIBM/IBM_Db2_TechX_Project_Submission.git
 cd IBM_Db2_TechX_Project_Submission/submissions/neighbourhood-safety-intelligence-network
+
+ollama pull granite3.3:2b
+ollama pull granite-embedding:278m
 
 # Only needed when running without Docker:
 python -m venv .venv
@@ -138,20 +141,19 @@ npm --prefix src/web-app install
 ## Configuration
 
 ```bash
-cp .env.example src/backend/.env
+cp .env.example src/backend/.env       # then set DB2_PASSWORD (and the other DB2_* values)
 cp src/web-app/.env.example src/web-app/.env
 ```
 
 | Variable | Purpose |
 |---|---|
-| `DATABASE_MODE` | `db2`, `sqlite` or `postgresql` |
-| `DB2_HOST`, `DB2_PORT`, `DB2_DATABASE`, `DB2_USER`, `DB2_PASSWORD` | Db2 connection |
-| `DB2_SCHEMA` | Schema of the tables when connecting as the least-privilege login (`DB2INST1`) |
-| `DB2_SECURITY` | Empty for local Db2 CE, `SSL` for Db2 on IBM Cloud |
-| `ENABLE_VECTOR_SEARCH`, `EMBEDDING_MODEL` | Db2 vector search (Db2 mode only) |
+| `DB2_HOST`, `DB2_PORT`, `DB2_DATABASE`, `DB2_USER`, `DB2_PASSWORD` | Db2 connection (`DB2_NAME`, `DB2_USERNAME`, `DB2_SSL` are accepted too) |
+| `DB2_SECURITY` | Empty for a local Db2, `SSL` for Db2 on IBM Cloud |
+| `DB2_SCHEMA` | Schema owning the tables, when connecting as the least-privilege login |
+| `OLLAMA_HOST`, `OLLAMA_CHAT_MODEL`, `OLLAMA_EMBED_MODEL`, `EMBEDDING_DIM` | Local IBM Granite models (defaults: `granite3.3:2b`, `granite-embedding:278m`, 768) |
+| `ENABLE_VECTOR_SEARCH`, `ENABLE_LLM_BRIEFING` | Turn the vector search or the LLM crew off |
 | `JWT_SECRET` | Token signing key; required (32+ characters) when `APP_ENV=production` |
 | `CORS_ORIGINS` | Comma-separated allowed web origins (no wildcard in production) |
-| `VITE_API_BASE_URL` | Web app → backend URL |
 
 The backend reads `src/backend/.env`; real environment variables take precedence.
 
@@ -161,42 +163,40 @@ The backend reads `src/backend/.env`; real environment variables take precedence
 
 ## Running the Project
 
-### Option A: Full stack on IBM Db2 (recommended)
+### Option A: Docker, with your existing Db2
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.db2.yml up --build
+DB2_PASSWORD=<your password> docker compose up --build
 ```
-This starts Db2 Community Edition (database `NSIN`) and waits until it's healthy. The backend then creates the schema (12 relational + 2 vector tables), seeds a 30-day demo history, embeds protocols and incidents into Db2, and the web app starts.
+The backend connects to Db2 on the host (default database `TESTDB`, user `db2inst1`) and to Ollama on the host. On first start it creates the schema (12 relational + 2 vector tables), seeds a 30-day demo history, and embeds protocols and incidents into Db2 with Granite.
 
 - Web app: **http://localhost:3000**
 - API + Swagger UI: http://localhost:8000/docs
-- Db2 status: http://localhost:8000/health shows `mode: db2`, the server version and `vector_search.enabled: true`
+- Db2 status: http://localhost:8000/health shows the Db2 version, `vector_search.enabled` and `hybrid_retrieval.hybrid`
 
-### Option B: Run as the least-privilege Db2 login
-After Option A has started once:
+### Option B: Docker, with a bundled Db2
 ```bash
-NSIN_APP_PASSWORD='choose-a-strong-password' ./scripts/db2_least_privilege.sh
-# then restart the backend with DB2_USER=nsinapp, DB2_PASSWORD=<that password>, DB2_SCHEMA=DB2INST1
+DB2_HOST=db2 DB2_PASSWORD=<choose one> docker compose --profile bundled-db2 up --build
 ```
+This also starts Db2 Community Edition. Its first start takes 3–5 minutes.
 
-### Option C: Quick start without Db2 (SQLite)
+### Option C: Run directly
 ```bash
-docker compose up --build
-```
-
-### Option D: Local development without Docker
-```bash
-# Db2 only (in Docker): docker compose -f docker-compose.yml -f docker-compose.db2.yml up -d db2
 cd src && uvicorn backend.app.main:app --reload --port 8000     # run from src/
 npm --prefix src/web-app run dev                                # http://localhost:5173
+```
+
+### Least-privilege Db2 login
+```bash
+NSIN_APP_PASSWORD='choose-a-strong-password' DB2_CONTAINER=<db2 container> ./scripts/db2_least_privilege.sh
+# then run the backend with DB2_USER=nsinapp, DB2_PASSWORD=<that password>, DB2_SCHEMA=DB2INST1
 ```
 
 ### Android
 ```bash
 cd src/android
 ./gradlew :app:assembleDebug          # Windows: gradlew.bat
-# → app/build/outputs/apk/debug/app-debug.apk
 ```
-The app talks to `http://10.0.2.2:8000` (the host machine from the emulator). On a physical device, set your machine's LAN IP in the app's **Settings** screen. Cleartext HTTP is allowed in debug builds only.
+The app talks to `http://10.0.2.2:8000` (the host machine from the emulator); on a device, set your machine's LAN IP in **Settings**. Cleartext HTTP is allowed in debug builds only.
 
 ### Demo accounts (password `Password123!`)
 | Role | Email | Try this |
@@ -206,8 +206,6 @@ The app talks to `http://10.0.2.2:8000` (the host machine from the emulator). On
 | Elder | `elder.ramesh@neighbourhood.org` | Daily check-in, assistance request |
 | Admin | `admin@neighbourhood.org` | Db2 diagnostics, verify pending responders, community analytics |
 
-The web sign-in page has one-click buttons for each role.
-
 ### API overview (`/api/v1`, full schemas at `/docs`)
 | Area | Endpoints |
 |---|---|
@@ -215,23 +213,20 @@ The web sign-in page has one-click buttons for each role.
 | SOS & incidents | `POST /sos`, `GET/POST /incidents`, `GET /incidents/{id}`, `GET /incidents/{id}/similar`, `POST /incidents/{id}/acknowledge`, `POST /incidents/{id}/status` |
 | Contacts, children, elders | `/trusted-contacts`, `/children/journeys`, `/elder-care/checkins`, `/elder-care/assistance-requests` |
 | Responders | `GET /responders/assignments`, `PATCH /responders/availability`, `GET /responders/roster`, `POST /responders/{user_id}/verify` (admin) |
-| Community & AI | `GET /community/insights`, `GET/POST /community/hazards`, `POST /ai/incident-assistance`, `GET /ai/guidance?query=&category=&audience=` |
+| Community & AI | `GET /community/insights`, `GET/POST /community/hazards`, `POST /ai/incident-assistance`, `POST /ai/crew-briefing`, `GET /ai/guidance?query=&category=&audience=` |
 
 ---
 
 ## Testing & Verification
 
+All tests are **integration tests against a real IBM Db2 and a real local Ollama**. Nothing is mocked and there is no SQLite. At the start of a run the application's tables are dropped and recreated, so use a dedicated database.
+
 ```bash
-# Fast suite on SQLite (Db2-only tests are skipped)
-pytest tests/ -v --cov=src/backend/app
+# Defaults: localhost:50000, database TESTDB, user db2inst1 (set DB2_PASSWORD, or the other DB2_* variables)
+DB2_PASSWORD=<password> pytest tests/ --cov=src/backend/app
 
-# Same suite against IBM Db2 (with the stack from Option A running)
-NSIN_TEST_DB2=1 DATABASE_MODE=db2 DB2_HOST=localhost DB2_DATABASE=NSIN \
-  DB2_USER=db2inst1 DB2_PASSWORD=<password> pytest tests/ -v
-
-# ...and as the least-privilege login (after Option B)
-NSIN_TEST_DB2=1 DATABASE_MODE=db2 DB2_HOST=localhost DB2_DATABASE=NSIN \
-  DB2_USER=nsinapp DB2_PASSWORD=<password> DB2_SCHEMA=DB2INST1 pytest tests/ -v
+# As the least-privilege login (after the script above; keeps the existing tables)
+NSIN_KEEP_DB=1 DB2_USER=nsinapp DB2_PASSWORD=<password> DB2_SCHEMA=DB2INST1 pytest tests/
 
 npm --prefix src/web-app run build                          # type-check + production build
 cd src/android && ./gradlew :app:testDebugUnitTest          # Android JVM tests (Robolectric)
@@ -239,21 +234,28 @@ cd src/android && ./gradlew :app:testDebugUnitTest          # Android JVM tests 
 
 | Suite | Result |
 |---|---|
-| SQLite | 57 passed, 12 Db2-only skipped · 89% line coverage |
-| IBM Db2 as `db2inst1`, fresh schema | 64 passed · **93% line coverage** |
-| IBM Db2 as `nsinapp` (least privilege) | 69 passed (everything) |
+| Backend on IBM Db2 `TESTDB` + Ollama Granite (real, no mocks) | 77 passed, 5 skipped (least-privilege-only tests) · **96% line coverage** |
 | Android `testDebugUnitTest` | 4 passed; `assembleDebug` builds |
 | Web `npm run build` | passes (strict TypeScript) |
 
 The tests cover:
 - **Security:** admin self-registration blocked, login throttling, token tampering, private-incident isolation, privacy masking, responder verification, input limits sized to the Db2 columns, security headers.
 - **Integrity:** the incident state machine, collision-free reference codes, SOS atomicity and audit rows, overdue journeys.
-- **AI:** triage wording traps, the CrewAI flow's critical and standard branches, the cited protocol for each category, metadata filters and passage citations.
-- **Db2:** catalog contents including the `VECTOR` columns, semantic retrieval and off-topic rejection, duplicate-report linking, native-SQL vs Python analytics parity, and DDL denied to the restricted login.
+- **Db2:**
+  - native `ibm_db` prepared statements, rollback and connection errors;
+  - the catalog including the `VECTOR` columns;
+  - analytics with exact median and p90 values;
+  - semantic retrieval and off-topic rejection, metadata filters, duplicate-report linking;
+  - DDL denied to the restricted login.
+- **AI:**
+  - triage wording traps;
+  - the CrewAI flow's branches;
+  - the Granite crew briefing, including degradation when Ollama is unreachable;
+  - cited protocols per category.
 
 **Inspect the data directly in Db2:**
 ```bash
-docker exec -it nsin_db2 su - db2inst1 -c "db2 connect to NSIN && \
+docker exec -it <db2 container> su - db2inst1 -c "db2 connect to TESTDB && \
   db2 \"SELECT reference_code, priority, status FROM incidents ORDER BY id DESC FETCH FIRST 5 ROWS ONLY\" && \
   db2 \"SELECT JSON_VALUE(SYSTOOLS.BSON2JSON(meta), '$.category' RETURNING VARCHAR(40)) AS category, COUNT(*) AS passages FROM nsin_protocol_passages GROUP BY JSON_VALUE(SYSTOOLS.BSON2JSON(meta), '$.category' RETURNING VARCHAR(40))\""
 ```
@@ -296,4 +298,4 @@ docker exec -it nsin_db2 su - db2inst1 -c "db2 connect to NSIN && \
 |---|---|---|
 | Yagnik Sharma | [@YagnikSharma](https://github.com/YagnikSharma) | Full stack: FastAPI backend, IBM Db2 integration (vectors, analytics, least privilege), Haystack + CrewAI pipelines, React web app, Android app |
 
-**License:** MIT (see [LICENSE](LICENSE)). Third-party components keep their own licenses: FastAPI, SQLAlchemy, React and CrewAI are MIT; Haystack, `ibm-db-haystack`, Retrofit, `ibm_db` and `ibm_db_sa` are Apache-2.0; the BAAI bge-small model is MIT; Db2 Community Edition is under the IBM license, accepted via `LICENSE=accept`.
+**License:** MIT (see [LICENSE](LICENSE)). Third-party components keep their own licenses: FastAPI, SQLAlchemy, React and CrewAI are MIT; IBM Granite models are Apache-2.0; Haystack, `ibm-db-haystack`, Retrofit, `ibm_db` and `ibm_db_sa` are Apache-2.0; Db2 Community Edition is under the IBM license, accepted via `LICENSE=accept`.

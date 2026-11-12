@@ -6,7 +6,7 @@ NSIN has three tiers. A React web app and a native Android app talk to one FastA
 - response-time and hotspot analytics in SQL;
 - privilege separation, through a data-only role and an append-only audit table.
 
-Access goes through SQLAlchemy with the `ibm_db_sa` dialect, plus the native `ibm_db` driver for health checks and prepared statements. SQLite and PostgreSQL adapters share the same models, for tests and local development.
+Access goes through SQLAlchemy with the `ibm_db_sa` dialect, plus the native `ibm_db` driver for health checks and prepared statements. Db2 is the only database: there is no fallback, and the tests run against a real Db2. AI models (IBM Granite) run locally in **Ollama**.
 
 ---
 
@@ -20,9 +20,9 @@ graph TD
     subgraph Backend["FastAPI backend (Python 3.11)"]
         API["REST routers /api/v1<br/>auth · sos · incidents · contacts · children<br/>elder-care · responders · community · ai"]
         SEC["Security<br/>JWT · role checks · login throttle<br/>validation · audit"]
-        TRI["CrewAI Flow<br/>intake → assess → router → escalate / standard"]
+        TRI["CrewAI Flow + Crew<br/>rules: intake → assess → router<br/>Granite agents: analyst + advisor"]
         HAY["Haystack hybrid pipeline<br/>BM25 + IBMDb2EmbeddingRetriever<br/>DocumentJoiner (RRF) · metadata filters"]
-        VEC["Related-incident search<br/>fastembed bge-small (local ONNX)"]
+        VEC["Related-incident search<br/>Granite embeddings via Ollama"]
         ANA["Analytics<br/>Db2-native SQL"]
         API --> SEC
         API --> TRI
@@ -39,7 +39,7 @@ graph TD
 
     subgraph DB2["IBM Db2 12.1 · database NSIN"]
         REL[("12 relational tables<br/>incidents · status history · audit · ...")]
-        VT[("nsin_protocol_passages · incident_embeddings<br/>VECTOR(384, FLOAT32) · BSON metadata")]
+        VT[("nsin_protocol_passages · incident_embeddings<br/>VECTOR(768, FLOAT32) · BSON metadata")]
     end
 ```
 
@@ -49,7 +49,7 @@ graph TD
 sequenceDiagram
     participant R as Resident (web/Android)
     participant A as FastAPI
-    participant V as Embeddings (local ONNX)
+    participant V as Ollama (IBM Granite)
     participant D as IBM Db2
     participant Q as Responder
 
@@ -101,12 +101,13 @@ sequenceDiagram
      - The agents themselves are deterministic, whole-word keyword rules, so "person" never matches "son".
      - CrewAI telemetry and tracing are disabled.
    - `haystack/rag_pipeline.py`, **Haystack 2 with IBM's `ibm-db-haystack`**:
-     - **Indexing:** `DocumentSplitter` → `FastembedDocumentEmbedder` → `DocumentWriter` into `IBMDb2DocumentStore` (table `NSIN_PROTOCOL_PASSAGES`: `VECTOR(384)` plus BSON metadata).
-     - **Query:** `FastembedTextEmbedder` → `IBMDb2EmbeddingRetriever`, plus `InMemoryBM25Retriever`, with the same metadata filters on both branches (Db2 runs them as `JSON_VALUE` predicates).
+     - **Indexing:** `DocumentSplitter` → `OllamaDocumentEmbedder` (granite-embedding:278m) → `DocumentWriter` into `IBMDb2DocumentStore` (table `NSIN_PROTOCOL_PASSAGES`: `VECTOR(768)` plus BSON metadata).
+     - **Query:** `OllamaTextEmbedder` → `IBMDb2EmbeddingRetriever`, plus `InMemoryBM25Retriever`, with the same metadata filters on both branches (Db2 runs them as `JSON_VALUE` predicates).
      - **Fusion:** passages collapse to protocols, then `DocumentJoiner` applies reciprocal rank fusion, with a category prior from triage.
      - **Trust:** distance/margin gating on the vector branch, and every answer cites its passage. Without Db2 the BM25 branch runs alone.
    - `semantic/db2_vector_store.py`: incident embeddings and the related-report self-join.
-   - Everything is local: no hosted LLM, resident text never leaves the deployment, and output is advisory.
+   - `crewai/crew.py`: a **CrewAI Crew** on `granite3.3:2b` (via Ollama) with a *Triage Analyst* and a *Protocol Advisor*. The advisor has a CrewAI tool that searches the Db2 protocol passages; retrieved passages go into the task context, and the answer is checked for a cited protocol. Served by `POST /ai/crew-briefing`; if Ollama is down, the rule-based triage is still returned with `briefing_error`.
+   - Everything is local (Ollama on the same machine): resident text never leaves the deployment, and output is advisory.
 
 ---
 
@@ -164,11 +165,11 @@ CREATE TABLE audit_events (                            -- append-only for the ap
 -- Semantic search inside Db2
 -- Protocol passages: table created and managed by IBMDb2DocumentStore (ibm-db-haystack)
 CREATE TABLE nsin_protocol_passages (
-    id VARCHAR(512) NOT NULL PRIMARY KEY, content CLOB(2M), meta BLOB /* BSON */, embedding VECTOR(384, FLOAT32)
+    id VARCHAR(512) NOT NULL PRIMARY KEY, content CLOB(2M), meta BLOB /* BSON */, embedding VECTOR(768, FLOAT32)
 );  -- filters: JSON_VALUE(SYSTOOLS.BSON2JSON(meta), '$.category' RETURNING VARCHAR(1000)) = ?
 CREATE TABLE incident_embeddings (
     incident_id INTEGER NOT NULL PRIMARY KEY REFERENCES incidents(id) ON DELETE CASCADE,
-    embedding VECTOR(384, FLOAT32) NOT NULL, embedding_model VARCHAR(100) NOT NULL,
+    embedding VECTOR(768, FLOAT32) NOT NULL, embedding_model VARCHAR(100) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT TIMESTAMP
 );
 ```
@@ -207,7 +208,7 @@ ORDER BY distance FETCH FIRST 20 ROWS ONLY;
 - Status and type codes are short `VARCHAR`s validated by Pydantic enums. The lifecycle rules live in one tested state machine, and every transition is kept in `incident_status_history`.
 - Reference codes are derived from the identity value inside the same transaction, so they can't collide; the earlier random 4-digit scheme could.
 - Embeddings are stored next to the data they describe, so similarity search, joins and access control all stay inside Db2.
-- Boolean filters are written as `col == True` in SQLAlchemy, which renders `= 1`. The alternative `.is_(True)` renders `IS 1`, which SQLite accepts and Db2 rejects (SQL0104N). The Db2 test run caught this.
+- Boolean filters are written as `col == True` in SQLAlchemy, which renders `= 1`. The alternative `.is_(True)` renders `IS 1`, which Db2 rejects (SQL0104N). The Db2 test run caught this.
 
 ---
 
@@ -233,4 +234,7 @@ ORDER BY distance FETCH FIRST 20 ROWS ONLY;
   - The backend runs as a non-root user, with the embedding model baked in, so there are no outbound calls at runtime.
   - Haystack and CrewAI telemetry are disabled.
   - Android allows cleartext HTTP in debug builds only.
-- **AI safety:** no hosted LLM and no prompt surface. Resident text stays inside the deployment, and triage output is advisory.
+- **AI safety:**
+  - The LLM runs locally (Ollama, IBM Granite), so resident text stays inside the deployment.
+  - The rule-based priority is authoritative; the crew only explains and advises, using retrieved Db2 passages, and its output is checked for a cited protocol.
+  - Triage output is advisory.

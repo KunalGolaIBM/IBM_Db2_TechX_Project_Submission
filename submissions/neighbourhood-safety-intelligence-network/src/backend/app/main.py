@@ -21,14 +21,8 @@ logger = logging.getLogger("neighbourhood_safety.main")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Initializing Neighbourhood Safety Intelligence Network Backend...")
-    try:
-        init_db()
-        logger.info(f"Database initialized in [{settings.DATABASE_MODE.upper()}] mode.")
-    except Exception as e:
-        logger.error(f"Database initialization failure: {e}")
-        # Note: In db2 mode, strict failure will bubble up as required
-        if settings.DATABASE_MODE.lower() == "db2":
-            raise e
+    init_db()  # fails fast if IBM Db2 is unreachable: there is no fallback database
+    logger.info("IBM Db2 %s initialised.", settings.DB2_DATABASE)
     yield
     logger.info("Shutting down Neighbourhood Safety Intelligence Network Backend...")
 

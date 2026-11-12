@@ -1,34 +1,13 @@
+"""Demo personas and a deterministic 30-day incident history, written to IBM Db2 on first start."""
 import logging
 import datetime
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from backend.app.core.config import settings
 from backend.app.core.security import get_password_hash
 from backend.app.models.entities import (
     Base, User, Responder, TrustedContact, Incident, IncidentStatusHistory,
     ChildJourney, ElderCheckIn, AssistanceRequest, CommunityHazard
 )
 
-logger = logging.getLogger("neighbourhood_safety.sqlite")
-
-def init_sqlite():
-    db_url = settings.DATABASE_URL
-    logger.info(f"Connecting to SQLite database at {db_url}")
-    engine = create_engine(
-        db_url,
-        connect_args={"check_same_thread": False}
-    )
-    Base.metadata.create_all(bind=engine)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    
-    # Auto-seed initial demo data if empty
-    session = SessionLocal()
-    try:
-        seed_data(session)
-    finally:
-        session.close()
-        
-    return engine, SessionLocal
+logger = logging.getLogger("neighbourhood_safety.seed")
 
 def seed_data(session):
     if session.query(User).first() is not None:

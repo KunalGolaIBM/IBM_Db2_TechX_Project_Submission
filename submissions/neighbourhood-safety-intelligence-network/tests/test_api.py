@@ -8,7 +8,7 @@ def test_health_check(client):
     data = response.json()
     assert data["status"] in ["healthy", "degraded"]
     assert "database" in data
-    assert data["database"]["mode"] in ["sqlite", "postgresql", "db2"]
+    assert data["database"]["mode"] == "db2"
 
 def test_auth_login_and_profile(client):
     # Test seeded resident login
