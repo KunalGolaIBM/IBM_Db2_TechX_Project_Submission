@@ -173,6 +173,28 @@ because routine resolution uses `CURRENT PATH`, and OUT parameters are never NUL
 
 ---
 
+## Distribution and degraded modes
+
+| Piece | Where it comes from | Needs |
+|---|---|---|
+| Python package (MCP server, CLI, Db2 schema) | `pip install https://shipsafe-bob.vercel.app/downloads/shipsafe-3.0.0-py3-none-any.whl` | Python 3.11–3.13 |
+| Extension for IBM Bob / VS Code | `.vsix` from [shipsafe-bob.vercel.app](https://shipsafe-bob.vercel.app) | the Python package on PATH, or `shipsafe.pythonPath` |
+| Bob rules + MCP config | `shipsafe connect bob` | the Python package |
+
+ShipSafe is useful from the first minute and gets richer as each dependency appears:
+
+| Available | Behaviour |
+|---|---|
+| Python package only | `check_code` gives the full verdict (AST rules, secrets, syntax, Bandit) and returns one note: connect Db2 with `shipsafe setup`. After a failed connect, Db2 is not retried for 30 s, so calls stay fast. |
+| + IBM Db2 | policy citations by `VECTOR_DISTANCE`, guard history, procedures, SQL PREPARE checks, project memory |
+| + Ollama (Granite) | verified fixes (CrewAI), answers about team standards (LangChain), Granite embeddings |
+
+If the extension cannot start the server (package missing, wrong interpreter), it shows one install prompt per
+session with links to the guide and the `shipsafe.pythonPath` setting, instead of an error on every save.
+Fresh-machine installs are tested on Windows and Linux ([docs/testing.md](docs/testing.md)).
+
+---
+
 ## Testing
 
 All tests run against the real Db2 from `.env` in a separate schema, `SHIPSAFE_TEST`, which is dropped and
