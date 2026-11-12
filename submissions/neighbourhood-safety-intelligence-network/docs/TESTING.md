@@ -34,7 +34,7 @@ Prerequisites: a Db2 instance (for example, created with the IBM Db2 VS Code ext
 
 | Run | Result |
 |---|---|
-| IBM Db2 `TESTDB` (fresh schema) + Ollama Granite | see the README's Testing section for the latest numbers (last full run: 77 passed, **96% line coverage**) |
+| IBM Db2 `TESTDB` (fresh schema) + Ollama Granite | see the README's Testing section for the latest numbers (last full run: **78 passed, 0 failed, 96% line coverage**) |
 | IBM Db2 as least-privilege login `nsinapp` | full suite, plus 5 DDL and audit-tampering denial tests |
 | Android `testDebugUnitTest` | 4 passed; `assembleDebug` builds |
 | Web `npm run build` | passes (strict TypeScript) |

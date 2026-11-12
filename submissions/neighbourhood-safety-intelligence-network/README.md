@@ -247,7 +247,7 @@ cd src/android && ./gradlew :app:testDebugUnitTest          # Android JVM tests 
 
 | Suite | Result |
 |---|---|
-| Backend on IBM Db2 `TESTDB` + Ollama Granite (real, no mocks) | 77 passed, 5 skipped (least-privilege-only tests) · **96% line coverage** |
+| Backend on IBM Db2 `TESTDB` + Ollama Granite (real, no mocks) | **78 passed**, 0 failed, 5 skipped (least-privilege-only tests) · **96% line coverage** |
 | Android `testDebugUnitTest` | 4 passed; `assembleDebug` builds |
 | Web `npm run build` | passes (strict TypeScript) |
 
