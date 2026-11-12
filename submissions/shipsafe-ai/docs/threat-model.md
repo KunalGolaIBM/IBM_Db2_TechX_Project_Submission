@@ -1,23 +1,47 @@
-# ShipSafe AI: Threat Model
+# ShipSafe: Threat Model
 
-| Threat | Risk | Mitigation in the code |
+ShipSafe runs on a developer's machine, is launched by an AI IDE, reads code the assistant wants to
+write, talks to a Db2 database and a local model server, and can also serve a team API. Each row lists
+a threat, its risk, and the mitigation in the code.
+
+## IDE add-on (MCP server, extension, CLI)
+
+| Threat | Risk | Mitigation |
 |---|---|---|
-| Unauthenticated access to the API or UI | High | Bearer tokens (256-bit random) required on every route except health and readiness. Tokens are stored only as SHA-256 hashes in `API_TOKENS`. |
-| Privilege escalation between users | High | Roles (`viewer` < `operator` < `admin`) enforced server-side on every route. Admins cannot revoke the token they are signed in with. |
-| Scanning arbitrary paths through the API | High | `resolve_target()` resolves symlinks and `..`, then requires the result to sit inside `SHIPSAFE_ALLOWED_ROOTS`. Rejections are audited. |
-| Abuse or denial of service through scans | Medium | Per-token scan rate limit, bounded worker pool, per-tool timeouts and output caps. |
-| Malicious content in a scanned repository | High | Files are read as text and never modified (read-only mount in Docker). The only code executed is the project's own test suite, and only in the `pre-pr` and `deep` profiles. |
-| Command injection through scanner invocation | High | Fixed argument lists with `shell=False`. Tools are run as `python -m <tool>` with the current interpreter. |
-| SQL injection in ShipSafe itself | High | All values bound with `?` markers. The schema identifier is validated and row limits are cast to `int`. |
-| Secret leakage through storage, logs or reports | High | Evidence is redacted before reaching Db2, reports or clients. The log filter redacts `PWD=`, bearer tokens and `ss_` tokens. Tool JSON is parsed first and redacted per field. |
-| Db2 credential exposure | High | Credentials come only from the environment. `DB2_SECURITY=SSL` is supported. A least-privilege runtime role is available (`docs/db2-least-privilege.sql`). |
-| Tampering with the audit trail | Medium | `AUDIT_LOG` is append-only for the application role (`INSERT` and `SELECT` grants only). |
-| Browser-side attacks on the UI | Medium | Strict CSP (`script-src 'self'`, `frame-ancestors 'none'`), `nosniff`, `no-referrer` and `no-store` on API responses. Same-origin only, with CORS off by default. The token lives in `sessionStorage` for one tab. |
-| Prompt injection through policy documents | Low | No LLM acts on retrieved text. Retrieval cannot create findings or change the gate. |
-| False confidence from skipped checks | Medium | Skipped or unavailable checks are recorded as `skipped` and prevent a clean `PASS`. |
-| Partial writes when Db2 fails mid-save | Medium | The assessment bundle is written in a single transaction and rolled back on any error; the UI reports "not saved". |
+| A prompt-injected assistant asks a tool to read files outside the project | High | `resolve_in_workspace()` resolves symlinks and `..` and refuses any path outside the workspace root |
+| Malicious code in a snippet executes during a check | High | Checks parse and pattern-match text only. Bandit analyses a temporary copy and never imports or runs it. |
+| The model's "fix" weakens security or breaks behaviour | High | Fixes are re-checked with the same deterministic rules; unverified fixes are flagged and need explicit confirmation. Db2 API misuse is a blocking rule. |
+| Invented policy references mislead the developer | Medium | Cited ids are checked against the ids Db2 returned; unknown ids are marked `(unverified)` |
+| SQL validation modifies data | High | Statements are only PREPAREd (never executed) and the transaction is rolled back |
+| Command injection through tool invocation | High | Fixed argument lists, `shell=False`, timeouts, empty stdin, output caps |
+| Code or telemetry leaves the machine | High | Local Granite via Ollama; CrewAI, LiteLLM and Haystack telemetry disabled at import |
+| A hung dependency freezes the IDE | Medium | Db2 connect timeout, subprocess timeouts, native modules loaded before the stdio transport |
+| Oversized inputs exhaust memory | Low | 400 KB per inline check, 50 files per call, 4,000 characters per memory |
+| Memory poisoning: wrong "decisions" saved and recalled later | Medium | Memories record their author (IDE name) and time, are scoped per project, and can be deleted (`forget`); recall returns similarity scores so weak matches are visible |
+
+## Data layer (IBM Db2)
+
+| Threat | Risk | Mitigation |
+|---|---|---|
+| SQL injection in ShipSafe itself | High | All values bound with `?` markers, including row limits; schema identifier validated; Bandit shows 0 medium/high findings |
+| Credential exposure | High | Credentials only from environment or `~/.shipsafe/.env`; connection strings never logged; `PWD=` redacted |
+| Tampering with history | Medium | `AUDIT_LOG`, `GUARD_EVENTS`, `FIX_ATTEMPTS` are INSERT/SELECT only for the app role; retention only through `SP_PURGE_HISTORY` |
+| Partial writes | Medium | Assessment bundle saved in one transaction with rollback on error |
+| Stale or dead connections | Low | Pool validates with a ping before reuse and replaces broken connections (tested by killing a real connection) |
+
+## Team API and dashboard
+
+| Threat | Risk | Mitigation |
+|---|---|---|
+| Unauthenticated access | High | Bearer tokens required on every route except health/readiness; stored as SHA-256 hashes |
+| Privilege escalation | High | Roles enforced server-side on every route; admins cannot revoke their own token |
+| Scanning arbitrary paths | High | `resolve_target()` allow-list (`SHIPSAFE_ALLOWED_ROOTS`); rejections are audited |
+| Abuse through scans | Medium | Per-token rate limit, bounded worker pool, per-tool timeouts |
+| Browser attacks | Medium | Strict CSP, `nosniff`, `no-referrer`, `no-store`; same-origin, CORS off by default |
 
 ## Known gaps
-- Scan jobs are held in the API process's memory (results are in Db2). Restarting the API loses the progress of in-flight scans.
-- The test-runner check executes the target project's tests. Run ShipSafe in a container or CI sandbox when assessing untrusted repositories.
-- There is no SSO yet. Tokens are the only authentication method.
+
+- The readiness check runs the target project's own test suite in the `pre-pr` and `deep` profiles. Use a
+  container or CI sandbox for untrusted repositories.
+- In-flight API scan jobs live in process memory (results are in Db2); restarting the API loses their progress.
+- There is no SSO yet; tokens are the only authentication method for the team API.

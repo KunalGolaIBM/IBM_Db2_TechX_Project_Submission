@@ -1,11 +1,11 @@
--- ShipSafe AI: least-privilege runtime access for IBM Db2.
+-- ShipSafe: least-privilege runtime access for IBM Db2.
 --
 -- 1. Create the schema once with an administrator:
 --      DB2_ADMIN_USERNAME=db2inst1 DB2_ADMIN_PASSWORD=... shipsafe init-db
 -- 2. Create an OS user for the app inside the Db2 server/container (Db2 authenticates against the OS):
---      docker exec -it shipsafe-db2 bash -c "useradd shipsafe_app && passwd shipsafe_app"
+--      docker exec -it db2server bash -c "useradd shipsafe_app && passwd shipsafe_app"
 -- 3. Run this script as the administrator:
---      db2 connect to SAMPLE && db2 -tvf db2-least-privilege.sql
+--      db2 connect to TESTDB && db2 -tvf db2-least-privilege.sql
 -- 4. Run ShipSafe with DB2_USERNAME=shipsafe_app. It can read and write data, but it cannot
 --    create, alter or drop objects, and it can only append to the audit log.
 
@@ -24,6 +24,17 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE SHIPSAFE.POLICY_VECTORS   TO ROLE 
 GRANT SELECT, INSERT, UPDATE         ON TABLE SHIPSAFE.API_TOKENS       TO ROLE SHIPSAFE_APP;
 -- The audit log is append-only for the application: no UPDATE or DELETE.
 GRANT SELECT, INSERT                 ON TABLE SHIPSAFE.AUDIT_LOG        TO ROLE SHIPSAFE_APP;
+
+-- IDE guard events and fix attempts are append-only for the application; retention runs in SP_PURGE_HISTORY.
+GRANT SELECT, INSERT                 ON TABLE SHIPSAFE.GUARD_EVENTS     TO ROLE SHIPSAFE_APP;
+GRANT SELECT, INSERT                 ON TABLE SHIPSAFE.FIX_ATTEMPTS     TO ROLE SHIPSAFE_APP;
+-- Project memory (Haystack ibm-db document store).
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE SHIPSAFE.MEMORY_VECTORS   TO ROLE SHIPSAFE_APP;
+
+-- Stored procedures run their static SQL with the definer's authority, so the app needs EXECUTE only.
+GRANT EXECUTE ON PROCEDURE SHIPSAFE.SP_PROJECT_RISK   TO ROLE SHIPSAFE_APP;
+GRANT EXECUTE ON PROCEDURE SHIPSAFE.SP_GUARD_SUMMARY  TO ROLE SHIPSAFE_APP;
+GRANT EXECUTE ON PROCEDURE SHIPSAFE.SP_PURGE_HISTORY  TO ROLE SHIPSAFE_APP;
 
 GRANT SELECT ON TABLE SHIPSAFE.V_RISK_TREND      TO ROLE SHIPSAFE_APP;
 GRANT SELECT ON TABLE SHIPSAFE.V_PROJECT_POSTURE TO ROLE SHIPSAFE_APP;

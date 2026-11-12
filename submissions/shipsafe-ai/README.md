@@ -1,227 +1,230 @@
-# ShipSafe AI: Pre-PR Production-Readiness Gate on IBM Db2
+# ShipSafe for IBM Bob
 
-> **One-line pitch:** ShipSafe AI tells you whether a change is safe to open as a pull request. It scans for leaked secrets, SQL injection, risky code, vulnerable dependencies and failing tests; gives one deterministic **PASS / PASS_WITH_WARNINGS / BLOCKED** decision; cites the exact team policy behind every finding using **LangChain + IBM Db2 vector search**; and keeps every assessment, trend and audit event in **IBM Db2**. It ships as a polished web app, a REST API, a CLI and an MCP server for IBM Bob.
+**Your AI writes the code. ShipSafe makes it shippable.**
 
-![ShipSafe AI dashboard: live risk posture from IBM Db2](docs/screenshots/ui-overview.png)
+ShipSafe is an add-on for **IBM Bob** and any MCP-capable AI IDE (VS Code, Claude Code, Cursor). While the
+assistant works, it checks every file *before* it is written, fixes problems with local **IBM Granite** and
+proves each fix, validates SQL against your real **IBM Db2** database, and remembers your team's decisions
+between sessions. Every check, fix, memory and policy lives in IBM Db2.
 
----
+> 11 MCP tools · 3 Db2 stored procedures · 2 Db2 vector stores · 181 tests, 91% coverage, no mocks ·
+> everything runs on your machine
+
+| Read next | |
+|---|---|
+| [docs/INNOVATIONS.md](docs/INNOVATIONS.md) | What is new, and how each claim was proved |
+| [architecture.md](architecture.md) | Components, data flow, Db2 schema |
+| [docs/getting-started.md](docs/getting-started.md) | Install in four steps, IDE setup, troubleshooting |
+| [docs/mcp-tools.md](docs/mcp-tools.md) | Every tool, its arguments and output, the rule catalogue |
+| [docs/db2-design.md](docs/db2-design.md) | Tables, vectors, procedures, PREPARE validation |
+| [docs/SECURITY.md](docs/SECURITY.md) · [docs/threat-model.md](docs/threat-model.md) | Security scan results, fixes, controls, threats |
+| [docs/testing.md](docs/testing.md) | How the tests run on real Db2 and Granite |
 
 ## Table of Contents
-- [Problem Statement](#problem-statement)
-- [Solution Overview](#solution-overview)
-- [Product Tour](#product-tour)
-- [IBM Db2 Integration](#ibm-db2-integration)
-- [AI / LLM Architecture](#ai--llm-architecture)
-- [Security & Production Readiness](#security--production-readiness)
-- [Tech Stack](#tech-stack)
-- [Prerequisites](#prerequisites)
-- [Setup & Installation](#setup--installation)
-- [Configuration](#configuration)
-- [Running the Project](#running-the-project)
-- [Testing & Verification](#testing--verification)
-- [Screenshots & Demo](#screenshots--demo)
-- [Known Limitations & Future Roadmap](#known-limitations--future-roadmap)
-- [Team Members & Credits](#team-members--credits)
+1. [Problem Statement](#problem-statement)
+2. [Solution Overview](#solution-overview)
+3. [IBM Db2 Integration](#ibm-db2-integration)
+4. [AI / LLM Architecture](#ai--llm-architecture)
+5. [Tech Stack](#tech-stack)
+6. [Prerequisites](#prerequisites)
+7. [Setup & Installation](#setup--installation)
+8. [Configuration](#configuration)
+9. [Running the Project](#running-the-project)
+10. [Testing & Verification](#testing--verification)
+11. [Screenshots & Demo](#screenshots--demo)
+12. [Known Limitations & Future Roadmap](#known-limitations--future-roadmap)
+13. [Team Members & Credits](#team-members--credits)
 
 ---
 
 ## Problem Statement
-- **Code now ships faster than it can be reviewed.** With AI assistants and tight deadlines, pull requests compile and pass a quick test but still carry a hardcoded key, an f-string SQL query, a `shell=True` call or a package with a known CVE.
-- **Who feels it:** developers who want a fast "is this safe to open?" answer; reviewers and tech leads who need consistent, explainable merge decisions; Db2, platform and security teams who own rules like "always use parameter markers" and need proof they are followed.
-- **Why current tooling falls short:** Bandit, Gitleaks and pip-audit each print their own output and remember nothing. None of them links a finding to *your* written policy, tracks whether last week's issue was really fixed, or gives one decision that the whole team can trust.
+
+AI assistants such as IBM Bob now write a large share of new code. They are fast, but the checks that keep
+code safe (security rules, team conventions, database correctness) still run later, in CI or in review. By
+then the assistant has moved on, a person has to explain the problem back to it, and the same mistakes
+return in the next session because nothing remembers the team's decisions.
+
+Three gaps stand out:
+- **Nothing checks code at the moment it is written.** Secrets, SQL injection and shell commands reach the
+  repository before anyone looks.
+- **AI fixes are trusted, not verified.** A model's patch can look right and still be insecure or broken.
+- **The assistant does not know your database or your decisions.** It guesses table and column names, and
+  it forgets agreements as soon as the chat ends.
 
 ## Solution Overview
-1. **Discover** the project: languages, manifests, tests and git state.
-2. **Scan** with deterministic, explainable checks: secrets; SAST (SQL built from f-strings, `%` or concatenation, `shell=True`, `eval`/`exec`, `pickle`); dependency CVEs; syntax and bare `except:`; and the project's own test suite. **Bandit** and **pip-audit** run automatically when installed, and their results are merged with the built-in rules.
-3. **Normalize** every result into one finding with a stable SHA-256 fingerprint. Duplicates from different tools collapse into one finding that lists every source.
-4. **Gate** deterministically: any critical or high finding, or a failing test, means `BLOCKED`. No model can override it.
-5. **Explain** each finding with the governing team policy, retrieved from **IBM Db2's native vector store** through **LangChain** and quoted word for word.
-6. **Remember** everything in IBM Db2, in one transaction per assessment: history, regression diffs (new / resolved / still open), risk trends computed with window functions, and an append-only audit trail.
 
-One engine, four ways in: a **web app** for the team, a **REST API** for automation, a **CLI** for developers and CI (with **SARIF** for GitHub code scanning), and an **MCP server** for IBM Bob.
+ShipSafe gives the assistant tools that it calls on its own. A rules file installed into Bob says when.
 
-## Product Tour
-| | |
-|---|---|
-| **Run a scan in three clicks.** Pick a project, choose a depth, and watch each check complete live. | ![Live scan](docs/screenshots/ui-scan-live.png) |
-| **Get one clear decision.** The verdict, severity counts and a link straight to the full report. | ![Scan result](docs/screenshots/ui-scan-result.png) |
-| **Understand every finding.** Redacted evidence, the policy Db2 retrieved for it with its similarity score, a copyable fix and references. | ![Report](docs/screenshots/ui-report.png) |
-| **Prove the fix landed.** Compare two runs by fingerprint: resolved, new and still open. | ![Compare](docs/screenshots/ui-compare.png) |
-| **Ask your policies.** Plain-language questions answered by `VECTOR_DISTANCE` inside Db2, never generated. | ![Policies](docs/screenshots/ui-policies.png) |
-| **Control access.** Role-based API tokens and a live audit trail, both stored in Db2. | ![Admin](docs/screenshots/ui-admin-audit.png) |
+| When | Tool | What happens |
+|---|---|---|
+| Start of a task | `shipsafe_recall` | Relevant team decisions come back from a Db2 vector table |
+| Before writing a file | `shipsafe_check_code` | clean / warn / block in about 0.4 s, each issue with the reason, the fix and the team policy |
+| After a block | `shipsafe_fix_code` | A CrewAI crew on Granite rewrites the file; the same checks must pass before it is accepted |
+| Before using SQL | `shipsafe_db2_schema`, `shipsafe_check_sql` | The real schema, and Db2 itself validates the statement without running it |
+| When unsure | `shipsafe_ask_standards` | Granite answers from team policies found by Db2 vector search, with checked citations |
+| After a decision | `shipsafe_remember` | Stored as a Granite embedding in Db2 for later sessions |
+| Before "done" | `shipsafe_readiness_check` | Full gate: secrets, code, dependency CVEs, tests, risk trend |
 
-Keyboard-first: <kbd>Ctrl</kbd>+<kbd>K</kbd> opens a command palette from anywhere, and <kbd>N</kbd> starts a new scan.
+The same server powers a **VS Code / Bob extension** (Problems panel on save, verified quick fix, SQL check,
+memory commands), a **CLI** with a git pre-commit hook, and a **REST API with a team dashboard**.
+
+**Highlights** (details and proof in [docs/INNOVATIONS.md](docs/INNOVATIONS.md)):
+- Python rules read the syntax tree, so comments and docstrings never raise false alarms, and SQL is
+  followed through variables.
+- A Granite fix is tested by running the fixed function against a real Db2 table: the query still works
+  and the injection returns nothing.
+- A Db2-specific rule (`DB2-API-MISUSE`) came from mistakes the model made in testing: code that was
+  secure but would have failed at runtime.
 
 ## IBM Db2 Integration
-- **Edition & environment:** IBM Db2 Community Edition **12.1.5** in Docker (`icr.io/db2_community/db2`), including instances created with the **IBM Db2 Developer Extension for VS Code**. Db2 on Cloud works with `DB2_SECURITY=SSL`. The native `VECTOR` type needs 12.1.2 or later.
-- **Connectors:** `ibm_db` / `ibm_db_dbi` (DB-API 2.0) through a thread-safe, self-healing **connection pool**; `langchain-db2` (`DB2VS`) for the vector store on the same connections.
-- **Schema `SHIPSAFE`** (created idempotently; full DDL in [`docs/db2-schema.sql`](docs/db2-schema.sql)):
 
-  | Object | Purpose |
-  |---|---|
-  | `PROJECTS` | One row per scanned repository |
-  | `ASSESSMENTS` | One row per run: profile, gate decision, reason, severity counts, timings |
-  | `TOOL_RUNS` | Provenance for every check: tool, version, exit code, duration, `passed` / `failed` / `skipped` |
-  | `FINDINGS` | Normalized findings: fingerprint, rule, severity, location, redacted evidence (`CLOB` JSON), policy citation, fix |
-  | `DEPENDENCIES` | Latest dependency inventory per project |
-  | `KNOWLEDGE_DOCS` | Source policy documents and versions |
-  | `POLICY_VECTORS` | Policy chunks with `VECTOR(384, FLOAT32)` embeddings (managed by `langchain-db2`) |
-  | `ASSESSMENT_DIFFS` | Regression results between two runs |
-  | `API_TOKENS` | API tokens stored only as SHA-256 hashes, with a `CHECK`-constrained role |
-  | `AUDIT_LOG` | Append-only security events: scans, token changes, denied requests |
-  | `V_RISK_TREND` (view) | Risk score per run with `LAG()` delta and `ROW_NUMBER()` recency rank |
-  | `V_PROJECT_POSTURE` (view) | Latest assessment per project, built on `V_RISK_TREND` |
+Db2 is the system of record for everything ShipSafe does ([docs/db2-design.md](docs/db2-design.md)):
 
-  Foreign keys cascade on delete; 7 secondary indexes cover time, severity, fingerprint, package and audit lookups.
-- **Key queries & operations:**
-  - **Atomic persistence:** project `MERGE`, inventory, assessment, tool runs and findings commit together or roll back together.
-  - **Vector search:** `VECTOR_DISTANCE(EMBEDDING, VECTOR(?, 384, FLOAT32), COSINE)` ranks policy chunks inside Db2, scoped by the finding's category.
-  - **Analytics:** window functions for the risk trend and posture; `GROUP BY` with `COUNT(DISTINCT FINGERPRINT)` for unique issues; dashboard KPIs in a single round-trip.
-  - **Operations:** `SYSCAT` checks for idempotent DDL, `SYSIBMADM.ENV_INST_INFO` for the live server level, and `SYSIBM.SYSDUMMY1` pings for pool health and the latency shown in the UI.
+| Capability | How Db2 is used |
+|---|---|
+| Policy citations | `POLICY_VECTORS` with `VECTOR(384, FLOAT32)`, ranked by `VECTOR_DISTANCE(COSINE)` through **LangChain `langchain-db2`** |
+| Project memory | `MEMORY_VECTORS` through **Haystack `ibm-db-haystack`**, filtered by project and kind inside Db2 |
+| SQL validation | Server-side `PREPARE` with deferred prepare off: SQL0104N / SQL0204N / SQL0206N, result columns, nothing executed |
+| Schema awareness | Catalog read through **SQLAlchemy + `ibm_db_sa`** inspector, used for "did you mean" suggestions |
+| Analytics | `SP_PROJECT_RISK` (OUT parameters), `SP_GUARD_SUMMARY` (dynamic result set) over views using `LAG` and `ROW_NUMBER` |
+| Retention | `SP_PURGE_HISTORY` with `SIGNAL SQLSTATE`, `GET DIAGNOSTICS` and `ON DELETE CASCADE` |
+| Records | `GUARD_EVENTS`, `FIX_ATTEMPTS`, assessments and findings; `MERGE` upserts; atomic multi-table saves |
+| Security | Hashed API tokens, append-only audit log, least-privilege role script, `?` markers everywhere |
 
 ## AI / LLM Architecture
-- **Framework:** **LangChain**. `MarkdownHeaderTextSplitter` and `RecursiveCharacterTextSplitter` chunk the policies, and `langchain_db2.DB2VS` stores and searches them.
-- **Embeddings:** offline, deterministic `HashingEmbeddings` (a LangChain `Embeddings` implementation over word unigrams, bigrams and character trigrams, 384 dimensions). It needs no downloads and gives reproducible results. Set `SHIPSAFE_EMBEDDINGS=huggingface` for `sentence-transformers/all-MiniLM-L6-v2`.
-- **Retrieval workflow:** each finding's title and description become a query. Db2 ranks chunks within the finding's policy category, falling back to all policies, and the top match is attached with its ID, version, section and similarity score.
-- **Evidence before AI:** findings and the gate are fully deterministic. Retrieval only adds citations, and the answer to a policy question is always the stored policy text, never generated.
 
-## Security & Production Readiness
-| Area | What ShipSafe does |
-|---|---|
-| **Authentication** | Bearer tokens (`ss_` + 256-bit random), stored only as SHA-256 hashes in Db2 and shown once at creation. The first `shipsafe serve` prints a one-time admin token. |
-| **Authorization** | Roles: `viewer` (read), `operator` (+ run scans, compare), `admin` (+ tokens, audit, re-index). Enforced on every API route and mirrored in the UI. |
-| **Audit** | Every scan, token change, re-index and denied request is written to the append-only Db2 `AUDIT_LOG`, viewable live on the Admin page. |
-| **Input safety** | All SQL uses `?` parameter markers. API inputs are validated with Pydantic. Scan targets must resolve inside `SHIPSAFE_ALLOWED_ROOTS`, so path traversal is rejected. Scans are rate-limited per token. |
-| **Execution safety** | Fixed argument lists with `shell=False`, timeouts and output caps. Scanned code is never modified, and Docker mounts workspaces read-only. |
-| **Secrets** | Credentials come only from the environment. Logs and evidence redact keys, tokens and `PWD=` values. The UI keeps its token in `sessionStorage` for the tab only. |
-| **HTTP hardening** | Strict CSP, `X-Frame-Options: DENY`, `nosniff`, `no-referrer`, `no-store` on API responses, CORS off unless configured, and a request ID on every response. |
-| **Resilience** | Db2 connection pool with validation, retry and backoff, and automatic replacement of dead connections. All-or-nothing writes. If Db2 is down, scans still run and say clearly that results were not saved. Health (`/api/health`) and readiness (`/api/ready`) endpoints. |
-| **Least privilege** | `init-db` can run with admin credentials while the app runs as a DML-only role; see [`docs/db2-least-privilege.sql`](docs/db2-least-privilege.sql). |
-| **Operations** | Structured JSON logs, startup config validation, a non-root container with a healthcheck, and Docker Compose for Db2 + app. |
-| **CI** | `shipsafe scan --offline --format sarif` fails a PR on `BLOCKED` and shows findings inline through GitHub code scanning; see [`ci/github-actions-shipsafe.yml`](ci/github-actions-shipsafe.yml). |
+All models are **IBM Granite**, served locally by **Ollama**: `granite4:micro` for chat and
+`granite-embedding:30m` (384 dimensions) for vectors. Each framework has one job:
 
-Threat model: [`docs/threat-model.md`](docs/threat-model.md).
+- **CrewAI**: the fix crew. A security analyst writes a plan from the exact findings and the policy
+  retrieved from Db2; an engineer returns the corrected file. Verification is deterministic, with up to three rounds.
+- **LangChain**: policy ingestion (Markdown splitters), the `DB2VS` vector store, and an LCEL retrieval
+  chain that answers questions from retrieved policy text only.
+- **Haystack**: the remember and recall pipelines (Ollama embedders, `DocumentWriter`, `IBMDb2EmbeddingRetriever`).
+- **Guardrails**: the model never decides a verdict. Fixes must pass the deterministic checks, and cited
+  policy ids are compared with what Db2 actually returned.
+
+See [architecture.md](architecture.md) for the full diagram and data flow.
 
 ## Tech Stack
-- **Backend:** Python 3.10+ (test suite run on 3.14; Docker image runs 3.12), FastAPI + Uvicorn, standard-library CLI, MCP over stdio
-- **Database:** IBM Db2 Community Edition 12.1.5 (`ibm_db`, `ibm_db_dbi`)
-- **AI / retrieval:** LangChain, `langchain-db2`
-- **Scanners:** built-in rules, Bandit, pip-audit (Gitleaks when installed)
-- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS v4, Motion, Recharts, cmdk, with [React Bits](https://reactbits.dev) components (Aurora, BlurText, GradientText, ShinyText, SpotlightCard, CountUp, ClickSpark, DecryptedText)
-- **Ops:** Docker multi-stage image, Docker Compose, GitHub Actions template
+
+| Layer | Technology |
+|---|---|
+| Database | IBM Db2 12.1.5 Community Edition (created with the IBM Db2 Developer Extension) |
+| Drivers | `ibm_db`, `ibm_db_dbi`, `ibm_db_sa` + SQLAlchemy 2 |
+| AI frameworks | LangChain (`langchain-db2`, `langchain-ollama`), Haystack (`ibm-db-haystack`, `ollama-haystack`), CrewAI |
+| Models | IBM Granite via Ollama: `granite4:micro`, `granite-embedding:30m` |
+| IDE integration | Model Context Protocol (official Python SDK), VS Code / Bob extension (TypeScript) |
+| Analysis | Python `ast`, Bandit, pip-audit |
+| API and dashboard | FastAPI, React, Tailwind, React Bits |
+| Tests | pytest, pytest-cov, Node test runner |
 
 ## Prerequisites
-- Docker Desktop (for Db2 Community Edition and/or the app image), or a running Db2 12.1.2+ instance
-- For local development: Python 3.10+ and Node.js 20+
+
+- Python **3.11–3.13**
+- IBM Db2 12.1 (the free IBM Db2 Developer Extension for VS Code creates one locally), or Docker
+- Ollama with `granite4:micro` and `granite-embedding:30m`
+- IBM Bob or VS Code (Node 20+ only if you build the extension yourself)
 
 ## Setup & Installation
 
-**Option A: everything in Docker (recommended).**
 ```bash
-cd submissions/shipsafe-ai
-cp .env.example .env                 # set DB2_PASSWORD
-docker compose up -d --build         # first Db2 start takes ~5-10 minutes
-docker compose logs shipsafe         # copy the one-time admin token
-# open http://localhost:8080 and paste the token
-```
-Put projects to scan in `./workspaces` (mounted read-only). Already have Db2 running, for example from the VS Code Db2 extension? Set `DB2_HOST=host.docker.internal` in `.env` and run `docker compose up -d --build --no-deps shipsafe`.
+# 1. Clone and enter the submission
+git clone https://github.com/ddevSharma/IBM_Db2_TechX_Project_Submission.git
+cd IBM_Db2_TechX_Project_Submission/submissions/shipsafe-ai
 
-**Option B: local Python + Node.**
-```bash
-cd submissions/shipsafe-ai
-cp .env.example .env                 # point DB2_* at your Db2
-python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
-pip install -e ".[scanners]"
-(cd web && npm ci && npm run build)
-shipsafe serve                       # prints the one-time admin token on first start
+# 2. Install (Python 3.11-3.13)
+python -m venv .venv && . .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -e ".[dev,scanners]"
+
+# 3. Models
+ollama pull granite4:micro
+ollama pull granite-embedding:30m
+
+# 4. Point at your Db2 and set everything up (schema, procedures, policy vectors)
+cp .env.example .env        # fill in DB2_PASSWORD
+shipsafe setup
+
+# 5. Connect your IDE inside the project you work on
+shipsafe connect bob        # or: vscode | claude | cursor
 ```
+
+Extension: `cd extension && npm ci && npm run package`, then
+`bobide --install-extension shipsafe-3.0.0.vsix` (or `code --install-extension ...`).
+Step-by-step guide with expected output: [docs/getting-started.md](docs/getting-started.md).
 
 ## Configuration
-Everything is configured through environment variables (`.env` is read automatically). [`.env.example`](.env.example) documents each one. The most important:
 
-| Variable | Default | Meaning |
+All settings come from environment variables, `./.env` or `~/.shipsafe/.env` (written by `shipsafe setup`).
+See [.env.example](.env.example).
+
+| Variable | Default | Purpose |
 |---|---|---|
-| `DB2_HOST` / `DB2_PORT` / `DB2_DATABASE` | `localhost` / `50000` / `SAMPLE` | Where Db2 is |
-| `DB2_USERNAME` / `DB2_PASSWORD` | `db2inst1` / *(required)* | Runtime credentials |
-| `DB2_ADMIN_USERNAME` / `DB2_ADMIN_PASSWORD` | *(unset)* | Optional admin credentials for `init-db` only |
-| `SHIPSAFE_ALLOWED_ROOTS` | `./fixtures` | Folders the API may scan |
-| `SHIPSAFE_AUTH` | `true` | Token auth (can only be disabled on localhost) |
-| `SHIPSAFE_PIP_AUDIT` | `deep` | When to run pip-audit: `deep`, `always` or `off` |
-| `SHIPSAFE_LOG_FORMAT` | `text` | `json` for structured logs |
+| `DB2_HOST` / `DB2_PORT` / `DB2_NAME` | `127.0.0.1` / `50001` / `TESTDB` | Db2 instance (defaults match the IBM Db2 VS Code extension) |
+| `DB2_USERNAME` / `DB2_PASSWORD` | `db2inst1` / — | Credentials (never committed) |
+| `DB2_SSL` | `false` | TLS for Db2 on Cloud |
+| `DB2_SCHEMA` | `SHIPSAFE` | Schema for every table, view, procedure and vector table |
+| `OLLAMA_HOST` | `http://localhost:11434` | Local model server |
+| `SHIPSAFE_CHAT_MODEL` / `SHIPSAFE_EMBED_MODEL` | `granite4:micro` / `granite-embedding:30m` | Granite models |
+| `SHIPSAFE_WORKSPACE` | current folder | Workspace root for file tools (the IDE sets it) |
 
 ## Running the Project
-**Web app:** `shipsafe serve` → http://localhost:8080. Interactive API docs at `/api/docs`.
 
-**CLI:**
 ```bash
-shipsafe doctor                                          # Db2 version, schema, vector store, scanners
-shipsafe scan --target ./workspaces/payments-service     # BLOCKED -> exit code 1
-shipsafe scan --target . --format sarif --output shipsafe.sarif
-shipsafe scan --target . --offline                       # CI without a database
-shipsafe history                                         # risk trend from V_RISK_TREND
-shipsafe assessment compare <previous_id> <current_id>
-shipsafe knowledge query "how should I store the Db2 password?"
-shipsafe token create --name ci-pipeline --role viewer
-shipsafe audit
+shipsafe-mcp                        # the MCP server (your IDE starts this for you)
+shipsafe check src/app.py           # guard a file; exit code 1 on block
+shipsafe fix src/app.py --write     # Granite crew; writes only a verified fix
+shipsafe sql "SELECT NAME FROM CUSTOMERS WHERE ID = ?"
+shipsafe ask "How must we store API keys?"
+shipsafe remember "Money is DECIMAL(15,2), never float" --kind decision
+shipsafe recall "add a refund endpoint"
+shipsafe report                     # what was caught per IDE (SP_GUARD_SUMMARY)
+shipsafe hook                       # git pre-commit hook
+shipsafe serve                      # REST API + team dashboard on http://127.0.0.1:8080
+shipsafe doctor                     # Db2, vectors, Granite and scanner health
 ```
-
-**REST API** (all routes except health and readiness need `Authorization: Bearer <token>`):
-
-| Method & path | Role | Purpose |
-|---|---|---|
-| `GET /api/health`, `GET /api/ready` | public | Liveness; Db2 readiness with version, latency and vector count |
-| `GET /api/overview` | viewer | KPIs, posture, trend and breakdown |
-| `GET /api/assessments`, `GET /api/assessments/{id}` | viewer | History and full report |
-| `GET /api/assessments/{id}/report?format=markdown\|json\|sarif` | viewer | Export |
-| `GET /api/compare?previous=&current=` | viewer | Regression diff |
-| `POST /api/scans`, `GET /api/scans/{job}` | operator / viewer | Start a scan, follow its progress |
-| `POST /api/policies/search` | viewer | Vector search in Db2 |
-| `POST /api/policies/reindex`, `/api/tokens`, `/api/audit` | admin | Administration |
-
-**MCP (IBM Bob):** `python -m shipsafe.mcp_server`, with 7 tools: discover, run assessment, get assessment, get finding, retrieve guidance, compare, export report.
 
 ## Testing & Verification
-```bash
-pip install -e ".[scanners,dev]"
-PYTHONPATH=src python -m unittest discover -s tests -p "test_*.py"                              # offline
-SHIPSAFE_DB2_INTEGRATION=1 PYTHONPATH=src python -m unittest discover -s tests -p "test_*.py"   # + live Db2
-```
-42 tests: API auth, roles, path allowlisting, rate limiting, scan jobs and exports; Bandit and pip-audit adapters; cross-tool merging; SARIF; connection-pool recovery; the release gate; and **live IBM Db2 integration** (real connection, vector search, persisted scans, audit trail, policy search through the API).
 
-**Check Db2 directly:**
-```sql
-SET SCHEMA SHIPSAFE;
-SELECT PROJECT_NAME, STATUS, RISK_SCORE, RISK_DELTA FROM V_RISK_TREND ORDER BY STARTED_AT;
-SELECT RULE_ID, SEVERITY, FILE_PATH, LINE_START FROM FINDINGS WHERE ASSESSMENT_ID = '<id>';
-SELECT ACTION, ACTOR, OUTCOME FROM AUDIT_LOG ORDER BY TS DESC FETCH FIRST 10 ROWS ONLY;
-SELECT TYPENAME, LENGTH FROM SYSCAT.COLUMNS WHERE TABNAME = 'POLICY_VECTORS' AND COLNAME = 'EMBEDDING';
+```bash
+pytest --cov=shipsafe               # 181 tests, 91% coverage, real Db2 + Granite, no mocks
+cd extension && npm test            # extension unit tests
 ```
+
+Tests run in a separate schema, `SHIPSAFE_TEST`, recreated on every run. Notable tests:
+- the MCP server driven over stdio by the official MCP client, the way Bob launches it;
+- a Granite fix executed against a real Db2 table;
+- every stored procedure, cascade and the atomic save on Db2;
+- a killed Db2 connection replaced by the pool.
+
+Security checks on our own code (Bandit: 0 medium/high; npm audit: 0; ShipSafe on itself: no blocking
+issue) are in [docs/SECURITY.md](docs/SECURITY.md). [docs/testing.md](docs/testing.md) lists the bugs these
+real-infrastructure tests found.
 
 ## Screenshots & Demo
-- **Demo video:** linked in the pull request description
-- **Sample report:** [`docs/sample-report.md`](docs/sample-report.md)
 
-| Sign in | Command palette |
-|---|---|
-| ![Sign in](docs/screenshots/ui-sign-in.png) | ![Command palette](docs/screenshots/ui-command-palette.png) |
+- **Landing page:** [ShipSafe landing repository](https://github.com/ddevSharma/IBM_Db2_TechX_Project_Submission_ShipSafe_AI_Landing_Page) (install guide and downloads)
+- **Team dashboard** (`shipsafe serve`):
 
-Straight from the terminal and the Db2 command line:
-
-![Db2 running in Docker and shipsafe doctor](docs/screenshots/db2-docker-doctor.png)
+![Dashboard: live risk posture from IBM Db2](docs/screenshots/ui-overview.png)
+![Assessment report with Db2-retrieved policies](docs/screenshots/ui-report.png)
+![Policy search with Db2 vectors](docs/screenshots/ui-policies.png)
 ![Db2 CLP: risk trend, findings and the VECTOR column](docs/screenshots/db2-risk-trend-clp.png)
 
 ## Known Limitations & Future Roadmap
-- **Limitations:**
-  - Built-in rules and Bandit target Python. Other languages are discovered but only checked for secrets.
-  - The curated CVE list is small; full coverage comes from pip-audit (the `deep` profile, which needs network).
-  - Hashing embeddings match shared vocabulary rather than deep meaning. Use the Hugging Face option for better recall.
-  - The dependency inventory is the latest per project, not a snapshot per assessment.
-  - Scan jobs are held in the API process's memory (results themselves are in Db2). A multi-replica setup would need a shared queue.
-- **Next steps:** IBM Granite fix suggestions through watsonx.ai or Ollama (never allowed to change the gate); a GitHub App that comments on PRs; per-assessment SBOM snapshots; SSO (OIDC) for the web app.
+
+- Code rules cover Python deeply and JavaScript/TypeScript at token level; Java and Go are next.
+- `granite4:micro` is small enough for a laptop; fixes take about 30 s per round. A larger Granite model on a
+  GPU server is a configuration change (`SHIPSAFE_CHAT_MODEL`, `OLLAMA_HOST`).
+- Project memory has no review step yet; a team approval flow for shared decisions is planned.
+- CrewAI pulls in `chromadb`, which has open advisories without a fix; ShipSafe does not use it
+  (see [docs/SECURITY.md](docs/SECURITY.md)).
+- Planned: a Db2 SQL migration reviewer, and IDE events streamed to a team dashboard view.
 
 ## Team Members & Credits
-| Name | GitHub Handle | Role / Contribution |
-|---|---|---|
-| Devanshu Sharma | [@ddevSharma](https://github.com/ddevSharma) | Design and engineering: scanners, IBM Db2 schema and persistence, LangChain/Db2 vector retrieval, API, web app, MCP server, docs |
 
-**Credits:** IBM Db2 Community Edition; [`langchain-db2`](https://pypi.org/project/langchain-db2/) and LangChain; [Bandit](https://github.com/PyCQA/bandit) and [pip-audit](https://github.com/pypa/pip-audit); UI components from [React Bits](https://reactbits.dev) (MIT + Commons Clause), IBM Plex fonts (OFL) and Lucide icons (ISC). ShipSafe AI is licensed under [Apache-2.0](LICENSE).
+- **Devanshu Sharma** ([@ddevSharma](https://github.com/ddevSharma)): solo developer.
+
+Built for **Db2Hack** at the IBM Db2 TechX Summit 2026. Thanks to the IBM Db2 team for the Db2 Developer
+Extension, `langchain-db2` and `ibm-db-haystack`, and to the IBM Granite team for open models.
+Licence: Apache-2.0.

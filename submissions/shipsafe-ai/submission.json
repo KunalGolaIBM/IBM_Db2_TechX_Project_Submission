@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "project": {
-    "title": "ShipSafe AI: Pre-PR Production-Readiness Gate on IBM Db2",
+    "title": "ShipSafe for IBM Bob: keeps AI-written code production-ready with IBM Db2 and Granite",
     "slug": "shipsafe-ai",
-    "short_description": "Tells you whether a change is safe to open as a pull request. Scans for leaked secrets, SQL injection, risky code, vulnerable dependencies and failing tests; gives one deterministic PASS / PASS_WITH_WARNINGS / BLOCKED decision; cites the governing team policy for every finding using LangChain + IBM Db2 vector search; and keeps assessments, risk trends, API tokens and an audit trail in IBM Db2. Ships as a web app, REST API, CLI (with SARIF) and an MCP server for IBM Bob.",
-    "category": "DevSecOps / AI Developer Tooling / Vector Search",
-    "demo_url": "",
+    "short_description": "An MCP add-on for IBM Bob and other AI IDEs. The assistant checks every file before writing it (AST rules, secrets, Bandit), fixes problems with a CrewAI crew on local IBM Granite that must pass the same checks, validates SQL by PREPARE on the real Db2 database, remembers team decisions in a Db2 vector table (Haystack) and answers team-standard questions from Db2 vector search (LangChain). Every check, fix and memory is stored in IBM Db2.",
+    "category": "AI Developer Tooling / IDE Add-on / Vector Search",
+    "demo_url": "https://github.com/ddevSharma/IBM_Db2_TechX_Project_Submission_ShipSafe_AI_Landing_Page",
     "video_url": "",
     "repo_url": "https://github.com/ddevSharma/IBM_Db2_TechX_Project_Submission/tree/submission/shipsafe-ai/submissions/shipsafe-ai"
   },
@@ -16,28 +16,43 @@
         "name": "Devanshu Sharma",
         "github": "ddevSharma",
         "email": "devanshusharma2005@gmail.com",
-        "role": "Solo developer: scanners, IBM Db2 schema and persistence, LangChain Db2 vector retrieval, API, web app, MCP server"
+        "role": "Solo developer: MCP server, guard rules, CrewAI fix crew, Db2 schema, procedures and vector stores, VS Code/Bob extension"
       }
     ]
   },
   "ibm_db2": {
-    "edition": "Db2 Community Edition 12.1.5 (Docker, icr.io/db2_community/db2; also created via the VS Code Db2 extension)",
-    "connector": "ibm_db / ibm_db_dbi (DB-API 2.0, pooled) + langchain-db2 (DB2VS)",
+    "edition": "Db2 Community Edition 12.1.5 (local instance created with the IBM Db2 Developer Extension for VS Code)",
+    "connector": "ibm_db / ibm_db_dbi, ibm_db_sa + SQLAlchemy, langchain-db2 (DB2VS), ibm-db-haystack (IBMDb2DocumentStore)",
     "features_used": [
-      "Relational tables with foreign keys, CHECK and UNIQUE constraints",
-      "Secondary indexes",
-      "MERGE upserts and multi-statement transactions",
-      "Native VECTOR(384, FLOAT32) column and VECTOR_DISTANCE (COSINE) search",
-      "OLAP window functions (LAG, ROW_NUMBER) in views",
-      "CLOB JSON evidence storage",
-      "Append-only audit table and hashed API tokens",
-      "SYSCAT / SYSIBMADM catalog queries",
-      "Least-privilege role grants"
+      "Native VECTOR(384, FLOAT32) columns with VECTOR_DISTANCE (COSINE) for policies and project memory",
+      "SQL PL stored procedures with OUT parameters, a dynamic result set, SIGNAL SQLSTATE and GET DIAGNOSTICS",
+      "Server-side PREPARE with deferred prepare off to validate SQL without executing it",
+      "Catalog introspection through SQLAlchemy (ibm_db_sa) for schema-aware suggestions",
+      "Views with LAG and ROW_NUMBER window functions",
+      "Foreign keys with ON DELETE CASCADE, CHECK and UNIQUE constraints, MERGE upserts, atomic multi-table transactions",
+      "Parameter markers everywhere, including OFFSET ? ROWS FETCH FIRST ? ROWS ONLY",
+      "Append-only audit tables and a least-privilege role script"
     ]
   },
   "tech_stack": {
-    "languages": ["Python", "TypeScript"],
-    "frameworks": ["LangChain", "langchain-db2", "FastAPI", "React", "Vite", "Tailwind CSS", "React Bits", "Model Context Protocol"],
-    "ai_models": ["Offline feature-hashing embeddings (default)", "sentence-transformers/all-MiniLM-L6-v2 (optional)"]
+    "languages": [
+      "Python",
+      "TypeScript"
+    ],
+    "frameworks": [
+      "LangChain",
+      "langchain-db2",
+      "Haystack",
+      "ibm-db-haystack",
+      "CrewAI",
+      "SQLAlchemy",
+      "Model Context Protocol",
+      "FastAPI",
+      "React"
+    ],
+    "ai_models": [
+      "IBM Granite granite4:micro (chat, via Ollama)",
+      "IBM Granite granite-embedding:30m (384-dim embeddings, via Ollama)"
+    ]
   }
 }
