@@ -238,3 +238,36 @@ def test_only_the_editor_may_preview(settings, embeddings, pets):
         with pytest.raises(db.DatabaseError) as err:
             policy.preview_change(app, PET_CHANGE, embeddings, pets)
     assert err.value.sqlstate == "42501"
+
+
+@pytest.fixture(scope="module")
+def pets_unpublished(admin_conn, embeddings, settings):
+    """The pets schema without its help-centre answers: the change's UPDATE of published answers then touches no row,
+    which raises NOT FOUND inside APPLY_POLICY_CHANGE (the case a rail clause hit on 12 Nov 2026)."""
+    name = f"ASOF_U{uuid.uuid4().hex[:6].upper()}"
+    try:
+        schema.install(admin_conn, name)
+        seed.seed_policy(admin_conn, embeddings, name)
+        seed.seed_chain_head(admin_conn, name)
+        seed.seed_faq(admin_conn, embeddings, name)
+        schema.apply_grants(admin_conn, settings.asof_app_user, settings.asof_editor_user, name)
+        pet = claim(text="The pet fee is $100 each way.", area="pets", clause_id="PET-001", rule_check="MATCH",
+                    quoted_span="The pet fee is $100 each way")
+        for on in (date(2026, 11, 20), date(2026, 12, 15)):
+            append(settings, name, entry("PASS", [pet], as_of=on))
+    except Exception:
+        schema.drop(admin_conn, name)
+        raise
+    time.sleep(1.1)
+    yield name
+    schema.drop(admin_conn, name)
+
+
+def test_a_preview_reports_the_impact_when_no_published_answer_cites_the_clause(settings, embeddings, pets_unpublished):
+    with db.connection(settings, "editor") as editor:
+        preview = policy.preview_change(editor, PET_CHANGE, embeddings, pets_unpublished)
+        real = policy.change_impact(editor, PET_CHANGE.clause_id, pets_unpublished)
+    assert preview["published_flagged"] == 0
+    assert sorted(r["status"] for r in preview["impact"]) == ["HISTORICALLY_VALID", "STALE"]
+    # what CHANGE_IMPACT says today, before the change: both answers still cite the version in force for their date
+    assert sorted(r["status"] for r in real) == ["HISTORICALLY_VALID", "HISTORICALLY_VALID"]

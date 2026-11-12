@@ -180,6 +180,9 @@ BEGIN
   CALL ASOF.CHANGE_IMPACT(P_CLAUSE_ID);
   ASSOCIATE RESULT SET LOCATOR (V_IMPACT) WITH PROCEDURE ASOF.CHANGE_IMPACT;
   ALLOCATE C_IMPACT CURSOR FOR RESULT SET V_IMPACT;
+  -- APPLY_POLICY_CHANGE may raise NOT FOUND itself (an UPDATE of no help-centre answers), which the handler above
+  -- records in V_DONE: start the read with it cleared, or a clause with no published answer previews as no impact.
+  SET V_DONE = 0;
   ROWS: LOOP
     FETCH C_IMPACT INTO V_ROW.KIND, V_ROW.REF_ID, V_ROW.FOR_FROM, V_ROW.FOR_TO, V_ROW.STATE, V_ROW.CREATED_AT,
                         V_ROW.CITED_VERSION, V_ROW.CURRENT_VERSION, V_ROW.STATUS, V_ROW.STALE_FROM;
