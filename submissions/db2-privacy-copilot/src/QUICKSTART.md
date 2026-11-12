@@ -1,13 +1,13 @@
 # Quick Start
 
-This guide starts the demo with real IBM Db2, the FastAPI service, and the
+This guide starts the application with real IBM Db2, the FastAPI service, and the
 Streamlit UI. The first Docker build downloads large application dependencies
 and can take several minutes.
 
 ## Requirements
 
 - Docker Desktop running with its Linux container engine and Compose v2
-- 8 GB RAM recommended for the local demo; leave several GB of disk space for
+- 8 GB RAM recommended for local use; leave several GB of disk space for
   the Db2 image, application images, and build cache
 - Python 3.11+ only if you want to run the test suite on your host
 
@@ -39,7 +39,7 @@ docker compose logs -f db2
 ```
 
 Wait until Db2 finishes initialization and the `db2` service is healthy. Then
-create the application schema and synthetic demo records:
+create the application schema and synthetic sample records:
 
 ```powershell
 docker compose exec api python -m app.bootstrap
@@ -56,7 +56,7 @@ The health endpoint returns the connected Db2 service level. The seed script
 adds 100 synthetic patients and related clinic records. Run it once on a fresh
 database; rerunning it adds more rows.
 
-Sign in using a demo persona. Analysts and DPOs can submit requests; the DPO
+Sign in using an access profile. Analysts and DPOs can submit requests; the DPO
 role can review the stored plan and approve execution from **Rights Requests**.
 Approval runs the deterministic SQL guardrail, writes the data change and audit
 record in one Db2 transaction, and returns failed requests to pending review.

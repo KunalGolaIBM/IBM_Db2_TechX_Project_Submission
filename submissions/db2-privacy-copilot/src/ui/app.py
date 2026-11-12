@@ -89,7 +89,7 @@ with left:
     st.write("")
     if st.button("Open the workspace  →", type="primary"):
         st.switch_page("pages/1_🔐_Login.py")
-    st.caption("Explore the dashboard with the demo roles provided on the sign-in page.")
+    st.caption("Choose an access profile on the sign-in page to open the workspace.")
 with right:
     st.markdown(
         """
@@ -154,9 +154,9 @@ st.markdown(
     """
     <div class="trust-band">
       <div class="trust-head">Designed for review, not automatic legal decisions</div>
-      <div class="trust-copy">This prototype supports selected DPDP-related workflows. It is not legal advice or a complete compliance program. Retention rules and classifications require review by qualified owners; demo mode uses synthetic data.</div>
+      <div class="trust-copy">The workspace supports selected DPDP-related privacy operations. It does not replace legal advice or a complete compliance program. Retention rules and classifications require review by qualified owners. The included clinic records are synthetic.</div>
     </div>
-    <div class="footer">Db2 Privacy Copilot&nbsp;&nbsp; · &nbsp;&nbsp;Decision-support prototype&nbsp;&nbsp; · &nbsp;&nbsp;<a href="https://github.com/dreameterftw/db2-privacy-copilot" target="_blank">View source on GitHub</a></div>
+    <div class="footer">Db2 Privacy Copilot&nbsp;&nbsp; · &nbsp;&nbsp;Privacy operations workspace&nbsp;&nbsp; · &nbsp;&nbsp;<a href="https://github.com/dreameterftw/db2-privacy-copilot" target="_blank">View source on GitHub</a></div>
     """,
     unsafe_allow_html=True,
 )

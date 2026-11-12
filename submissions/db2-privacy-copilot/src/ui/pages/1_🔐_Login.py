@@ -100,7 +100,7 @@ st.markdown("""
 st.markdown("<br>", unsafe_allow_html=True)
 
 # Role selection
-st.markdown("### Select Your Role")
+st.markdown("### Choose an access profile")
 
 # Define users (in production, this would come from a database)
 users = {
@@ -156,14 +156,14 @@ for role, info in users.items():
 
 st.markdown("<br><br>", unsafe_allow_html=True)
 
-# Demo notice
+# Access profile notice
 st.info("""
-**Demo personas**: Choose a role to demonstrate the workflow. The API checks a
-separate role token for every request; set unique `VIEWER_TOKEN`,
+**Access profiles**: The workspace applies role-specific permissions, and the
+API checks a separate token for every request. Set unique `VIEWER_TOKEN`,
 `ANALYST_TOKEN`, and `DPO_TOKEN` values in `.env` before exposing the app.
 
-This role selector is not an identity provider. Do not use the demo personas
-to protect real personal data.
+This starter sign-in flow is not an identity provider. Connect an organization
+identity provider before using the workspace with real personal data.
 """)
 
 st.markdown("<br>", unsafe_allow_html=True)

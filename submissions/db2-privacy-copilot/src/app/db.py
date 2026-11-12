@@ -14,16 +14,16 @@ Production Recommendations:
 - Implement read replicas for scalability
 - Add database health monitoring
 
-Mock Mode:
-- When ibm_db is unavailable (Docker not running, DLL blocked, or no IBM client),
-  this module falls back to app.db_mock automatically.
-- Force mock mode by setting DB_MOCK=1 in .env.
+Development mode:
+- The in-memory backend is available only when DB_MOCK=1 is explicitly set.
+- Normal application runs require the IBM Db2 driver and a reachable Db2 server.
 """
 import os
 from typing import Any, Optional
 
 # ---------------------------------------------------------------------------
-# Auto-detect mock mode — try importing ibm_db, fall back gracefully
+# Use the in-memory backend only when explicitly requested. Normal startup must
+# never silently look successful while disconnected from the real Db2 database.
 # ---------------------------------------------------------------------------
 _force_mock = os.environ.get("DB_MOCK", "").strip() == "1"
 MOCK_MODE = False
@@ -36,9 +36,12 @@ else:
         import ibm_db  # noqa: F401
         import ibm_db_dbi as _ibm_db_dbi  # keep private to this module
         MOCK_MODE = False
-    except (ImportError, OSError):
-        print("[db] ibm_db unavailable — running in MOCK mode (no Db2 connection)")
-        MOCK_MODE = True
+    except (ImportError, OSError) as exc:
+        raise RuntimeError(
+            "The IBM Db2 driver is unavailable. Start the application with "
+            "Docker Compose (the recommended Db2 setup) or explicitly set "
+            "DB_MOCK=1 for isolated development and tests."
+        ) from exc
 
 # If mock, re-export everything from the mock module and stop here
 if MOCK_MODE:
