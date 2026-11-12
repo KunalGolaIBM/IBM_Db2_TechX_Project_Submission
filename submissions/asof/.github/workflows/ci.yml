@@ -192,7 +192,7 @@ jobs:
           .venv/bin/python src/main.py --port 8000 > /tmp/app.log 2>&1 &
           for i in $(seq 1 40); do curl -sf localhost:8000/healthz > /dev/null && break; sleep 3; done
           curl -sf localhost:8000/healthz
-          test "$(curl -sf localhost:8000/api/policy/timeline | python -c 'import json,sys; print(len(json.load(sys.stdin)))')" = 52
+          test "$(curl -sf localhost:8000/api/policy/timeline | python -c 'import json,sys; print(len(json.load(sys.stdin)))')" = 53  # 52 airline and bank clauses + the Indian Railways CAN-001
           curl -sf localhost:8000/api/chain/verify
       - name: A real check end to end with no key (replay mode, which quickstart picked)
         run: |
