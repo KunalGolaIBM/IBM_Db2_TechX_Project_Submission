@@ -9,8 +9,10 @@ Two LangChain ``LLM`` implementations are provided:
   was derived from a real SQLCODE observed on a real Db2, and each one is
   re-verified by Db2 after it fires -- a rule that produces invalid SQL is
   rejected exactly like a model's output would be.
-* :class:`HttpRepairLLM` -- any OpenAI-compatible chat endpoint (Groq, Gemini's
-  compatibility layer, watsonx, a local server). Used when ``LLM_PROVIDER=http``.
+* :class:`HttpRepairLLM` -- a real language model, over any OpenAI-compatible
+  chat endpoint. ``LLM_PROVIDER=gemini`` points it at Google's compatibility
+  surface and needs only ``GEMINI_API_KEY``; ``LLM_PROVIDER=http`` takes an
+  explicit ``LLM_BASE_URL`` for Groq, watsonx or a local server.
 
 Both are plugged into the same LangChain chain in :mod:`src.repair`, so the
 pipeline does not know or care which one answered.
@@ -481,15 +483,18 @@ def build_llm(cfg: LlmConfig | None = None) -> LLM:
     cfg = cfg or llm_config()
     if cfg.provider in ("mock", "rules", ""):
         return RuleRepairLLM()
-    if cfg.provider == "http":
+    if cfg.provider in ("http", "gemini"):
         if not cfg.api_key:
             raise RuntimeError(
-                "LLM_PROVIDER=http needs LLM_API_KEY. Use LLM_PROVIDER=mock to run "
-                "without any key."
+                f"LLM_PROVIDER={cfg.provider} needs an API key. Set LLM_API_KEY, or "
+                "GEMINI_API_KEY for the gemini provider, in .env or .env.local. Use "
+                "LLM_PROVIDER=mock to run without any key."
             )
         return HttpRepairLLM(
             model=cfg.model,
             api_key=cfg.api_key,
             base_url=cfg.base_url or "https://api.groq.com/openai/v1",
         )
-    raise RuntimeError(f"Unknown LLM_PROVIDER {cfg.provider!r} (use 'mock' or 'http')")
+    raise RuntimeError(
+        f"Unknown LLM_PROVIDER {cfg.provider!r} (use 'mock', 'gemini' or 'http')"
+    )
