@@ -37,6 +37,7 @@
       "SQL"
     ],
     "frameworks": [
+      "FastAPI",
       "React",
       "Vite",
       "Tailwind CSS",

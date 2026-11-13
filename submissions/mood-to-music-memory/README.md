@@ -1,128 +1,233 @@
-# Mood-to-Music Memory
+# 🎵 Mood-to-Music Memory
 
-> A personal desktop music companion that connects an explicitly selected mood
-> to a Db2-backed playlist and helps preserve the moments that mattered.
+> A desktop music companion that connects emotional state to music playback, memory journaling, and listening analytics — powered by **IBM Db2** and local AI via **Ollama**.
 
-## Problem Statement
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=white)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![IBM Db2](https://img.shields.io/badge/IBM%20Db2-11.5-052FAD?logo=ibm&logoColor=white)](https://www.ibm.com/products/db2)
+[![Ollama](https://img.shields.io/badge/Ollama-Local%20AI-black?logo=ollama&logoColor=white)](https://ollama.ai)
 
-Music applications usually make users search for a track before they can
-listen. Mood-to-Music Memory reverses that interaction: the user selects how
-they feel, receives a matching playlist and playback profile, and can save the
-listening moment with a personal reflection. The target audience is anyone who
-wants a more intentional music-listening and journaling experience.
+---
 
-The application does not claim to diagnose or infer a person's mental-health
-state. Mood selection remains an explicit user action.
+## 📖 Executive Summary
 
-## Solution Overview
+**Mood-to-Music Memory** transforms everyday music listening into an emotional journey and reflective memory journal.
 
-- Select Sad, Happy, Romantic, Wholesome, or Ghazal.
-- Load the matching playlist and playback profile from IBM Db2.
-- Browse songs, playlists, memories, and listening analytics in a React UI.
-- Save a song, mood, timestamp, and reflection as a music memory.
-- Import user-authorized media with `yt-dlp`; audio stays on the local machine.
-- Optionally interpret free-text mood descriptions with a local Ollama model.
+Instead of endlessly browsing through thousands of tracks, users express how they feel:
+- Choose from 5 curated mood profiles: **Sad · Happy · Romantic · Wholesome · Ghazal**
+- Or describe their feelings in natural language, interpreted locally by **Ollama (`llama3.2:3b`)** without sending personal data to the cloud.
 
-The React interface currently uses local mock data for its browser-only
-demonstration. The Python services and Db2 scripts provide the database-backed
-integration path and are the source of truth for the data model.
+Every listening session, song transition, and saved personal reflection is persisted securely in **IBM Db2**, driving live listening analytics and emotional memory retrieval.
 
-## IBM Db2 Integration
+---
 
-- **Environment:** Db2 Community Edition locally or in Docker.
-- **Driver:** Python `ibm_db`.
-- **Schema:** `db/schema.sql` creates the `MOODMUSIC` schema tables for moods,
-  playlists, playback profiles, songs, playlist membership, playback sessions,
-  and memories.
-- **Operations:** `src/db/queries.py` uses prepared statements and bound
-  parameters for mood lookup, playlist/profile retrieval, ordered songs,
-  session tracking, and memory persistence.
-- **Storage boundary:** Db2 stores song metadata and local paths. Audio bytes
-  remain on the user's computer.
+## 🏛️ System Architecture
 
-## AI / LLM Architecture
+```mermaid
+flowchart TD
+    subgraph Client["Frontend Client (React + TypeScript + Vite)"]
+        UI["Desktop App Shell"]
+        Router["Page Routes (Home, Player, Library, Memories, Analytics)"]
+        Store["Zustand Global State + LocalStorage Persistence"]
+        AudioEngine["HTML5 Audio Playback Engine"]
+    end
 
-The deterministic mood-to-playlist flow works without an AI model. The
-optional `src/ai/mood_interpreter.py` integration uses LangChain and a local
-Ollama model to map a user's free-text description to one of the supported
-mood codes. The user remains in control and the model does not make clinical
-inferences or silently change saved playlist membership.
+    subgraph Server["Backend API (Python FastAPI)"]
+        API["FastAPI REST Endpoints (:8000)"]
+        CORS["CORS Middleware & Static Audio Mount"]
+    end
 
-## Tech Stack
+    subgraph Database["Relational Store (IBM Db2)"]
+        DBSchema["MOODMUSIC Schema"]
+        T_Moods[("MOODS")]
+        T_Playlists[("PLAYLISTS & PROFILES")]
+        T_Songs[("SONGS & PLAYLIST_SONGS")]
+        T_Sessions[("PLAYBACK_SESSIONS")]
+        T_Memories[("MEMORIES")]
+    end
 
-- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Framer Motion,
-  React Router, Zustand, and Lucide.
-- **Db2 services:** Python 3.11+, `ibm_db`, `python-dotenv`.
-- **Optional AI:** LangChain, `langchain-ollama`, and Ollama.
-- **Media import/playback utilities:** `yt-dlp` and `pygame`.
+    subgraph AI["Local AI Engine (Ollama)"]
+        LLM["Llama 3.2 (3B) — Mood Classification"]
+        Embeddings["Nomic Embed Text — Semantic Embeddings"]
+    end
 
-## Prerequisites
+    UI --> Router
+    Router --> Store
+    Store --> AudioEngine
+    Store <-->|"REST API (JSON)"| API
+    API <-->|"ibm_db (Parameterized SQL)"| DBSchema
+    DBSchema --- T_Moods
+    DBSchema --- T_Playlists
+    DBSchema --- T_Songs
+    DBSchema --- T_Sessions
+    DBSchema --- T_Memories
+    API <-->|"HTTP /api/chat"| LLM
+    API <-->|"HTTP /api/embeddings"| Embeddings
+```
 
-- Python 3.11 or newer.
-- Node.js and pnpm.
-- A reachable IBM Db2 Community Edition instance.
-- Optional: Ollama with `llama3.2:3b` for free-text mood interpretation.
+---
 
-## Setup
+## ✨ Key Capabilities
 
-From this directory:
+### 1. 🏠 Emotional Mood Selection & AI Detection
+- Five primary mood cards: **Sad · Happy · Romantic · Wholesome · Ghazal**.
+- **Free-Text AI Mood Classification**: Users can type descriptive thoughts (e.g., *"It's raining outside and I miss college days"*). The local Ollama model classifies the input into an optimal mood profile.
+- Quick stats: active streak, total songs played, and saved memories.
+
+### 2. 🎵 Synchronized Music Player
+- **Dedicated Player & Persistent Bottom Mini-Player**: Single playback state managed across all 5 pages.
+- Real offline audio playback powered by HTML5 `<audio>` engine.
+- Interactive scrubbable progress bar, volume slider, shuffle, repeat, and playlist queue.
+- Playback profile display (volume level, pacing, and mood-tailored fade-in).
+- **"Save This Moment"** shortcut to instantly capture a reflection tied to the active song.
+
+### 3. 📚 Music Library & File Import
+- **My Songs**: Comprehensive table showing artwork, title, artist, duration, and mood.
+- **Playlists**: Visual card grid of all mood-linked playlists.
+- **Instant Search**: Real-time filtering across tracks and artists.
+- **Import Audio**: Import local `.mp3`, `.wav`, or `.m4a` files with instantaneous browser playback and Db2 cataloging.
+
+### 4. 💭 Memory Journaling & Semantic Recall
+- Create, view, edit, bookmark, and delete personal memories tied to songs and moods.
+- Fully synchronized with IBM Db2 `MEMORIES` table.
+- **Similar Memories** panel powered by semantic vector embeddings.
+
+### 5. 📊 Live Db2 Analytics
+- Live connection indicator displaying real-time synchronization with IBM Db2.
+- Interactive session frequency activity chart.
+- Mood distribution percentage breakdown.
+- Top played tracks and recent session audit logs.
+
+---
+
+## 🗄️ IBM Db2 Architecture (`MOODMUSIC` Schema)
+
+| Table | Purpose | Key Columns |
+|---|---|---|
+| `MOODS` | Master catalog of moods | `MOOD_ID`, `MOOD_CODE`, `DISPLAY_NAME` |
+| `PLAYBACK_PROFILES` | Volume, speed, and fade configuration | `PROFILE_ID`, `VOLUME_PERCENT`, `FADE_IN_SECONDS` |
+| `PLAYLISTS` | Curated mood playlists | `PLAYLIST_ID`, `PLAYLIST_NAME`, `PROFILE_ID` |
+| `MOOD_PLAYLISTS` | Relationship between moods and playlists | `MOOD_ID`, `PLAYLIST_ID`, `PRIORITY` |
+| `SONGS` | Track metadata and audio paths | `SONG_ID`, `SONG_TITLE`, `LOCAL_FILE_PATH`, `DURATION_SECONDS` |
+| `PLAYLIST_SONGS` | Ordered playlist track mapping | `PLAYLIST_ID`, `SONG_ID`, `POSITION` |
+| `PLAYBACK_SESSIONS` | User listening session tracking | `SESSION_ID`, `MOOD_ID`, `STARTED_AT`, `ENDED_AT` |
+| `MEMORIES` | Personal mood reflections | `MEMORY_ID`, `MEMORY_TEXT`, `SONG_TITLE`, `MOOD_TAG`, `SAVED_AT` |
+
+> All queries use **parameterized statements (`?` markers)** via `ibm_db` to guarantee complete protection against SQL injection.
+
+---
+
+## 🚀 Quick Start Guide
+
+### Prerequisites
+- **Node.js** (v18+) & **pnpm**
+- **Python** (v3.11 or v3.12)
+- **IBM Db2** running locally (or via Docker)
+- **Ollama** (for local AI features)
+
+### 1. Environment Setup
+
+Copy `.env.example` to `.env` in the project root:
+
+```env
+DB2_DATABASE=MDMUSIC
+DB2_HOST=localhost
+DB2_PORT=50000
+DB2_USER=db2inst1
+DB2_PASSWORD=your_password
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2:3b
+MUSIC_DIR=d:\mood-to-music-memory\music
+```
+
+### 2. Automated One-Command Setup (Windows)
 
 ```powershell
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.\setup.ps1
+```
+
+### 3. Manual Step-by-Step Setup
+
+```powershell
+# 1. Activate Python virtual environment & install dependencies
+python -m venv .venv
+.\.venv\Scripts\activate
 pip install -r requirements.txt
-Copy-Item .env.example .env
-```
 
-Edit `.env` with local Db2 credentials. Do not commit `.env` or real secrets.
+# 2. Setup Db2 Schema and Seed initial playlists
+python db/setup_db2.py
+python db/seed_db.py
 
-Initialize and seed Db2:
+# 3. Generate offline audio files for all 5 moods
+python generate_mood_audio.py
 
-```powershell
-python db\check_db2.py
-python db\setup_db2.py
-python db\seed_db.py
-```
+# 4. Pull local AI models via Ollama
+ollama pull llama3.2:3b
+ollama pull nomic-embed-text
 
-Install and run the frontend:
+# 5. Start Backend API
+uvicorn backend.main:app --port 8000 --reload
 
-```powershell
+# 6. Start Frontend (in a new terminal)
 cd frontend
 pnpm install
-pnpm run dev
+pnpm dev
 ```
 
-Open the Vite URL printed in the terminal, normally
-`http://localhost:5173`.
+Visit **http://localhost:5173** to launch the application.
 
-## Verification
+---
 
-Run the Db2-backed smoke test after initializing and seeding the database:
+## 🧪 Verification & Testing
+
+Verify end-to-end functionality across all REST endpoints and the Db2 database:
 
 ```powershell
-python smoke_test.py
+.\.venv\Scripts\python.exe smoke_test.py
 ```
 
-The smoke test checks the Db2 connection, all five mood records, playlist and
-playback-profile lookup, ordered songs, and the optional Ollama interpreter.
-The Ollama checks require a running local model.
+Expected output:
+```
+==================================================
+  Mood-to-Music Memory — Smoke Test
+==================================================
+[Health]
+  ✅ GET /api/health  (200)
+[Moods]
+  ✅ GET /api/moods  (200)
+[Songs]
+  ✅ GET /api/songs  (200)
+[Playlists]
+  ✅ GET /api/playlists  (200)
+[Create Memory]
+  ✅ POST /api/memories  (201)
+[Delete Memory]
+  ✅ DELETE /api/memories/1  (200)
+[Session]
+  ✅ POST /api/session/start  (201)
+  ✅ POST /api/session/end  (200)
+[Analytics]
+  ✅ GET /api/analytics  (200)
 
-## Screenshots and Demo
+  PASSED: 9   FAILED: 0
+==================================================
+```
 
-No hosted demo or video is included yet. Screenshots can be added under
-`docs/screenshots/`.
+---
 
-## Known Limitations and Roadmap
+## 🗺️ Future Roadmap
 
-- The browser UI currently uses mock data and is not yet connected to a REST
-  backend.
-- Browser audio playback and persistent frontend storage are still planned.
-- Analytics are currently demonstration data.
-- Future work includes a REST bridge, real audio playback, semantic memory
-  retrieval, and a native Electron or Tauri shell.
+- [ ] **Native Desktop Packaging**: Package as an Electron / Tauri Windows executable.
+- [ ] **Smart Mood Transitions**: Dynamic cross-fading and tempo morphing between mood shifts.
+- [ ] **Voice Input**: Speech-to-text mood capture using OpenAI Whisper running locally via Ollama.
+- [ ] **Biometric Input Integration**: Optional smart-band integration to suggest playlists matching heart rate and stress levels.
 
-## License and Credits
+---
 
-This submission is provided as a personal project for the IBM Db2 TechX
-Summit 2026 challenge. Third-party dependencies retain their respective
-licenses. Created by [NotTushar-dotcom](https://github.com/NotTushar-dotcom).
+## 📄 License & Attribution
+
+Built for the **IBM Db2 TechX Summit 2026**.  
+Engineered with 💜 by **Tushar**.

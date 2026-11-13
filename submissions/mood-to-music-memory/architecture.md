@@ -1,77 +1,67 @@
-# System Architecture
+# Architecture
 
-## Overview
+## Product goal
 
-Mood-to-Music Memory has a React/Vite presentation layer and a Python service
-layer. The Python layer owns the Db2 connection, schema setup, playlist
-queries, session tracking, memory persistence, and authorized media import.
-The browser UI currently demonstrates the experience with local mock data while
-the database services are exercised independently through scripts and
-`smoke_test.py`.
+When the desktop application opens, a user chooses their current mood. The
+application retrieves the user's matching playlist from IBM Db2, loads local
+song files, applies the playlist's playback profile, and starts playing music.
+The user can pause, skip, change volume, or choose another mood.
 
-## Architecture Diagram
+The first release should use explicit mood buttons rather than claiming to
+detect a person's mental-health state. A later text input can interpret mood
+language as a convenience, but the user must remain in control.
 
-```mermaid
-graph TD
-    User[User] --> UI[React + Vite UI]
-    UI --> State[Zustand playback state]
-    State --> Player[Player and memory screens]
-    User --> CLI[Python utilities]
-    CLI --> DBLayer[ibm_db query and connection layer]
-    DBLayer --> Db2[(IBM Db2 MOODMUSIC schema)]
-    CLI --> Files[Local music files]
-    CLI --> Import[yt-dlp authorized media import]
-    Import --> Files
-    Text[Optional free-text mood] --> AI[LangChain + Ollama]
-    AI --> DBLayer
-```
+## Db2 responsibility
 
-## Components
+Db2 is the system of record for:
 
-1. **React client:** Provides mood selection, player controls, library,
-   memories, and analytics views in `frontend/src/`.
-2. **Db2 connection layer:** `src/db/connection.py` reads environment
-   variables, opens `ibm_db` connections, and sets the `MOODMUSIC` schema.
-3. **Query layer:** `src/db/queries.py` exposes typed dataclasses and
-   parameterized queries for moods, playlists, songs, sessions, and memories.
-4. **Database setup:** `db/schema.sql`, `db/setup_db2.py`, and `db/seed_db.py`
-   create and populate the relational model.
-5. **Media utilities:** `download_and_store.py` and `import_song.py` store
-   metadata and local paths while keeping audio files on disk.
-6. **Optional AI:** `src/ai/mood_interpreter.py` uses a local Ollama model
-   through LangChain for free-text mood classification.
+- Mood categories and their playlist mappings
+- Playlist metadata and ordering
+- Song title, artist, duration, and local file path
+- Playback profiles such as volume and playback speed
+- Playback sessions and optional feedback
+- The user's saved music-memory text and attached songs
+- Embeddings used for optional semantic memory retrieval
 
-## Data Flow
+Audio files themselves remain on the user's computer in the MVP. Db2 stores
+their paths and metadata rather than large binary audio objects.
 
-1. The user chooses a supported mood in the UI or enters optional mood text.
-2. The service validates the mood code and retrieves the highest-priority
-   active playlist from Db2.
-3. The playlist query joins its playback profile and ordered song metadata.
-4. A playback session can be recorded in `PLAYBACK_SESSIONS`.
-5. The local player uses the stored path and playback profile; audio bytes do
-   not enter Db2.
-6. A user can explicitly save a reflection in `MEMORIES`.
+## Technology choices
 
-## IBM Db2 Schema
+- **Langflow with `lfx-ibm`:** the single AI/orchestration framework, used later
+  for optional mood-text interpretation and memory retrieval.
+- **IBM Db2 with `ibm_db`:** the system of record and database driver.
+- **`yt-dlp`:** imports user-authorized media into the local music folder.
+- **Desktop player:** plays local files and applies the Db2 playback profile.
 
-The schema in `db/schema.sql` uses these tables:
+`yt-dlp` is an import utility, not an AI framework. The MVP's deterministic
+mood-to-playlist path does not need an AI model.
 
-- `MOODS` and `PLAYBACK_PROFILES` define supported moods and playback behavior.
-- `PLAYLISTS` and `MOOD_PLAYLISTS` map moods to active, prioritized playlists.
-- `SONGS` and `PLAYLIST_SONGS` store metadata and playlist ordering.
-- `PLAYBACK_SESSIONS` records listening sessions and optional feedback.
-- `MEMORIES` stores reflections, song metadata, mood tags, and timestamps.
+## Application flow
 
-Important indexes support mood playlist priority, playlist ordering, memory
-mood filtering, and memory date ordering.
+1. The desktop shell opens and displays mood choices.
+2. The backend validates the selected mood.
+3. A parameterised Db2 query finds the active playlist and playback profile.
+4. The backend loads the ordered songs and checks each local path.
+5. The player starts the first available song using the profile settings.
+6. Playback controls update the local player; meaningful events may be saved to
+   Db2.
 
-## Security and Secrets
+## Media import flow
 
-All Db2 credentials and optional local-model settings are read from environment
-variables. `.env.example` contains placeholders only. User input in the query
-layer is bound with `ibm_db.prepare`, `bind_param`, and `execute`; schema names
-are fixed constants rather than user input.
+1. The user pastes a URL or chooses a local audio file.
+2. The backend verifies that the import is permitted and the URL is supported.
+3. `yt-dlp` downloads permitted media into the configured music folder.
+4. The backend extracts title, artist, duration, and source URL.
+5. Db2 stores metadata and the local path; the audio bytes stay on disk.
+6. The user explicitly assigns the song to one or more mood playlists.
 
-Media import is intended for user-authorized content only. Downloaded audio
-files remain in the local `music` directory and are excluded from version
-control.
+## Langflow and AI responsibility
+
+Langflow is not required for the deterministic MVP path. When included, it can
+orchestrate optional mood-text interpretation or semantic retrieval of a
+similar saved memory. It must not autonomously change a playlist or infer a
+clinical condition.
+
+Saving a new memory, changing playlist membership, and enabling automatic
+startup are explicit user actions.

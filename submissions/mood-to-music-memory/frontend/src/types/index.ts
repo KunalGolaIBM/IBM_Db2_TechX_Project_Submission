@@ -6,6 +6,9 @@ export interface Song {
   artwork: string;
   mood: string;
   playlistId: string;
+  // Extended fields from Db2
+  audioUrl?: string;
+  album?: string;
 }
 
 export interface Playlist {
@@ -13,6 +16,10 @@ export interface Playlist {
   name: string;
   mood: string;
   songIds: string[];
+  // Extended fields from Db2
+  description?: string;
+  coverArt?: string;
+  songCount?: number;
 }
 
 export interface MoodMemory {
@@ -24,6 +31,9 @@ export interface MoodMemory {
   reflection: string;
   artwork: string;
   isBookmarked: boolean;
+  // Extended fields from Db2
+  songTitle?: string;
+  artist?: string;
 }
 
 export interface PlaybackProfile {
@@ -56,4 +66,7 @@ export interface AppState {
   playlists: Playlist[];
   memories: MoodMemory[];
   currentSession: MusicSession | null;
+  // Db2 connection state
+  db2Connected: boolean;
+  db2Loading: boolean;
 }

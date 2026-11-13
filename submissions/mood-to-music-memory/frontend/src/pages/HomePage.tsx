@@ -1,16 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Cloud, Sun, Heart, Leaf, Music2, Play, Clock, Flame } from 'lucide-react';
+import { Cloud, Sun, Heart, Leaf, Music2, Play, Clock, Flame, Loader2 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import CustomMoodInput from '../components/mood/CustomMoodInput';
+import { api } from '../api/client';
 
 const MOODS = [
-  { id: 'sad',       label: 'Sad',       desc: 'For when things feel heavy',    icon: <Cloud size={22} />,  color: '#60a5fa', glow: 'rgba(96,165,250,0.35)'  },
-  { id: 'happy',     label: 'Happy',     desc: 'Uplift your energy',            icon: <Sun size={22} />,    color: '#fbbf24', glow: 'rgba(251,191,36,0.35)'  },
-  { id: 'romantic',  label: 'Romantic',  desc: 'For the heartfelt moments',     icon: <Heart size={22} />,  color: '#f472b6', glow: 'rgba(244,114,182,0.35)' },
-  { id: 'wholesome', label: 'Wholesome', desc: 'Calm, cozy and positive',       icon: <Leaf size={22} />,   color: '#4ade80', glow: 'rgba(74,222,128,0.35)'  },
-  { id: 'ghazal',    label: 'Ghazal',    desc: 'Soulful, poetic and deep',      icon: <Music2 size={22} />, color: '#c084fc', glow: 'rgba(192,132,252,0.35)' },
+  { id: 'sad', label: 'Sad', desc: 'For when things feel heavy', icon: <Cloud size={22} />, color: '#60a5fa', glow: 'rgba(96,165,250,0.35)' },
+  { id: 'happy', label: 'Happy', desc: 'Uplift your energy', icon: <Sun size={22} />, color: '#fbbf24', glow: 'rgba(251,191,36,0.35)' },
+  { id: 'romantic', label: 'Romantic', desc: 'For the heartfelt moments', icon: <Heart size={22} />, color: '#f472b6', glow: 'rgba(244,114,182,0.35)' },
+  { id: 'wholesome', label: 'Wholesome', desc: 'Calm, cozy and positive', icon: <Leaf size={22} />, color: '#4ade80', glow: 'rgba(74,222,128,0.35)' },
+  { id: 'ghazal', label: 'Ghazal', desc: 'Soulful, poetic and deep', icon: <Music2 size={22} />, color: '#c084fc', glow: 'rgba(192,132,252,0.35)' },
 ];
 
 const container = {
@@ -19,7 +20,7 @@ const container = {
 };
 const item = {
   hidden: { opacity: 0, y: 24 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.35 } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35 } },
 };
 
 const HomePage: React.FC = () => {
@@ -28,14 +29,30 @@ const HomePage: React.FC = () => {
     selectedMood, customMood, playlists,
     setSelectedMood, setCustomMood, startSession, songs,
   } = useAppStore();
+  const [aiLoading, setAiLoading] = useState(false);
 
   const canStart = !!(selectedMood || customMood.trim());
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (!canStart) return;
-    const playlist =
-      playlists.find(p => p.mood === selectedMood) ?? playlists[0];
-    startSession(selectedMood || 'custom', playlist);
+    let moodToUse = selectedMood || 'happy';
+
+    // If user typed a custom mood and no button selected, detect via AI
+    if (!selectedMood && customMood.trim()) {
+      setAiLoading(true);
+      try {
+        const result = await api.detectMood(customMood.trim());
+        moodToUse = result.mood_code;
+        setSelectedMood(moodToUse);
+      } catch {
+        moodToUse = 'happy';
+      } finally {
+        setAiLoading(false);
+      }
+    }
+
+    const playlist = playlists.find(p => p.mood === moodToUse) ?? playlists[0];
+    startSession(moodToUse, playlist);
     navigate('/now-playing');
   };
 
@@ -158,7 +175,8 @@ const HomePage: React.FC = () => {
           }}
         >
           <Play size={16} style={{ fill: canStart ? '#fff' : 'rgba(255,255,255,0.28)' }} />
-          Start My Session
+          {aiLoading ? 'Detecting mood…' : 'Start My Session'}
+          {aiLoading && <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />}
         </motion.button>
       </motion.div>
 

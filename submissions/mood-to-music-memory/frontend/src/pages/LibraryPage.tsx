@@ -45,18 +45,20 @@ const LibraryPage: React.FC = () => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
     files.forEach((f, i) => {
+      const objectUrl = URL.createObjectURL(f);
       const song: Song = {
         id: `imp-${Date.now()}-${i}`,
         title: f.name.replace(/\.[^.]+$/, ''),
-        artist: 'Unknown Artist',
-        duration: 180 + Math.floor(Math.random() * 180),
+        artist: 'Local Import',
+        duration: 210,
         artwork: '',
         mood: 'happy',
         playlistId: 'pl3',
+        audioUrl: objectUrl,
       };
       addSong(song);
     });
-    setToast(`${files.length} song${files.length > 1 ? 's' : ''} added to your library.`);
+    setToast(`${files.length} audio file${files.length > 1 ? 's' : ''} added to your library and ready to play.`);
     setTimeout(() => setToast(null), 4000);
     e.target.value = '';
   };

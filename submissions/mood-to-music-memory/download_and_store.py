@@ -1,8 +1,8 @@
 """
 download_and_store.py
 ----------------------
-Downloads a song from a URL using yt-dlp (SSL-safe),
-saves the audio to music folder, and registers it in Db2.
+Downloads a song from a YouTube URL using yt-dlp (SSL-safe),
+saves the audio to the music folder, and registers it in Db2.
 
 Usage:
     python download_and_store.py <URL> <mood_code>
@@ -57,9 +57,21 @@ def get_conn():
     ibm_db.exec_immediate(conn, f"SET CURRENT SCHEMA {SCHEMA}")
     return conn
 
+
 def safe_name(name: str, max_len: int = 80) -> str:
     name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", name)
     return name.strip(". ")[:max_len]
+
+
+# ── Parameterised query helpers ───────────────────────────────────────
+def exec_param(conn, sql: str, params: tuple):
+    """Execute a parameterised statement safely (no f-string SQL injection)."""
+    stmt = ibm_db.prepare(conn, sql)
+    for i, val in enumerate(params, start=1):
+        ibm_db.bind_param(stmt, i, val)
+    ibm_db.execute(stmt)
+    return stmt
+
 
 # ── Step 1: Fetch info ────────────────────────────────────────────────
 print(f"\n[1/4] Fetching info for: {URL}")
@@ -81,12 +93,11 @@ print(f"    Artist  : {artist}")
 print(f"    Duration: {duration}s ({(duration or 0)//60}m {(duration or 0)%60}s)")
 
 # ── Step 2: Download audio ────────────────────────────────────────────
-fname          = safe_name(title)
-output_tpl     = str(MUSIC_DIR / f"{fname}.%(ext)s")
+fname      = safe_name(title)
+output_tpl = str(MUSIC_DIR / f"{fname}.%(ext)s")
 
 print(f"\n[2/4] Downloading audio…")
 
-# Try with ffmpeg (MP3), fall back to best native audio if ffmpeg missing
 def build_ydl_opts(use_ffmpeg: bool) -> dict:
     base = {
         "format": "bestaudio/best",
@@ -104,17 +115,15 @@ def build_ydl_opts(use_ffmpeg: bool) -> dict:
         }]
     return base
 
-# Detect ffmpeg — check PATH first, then known winget install location
 import shutil
 _WINGET_FFMPEG = r"C:\Users\Tushar bhai\AppData\Local\Microsoft\WinGet\Links\ffmpeg.exe"
 ffmpeg_path = shutil.which("ffmpeg") or (_WINGET_FFMPEG if Path(_WINGET_FFMPEG).exists() else None)
-has_ffmpeg = ffmpeg_path is not None
+has_ffmpeg  = ffmpeg_path is not None
 
 if has_ffmpeg:
     print(f"    ffmpeg detected → will convert to MP3")
 else:
     print("    ffmpeg not found — saving in native format (m4a/webm/opus)")
-    print("    Install ffmpeg: winget install Gyan.FFmpeg.Essentials")
 
 with yt_dlp.YoutubeDL(build_ydl_opts(has_ffmpeg)) as ydl:
     ydl.download([URL])
@@ -127,28 +136,36 @@ if not matches:
 file_path = str(matches[-1])
 print(f"\n    Saved → {file_path}")
 
-# ── Step 3: Store in Db2 ─────────────────────────────────────────────
-print(f"\n[3/4] Storing in Db2…")
+# ── Step 3: Store in Db2 (fully parameterised — no SQL injection) ────
+print(f"\n[3/4] Storing in Db2 (parameterised queries)…")
 conn = get_conn()
 
-# Get mood_id
-stmt = ibm_db.exec_immediate(conn, f"SELECT MOOD_ID FROM {SCHEMA}.MOODS WHERE MOOD_CODE = '{MOOD_CODE}'")
-row  = ibm_db.fetch_tuple(stmt)
+# Get mood_id using parameterised query ✅
+stmt = exec_param(
+    conn,
+    f"SELECT MOOD_ID FROM {SCHEMA}.MOODS WHERE LOWER(MOOD_CODE) = LOWER(?)",
+    (MOOD_CODE,),
+)
+row = ibm_db.fetch_tuple(stmt)
 if not row:
     print(f"Mood '{MOOD_CODE}' not found in DB. Run seed_db.py first.")
     ibm_db.close(conn)
     sys.exit(1)
 mood_id = row[0]
 
-# Get playlist_id (highest priority for this mood)
-stmt = ibm_db.exec_immediate(conn, f"""
+# Get playlist_id using parameterised query ✅
+stmt = exec_param(
+    conn,
+    f"""
     SELECT pl.PLAYLIST_ID, pl.PLAYLIST_NAME
     FROM {SCHEMA}.MOOD_PLAYLISTS mp
     JOIN {SCHEMA}.PLAYLISTS pl ON mp.PLAYLIST_ID = pl.PLAYLIST_ID
-    WHERE mp.MOOD_ID = {mood_id} AND pl.IS_ACTIVE = 'Y'
+    WHERE mp.MOOD_ID = ? AND pl.IS_ACTIVE = 'Y'
     ORDER BY mp.PRIORITY ASC
     FETCH FIRST 1 ROWS ONLY
-""")
+    """,
+    (mood_id,),
+)
 row = ibm_db.fetch_tuple(stmt)
 if not row:
     print(f"No active playlist for mood '{MOOD_CODE}'.")
@@ -156,38 +173,38 @@ if not row:
     sys.exit(1)
 playlist_id, playlist_name = row
 
-# Get next position in playlist
-stmt = ibm_db.exec_immediate(conn, f"""
-    SELECT COALESCE(MAX(POSITION), 0) + 1
-    FROM {SCHEMA}.PLAYLIST_SONGS
-    WHERE PLAYLIST_ID = {playlist_id}
-""")
-row      = ibm_db.fetch_tuple(stmt)
-position = row[0] if row else 1
+# Get next position in playlist using parameterised query ✅
+stmt = exec_param(
+    conn,
+    f"SELECT COALESCE(MAX(POSITION), 0) + 1 FROM {SCHEMA}.PLAYLIST_SONGS WHERE PLAYLIST_ID = ?",
+    (playlist_id,),
+)
+pos_row  = ibm_db.fetch_tuple(stmt)
+position = pos_row[0] if pos_row else 1
 
-# Insert song (safe title/artist escaping)
-safe_title  = title.replace("'", "''")
-safe_artist = artist.replace("'", "''")
-safe_path   = file_path.replace("'", "''")
+# Insert song using parameterised query ✅ (no f-string with user data)
+exec_param(
+    conn,
+    f"INSERT INTO {SCHEMA}.SONGS (SONG_TITLE, ARTIST, ALBUM, LOCAL_FILE_PATH, DURATION_SECONDS) "
+    f"VALUES (?, ?, ?, ?, ?)",
+    (title, artist, "", file_path, duration),
+)
 
-ibm_db.exec_immediate(conn, f"""
-    INSERT INTO {SCHEMA}.SONGS (SONG_TITLE, ARTIST, ALBUM, LOCAL_FILE_PATH, DURATION_SECONDS)
-    VALUES ('{safe_title}', '{safe_artist}', '', '{safe_path}', {duration or 'NULL'})
-""")
-
-# Get new song_id
-stmt = ibm_db.exec_immediate(conn, f"""
-    SELECT SONG_ID FROM {SCHEMA}.SONGS
-    WHERE LOCAL_FILE_PATH = '{safe_path}'
-    ORDER BY CREATED_AT DESC FETCH FIRST 1 ROWS ONLY
-""")
+# Get new song_id using parameterised query ✅
+stmt = exec_param(
+    conn,
+    f"SELECT SONG_ID FROM {SCHEMA}.SONGS WHERE LOCAL_FILE_PATH = ? "
+    f"ORDER BY CREATED_AT DESC FETCH FIRST 1 ROWS ONLY",
+    (file_path,),
+)
 song_id = ibm_db.fetch_tuple(stmt)[0]
 
-# Link to playlist
-ibm_db.exec_immediate(conn, f"""
-    INSERT INTO {SCHEMA}.PLAYLIST_SONGS (PLAYLIST_ID, SONG_ID, POSITION)
-    VALUES ({playlist_id}, {song_id}, {position})
-""")
+# Link to playlist using parameterised query ✅
+exec_param(
+    conn,
+    f"INSERT INTO {SCHEMA}.PLAYLIST_SONGS (PLAYLIST_ID, SONG_ID, POSITION) VALUES (?, ?, ?)",
+    (playlist_id, song_id, position),
+)
 
 ibm_db.close(conn)
 
@@ -199,4 +216,3 @@ print(f"    Artist    : {artist}")
 print(f"    File      : {file_path}")
 print(f"    Playlist  : {playlist_name} (position {position})")
 print(f"    Mood      : {MOOD_CODE}")
-
