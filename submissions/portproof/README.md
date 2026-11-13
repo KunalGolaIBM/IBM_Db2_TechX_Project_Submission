@@ -617,7 +617,48 @@ Those tools answer two questions: will this SQL convert, and did the rows arrive
 | Move the data | Db2 Bridge, Db2MT | Identical rows do not mean identical query results. Collation, blank padding and division scale change answers over the same data. | A proof of query behaviour on top of data Bridge has already validated. |
 | Sources outside DCW's documented list | none found | PostgreSQL, MySQL, SQL Server and SQLite have a translator and nothing that verifies it. | These four are what PortProof covers today. |
 
-Three places it could plug in:
+Three places it could plug in, as a map:
+
+```mermaid
+mindmap
+  root((PortProof))
+    Behind DCW
+      DCW converts and reports compatibility
+      PortProof proves each converted statement
+      Report gains a verdict per statement
+      Needs Oracle as a fifth source engine
+      Needs a reader for DCW output
+    After Db2 Bridge
+      Bridge moves data and checks rows
+      PortProof proves queries still agree
+      Covers version, platform and collation changes
+      Needs Db2 as a source dialect
+    Sign off record
+      Ledger in Db2
+      Engine computed certificates
+      Temporal history
+      One verdict per statement
+    Covered today
+      PostgreSQL
+      MySQL
+      SQL Server
+      SQLite
+```
+
+And as the order of work in one migration:
+
+```mermaid
+flowchart LR
+    A[Source SQL] --> B[DCW or db2-sqlglot-dialect<br/>convert]
+    B --> C[PortProof<br/>PREPARE on Db2]
+    C --> D[PortProof<br/>differential proof<br/>against the source engine]
+    D -->|fails| E[Tiered repair<br/>memory, rules, model]
+    E --> C
+    D -->|agrees| F[Db2 Bridge or Db2MT<br/>move data, validate rows]
+    F --> G[PortProof ledger in Db2<br/>sign off record]
+```
+
+The same three in words:
 
 1. **Behind DCW, as the verification stage.** DCW's converted SQL goes into PortProof in place of the translator's output, and each statement in the evaluation report gains a verdict: proven equivalent, proven different with a counterexample, or repaired and re proved. What it needs: Oracle as a fifth source engine behind the same three method interface, and a reader for DCW's output.
 2. **After Db2 Bridge, on a Db2 to Db2 move.** Bridge proves the rows match. PortProof would then prove the application's queries behave the same across the version, platform or collation change. What it needs: Db2 itself as a source dialect.
