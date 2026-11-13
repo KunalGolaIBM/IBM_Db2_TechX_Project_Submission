@@ -1,0 +1,444 @@
+Access Plan:
+-----------
+	Total Cost: 		5248.54
+	Query Degree:		1
+
+
+      Rows 
+     RETURN
+     (   1)
+      Cost 
+       I/O 
+       |
+        8 
+     TBSCAN
+     (   2)
+     5248.54 
+      3191 
+       |
+        8 
+     SORT  
+     (   3)
+     5248.54 
+      3191 
+       |
+        8 
+     GRPBY 
+     (   4)
+     5248.54 
+      3191 
+       |
+        8 
+     TBSCAN
+     (   5)
+     5248.54 
+      3191 
+       |
+        8 
+     SORT  
+     (   6)
+     5248.54 
+      3191 
+       |
+      2e+06 
+     TBSCAN
+     (   7)
+     4660.23 
+      3191 
+       |
+      2e+06 
+ TABLE: LBFLAT  
+ CLAIM_CITATION
+       Q1
+
+Plan Details:
+-------------
+
+
+	1) RETURN: (Return Result)
+		Cumulative Total Cost: 		5248.54
+		Cumulative CPU Cost: 		8.34668e+09
+		Cumulative I/O Cost: 		3191
+		Cumulative Re-Total Cost: 	801.8
+		Cumulative Re-CPU Cost: 	4.33402e+09
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	5248.54
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		BLDLEVEL: (Build level)
+			DB2 v12.1.5.0 : special_85816
+		CPUCACHE: (Per-thread CPU cache size)
+			0
+		HEAPUSE : (Maximum Statement Heap Usage)
+			128 Pages
+		PLANID  : (Access plan identifier)
+			d83776df6113e52e
+		PREPTIME: (Statement prepare time)
+			         4 milliseconds
+		SEMEVID : (Semantic environment identifier)
+			11fb83c991b9f1b2
+		STMTHEAP: (Statement heap size)
+			8192
+		STMTID  : (Normalized statement identifier)
+			9652610142098a21
+		TENANTID: (Compiled In Tenant ID)
+			0
+		TENANTNM: (Compiled In Tenant Name)
+			SYSTEM
+
+		Input Streams:
+		-------------
+			7) From Operator #2
+
+				Estimated number of rows: 	8
+				Number of columns: 		5
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q4.CLAIMS(D)+Q4.NOT_COVERED+Q4.CONTRADICTED
+				+Q4.SUPPORTED+Q4.AREA
+
+
+	2) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		5248.54
+		Cumulative CPU Cost: 		8.34668e+09
+		Cumulative I/O Cost: 		3191
+		Cumulative Re-Total Cost: 	801.8
+		Cumulative Re-CPU Cost: 	4.33402e+09
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	5248.54
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			6) From Operator #3
+
+				Estimated number of rows: 	8
+				Number of columns: 		5
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q3.$C4(D)+Q3.$C3+Q3.$C2+Q3.$C1+Q3.AREA
+
+
+		Output Streams:
+		--------------
+			7) To Operator #1
+
+				Estimated number of rows: 	8
+				Number of columns: 		5
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q4.CLAIMS(D)+Q4.NOT_COVERED+Q4.CONTRADICTED
+				+Q4.SUPPORTED+Q4.AREA
+
+
+	3) SORT  : (Sort)
+		Cumulative Total Cost: 		5248.54
+		Cumulative CPU Cost: 		8.34668e+09
+		Cumulative I/O Cost: 		3191
+		Cumulative Re-Total Cost: 	801.799
+		Cumulative Re-CPU Cost: 	4.33401e+09
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	5248.54
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		DUPLWARN: (Duplicates Warning flag)
+			FALSE
+		KEYS    : (Key cardinality)
+			8
+		NUMROWS : (Estimated number of rows)
+			8
+		ROWWIDTH: (Estimated width of rows)
+			28.000000
+		SORTKEY : (Sort Key column)
+			1: Q3.$C4(D)
+		TEMPSIZE: (Temporary Table Page Size)
+			4096
+		UNIQUE  : (Uniqueness required flag)
+			FALSE
+
+		Input Streams:
+		-------------
+			5) From Operator #4
+
+				Estimated number of rows: 	8
+				Number of columns: 		5
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q3.$C4+Q3.$C3+Q3.$C2+Q3.$C1+Q3.AREA
+
+
+		Output Streams:
+		--------------
+			6) To Operator #2
+
+				Estimated number of rows: 	8
+				Number of columns: 		5
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q3.$C4(D)+Q3.$C3+Q3.$C2+Q3.$C1+Q3.AREA
+
+
+	4) GRPBY : (Group By)
+		Cumulative Total Cost: 		5248.54
+		Cumulative CPU Cost: 		8.34667e+09
+		Cumulative I/O Cost: 		3191
+		Cumulative Re-Total Cost: 	801.798
+		Cumulative Re-CPU Cost: 	4.33401e+09
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	5248.54
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		AGGMODE : (Aggregation Mode)
+			FINAL
+		GROUPBYC: (Group By columns)
+			TRUE
+		GROUPBYN: (Number of Group By columns)
+			1
+		GROUPBYR: (Group By requirement)
+			1: Q2.AREA
+		ONEFETCH: (One Fetch flag)
+			FALSE
+
+		Input Streams:
+		-------------
+			4) From Operator #5
+
+				Estimated number of rows: 	8
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.AREA(A)+Q2.VERDICT
+
+
+		Output Streams:
+		--------------
+			5) To Operator #3
+
+				Estimated number of rows: 	8
+				Number of columns: 		5
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q3.$C4+Q3.$C3+Q3.$C2+Q3.$C1+Q3.AREA
+
+
+	5) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		5248.54
+		Cumulative CPU Cost: 		8.34666e+09
+		Cumulative I/O Cost: 		3191
+		Cumulative Re-Total Cost: 	801.798
+		Cumulative Re-CPU Cost: 	4.33401e+09
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	5248.54
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			3) From Operator #6
+
+				Estimated number of rows: 	8
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.AREA(A)+Q2.VERDICT
+
+
+		Output Streams:
+		--------------
+			4) To Operator #4
+
+				Estimated number of rows: 	8
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.AREA(A)+Q2.VERDICT
+
+
+	6) SORT  : (Sort)
+		Cumulative Total Cost: 		5248.54
+		Cumulative CPU Cost: 		8.34666e+09
+		Cumulative I/O Cost: 		3191
+		Cumulative Re-Total Cost: 	801.797
+		Cumulative Re-CPU Cost: 	4.334e+09
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	5248.54
+		Estimated Bufferpool Buffers: 	3191
+
+		Arguments:
+		---------
+		AGGMODE : (Aggregation Mode)
+			PARTIAL
+		DUPLWARN: (Duplicates Warning flag)
+			FALSE
+		KEYS    : (Key cardinality)
+			8
+		NUMROWS : (Estimated number of rows)
+			8
+		ROWWIDTH: (Estimated width of rows)
+			51.000000
+		SORTKEY : (Sort Key column)
+			1: Q2.AREA(A)
+		TEMPSIZE: (Temporary Table Page Size)
+			4096
+		UNIQUE  : (Uniqueness required flag)
+			FALSE
+
+		Input Streams:
+		-------------
+			2) From Operator #7
+
+				Estimated number of rows: 	2e+06
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.VERDICT+Q2.AREA
+
+
+		Output Streams:
+		--------------
+			3) To Operator #5
+
+				Estimated number of rows: 	8
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.AREA(A)+Q2.VERDICT
+
+
+	7) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		4660.23
+		Cumulative CPU Cost: 		5.16666e+09
+		Cumulative I/O Cost: 		3191
+		Cumulative Re-Total Cost: 	801.797
+		Cumulative Re-CPU Cost: 	4.334e+09
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	7.05514
+		Estimated Bufferpool Buffers: 	3191
+
+		Arguments:
+		---------
+		CUR_COMM: (Currently Committed)
+			TRUE
+		LCKAVOID: (Lock Avoidance)
+			TRUE
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			SEQUENTIAL          
+		ROWLOCK : (Row Lock intent)
+			SHARE (CS/RS)
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SKIP_INS: (Skip Inserted Rows)
+			TRUE
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			FAST
+		TABLOCK : (Table Lock intent)
+			INTENT SHARE
+		TBISOLVL: (Table access Isolation Level)
+			CURSOR STABILITY
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			TRUE
+		VISIBLE : (May be included in scan sharing structures)
+			TRUE
+		WRAPPING: (Scan may start anywhere and wrap)
+			TRUE
+
+		Predicates:
+		----------
+		3) Sargable Predicate, 
+			Comparison Operator: 		Equal (=)
+			Subquery Input Required: 	No
+			Filter Factor: 			1
+
+			Predicate Text:
+			--------------
+			(Q1.PASS_NO = 1)
+
+
+
+		Input Streams:
+		-------------
+			1) From Object LBFLAT.CLAIM_CITATION
+
+				Estimated number of rows: 	2e+06
+				Number of columns: 		4
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.$RID$+Q1.VERDICT+Q1.AREA+Q1.PASS_NO
+
+
+		Output Streams:
+		--------------
+			2) To Operator #6
+
+				Estimated number of rows: 	2e+06
+				Number of columns: 		2
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.VERDICT+Q2.AREA

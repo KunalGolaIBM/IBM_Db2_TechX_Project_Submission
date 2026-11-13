@@ -1,0 +1,306 @@
+Access Plan:
+-----------
+	Total Cost: 		7.06054
+	Query Degree:		1
+
+
+        Rows 
+       RETURN
+       (   1)
+        Cost 
+         I/O 
+         |
+          3 
+       GRPBY 
+       (   2)
+       7.05988 
+          1 
+         |
+          3 
+       TBSCAN
+       (   3)
+       7.05964 
+          1 
+         |
+          3 
+       SORT  
+       (   4)
+       7.05922 
+          1 
+         |
+          8 
+       TBSCAN
+       (   5)
+       7.05723 
+          1 
+         |
+          8 
+   TABLE: LBPART  
+ MQT_DECISION_STATS
+         Q1
+
+Plan Details:
+-------------
+
+
+	1) RETURN: (Return Result)
+		Cumulative Total Cost: 		7.06054
+		Cumulative CPU Cost: 		83989.2
+		Cumulative I/O Cost: 		1
+		Cumulative Re-Total Cost: 	0.00418936
+		Cumulative Re-CPU Cost: 	22645
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	7.05973
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		BLDLEVEL: (Build level)
+			DB2 v12.1.5.0 : special_85816
+		CPUCACHE: (Per-thread CPU cache size)
+			0
+		HEAPUSE : (Maximum Statement Heap Usage)
+			192 Pages
+		PLANID  : (Access plan identifier)
+			a08ceebdc27f78c9
+		PREPTIME: (Statement prepare time)
+			         4 milliseconds
+		SEMEVID : (Semantic environment identifier)
+			0d97f9b82002b8a5
+		STMTHEAP: (Statement heap size)
+			8192
+		STMTID  : (Normalized statement identifier)
+			483d87bf13dd8798
+		TENANTID: (Compiled In Tenant ID)
+			0
+		TENANTNM: (Compiled In Tenant Name)
+			SYSTEM
+
+		Input Streams:
+		-------------
+			5) From Operator #2
+
+				Estimated number of rows: 	3
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q4.$C2+Q4.$C1+Q4.DECISION
+
+
+	2) GRPBY : (Group By)
+		Cumulative Total Cost: 		7.05988
+		Cumulative CPU Cost: 		80429.2
+		Cumulative I/O Cost: 		1
+		Cumulative Re-Total Cost: 	0.00353075
+		Cumulative Re-CPU Cost: 	19085
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	7.05957
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		AGGMODE : (Aggregation Mode)
+			FINAL
+		GROUPBYC: (Group By columns)
+			TRUE
+		GROUPBYN: (Number of Group By columns)
+			1
+		GROUPBYR: (Group By requirement)
+			1: Q2.DECISION
+		ONEFETCH: (One Fetch flag)
+			FALSE
+
+		Input Streams:
+		-------------
+			4) From Operator #3
+
+				Estimated number of rows: 	3
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.DECISION(A)+Q2.LATENCY_MS_SUM+Q2.DECISIONS
+
+
+		Output Streams:
+		--------------
+			5) To Operator #1
+
+				Estimated number of rows: 	3
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q4.$C2+Q4.$C1+Q4.DECISION
+
+
+	3) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		7.05964
+		Cumulative CPU Cost: 		79129.2
+		Cumulative I/O Cost: 		1
+		Cumulative Re-Total Cost: 	0.00329025
+		Cumulative Re-CPU Cost: 	17785
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	7.0595
+		Estimated Bufferpool Buffers: 	0
+
+		Arguments:
+		---------
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			3) From Operator #4
+
+				Estimated number of rows: 	3
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.DECISION(A)+Q2.LATENCY_MS_SUM+Q2.DECISIONS
+
+
+		Output Streams:
+		--------------
+			4) To Operator #2
+
+				Estimated number of rows: 	3
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.DECISION(A)+Q2.LATENCY_MS_SUM+Q2.DECISIONS
+
+
+	4) SORT  : (Sort)
+		Cumulative Total Cost: 		7.05922
+		Cumulative CPU Cost: 		76842.2
+		Cumulative I/O Cost: 		1
+		Cumulative Re-Total Cost: 	0.00286715
+		Cumulative Re-CPU Cost: 	15498
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	7.05922
+		Estimated Bufferpool Buffers: 	1
+
+		Arguments:
+		---------
+		AGGMODE : (Aggregation Mode)
+			PARTIAL
+		DUPLWARN: (Duplicates Warning flag)
+			FALSE
+		KEYS    : (Key cardinality)
+			3
+		NUMROWS : (Estimated number of rows)
+			3
+		ROWWIDTH: (Estimated width of rows)
+			42.000000
+		SORTKEY : (Sort Key column)
+			1: Q2.DECISION(A)
+		TEMPSIZE: (Temporary Table Page Size)
+			4096
+		UNIQUE  : (Uniqueness required flag)
+			FALSE
+
+		Input Streams:
+		-------------
+			2) From Operator #5
+
+				Estimated number of rows: 	8
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.LATENCY_MS_SUM+Q2.DECISIONS+Q2.DECISION
+
+
+		Output Streams:
+		--------------
+			3) To Operator #3
+
+				Estimated number of rows: 	3
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.DECISION(A)+Q2.LATENCY_MS_SUM+Q2.DECISIONS
+
+
+	5) TBSCAN: (Table Scan)
+		Cumulative Total Cost: 		7.05723
+		Cumulative CPU Cost: 		66091
+		Cumulative I/O Cost: 		1
+		Cumulative Re-Total Cost: 	0.00286715
+		Cumulative Re-CPU Cost: 	15498
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	7.05468
+		Estimated Bufferpool Buffers: 	1
+
+		Arguments:
+		---------
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		ROWLOCK : (Row Lock intent)
+			SHARE (CS/RS)
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			FAST
+		TABLOCK : (Table Lock intent)
+			INTENT SHARE
+		TBISOLVL: (Table access Isolation Level)
+			CURSOR STABILITY
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			TRUE
+		VISIBLE : (May be included in scan sharing structures)
+			TRUE
+		WRAPPING: (Scan may start anywhere and wrap)
+			TRUE
+
+		Input Streams:
+		-------------
+			1) From Object LBPART.MQT_DECISION_STATS
+
+				Estimated number of rows: 	8
+				Number of columns: 		4
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.$RID$+Q1.LATENCY_MS_SUM+Q1.DECISIONS
+				+Q1.DECISION
+
+
+		Output Streams:
+		--------------
+			2) To Operator #4
+
+				Estimated number of rows: 	8
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.LATENCY_MS_SUM+Q2.DECISIONS+Q2.DECISION

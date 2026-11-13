@@ -1,0 +1,101 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "asof"
+version = "0.1.0"
+description = "Checks AI assistant answers against the policy in force on that date, on IBM Db2."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"  # tested on 3.12 (CI and macOS); requirements.lock pins for it
+license = "Apache-2.0"
+authors = [{ name = "Jay Malhotra" }]
+# Exact, tested versions live in requirements.txt.
+dependencies = [
+  "ibm_db>=3.3",
+  "langchain-db2>=1.0",
+  "langchain-core>=1.7",
+  "langchain-openai>=1.7",
+  "langchain-ollama>=1.1",
+  "langchain-huggingface>=1.2",
+  "langchain-community>=0.4",
+  "langgraph>=1.2",
+  "ibm-db-sa>=0.4.4",
+  "sqlalchemy>=2.1",
+  "sqlglot>=30.30",
+  "db2-sqlglot-dialect>=1.1",
+  "sentence-transformers>=6.2",
+  "fastapi>=0.160",
+  "starlette>=1.10",
+  "uvicorn>=0.54",
+  "pydantic>=2.14",
+  "pydantic-settings>=2.16",
+  "python-dotenv>=1.2",
+  "httpx>=0.28",
+  "pypdf>=6.21",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+asof = ["data/*.json", "data/samples/*", "sql/*.sql", "eval/*.jsonl", "eval/intake/*", "eval/unseen/*", "eval/unseen/pdf/*", "eval/unseen/onboarding/*", "eval/real/*", "eval/real/ecfr/*", "eval/real/pdf/*", "eval/real/onboarding/*", "ui/*", "ui/fonts/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+  "db2: needs a running Db2 (skipped automatically when it is unreachable)",
+  "llm: calls the configured LLM provider (skipped unless ASOF_RUN_LLM_TESTS=1)",
+  "network: Db2 calls the remote embedding endpoint (skipped unless ASOF_RUN_NETWORK_TESTS=1)",
+  "backup: the online backup and restore drill, minutes long (skipped unless ASOF_RUN_BACKUP_TESTS=1)",
+]
+
+[tool.coverage.run]
+source = ["asof"]
+
+[tool.coverage.report]
+skip_empty = true
+
+[tool.ruff]
+line-length = 130
+target-version = "py312"
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, isort, bugbear, pyupgrade and bandit (security) rules. S608 (SQL built
+# from strings) stays on; it agrees with tests/test_sql_safety.py.
+select = ["E", "F", "W", "I", "B", "UP", "S"]
+ignore = [
+  "S101",  # assert is how pytest checks
+  "S311",  # random is used for synthetic benchmark data, never for secrets
+  "S603", "S607",  # subprocess with argument lists to docker and db2 tooling, no shell
+  "B008",  # FastAPI dependency defaults
+  "UP046", "UP047",  # TypeVar generics kept: one module-level T shared by the LLM client's methods
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106"]  # dummy credentials in test fixtures
+
+[tool.mypy]
+# Run from this folder: `mypy` (CI does the same). Strict on 40 of 46 modules; relaxed below for six that are mostly
+# glue around untyped libraries (FastAPI routes, LangChain's SQL chain, the model clients, replay, the SQL-file loader,
+# the evaluation's counting wrapper), which are still fully type-checked, bodies included.
+python_version = "3.12"
+files = ["src/asof"]  # mcp_server/ has its own environment; CI checks it there with --strict
+plugins = ["pydantic.mypy"]
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["asof.api", "asof.askledger", "asof.eval",
+          "asof.llm", "asof.replay", "asof.schema"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+disallow_any_generics = false
+warn_return_any = false
+
+[[tool.mypy.overrides]]
+# Drivers and libraries that ship no type information.
+module = ["ibm_db", "ibm_db_dbi", "langchain_db2.*", "sentence_transformers.*", "pypdf.*", "ibm_watsonx_ai.*",
+          "langchain_ibm.*"]
+ignore_missing_imports = true

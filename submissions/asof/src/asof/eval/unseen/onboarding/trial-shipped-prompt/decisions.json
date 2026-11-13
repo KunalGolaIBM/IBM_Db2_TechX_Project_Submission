@@ -1,0 +1,16 @@
+{
+ "uploads": [
+  {
+   "upload": 1,
+   "version": 1,
+   "items": {"1": "OTH-001", "2": "CAN-001", "3": "CAN-002", "4": "OTH-002", "5": "REF-001", "6": "DEL-001", "7": "REF-002", "8": "REF-003"},
+   "accept": [1, 2, 3, 4, 6, 7, 8],
+   "notes": {
+    "all": "Every item copies its section word for word. Every item ends on 2026-04-30, the document's last day for v1, where AsOf's exclusive end should be 2026-05-01; intake warns about it, and the console cannot edit an item's dates, so accepting leaves 2026-04-30 with no v1 clause. Accepted anyway: rejecting would leave no v1 clause at all, and no editor procedure can extend a period (APPLY_POLICY_CHANGE only rewrites periods that exist).",
+    "5": "Not accepted: blocked. E1's text says 'no later than 7 calendar days', and the rule-value check does not read '7 calendar days' as 7 days, so max_claim_deadline_days = 7 fails as 'not stated'. Db2 refuses a blocked item.",
+    "missed": "The model proposed 8 of the 14 sections. P-01, P-02, P-03 (the cancellation charge table), P-08, E5 and P-09 are missing; the editor uploads the same PDF again (upload 2)."
+   },
+   "changes": []
+  }
+ ]
+}

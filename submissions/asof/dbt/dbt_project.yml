@@ -1,0 +1,16 @@
+# dbt marts over the AsOf ledger (IBM's dbt adapter for Db2, ibm-dbt-db2). See README.md here.
+name: asof_marts
+version: "1.0.0"
+config-version: 2
+profile: asof
+
+model-paths: ["models"]
+test-paths: ["tests"]
+clean-targets: ["target", "logs"]
+
+models:
+  asof_marts:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table

@@ -1,0 +1,222 @@
+{
+ "note": "Editor corrections made after the first unseen-domain run (post-hoc): applied with APPLY_POLICY_CHANGE after every recorded upload. `python -m asof.eval.unseen.onboard --first-run-policy` leaves them out and rebuilds the policy the first run checked.",
+ "changes": [
+  {
+   "clause_id": "CAN-004",
+   "effective_from": "2026-01-01",
+   "effective_to": "2026-05-01",
+   "version_label": "v4",
+   "clause_text": "Use the passenger's base fare and class. The table gives the cancellation CHARGE, not the refund. Refund = max(0, base fare minus charge). For any flat charge, deduct no more than the passenger's base fare. No refund of base fare is due when T is below the last threshold, including after departure. The booking service fee is not refunded under this clause. CLASS T >= 48 h 12 <= T < 48 h 4 <= T < 12 h T < 4 h AC First (1A) INR 240 INR 120 50% of base fare No refund AC Two Tier (2A) INR 200 INR 100 50% of base fare No refund Sleeper (SL) INR 120 INR 60 50% of base fare No refund Second Sitting (2S) INR 60 INR 30 50% of base fare No refund",
+   "rule": {
+    "charge_1a_12h_inr": 120,
+    "charge_1a_48h_inr": 240,
+    "charge_2a_12h_inr": 100,
+    "charge_2a_48h_inr": 200,
+    "charge_2s_12h_inr": 30,
+    "charge_2s_48h_inr": 60,
+    "charge_sl_12h_inr": 60,
+    "charge_sl_48h_inr": 120,
+    "min_t_hours": 4,
+    "refund_pct": 50,
+    "time_bands": [
+     {
+      "from_h": 48,
+      "charge_inr": {
+       "1A": 240,
+       "2A": 200,
+       "SL": 120,
+       "2S": 60
+      }
+     },
+     {
+      "from_h": 12,
+      "to_h": 48,
+      "charge_inr": {
+       "1A": 120,
+       "2A": 100,
+       "SL": 60,
+       "2S": 30
+      }
+     },
+     {
+      "from_h": 4,
+      "to_h": 12,
+      "charge_pct": 50
+     },
+     {
+      "to_h": 4,
+      "refund": false
+     }
+    ]
+   },
+   "change_note": "SPR v1 P-03: the fare table's bands as time_bands, added after the first unseen-domain run",
+   "why": "Post-hoc, after the first run: P-03 v1's fare table as time_bands (asof/eval/unseen/bands.py, from the policy text), so the rule check reads which band a cancellation time falls in. Same text; the parameters it had are kept."
+  },
+  {
+   "clause_id": "CAN-004",
+   "effective_from": "2026-05-01",
+   "effective_to": "2026-09-01",
+   "version_label": "v5",
+   "clause_text": "Use the passenger's base fare and class. The table gives the cancellation CHARGE, not the refund. Refund = max(0, base fare minus charge). For any flat charge, deduct no more than the passenger's base fare. No refund of base fare is due when T is below the last threshold, including after departure. The booking service fee is not refunded under this clause. CLASS T >= 36 h 10 <= T < 36 h 3 <= T < 10 h T < 3 h AC First (1A) INR 260 INR 130 50% of base fare No refund AC Two Tier (2A) INR 220 INR 110 50% of base fare No refund Sleeper (SL) INR 140 INR 70 50% of base fare No refund Second Sitting (2S) INR 70 INR 35 50% of base fare No refund",
+   "rule": {
+    "charge_1a_10h_inr": 130,
+    "charge_1a_36h_inr": 260,
+    "charge_2a_10h_inr": 110,
+    "charge_2a_36h_inr": 220,
+    "charge_2s_10h_inr": 35,
+    "charge_2s_36h_inr": 70,
+    "charge_sl_10h_inr": 70,
+    "charge_sl_36h_inr": 140,
+    "refund_3h_10h_pct": 50,
+    "time_bands": [
+     {
+      "from_h": 36,
+      "charge_inr": {
+       "1A": 260,
+       "2A": 220,
+       "SL": 140,
+       "2S": 70
+      }
+     },
+     {
+      "from_h": 10,
+      "to_h": 36,
+      "charge_inr": {
+       "1A": 130,
+       "2A": 110,
+       "SL": 70,
+       "2S": 35
+      }
+     },
+     {
+      "from_h": 3,
+      "to_h": 10,
+      "charge_pct": 50
+     },
+     {
+      "to_h": 3,
+      "refund": false
+     }
+    ]
+   },
+   "change_note": "SPR v2 P-03: the fare table's bands as time_bands, added after the first unseen-domain run",
+   "why": "Post-hoc, after the first run: P-03 v2's fare table as time_bands (asof/eval/unseen/bands.py, from the policy text), so the rule check reads which band a cancellation time falls in. Same text; the parameters it had are kept."
+  },
+  {
+   "clause_id": "CAN-004",
+   "effective_from": "2026-09-01",
+   "effective_to": null,
+   "version_label": "v6",
+   "clause_text": "Use the passenger's base fare and class. The table gives the cancellation CHARGE, not the refund. Refund = max(0, base fare minus charge). For any flat charge, deduct no more than the passenger's base fare. No refund of base fare is due when T is below the last threshold, including after departure. The booking service fee is not refunded under this clause. CLASS T >= 24 h 8 <= T < 24 h 2 <= T < 8 h T < 2 h AC First (1A) INR 280 INR 140 60% of base fare No refund AC Two Tier (2A) INR 240 INR 120 60% of base fare No refund Sleeper (SL) INR 160 INR 80 60% of base fare No refund Second Sitting (2S) INR 80 INR 40 60% of base fare No refund",
+   "rule": {
+    "charge_1a_24h_inr": 280,
+    "charge_1a_2h_pct": 60,
+    "charge_1a_8h_inr": 140,
+    "charge_2a_24h_inr": 240,
+    "charge_2a_2h_pct": 60,
+    "charge_2a_8h_inr": 120,
+    "charge_2s_24h_inr": 80,
+    "charge_2s_2h_pct": 60,
+    "charge_2s_8h_inr": 40,
+    "charge_sl_24h_inr": 160,
+    "charge_sl_2h_pct": 60,
+    "charge_sl_8h_inr": 80,
+    "time_bands": [
+     {
+      "from_h": 24,
+      "charge_inr": {
+       "1A": 280,
+       "2A": 240,
+       "SL": 160,
+       "2S": 80
+      }
+     },
+     {
+      "from_h": 8,
+      "to_h": 24,
+      "charge_inr": {
+       "1A": 140,
+       "2A": 120,
+       "SL": 80,
+       "2S": 40
+      }
+     },
+     {
+      "from_h": 2,
+      "to_h": 8,
+      "charge_pct": 60
+     },
+     {
+      "to_h": 2,
+      "refund": false
+     }
+    ]
+   },
+   "change_note": "SPR v3 P-03: the fare table's bands as time_bands, added after the first unseen-domain run",
+   "why": "Post-hoc, after the first run: P-03 v3's fare table as time_bands (asof/eval/unseen/bands.py, from the policy text), so the rule check reads which band a cancellation time falls in. Same text; the parameters it had are kept."
+  },
+  {
+   "clause_id": "CAN-002",
+   "effective_from": "2026-01-01",
+   "effective_to": "2026-05-01",
+   "version_label": "v5",
+   "clause_text": "No voluntary refund is available for a confirmed Premium QuickBook ticket at any time before or after departure. This special rule replaces P-03 for a confirmed PQ passenger regardless of 1A, 2A, SL, or 2S class. An unconfirmed PQ waitlisted passenger instead follows P-06. A booking becomes PQ only if sold explicitly under the PQ quota; paying a high fare alone does not make it PQ. E1 and E2 can override the confirmed-PQ rule, and E3 can override it only where that version expressly permits.",
+   "rule": {
+    "voluntary_refund_pq_allowed": false,
+    "time_bands": [
+     {
+      "refund": false
+     }
+    ]
+   },
+   "change_note": "SPR v1 P-05: the fare table's bands as time_bands, added after the first unseen-domain run",
+   "why": "Post-hoc, after the first run: P-05 v1's Premium QuickBook rule as time_bands (asof/eval/unseen/bands.py, from the policy text), so the rule check reads which band a cancellation time falls in. Same text; the parameters it had are kept."
+  },
+  {
+   "clause_id": "CAN-002",
+   "effective_from": "2026-05-01",
+   "effective_to": "2026-09-01",
+   "version_label": "v6",
+   "clause_text": "A confirmed Premium QuickBook passenger who requests voluntary cancellation at least 36 hours before scheduled departure pays a charge of 30% of that passenger's base fare; with less than 36 hours remaining, the base fare is non-refundable. This special rule replaces P-03 for a confirmed PQ passenger regardless of 1A, 2A, SL, or 2S class. An unconfirmed PQ waitlisted passenger instead follows P-06. A booking becomes PQ only if sold explicitly under the PQ quota; paying a high fare alone does not make it PQ. E1 and E2 can override the confirmed-PQ rule, and E3 can override it only where that version expressly permits.",
+   "rule": {
+    "charge_pq_36h_pct": 30,
+    "voluntary_refund_pq_allowed": true,
+    "time_bands": [
+     {
+      "from_h": 36,
+      "charge_pct": 30
+     },
+     {
+      "to_h": 36,
+      "refund": false
+     }
+    ]
+   },
+   "change_note": "SPR v2 P-05: the fare table's bands as time_bands, added after the first unseen-domain run",
+   "why": "Post-hoc, after the first run: P-05 v2's Premium QuickBook rule as time_bands (asof/eval/unseen/bands.py, from the policy text), so the rule check reads which band a cancellation time falls in. Same text; the parameters it had are kept."
+  },
+  {
+   "clause_id": "CAN-002",
+   "effective_from": "2026-09-01",
+   "effective_to": null,
+   "version_label": "v7",
+   "clause_text": "A confirmed Premium QuickBook passenger who requests voluntary cancellation at least 24 hours before scheduled departure pays a charge of 35% of that passenger's base fare; with less than 24 hours remaining, the base fare is non-refundable. This special rule replaces P-03 for a confirmed PQ passenger regardless of 1A, 2A, SL, or 2S class. An unconfirmed PQ waitlisted passenger instead follows P-06. A booking becomes PQ only if sold explicitly under the PQ quota; paying a high fare alone does not make it PQ. E1 and E2 can override the confirmed-PQ rule, and E3 can override it only where that version expressly permits.",
+   "rule": {
+    "charge_pq_24h_pct": 35,
+    "voluntary_refund_pq_allowed": true,
+    "time_bands": [
+     {
+      "from_h": 24,
+      "charge_pct": 35
+     },
+     {
+      "to_h": 24,
+      "refund": false
+     }
+    ]
+   },
+   "change_note": "SPR v3 P-05: the fare table's bands as time_bands, added after the first unseen-domain run",
+   "why": "Post-hoc, after the first run: P-05 v3's Premium QuickBook rule as time_bands (asof/eval/unseen/bands.py, from the policy text), so the rule check reads which band a cancellation time falls in. Same text; the parameters it had are kept."
+  }
+ ]
+}

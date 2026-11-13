@@ -1,0 +1,414 @@
+-- AsOf schema: tables, history table and indexes.
+-- Statements end with a line containing only "@" because SQL PL bodies contain ";".
+-- "ASOF." is replaced by the validated target schema at install time (ASOF, or ASOF_TEST in tests).
+-- Each CREATE TABLE is skipped when the table already exists, so setup is safe to re-run.
+
+-- table: POLICY_DOC
+CREATE TABLE ASOF.POLICY_DOC (
+  DOC_ID      VARCHAR(32)  NOT NULL,
+  TITLE       VARCHAR(200) NOT NULL,
+  OWNER_TEAM  VARCHAR(100),
+  SOURCE_NOTE VARCHAR(400),
+  CONSTRAINT PK_POLICY_DOC PRIMARY KEY (DOC_ID)
+) IN ASOF_TS32K
+@
+
+-- table: POLICY_CLAUSE
+-- Bitemporal. BUSINESS_TIME is when a clause version applies to customers.
+-- SYSTEM_TIME is when this database held that row, which is what replay uses.
+CREATE TABLE ASOF.POLICY_CLAUSE (
+  CLAUSE_ID     VARCHAR(32)   NOT NULL,
+  DOC_ID        VARCHAR(32)   NOT NULL,
+  AREA          VARCHAR(40)   NOT NULL,
+  TITLE         VARCHAR(200)  NOT NULL,
+  VERSION_LABEL VARCHAR(20)   NOT NULL,
+  CLAUSE_TEXT   VARCHAR(4000) NOT NULL,
+  RULE_JSON     VARCHAR(2000) NOT NULL,
+  EMBEDDING     VECTOR(384, FLOAT32) NOT NULL,
+  CHANGE_NOTE   VARCHAR(400),
+  CHANGED_BY    VARCHAR(128)  NOT NULL DEFAULT SESSION_USER,
+  BUS_START     DATE          NOT NULL,
+  BUS_END       DATE          NOT NULL,
+  SYS_START     TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN,
+  SYS_END       TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW END,
+  TRANS_ID      TIMESTAMP(12) GENERATED ALWAYS AS TRANSACTION START ID,
+  PERIOD BUSINESS_TIME (BUS_START, BUS_END),
+  PERIOD SYSTEM_TIME (SYS_START, SYS_END),
+  CONSTRAINT PK_POLICY_CLAUSE PRIMARY KEY (CLAUSE_ID, BUSINESS_TIME WITHOUT OVERLAPS),
+  CONSTRAINT FK_CLAUSE_DOC FOREIGN KEY (DOC_ID) REFERENCES ASOF.POLICY_DOC (DOC_ID),
+  CONSTRAINT CK_CLAUSE_RULE_JSON CHECK (JSON_EXISTS(RULE_JSON, '$')),
+  -- The areas of both fictional domains (schemas.Area and schemas.BankArea; a test keeps them in step).
+  CONSTRAINT CK_CLAUSE_AREA CHECK (AREA IN ('bereavement', 'cancellation', 'change_fee', 'baggage',
+                                            'refund', 'delay', 'travel_credit', 'pets', 'other',
+                                            'overdraft', 'fee_refund', 'monthly_fee', 'foreign_transaction',
+                                            'wire_transfer', 'atm', 'dispute', 'account_closure', 'checks')),
+  CONSTRAINT CK_CLAUSE_VERSION CHECK (VERSION_LABEL LIKE 'v%')
+) IN ASOF_TS32K
+@
+
+-- table: POLICY_CLAUSE_HIST
+CREATE TABLE ASOF.POLICY_CLAUSE_HIST LIKE ASOF.POLICY_CLAUSE IN ASOF_TS32K
+@
+
+-- versioning: POLICY_CLAUSE
+ALTER TABLE ASOF.POLICY_CLAUSE ADD VERSIONING USE HISTORY TABLE ASOF.POLICY_CLAUSE_HIST
+@
+
+-- index: IX_CLAUSE_DOC_ASOF
+-- The as-of query's index: DOC_ID = ?, then the business-time range Db2 derives from
+-- FOR BUSINESS_TIME AS OF ? (BUS_START <= ? AND BUS_END > ?) as start and stop keys.
+CREATE INDEX ASOF.IX_CLAUSE_DOC_ASOF ON ASOF.POLICY_CLAUSE (DOC_ID, BUS_START, BUS_END)
+@
+
+-- index: IX_CLAUSE_HIST_ID
+CREATE INDEX ASOF.IX_CLAUSE_HIST_ID ON ASOF.POLICY_CLAUSE_HIST (CLAUSE_ID, SYS_END)
+@
+
+-- index: IX_CLAUSE_EMBEDDING
+-- Native approximate-nearest-neighbour index (catalog type VANN, Db2 12.1.5). With a few
+-- dozen clauses the optimizer rightly prefers an exact scan, and AsOf's temporal query asks
+-- for exact search explicitly (FETCH EXACT): an approximate top-k taken before the
+-- FOR BUSINESS_TIME filter could miss the version in force. The index is there for scale;
+-- python -m asof.vectorbench measures where Db2 starts to choose it and what it costs in recall.
+-- Storage is named explicitly. (db2look 12.1.5 prints this index without its distance metric, in
+-- SYSCATSPACE and with zero build parameters, whatever the definition; SYSCAT.INDEXES has the truth.)
+CREATE VECTOR INDEX ASOF.IX_CLAUSE_EMBEDDING ON ASOF.POLICY_CLAUSE (EMBEDDING) WITH DISTANCE COSINE
+  IN ASOF_TS32K COMPRESSED VECTORS IN ASOF_TS32K
+@
+
+-- table: ANSWER_LEDGER
+-- One row per gate decision. Rows are written only by APPEND_LEDGER, never updated or
+-- deleted (see 02_ledger_rules.sql), and each ROW_HASH covers the previous row's hash.
+-- LEDGER_ID is assigned by APPEND_LEDGER under the CHAIN_HEAD lock (1, 2, 3, ... with no
+-- gaps), so a missing row is visible as a gap, not just as a broken hash.
+-- Append-only and repetitive (JSON verdicts, model names, decisions), so it uses adaptive row compression.
+-- Range-partitioned by month of CREATED_AT, so an audit of a period reads only that period's partitions
+-- (partition elimination) and each month can be reorganised or have statistics collected on its own. Rows
+-- before 2026 or after 2027 land in the two open-ended partitions, so an insert never fails for want of one;
+-- ALTER TABLE ... ADD PARTITION extends the monthly range. Partitions are never detached: that would remove
+-- rows without the DELETE trigger. Db2 refuses it anyway while CLAIM_CITATION's foreign key references this table.
+CREATE TABLE ASOF.ANSWER_LEDGER (
+  LEDGER_ID         BIGINT        NOT NULL,
+  REQUEST_ID        CHAR(36)      NOT NULL,
+  CREATED_AT        TIMESTAMP(12) NOT NULL,
+  CHANNEL           VARCHAR(20)   NOT NULL,
+  DOC_ID            VARCHAR(32)   NOT NULL,
+  AS_OF_DATE        DATE          NOT NULL,
+  QUESTION_REDACTED VARCHAR(2000) NOT NULL,
+  DRAFT_REDACTED    VARCHAR(4000) NOT NULL,
+  FINAL_ANSWER      VARCHAR(4000) NOT NULL,
+  DECISION          VARCHAR(12)   NOT NULL,
+  REASON_CODE       VARCHAR(40)   NOT NULL,
+  MODEL_INFO        VARCHAR(200)  NOT NULL,
+  PROMPT_VERSION    VARCHAR(40)   NOT NULL,
+  LATENCY_MS        INTEGER       NOT NULL,
+  VERDICTS_JSON     VARCHAR(30000) NOT NULL,
+  PREV_HASH         CHAR(64)      NOT NULL,
+  ROW_HASH          CHAR(64)      NOT NULL,
+  CONSTRAINT PK_ANSWER_LEDGER PRIMARY KEY (LEDGER_ID),
+  CONSTRAINT UQ_LEDGER_REQUEST UNIQUE (REQUEST_ID),
+  CONSTRAINT UQ_LEDGER_HASH UNIQUE (ROW_HASH),
+  CONSTRAINT FK_LEDGER_DOC FOREIGN KEY (DOC_ID) REFERENCES ASOF.POLICY_DOC (DOC_ID),
+  -- REVIEWED: a specialist's reply to a held (ESCALATED) decision, appended by RESOLVE_ESCALATION.
+  CONSTRAINT CK_LEDGER_DECISION CHECK (DECISION IN ('PASS', 'CORRECTED', 'ESCALATED', 'REVIEWED')),
+  -- agent: a check an agent ran on its own draft (a help-centre fix or a correction notice), never a customer answer.
+  -- backtest: a past answer checked in batch (11_backtest.sql), never an answer AsOf released.
+  CONSTRAINT CK_LEDGER_CHANNEL CHECK (CHANNEL IN ('chat', 'email', 'faq', 'api', 'eval', 'demo', 'agent', 'backtest')),
+  CONSTRAINT CK_LEDGER_LATENCY CHECK (LATENCY_MS >= 0),
+  CONSTRAINT CK_LEDGER_ID CHECK (LEDGER_ID >= 1),
+  CONSTRAINT CK_LEDGER_VERDICTS CHECK (JSON_EXISTS(VERDICTS_JSON, '$'))
+) IN ASOF_TS32K
+  PARTITION BY RANGE (CREATED_AT) (
+    PARTITION P_BEFORE_2026 STARTING MINVALUE ENDING '2026-01-01-00.00.00' EXCLUSIVE,
+    STARTING '2026-01-01-00.00.00' ENDING '2028-01-01-00.00.00' EXCLUSIVE EVERY 1 MONTH,
+    PARTITION P_FROM_2028 STARTING '2028-01-01-00.00.00' ENDING MAXVALUE)
+  COMPRESS YES ADAPTIVE
+@
+
+-- index: IX_LEDGER_CREATED
+CREATE INDEX ASOF.IX_LEDGER_CREATED ON ASOF.ANSWER_LEDGER (CREATED_AT)
+@
+
+-- index: IX_LEDGER_DECISION
+-- The ledger page filtered by decision: WHERE DECISION = ? ORDER BY LEDGER_ID DESC (a reverse scan).
+-- NOT PARTITIONED: one index over every month gives LEDGER_ID order across partitions; partitioned, the
+-- optimizer read the primary key backwards instead (8.4 ms became 11.9 ms at 1,000,000 rows, asof.ledgerbench).
+CREATE INDEX ASOF.IX_LEDGER_DECISION ON ASOF.ANSWER_LEDGER (DECISION, LEDGER_ID) NOT PARTITIONED
+@
+
+-- index: IX_LEDGER_GROUP_CREATED
+-- V_DECISION_STATS: the first and last decision of each (channel, decision, reason) group, read from the
+-- ends of this index instead of a scan (a materialized query table maintained on every insert cannot hold
+-- MIN or MAX in Db2).
+CREATE INDEX ASOF.IX_LEDGER_GROUP_CREATED ON ASOF.ANSWER_LEDGER (CHANNEL, DECISION, REASON_CODE, CREATED_AT)
+@
+
+-- table: CLAIM_CITATION
+-- One row per claim per check, shredded from VERDICTS_JSON by APPEND_LEDGER.
+-- PASS_NO 1 is the check of the draft; PASS_NO 2 is the re-check of a rewrite (CORRECTED).
+-- CLAUSE_ID + CLAUSE_BUS_START identify the exact clause version a claim was checked against,
+-- and CLAUSE_SYS_START the exact row the database held at the time.
+CREATE TABLE ASOF.CLAIM_CITATION (
+  LEDGER_ID        BIGINT        NOT NULL,
+  PASS_NO          SMALLINT      NOT NULL,
+  CLAIM_NO         SMALLINT      NOT NULL,
+  CLAIM_TEXT       VARCHAR(1000) NOT NULL,
+  AREA             VARCHAR(40)   NOT NULL,
+  VERDICT          VARCHAR(14)   NOT NULL,
+  LLM_VERDICT      VARCHAR(14),
+  RULE_CHECK       VARCHAR(16)   NOT NULL,
+  CLAUSE_ID        VARCHAR(32),
+  CLAUSE_VERSION   VARCHAR(20),
+  CLAUSE_BUS_START DATE,
+  CLAUSE_SYS_START TIMESTAMP(12),
+  DISTANCE         DOUBLE,
+  QUOTED_SPAN      VARCHAR(1000),
+  CONSTRAINT PK_CLAIM_CITATION PRIMARY KEY (LEDGER_ID, PASS_NO, CLAIM_NO),
+  CONSTRAINT CK_CITATION_PASS CHECK (PASS_NO IN (1, 2)),
+  CONSTRAINT FK_CITATION_LEDGER FOREIGN KEY (LEDGER_ID) REFERENCES ASOF.ANSWER_LEDGER (LEDGER_ID),
+  CONSTRAINT CK_CITATION_CLAIM_NO CHECK (CLAIM_NO BETWEEN 1 AND 8),
+  CONSTRAINT CK_CITATION_VERDICT CHECK (VERDICT IN ('SUPPORTED', 'CONTRADICTED', 'NOT_COVERED')),
+  CONSTRAINT CK_CITATION_LLM_VERDICT CHECK (LLM_VERDICT IS NULL OR LLM_VERDICT IN ('SUPPORTED', 'CONTRADICTED', 'NOT_COVERED')),
+  CONSTRAINT CK_CITATION_RULE CHECK (RULE_CHECK IN ('MATCH', 'MISMATCH', 'NOT_APPLICABLE')),
+  CONSTRAINT CK_CITATION_CLAUSE CHECK ((CLAUSE_ID IS NULL) = (CLAUSE_BUS_START IS NULL))
+) IN ASOF_TS32K COMPRESS YES ADAPTIVE
+@
+
+-- index: IX_CITATION_CLAUSE
+CREATE INDEX ASOF.IX_CITATION_CLAUSE ON ASOF.CLAIM_CITATION (CLAUSE_ID, CLAUSE_BUS_START)
+@
+
+-- table: CHAIN_HEAD
+-- Exactly one row. APPEND_LEDGER locks it, so concurrent writers cannot fork the chain.
+CREATE TABLE ASOF.CHAIN_HEAD (
+  HEAD_ID        SMALLINT NOT NULL,
+  LAST_LEDGER_ID BIGINT   NOT NULL,
+  LAST_HASH      CHAR(64) NOT NULL,
+  CONSTRAINT PK_CHAIN_HEAD PRIMARY KEY (HEAD_ID),
+  CONSTRAINT CK_CHAIN_HEAD_SINGLE CHECK (HEAD_ID = 1)
+) IN ASOF_TS32K
+@
+
+-- table: PUBLISHED_ANSWER
+-- Cached help-centre answers, each tied to the clause version it was written from.
+CREATE TABLE ASOF.PUBLISHED_ANSWER (
+  ANSWER_ID       VARCHAR(32)   NOT NULL,
+  DOC_ID          VARCHAR(32)   NOT NULL,
+  QUESTION        VARCHAR(1000) NOT NULL,
+  ANSWER_TEXT     VARCHAR(4000) NOT NULL,
+  CITED_CLAUSE_ID VARCHAR(32)   NOT NULL,
+  CITED_VERSION   VARCHAR(20)   NOT NULL,
+  CITED_BUS_START DATE          NOT NULL,
+  APPLIES_FROM    DATE          NOT NULL,
+  APPLIES_TO      DATE          NOT NULL,
+  STATUS          VARCHAR(12)   NOT NULL DEFAULT 'LIVE',
+  CONSTRAINT PK_PUBLISHED_ANSWER PRIMARY KEY (ANSWER_ID),
+  CONSTRAINT FK_PUBLISHED_DOC FOREIGN KEY (DOC_ID) REFERENCES ASOF.POLICY_DOC (DOC_ID),
+  CONSTRAINT CK_PUBLISHED_STATUS CHECK (STATUS IN ('LIVE', 'NEEDS_REVIEW', 'RETIRED')),
+  CONSTRAINT CK_PUBLISHED_RANGE CHECK (APPLIES_TO > APPLIES_FROM)
+) IN ASOF_TS32K
+@
+
+-- index: IX_PUBLISHED_CLAUSE
+CREATE INDEX ASOF.IX_PUBLISHED_CLAUSE ON ASOF.PUBLISHED_ANSWER (CITED_CLAUSE_ID, CITED_BUS_START)
+@
+
+-- table: ANSWER_SUGGESTION
+-- Corrected help-centre answers drafted by the change-impact agent after a policy change.
+-- Each was run through the full check on the date it must hold from (CHECK_LEDGER_ID is that
+-- check's ledger row). Nothing here is published until the policy editor approves it
+-- (DECIDE_SUGGESTION), and only a draft the check released (PASS or CORRECTED) can be approved.
+CREATE TABLE ASOF.ANSWER_SUGGESTION (
+  SUGGESTION_ID    BIGINT        NOT NULL GENERATED ALWAYS AS IDENTITY,
+  ANSWER_ID        VARCHAR(32)   NOT NULL,
+  CLAUSE_ID        VARCHAR(32)   NOT NULL,
+  STALE_FROM       DATE          NOT NULL,
+  BASED_ON_VERSION VARCHAR(20)   NOT NULL,
+  SUGGESTED_TEXT   VARCHAR(4000) NOT NULL,
+  CHECK_DECISION   VARCHAR(12)   NOT NULL,
+  CHECK_LEDGER_ID  BIGINT,
+  AGENT_TRACE      VARCHAR(8000) NOT NULL,
+  STATUS           VARCHAR(12)   NOT NULL DEFAULT 'PENDING',
+  CREATED_AT       TIMESTAMP     NOT NULL DEFAULT CURRENT TIMESTAMP,
+  CREATED_BY       VARCHAR(128)  NOT NULL DEFAULT SESSION_USER,
+  DECIDED_AT       TIMESTAMP,
+  DECIDED_BY       VARCHAR(128),
+  CONSTRAINT PK_ANSWER_SUGGESTION PRIMARY KEY (SUGGESTION_ID),
+  CONSTRAINT FK_SUGGESTION_ANSWER FOREIGN KEY (ANSWER_ID) REFERENCES ASOF.PUBLISHED_ANSWER (ANSWER_ID),
+  CONSTRAINT FK_SUGGESTION_CHECK FOREIGN KEY (CHECK_LEDGER_ID) REFERENCES ASOF.ANSWER_LEDGER (LEDGER_ID),
+  CONSTRAINT CK_SUGGESTION_DECISION CHECK (CHECK_DECISION IN ('PASS', 'CORRECTED', 'ESCALATED')),
+  CONSTRAINT CK_SUGGESTION_STATUS CHECK (STATUS IN ('PENDING', 'APPROVED', 'REJECTED')),
+  CONSTRAINT CK_SUGGESTION_TRACE CHECK (JSON_EXISTS(AGENT_TRACE, '$'))
+) IN ASOF_TS32K
+@
+
+-- index: IX_SUGGESTION_ANSWER
+CREATE INDEX ASOF.IX_SUGGESTION_ANSWER ON ASOF.ANSWER_SUGGESTION (ANSWER_ID, STATUS)
+@
+
+-- table: API_USER
+-- Per-user API access (ASOF_AUTH=users). Only the SHA-256 of each personal token is stored: the
+-- token itself is shown once, when the owner adds the user (python -m asof.users add). The flags
+-- are the API roles: CAN_CHECK (submit drafts), CAN_AUDIT (ledger, chain, analytics, Ask the
+-- ledger), CAN_EDIT (policy changes, approving drafted corrections), CAN_REVIEW (the specialist
+-- inbox: answer held decisions, approve correction notices). A disabled user keeps its row, so
+-- the ledger's requested_by and reviewer names stay resolvable.
+CREATE TABLE ASOF.API_USER (
+  USER_NAME    VARCHAR(40)  NOT NULL,
+  TOKEN_SHA256 CHAR(64)     NOT NULL,
+  CAN_CHECK    SMALLINT     NOT NULL DEFAULT 0,
+  CAN_AUDIT    SMALLINT     NOT NULL DEFAULT 0,
+  CAN_EDIT     SMALLINT     NOT NULL DEFAULT 0,
+  CAN_REVIEW   SMALLINT     NOT NULL DEFAULT 0,
+  CREATED_AT   TIMESTAMP    NOT NULL DEFAULT CURRENT TIMESTAMP,
+  CREATED_BY   VARCHAR(128) NOT NULL DEFAULT SESSION_USER,
+  DISABLED_AT  TIMESTAMP,
+  CONSTRAINT PK_API_USER PRIMARY KEY (USER_NAME),
+  CONSTRAINT UQ_API_USER_TOKEN UNIQUE (TOKEN_SHA256),
+  CONSTRAINT CK_API_USER_FLAGS CHECK (CAN_CHECK IN (0, 1) AND CAN_AUDIT IN (0, 1) AND CAN_EDIT IN (0, 1)
+                                      AND CAN_REVIEW IN (0, 1)),
+  CONSTRAINT CK_API_USER_SOME_ROLE CHECK (CAN_CHECK + CAN_AUDIT + CAN_EDIT + CAN_REVIEW >= 1),
+  CONSTRAINT CK_API_USER_HASH CHECK (TRANSLATE(TOKEN_SHA256, '', '0123456789abcdef') = '')
+) IN ASOF_TS32K
+@
+
+-- table: POLICY_DRAFT
+-- A policy document uploaded for intake (asof/intake.py). The PDF itself is kept, with the SHA-256
+-- Db2 computed over it (ADD_POLICY_DRAFT refuses a file whose hash differs from the application's),
+-- so every clause version approved from it traces back to the exact file. Nothing in a draft is in
+-- force: the only way into POLICY_CLAUSE is DECIDE_POLICY_DRAFT, then APPLY_DRAFT_ITEM (which calls
+-- APPLY_POLICY_CHANGE for a changed clause) in the same transaction, as the policy editor.
+-- UPLOADED_BY and DECIDED_BY_USER are API user names (ASOF_AUTH=users); with them set, Db2 refuses an
+-- approval by the person who uploaded the document.
+CREATE TABLE ASOF.POLICY_DRAFT (
+  DRAFT_ID        BIGINT        NOT NULL GENERATED ALWAYS AS IDENTITY (NO CACHE),  -- no gaps of 20 after a restart
+  DOC_ID          VARCHAR(32)   NOT NULL,
+  SOURCE_NAME     VARCHAR(200)  NOT NULL,
+  SOURCE_SHA256   CHAR(64)      NOT NULL,
+  SOURCE_PDF      BLOB(4M)      NOT NULL,
+  SOURCE_PAGES    SMALLINT      NOT NULL,
+  SOURCE_TEXT     CLOB(256K)    NOT NULL,
+  EXTRACTED_BY    VARCHAR(200)  NOT NULL,
+  STATUS          VARCHAR(12)   NOT NULL DEFAULT 'PENDING',
+  UPLOADED_BY     VARCHAR(40),
+  CREATED_AT      TIMESTAMP     NOT NULL DEFAULT CURRENT TIMESTAMP,
+  CREATED_BY      VARCHAR(128)  NOT NULL DEFAULT SESSION_USER,
+  DECIDED_AT      TIMESTAMP,
+  DECIDED_BY      VARCHAR(128),
+  DECIDED_BY_USER VARCHAR(40),
+  CONSTRAINT PK_POLICY_DRAFT PRIMARY KEY (DRAFT_ID),
+  CONSTRAINT FK_DRAFT_DOC FOREIGN KEY (DOC_ID) REFERENCES ASOF.POLICY_DOC (DOC_ID),
+  CONSTRAINT CK_DRAFT_STATUS CHECK (STATUS IN ('PENDING', 'APPLIED', 'REJECTED')),
+  CONSTRAINT CK_DRAFT_HASH CHECK (TRANSLATE(SOURCE_SHA256, '', '0123456789abcdef') = ''),
+  CONSTRAINT CK_DRAFT_PAGES CHECK (SOURCE_PAGES BETWEEN 1 AND 50)
+) IN ASOF_TS32K
+@
+
+-- table: POLICY_DRAFT_ITEM
+-- One proposed clause version per row: CHANGE (a new version of an existing clause), NEW (a clause
+-- the policy did not have) or UNCHANGED (restated as it is; never applied). CHECKS_JSON holds the
+-- deterministic checks run on the extraction (verbatim text, quoted date, rule values found in the
+-- text); BLOCKED = 1 means one of them failed and the item cannot be accepted. APPLIED_VERSION is
+-- the version label the item became.
+CREATE TABLE ASOF.POLICY_DRAFT_ITEM (
+  DRAFT_ID        BIGINT        NOT NULL,
+  ITEM_NO         SMALLINT      NOT NULL,
+  KIND            VARCHAR(10)   NOT NULL,
+  CLAUSE_ID       VARCHAR(32)   NOT NULL,
+  AREA            VARCHAR(40)   NOT NULL,
+  TITLE           VARCHAR(200)  NOT NULL,
+  CLAUSE_TEXT     VARCHAR(4000) NOT NULL,
+  RULE_JSON       VARCHAR(2000) NOT NULL,
+  BUS_START       DATE          NOT NULL,
+  BUS_END         DATE          NOT NULL,
+  DATE_QUOTE      VARCHAR(1000) NOT NULL,
+  SOURCE_PAGE     SMALLINT,
+  CHECKS_JSON     VARCHAR(8000) NOT NULL,
+  BLOCKED         SMALLINT      NOT NULL,
+  STATUS          VARCHAR(12)   NOT NULL DEFAULT 'PENDING',
+  APPLIED_VERSION VARCHAR(20),
+  CONSTRAINT PK_POLICY_DRAFT_ITEM PRIMARY KEY (DRAFT_ID, ITEM_NO),
+  CONSTRAINT FK_ITEM_DRAFT FOREIGN KEY (DRAFT_ID) REFERENCES ASOF.POLICY_DRAFT (DRAFT_ID),
+  CONSTRAINT CK_ITEM_KIND CHECK (KIND IN ('CHANGE', 'NEW', 'UNCHANGED')),
+  CONSTRAINT CK_ITEM_STATUS CHECK (STATUS IN ('PENDING', 'APPLIED', 'REJECTED')),
+  CONSTRAINT CK_ITEM_BLOCKED CHECK (BLOCKED IN (0, 1)),
+  CONSTRAINT CK_ITEM_PERIOD CHECK (BUS_END > BUS_START),
+  CONSTRAINT CK_ITEM_RULE_JSON CHECK (JSON_EXISTS(RULE_JSON, '$')),
+  CONSTRAINT CK_ITEM_CHECKS_JSON CHECK (JSON_EXISTS(CHECKS_JSON, '$')),
+  CONSTRAINT CK_ITEM_APPLIABLE CHECK (STATUS <> 'APPLIED' OR (BLOCKED = 0 AND KIND <> 'UNCHANGED'))
+) IN ASOF_TS32K
+@
+
+-- table: ESCALATION_REVIEW
+-- The specialist inbox's record: which held decision a specialist answered, and with which ledger row.
+-- Written only by RESOLVE_ESCALATION, in the same transaction as the REVIEWED ledger row it points to,
+-- and append-only like the ledger (02_ledger_rules.sql). The primary key makes each held decision
+-- answerable once: of two specialists sending at the same moment, exactly one succeeds. The reply,
+-- the reviewer, the note and the link back are also inside that row's hashed verdicts, so VERIFY_CHAIN
+-- covers them; this table is the index the inbox reads.
+CREATE TABLE ASOF.ESCALATION_REVIEW (
+  ESCALATED_LEDGER_ID BIGINT        NOT NULL,
+  REVIEW_LEDGER_ID    BIGINT        NOT NULL,
+  OUTCOME             VARCHAR(40)   NOT NULL,
+  REVIEWER            VARCHAR(40),
+  NOTE                VARCHAR(1000),
+  CREATED_AT          TIMESTAMP     NOT NULL DEFAULT CURRENT TIMESTAMP,
+  CREATED_BY          VARCHAR(128)  NOT NULL DEFAULT SESSION_USER,
+  CONSTRAINT PK_ESCALATION_REVIEW PRIMARY KEY (ESCALATED_LEDGER_ID),
+  CONSTRAINT UQ_REVIEW_LEDGER UNIQUE (REVIEW_LEDGER_ID),
+  CONSTRAINT FK_REVIEW_ESCALATED FOREIGN KEY (ESCALATED_LEDGER_ID) REFERENCES ASOF.ANSWER_LEDGER (LEDGER_ID),
+  CONSTRAINT FK_REVIEW_REPLY FOREIGN KEY (REVIEW_LEDGER_ID) REFERENCES ASOF.ANSWER_LEDGER (LEDGER_ID),
+  CONSTRAINT CK_REVIEW_OUTCOME CHECK (OUTCOME IN ('SPECIALIST_CHECKED', 'SPECIALIST_JUDGMENT')),
+  CONSTRAINT CK_REVIEW_NOTE CHECK (OUTCOME <> 'SPECIALIST_JUDGMENT' OR LENGTH(TRIM(COALESCE(NOTE, ''))) >= 10),
+  CONSTRAINT CK_REVIEW_ORDER CHECK (REVIEW_LEDGER_ID > ESCALATED_LEDGER_ID)
+) IN ASOF_TS32K
+@
+
+-- table: CORRECTION_NOTICE
+-- A correction for a customer whose answer went stale: after a policy change, the version in force for their date
+-- is no longer the one the answer they were given cited (CHANGE_IMPACT status STALE). The change-impact agent
+-- drafts it (asof/impactagent.py); the correction in it passed the full check against the version now in force on
+-- the customer's date (CHECK_LEDGER_ID is that check's ledger row); a specialist approves it before it counts as
+-- sent. AsOf sends nothing itself: SENT means a person approved it for the customer's channel. Written and decided
+-- only through ADD_NOTICE and DECIDE_NOTICE; a decided notice cannot change and no notice can be deleted
+-- (02_ledger_rules.sql). OPEN_KEY plus UX_NOTICE_OPEN allow one open (PENDING or SENT) notice per answer, clause
+-- and version: a rejected draft makes way for a new one, a sent one does not.
+CREATE TABLE ASOF.CORRECTION_NOTICE (
+  NOTICE_ID       BIGINT        NOT NULL GENERATED ALWAYS AS IDENTITY (NO CACHE),
+  LEDGER_ID       BIGINT        NOT NULL,
+  CLAUSE_ID       VARCHAR(32)   NOT NULL,
+  CITED_VERSION   VARCHAR(20)   NOT NULL,
+  CURRENT_VERSION VARCHAR(20)   NOT NULL,
+  AS_OF_DATE      DATE          NOT NULL,
+  CORRECTION_TEXT VARCHAR(4000) NOT NULL,
+  NOTICE_TEXT     VARCHAR(6000) NOT NULL,
+  CHECK_DECISION  VARCHAR(12)   NOT NULL,
+  CHECK_LEDGER_ID BIGINT,
+  AGENT_TRACE     VARCHAR(8000) NOT NULL,
+  STATUS          VARCHAR(12)   NOT NULL DEFAULT 'PENDING',
+  OPEN_KEY        VARCHAR(80)   GENERATED ALWAYS AS (CASE WHEN STATUS IN ('PENDING', 'SENT')
+                                  THEN RTRIM(CHAR(LEDGER_ID)) || '/' || CLAUSE_ID || '/' || CURRENT_VERSION END),
+  REQUESTED_BY    VARCHAR(40),
+  CREATED_AT      TIMESTAMP     NOT NULL DEFAULT CURRENT TIMESTAMP,
+  CREATED_BY      VARCHAR(128)  NOT NULL DEFAULT SESSION_USER,
+  DECIDED_AT      TIMESTAMP,
+  DECIDED_BY      VARCHAR(128),
+  DECIDED_BY_USER VARCHAR(40),
+  CONSTRAINT PK_CORRECTION_NOTICE PRIMARY KEY (NOTICE_ID),
+  CONSTRAINT FK_NOTICE_ANSWER FOREIGN KEY (LEDGER_ID) REFERENCES ASOF.ANSWER_LEDGER (LEDGER_ID),
+  CONSTRAINT FK_NOTICE_CHECK FOREIGN KEY (CHECK_LEDGER_ID) REFERENCES ASOF.ANSWER_LEDGER (LEDGER_ID),
+  CONSTRAINT CK_NOTICE_STATUS CHECK (STATUS IN ('PENDING', 'SENT', 'REJECTED')),
+  CONSTRAINT CK_NOTICE_DECISION CHECK (CHECK_DECISION IN ('PASS', 'CORRECTED', 'ESCALATED')),
+  CONSTRAINT CK_NOTICE_SENDABLE CHECK (STATUS <> 'SENT' OR (CHECK_DECISION IN ('PASS', 'CORRECTED') AND CHECK_LEDGER_ID IS NOT NULL)),
+  CONSTRAINT CK_NOTICE_VERSIONS CHECK (CITED_VERSION <> CURRENT_VERSION),
+  CONSTRAINT CK_NOTICE_TRACE CHECK (JSON_EXISTS(AGENT_TRACE, '$'))
+) IN ASOF_TS32K
+@
+
+-- index: UX_NOTICE_OPEN
+CREATE UNIQUE INDEX ASOF.UX_NOTICE_OPEN ON ASOF.CORRECTION_NOTICE (OPEN_KEY) EXCLUDE NULL KEYS
+@
+
+-- index: IX_NOTICE_CLAUSE
+CREATE INDEX ASOF.IX_NOTICE_CLAUSE ON ASOF.CORRECTION_NOTICE (CLAUSE_ID, STATUS)
+@

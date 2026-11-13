@@ -1,0 +1,5046 @@
+{
+ "what": "The four correct drafts held in the latest frozen run (ET09, ET12, ET14 on escalation-test; L10 on list-test), run 10 times each in four arms on the hosted model, to find what held them and whether a code change since 0be4f60 did",
+ "run_at": "2026-11-08",
+ "model": "openrouter:google/gemini-3.1-flash-lite",
+ "arms": {
+  "A": {
+   "description": "today's code (8058e85 check)",
+   "tripwire_calls": 0,
+   "records": [
+    {
+     "id": "ET09",
+     "rep": 0,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer purchased the ticket three days ago, which is outside the 24-hour window mentioned in CXL-001."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "Clause CXL-003 confirms that non-refundable fares can be cancelled before departure."
+      },
+      {
+       "text": "There is a $100 cancellation fee per passenger",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "Clause CXL-003 explicitly states the $100 cancellation fee for non-refundable fares."
+      },
+      {
+       "text": "The remaining value of the canceled non-refundable fare is issued as a travel credit",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "Clause CXL-003 explicitly states the remaining value is issued as a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim correctly combines the conditions and outcomes provided in CXL-003 for after the 24-hour period."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 1,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer purchased the ticket 3 days ago, which exceeds the 24-hour window."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "Clause CXL-003 explicitly permits cancellation of non-refundable fares before departure."
+      },
+      {
+       "text": "Canceling a non-refundable fare incurs a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "Clause CXL-003 specifies a $100 fee for such cancellations."
+      },
+      {
+       "text": "The remaining value of a cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "Clause CXL-003 confirms the value is issued as a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim accurately summarizes the policy for non-refundable fares after the 24-hour window."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 2,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer stated they purchased the ticket three days ago, which exceeds the 24-hour window specified in the clause."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms that non-refundable fares may be cancelled prior to departure."
+      },
+      {
+       "text": "There is a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly sets the cancellation fee for non-refundable fares at $100 per passenger after the 24-hour window."
+      },
+      {
+       "text": "The remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause mandates that the remaining value of a cancelled non-refundable fare is provided as a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "This claim is a composite of information fully supported by the policy clause CXL-003."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 3,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer stated they bought the ticket three days ago, which exceeds the 24-hour period."
+      },
+      {
+       "text": "You can still cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "Clause CXL-003 explicitly allows cancellation of non-refundable fares before departure after the 24-hour period."
+      },
+      {
+       "text": "Canceling your non-refundable fare incurs a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms the $100 fee for cancelling a non-refundable fare after the 24-hour window."
+      },
+      {
+       "text": "The remaining value of the cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms that the remaining value of a cancelled non-refundable fare is issued as a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim correctly synthesizes the information provided in clause CXL-003 regarding cancellations after the 24-hour window."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 4,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer stated they purchased the ticket three days ago, which is beyond the 24-hour window specified in the policy."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly permits the cancellation of a non-refundable fare before departure after the 24-hour period."
+      },
+      {
+       "text": "You can cancel your non-refundable fare for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms the $100 cancellation fee for non-refundable fares after the 24-hour window."
+      },
+      {
+       "text": "The remaining value of a cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy clearly states that the remaining value of a cancelled non-refundable fare is provided as a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim accurately synthesizes the rules for cancelling a non-refundable fare after the initial 24-hour period."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 5,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "NOT_COVERED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "the quoted text does not appear in the cited clause"
+      },
+      {
+       "text": "You can still cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy allows cancellation of non-refundable fares before departure after the 24-hour window."
+      },
+      {
+       "text": "Canceling your non-refundable fare before departure incurs a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy specifies a $100 fee per passenger for cancelling non-refundable fares after the 24-hour window."
+      },
+      {
+       "text": "The remaining value of a cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy confirms the remaining value is issued as a travel credit after the fee is applied."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim accurately summarizes the policy for cancelling a non-refundable fare after the 24-hour period."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 6,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed for your ticket.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer stated they bought the ticket three days ago, which exceeds the 24-hour period."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "Clause CXL-003 permits cancellation of non-refundable fares before departure after the 24-hour window."
+      },
+      {
+       "text": "You can cancel your non-refundable fare for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The fee is explicitly defined for cancellations made after the 24-hour period."
+      },
+      {
+       "text": "After paying the cancellation fee for a non-refundable fare, the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy confirms that remaining value is provided as travel credit after the fee is applied."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 7,
+     "decision": "CORRECTED",
+     "reason": "CORRECTED_FROM_CLAUSES",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure.",
+       "verdict": "CONTRADICTED",
+       "llm": "SUPPORTED",
+       "rule": "MISMATCH",
+       "clause": "CXL-003 v1",
+       "reason": "rule check overrides the judge: claim says free; CXL-003 says cancellation_fee_usd=100"
+      },
+      {
+       "text": "You can cancel your non-refundable fare for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy explicitly states the $100 fee for cancelling non-refundable fares."
+      },
+      {
+       "text": "The remaining value of your cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy confirms the remaining value is provided as a travel credit."
+      }
+     ],
+     "second": [
+      {
+       "text": "After the 24-hour period, a non-refundable fare can be cancelled before departure for a cancellation fee of $100 per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim accurately quotes the policy for cancelling non-refundable fares after the 24-hour window."
+      },
+      {
+       "text": "After the 24-hour period, a non-refundable fare can be cancelled before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms that cancellation is permitted after the 24-hour period."
+      },
+      {
+       "text": "The remaining value after a cancellation is issued as a travel credit, not as a refund.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly states that cancelled non-refundable fares are returned as travel credit rather than a refund."
+      }
+     ]
+    },
+    {
+     "id": "ET09",
+     "rep": 8,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer purchased the ticket three days ago, which is beyond the 24-hour period."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly allows for cancellation of non-refundable fares before departure."
+      },
+      {
+       "text": "There is a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause states the cancellation fee for non-refundable fares is $100."
+      },
+      {
+       "text": "The remaining value of the cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms the value is returned as a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim accurately summarizes the conditions for cancelling a non-refundable fare after the 24-hour window."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 9,
+     "decision": "CORRECTED",
+     "reason": "CORRECTED_FROM_CLAUSES",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure.",
+       "verdict": "CONTRADICTED",
+       "llm": "SUPPORTED",
+       "rule": "MISMATCH",
+       "clause": "CXL-003 v1",
+       "reason": "rule check overrides the judge: claim says free; CXL-003 says cancellation_fee_usd=100"
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly states a $100 cancellation fee per passenger for non-refundable fares."
+      },
+      {
+       "text": "The remaining value after the $100 cancellation fee is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy states that the remaining value is issued as a travel credit."
+      }
+     ],
+     "second": [
+      {
+       "text": "After the 24-hour period, a non-refundable fare can be cancelled before departure for a cancellation fee of $100 per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly allows cancellation of non-refundable fares after 24 hours for a $100 fee."
+      },
+      {
+       "text": "The remaining value of a cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms that remaining value is provided as a travel credit."
+      },
+      {
+       "text": "The remaining value of a cancelled non-refundable fare is not issued as a refund.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly states the remaining value is not issued as a refund."
+      }
+     ]
+    },
+    {
+     "id": "ET12",
+     "rep": 0,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause explicitly confirms the $15 fee is waived if a $1,000 minimum daily balance is maintained."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 1,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause confirms the $1,000 minimum balance requirement to waive the monthly fee."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 2,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause confirms both the fee waiver condition and the amount implied by the combination of clauses MTF-001 and MTF-002."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 3,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000 on Everyday Checking.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause confirms the $1,000 minimum daily balance requirement for waiving the fee."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 4,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The Everyday Checking account has a $15 monthly maintenance fee.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-001 v2",
+       "reason": "The clause explicitly states the $15 fee for the Everyday Checking account."
+      },
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause confirms the waiver condition matches the claim."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 5,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The claim accurately reflects the conditions and amounts specified in the fee schedule for the waiver of the monthly maintenance fee."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 6,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The Everyday Checking account has a $15 monthly maintenance fee.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-001 v2",
+       "reason": "The clause explicitly states the monthly maintenance fee is $15."
+      },
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause confirms the $1,000 minimum daily balance requirement for the fee waiver."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 7,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause explicitly states the waiver condition for the maintenance fee described."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 8,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause confirms the minimum daily balance requirement for the fee waiver."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 9,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000 on Everyday Checking.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause confirms that maintaining a $1,000 minimum daily balance waives the monthly maintenance fee."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 0,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly permits small cats in the cabin up to 8kg, and the limitation on flights longer than 8 hours in PET-004 does not exclude a 6-hour flight."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms the $100 fee for pet travel in the cabin."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 1,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms that small cats can travel in the cabin if they weigh 8 kg or less, which is applicable to the customer's 6-hour flight."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the fee is $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 2,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The policy confirms cats may travel in the cabin under the weight limit mentioned."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The policy explicitly states the $100 fee."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 3,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "on flights scheduled for 8 hours or less, a small cat can travel in the cabin",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "While there is a clause about flights longer than 8 hours, no clause explicitly confirms cats can travel in the cabin on flights 8 hours or less."
+      },
+      {
+       "text": "a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly permits small cats in the cabin within the stated weight limit."
+      },
+      {
+       "text": "The pet fee is $100 each way",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause clearly states the fee for pets in the cabin is $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 4,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The policy confirms that small cats may travel in the cabin under the specified weight limit."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The policy explicitly states the pet fee is $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 5,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "PET-001 v1",
+       "reason": "The policy permits small cats to travel in the cabin, and the claim correctly identifies the flight duration condition."
+      },
+      {
+       "text": "the pet and its carrier together weigh no more than 8 kg",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the weight requirement for pets and carriers in the cabin."
+      },
+      {
+       "text": "The pet fee is $100 each way",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly confirms the pet fee for each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 6,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "on flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms the weight limit for cats in the cabin."
+      },
+      {
+       "text": "The pet fee is $100 each way",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the fee is $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 7,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "on flights scheduled for 8 hours or less, a small cat can travel in the cabin",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "The clauses state that pets are not allowed on flights longer than 8 hours, but they do not explicitly state that pets are allowed on flights 8 hours or less."
+      },
+      {
+       "text": "a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause directly supports the weight limit condition for traveling in the cabin."
+      },
+      {
+       "text": "The pet fee is $100 each way",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly confirms the pet fee per flight."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 8,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms small cats can travel in the cabin given the 8 kg weight limit, and the flight length constraint in the claim is not prohibited by the clauses."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the fee is $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 9,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause permits small cats in the cabin with the weight limit specified in the claim."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the fee for pets in the cabin is $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 0,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly defines a grandparent as an immediate family member."
+      },
+      {
+       "text": "you qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Qualification depends on providing specific documentation which the customer has not yet provided."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 1,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly includes grandparent in the definition of immediate family."
+      },
+      {
+       "text": "You qualify for the bereavement fare.",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Qualifying requires documentation and specific timing not addressed in the customer's question."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 2,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family for the bereavement fare.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The policy explicitly lists 'grandparent' under the definition of immediate family."
+      },
+      {
+       "text": "You qualify for the bereavement fare.",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Eligibility depends on providing required documentation and booking before travel, which is not stated in the question."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 3,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family for the bereavement fare.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists grandparent as immediate family."
+      },
+      {
+       "text": "You qualify for the bereavement fare as a grandparent counts as immediate family.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause confirms that the death of a grandparent qualifies the customer for the bereavement fare."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 4,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists 'grandparent' as part of the definition of immediate family."
+      },
+      {
+       "text": "You qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "While the customer fits the definition of immediate family, qualification for the fare also requires specific documentation not yet provided and compliance with timing rules not yet established."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 5,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists 'grandparent' as an immediate family member."
+      },
+      {
+       "text": "You qualify for the bereavement fare.",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "The policy requires documentation and the request to be made before travel, but it cannot be determined from the question if the customer meets these conditions."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 6,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists 'grandparent' as an immediate family member."
+      },
+      {
+       "text": "You qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "The clauses describe the eligibility criteria for a bereavement fare, but there is no clause stating that the customer qualifies simply by having a grandparent pass away, as additional documentation i"
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 7,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly includes 'grandparent' in the definition of immediate family."
+      },
+      {
+       "text": "You qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "While the customer qualifies by relation, the clause requires specific documentation and booking procedures that are not confirmed by the user."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 8,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "a grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly includes 'grandparent' in the definition of immediate family."
+      },
+      {
+       "text": "you qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Eligibility depends on providing required documentation and making a timely request, which are not confirmed by the user's question."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 9,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists grandparents as immediate family."
+      },
+      {
+       "text": "You qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "The policy describes eligibility criteria and documentation requirements, but it cannot be confirmed if the customer qualifies without knowing if they can provide the required documentation."
+      }
+     ],
+     "second": []
+    }
+   ]
+  },
+  "B": {
+   "description": "today's code with the inbox's uncovered-sentence functions replaced by tripwires that count calls and raise",
+   "tripwire_calls": 0,
+   "records": [
+    {
+     "id": "ET09",
+     "rep": 0,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed for your ticket.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "Since the ticket was purchased three days ago, it is outside the 24-hour window mentioned in the policy."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy confirms that non-refundable fares can be cancelled prior to flight departure."
+      },
+      {
+       "text": "You can cancel your non-refundable fare for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy explicitly mentions the $100 cancellation fee per passenger for non-refundable tickets after the 24-hour period."
+      },
+      {
+       "text": "The remaining value of your cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy states that the remaining value of a cancelled non-refundable fare is provided as a travel credit."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 1,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer stated they bought the ticket three days ago, which is past the 24-hour window."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "Clause CXL-003 permits cancellation of non-refundable fares before departure."
+      },
+      {
+       "text": "You can cancel for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy explicitly mentions a $100 fee per passenger for non-refundable fare cancellations after 24 hours."
+      },
+      {
+       "text": "The remaining value of a cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "Clause CXL-003 confirms that non-refundable fare cancellations result in a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "This claim accurately summarizes the cancellation policy provided in CXL-003."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 2,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer stated the purchase was three days ago, which exceeds the 24-hour free cancellation window defined in CXL-001."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "CXL-003 explicitly permits cancellation of non-refundable fares before departure."
+      },
+      {
+       "text": "There is a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "CXL-003 specifies the $100 fee for cancelling after the 24-hour window."
+      },
+      {
+       "text": "The remaining value of a cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "CXL-003 states the value is issued as travel credit for non-refundable fares cancelled after 24 hours."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "This claim correctly summarizes the conditions and outcomes provided in CXL-003."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 3,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "NOT_COVERED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "the quoted text does not appear in the cited clause"
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy explicitly allows for non-refundable fares to be cancelled for a $100 fee after the 24-hour period."
+      },
+      {
+       "text": "After cancelling a non-refundable fare, the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms that the remaining value after a cancellation fee is issued as a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim correctly combines the conditions and outcomes provided in the policy for cancelling a non-refundable fare after 24 hours."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 4,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed for your ticket.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer purchased the ticket three days ago, which is beyond the 24-hour free cancellation window."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy allows cancellation of non-refundable fares before departure after the 24-hour period."
+      },
+      {
+       "text": "Canceling your non-refundable fare incurs a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy explicitly states a $100 fee applies for such cancellations."
+      },
+      {
+       "text": "The remaining value of a cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy confirms that the remaining value for cancelled non-refundable fares is provided as travel credit."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 5,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "NOT_COVERED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "the quoted text does not appear in the cited clause"
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly states non-refundable fares can be cancelled before departure after the 24-hour period."
+      },
+      {
+       "text": "Canceling your non-refundable fare costs a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms the $100 fee per passenger for cancelling after the 24-hour window."
+      },
+      {
+       "text": "The remaining value of a cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms the remaining value is provided as a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim accurately synthesizes the conditions provided in clause CXL-003 for cancelling a non-refundable fare after 24 hours."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 6,
+     "decision": "CORRECTED",
+     "reason": "CORRECTED_FROM_CLAUSES",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure.",
+       "verdict": "CONTRADICTED",
+       "llm": "SUPPORTED",
+       "rule": "MISMATCH",
+       "clause": "CXL-003 v1",
+       "reason": "rule check overrides the judge: claim says free; CXL-003 says cancellation_fee_usd=100"
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly allows cancellation before departure for the stated fee."
+      },
+      {
+       "text": "After paying the $100 cancellation fee, the remaining value of the non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause states the remaining value is issued as a travel credit after the fee is applied."
+      }
+     ],
+     "second": [
+      {
+       "text": "After the 24-hour period, a non-refundable fare can be cancelled before departure for a cancellation fee of $100 per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly permits cancellation of non-refundable fares after 24 hours for a $100 fee."
+      },
+      {
+       "text": "After the 24-hour period, a non-refundable fare can be cancelled before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms that cancellation is permitted after the 24-hour window."
+      },
+      {
+       "text": "The remaining value of a cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause states that the remaining value is provided as a travel credit."
+      },
+      {
+       "text": "The remaining value of a cancelled non-refundable fare is not issued as a refund.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause specifies that the credit is not issued as a refund."
+      }
+     ]
+    },
+    {
+     "id": "ET09",
+     "rep": 7,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer purchased the ticket three days ago, which exceeds the 24-hour free cancellation policy."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy allows non-refundable fare cancellations before departure after the 24-hour window."
+      },
+      {
+       "text": "You can cancel your non-refundable fare for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy explicitly mentions the $100 fee for such cancellations."
+      },
+      {
+       "text": "The remaining value of a cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy confirms that the remaining value is provided as a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "This claim accurately summarizes the conditions for cancelling a non-refundable fare after the initial 24-hour period."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 8,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer stated they purchased the ticket three days ago, which is beyond the 24-hour window."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly permits cancellation of non-refundable fares for a $100 fee."
+      },
+      {
+       "text": "The remaining value after the $100 cancellation fee is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause states the remaining value after the fee is issued as a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim accurately summarizes the conditions for post-24-hour cancellations for non-refundable tickets."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 9,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "Since the customer bought the ticket three days ago, the 24-hour period has passed."
+      },
+      {
+       "text": "You can still cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly allows cancellation of non-refundable fares before departure after the 24-hour window."
+      },
+      {
+       "text": "You can cancel your non-refundable fare for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly mentions the $100 cancellation fee."
+      },
+      {
+       "text": "The remaining value of a cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms that the remaining value is issued as a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim correctly combines the conditions and terms for cancelling a non-refundable fare after 24 hours."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 0,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The claim accurately reflects the fee amount stated in MTF-001 and the waiver conditions stated in MTF-002."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 1,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause explicitly states the condition required to waive the maintenance fee."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 2,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The Everyday Checking monthly maintenance fee is $15.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-001 v2",
+       "reason": "The clause confirms the $15 monthly maintenance fee for the Everyday Checking account."
+      },
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause states the exact waiver condition for the monthly maintenance fee."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 3,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause confirms that maintaining a balance of $1,000 waives the monthly maintenance fee mentioned in MTF-001."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 4,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause confirms both the $15 fee amount (established in MTF-001) and the $1,000 balance waiver requirement."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 5,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause explicitly states the waiver condition, and the monthly fee amount is confirmed in a separate clause."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 6,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The claim accurately describes the fee waiver condition provided in clause MTF-002."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 7,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "Clause MTF-002 confirms the waiver condition, and clause MTF-001 confirms the $15 fee amount."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 8,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The claim accurately reflects the waiver criteria and fee amount specified in the clauses."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 9,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "Clause MTF-002 confirms the $1,000 minimum daily balance requirement for the fee waiver, and clause MTF-001 confirms the $15 fee amount."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 0,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "on flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause states small cats can travel in the cabin if they and their carrier weigh 8 kg or less, and the flight duration limit in the claim is not contradicted by the policy."
+      },
+      {
+       "text": "The pet fee is $100 each way",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The policy directly confirms the $100 fee per way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 1,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "on flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms small cats can travel in the cabin if they meet the weight requirement, and the flight duration is within the limits."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the $100 fee each way for pets in the cabin."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 2,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms small cats are allowed in the cabin with a weight limit of 8kg."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the fee is $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 3,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause supports that small cats can travel in the cabin within the stated weight limit."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms the $100 pet fee per way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 4,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin.",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "There is no clause stating that pets are allowed on flights 8 hours or less, only one stating they are not allowed on flights longer than 8 hours."
+      },
+      {
+       "text": "A small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the weight condition for traveling in the cabin."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly mentions the fee for pet travel."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 5,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms the weight limit for small cats in the cabin, and the policy regarding flight duration does not contradict this claim."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the $100 pet fee for each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 6,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "on flights scheduled for 8 hours or less, a small cat can travel in the cabin",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "The policy states restrictions for flights over 8 hours, but does not explicitly state that pets are allowed on flights 8 hours or less."
+      },
+      {
+       "text": "a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The policy explicitly allows small cats in the cabin within the stated weight limit."
+      },
+      {
+       "text": "The pet fee is $100 each way",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The policy defines the pet fee as $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 7,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms that small cats can travel in the cabin if the specified weight limit is met, without restricting it based on flight duration."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the pet fee is $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 8,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "on flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause allows small cats in the cabin with the specified weight limit, and the claim correctly identifies the weight condition."
+      },
+      {
+       "text": "The pet fee is $100 each way",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the pet fee is $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 9,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin.",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "The policy does not explicitly state the rules for flights 8 hours or less, only that pets are prohibited on flights over 8 hours."
+      },
+      {
+       "text": "A small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the weight limit for small cats in the cabin."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause directly mentions the fee for pets."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 0,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family for bereavement fares.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The policy explicitly lists grandparent as immediate family."
+      },
+      {
+       "text": "You qualify for the bereavement fare for the death of your grandmother.",
+       "verdict": "NOT_COVERED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "the quoted text does not appear in the cited clause"
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 1,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family for the bereavement fare.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The policy explicitly lists grandparent as an immediate family member."
+      },
+      {
+       "text": "You qualify for the bereavement fare.",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Eligibility is dependent on documentation and application timing not addressed in the question."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 2,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family for the bereavement fare.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists grandparent as immediate family."
+      },
+      {
+       "text": "You qualify for the bereavement fare.",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "The clauses define eligibility criteria but cannot determine if the specific customer qualifies without the required documentation and booking details."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 3,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists grandparent as a member of the immediate family."
+      },
+      {
+       "text": "You qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "While a grandparent is an eligible relative, the clause requires documentation and does not guarantee qualification based solely on the relationship."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 4,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists grandparent under the definition of immediate family."
+      },
+      {
+       "text": "You qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "While the customer qualifies by familial relationship, the clauses require specific documentation and adherence to procedural rules (like requesting before travel) that the current information is insu"
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 5,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "a grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The policy explicitly lists grandparents as immediate family members."
+      },
+      {
+       "text": "you qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Eligibility depends on providing required documentation which the customer has not yet confirmed they can provide."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 6,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly includes grandparent in the definition of immediate family."
+      },
+      {
+       "text": "You qualify for the bereavement fare.",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Eligibility depends on documentation and requesting the fare before travel, neither of which the question confirms."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 7,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family for the bereavement fare.",
+       "verdict": "NOT_COVERED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "the quoted text does not appear in the cited clause"
+      },
+      {
+       "text": "You qualify for the bereavement fare.",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Eligibility depends on providing documentation, which is not stated in the question."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 8,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family for the bereavement fare.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists 'grandparent' under the definition of immediate family for bereavement fares."
+      },
+      {
+       "text": "You qualify for the bereavement fare for the death of a grandparent.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The policy confirms eligibility for bereavement fares due to the death of an immediate family member, which includes grandparents."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 9,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family for the bereavement fare.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The policy explicitly defines a grandparent as an immediate family member."
+      },
+      {
+       "text": "You qualify for the bereavement fare.",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Qualifying depends on providing documentation and meeting travel requirements which have not been established yet."
+      }
+     ],
+     "second": []
+    }
+   ]
+  },
+  "C": {
+   "description": "the code of the 0be4f60 run",
+   "tripwire_calls": 0,
+   "records": [
+    {
+     "id": "ET09",
+     "rep": 0,
+     "decision": "CORRECTED",
+     "reason": "CORRECTED_FROM_CLAUSES",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure.",
+       "verdict": "CONTRADICTED",
+       "llm": "SUPPORTED",
+       "rule": "MISMATCH",
+       "clause": "CXL-003 v1",
+       "reason": "rule check overrides the judge: claim says free; CXL-003 says cancellation_fee_usd=100"
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly states the $100 cancellation fee requirement for non-refundable tickets."
+      },
+      {
+       "text": "The remaining value after the $100 cancellation fee is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms that the remaining value is provided as a travel credit after the fee is deducted."
+      }
+     ],
+     "second": [
+      {
+       "text": "After the 24-hour period, a non-refundable fare can be cancelled before departure for a cancellation fee of $100 per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim aligns exactly with the policy for non-refundable fares after the 24-hour window."
+      },
+      {
+       "text": "The remaining value after a cancellation fee for a non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly states that the remaining value after the fee is issued as a travel credit."
+      },
+      {
+       "text": "The remaining value after a cancellation fee for a non-refundable fare is not issued as a refund.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause clearly specifies that the remaining value is not issued as a refund."
+      }
+     ]
+    },
+    {
+     "id": "ET09",
+     "rep": 1,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer purchased the ticket three days ago, which exceeds the 24-hour limit."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy allows for the cancellation of non-refundable fares before the departure date."
+      },
+      {
+       "text": "You can cancel your non-refundable fare for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy explicitly specifies a $100 cancellation fee per passenger for non-refundable fares after the 24-hour window."
+      },
+      {
+       "text": "The remaining value after a cancellation fee is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy states that the remaining value after the cancellation fee is provided as a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim accurately synthesizes the policy regarding post-24-hour cancellations for non-refundable tickets."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 2,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The user purchased the ticket three days ago, which is outside the 24-hour window."
+      },
+      {
+       "text": "You can still cancel your non-refundable fare before departure",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy explicitly allows cancellation of non-refundable fares before departure after the 24-hour window."
+      },
+      {
+       "text": "There is a $100 cancellation fee per passenger for non-refundable fares after the 24-hour window",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy mandates a $100 fee for such cancellations."
+      },
+      {
+       "text": "The remaining value of a non-refundable fare after a cancellation fee is issued as a travel credit",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy states the remaining value is provided as a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "This claim accurately summarizes the combined conditions provided in the clause."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 3,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "NOT_COVERED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "the quoted text does not appear in the cited clause"
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy allows for cancellation of non-refundable fares for a $100 fee after the 24-hour window."
+      },
+      {
+       "text": "The remaining value is issued as a travel credit after cancelling your non-refundable fare.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy states that the remaining value after the cancellation fee is issued as a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim correctly combines the policy regarding the cancellation window, the fee, and the form of the returned value."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 4,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "Since the customer purchased the ticket three days ago, the 24-hour period has passed."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy allows cancellation of non-refundable fares before departure after the 24-hour period."
+      },
+      {
+       "text": "Canceling your non-refundable fare costs a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly states the $100 fee per passenger for cancelling non-refundable fares."
+      },
+      {
+       "text": "The remaining value of a canceled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms that the remaining value for such cancellations is issued as a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim correctly combines the provisions for cancellation after the 24-hour window for non-refundable tickets."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 5,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "NOT_COVERED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "the quoted text does not appear in the cited clause"
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy explicitly permits cancellation of non-refundable fares before departure after the 24-hour period."
+      },
+      {
+       "text": "There is a $100 cancellation fee per passenger for non-refundable fares.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause states the exact fee mentioned in the claim."
+      },
+      {
+       "text": "The remaining value after cancellation is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms that the remaining value of a cancelled non-refundable fare is provided as a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim accurately summarizes the combined conditions and outcomes provided in the policy."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 6,
+     "decision": "CORRECTED",
+     "reason": "CORRECTED_FROM_CLAUSES",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure.",
+       "verdict": "CONTRADICTED",
+       "llm": "SUPPORTED",
+       "rule": "MISMATCH",
+       "clause": "CXL-003 v1",
+       "reason": "rule check overrides the judge: claim says free; CXL-003 says cancellation_fee_usd=100"
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause directly supports the $100 cancellation fee for non-refundable tickets after 24 hours."
+      },
+      {
+       "text": "The remaining value after the $100 cancellation fee is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly states that the remaining value is provided as a travel credit."
+      }
+     ],
+     "second": [
+      {
+       "text": "After the 24-hour period, a non-refundable fare can be cancelled before departure for a cancellation fee of $100 per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly allows cancellation of non-refundable fares after 24 hours for a $100 fee."
+      },
+      {
+       "text": "The remaining value is issued as a travel credit, not as a refund.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms that the remaining value is provided as a travel credit."
+      }
+     ]
+    },
+    {
+     "id": "ET09",
+     "rep": 7,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed",
+       "verdict": "NOT_COVERED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "the quoted text does not appear in the cited clause"
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "Clause CXL-003 allows cancellation of non-refundable fares before departure after the initial 24-hour period."
+      },
+      {
+       "text": "You can cancel your non-refundable fare for a $100 cancellation fee per passenger",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "Clause CXL-003 specifies a $100 fee for such cancellations."
+      },
+      {
+       "text": "The remaining value of a cancelled non-refundable fare is issued as a travel credit",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "Clause CXL-003 confirms the remaining value is provided as travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim accurately summarizes the policy for cancelling a non-refundable fare after the 24-hour window."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 8,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "NOT_COVERED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "the quoted text does not appear in the cited clause"
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy confirms non-refundable fares can be cancelled before departure."
+      },
+      {
+       "text": "You can cancel your non-refundable fare for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy explicitly states the $100 fee for cancellations after the 24-hour period."
+      },
+      {
+       "text": "The remaining value of a cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy states the remaining value is issued as a travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim accurately combines the conditions and terms provided in the policy for non-refundable fares after the free cancellation window."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 9,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer bought the ticket three days ago, meaning the 24-hour window has expired."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy confirms non-refundable tickets can be cancelled before departure after the 24-hour period."
+      },
+      {
+       "text": "Canceling your non-refundable fare incurs a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause specifies a $100 cancellation fee for non-refundable fares after the 24-hour window."
+      },
+      {
+       "text": "The remaining value of the cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy states that remaining value for such cancellations is issued as travel credit."
+      },
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure for a $100 cancellation fee per passenger, and the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The claim accurately synthesizes the conditions and consequences stated in the policy."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 0,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The Everyday Checking account has a $15 monthly maintenance fee.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-001 v2",
+       "reason": "The clause explicitly states the $15 monthly maintenance fee for the Everyday Checking account."
+      },
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause confirms that maintaining a minimum daily balance of $1,000 waives the monthly maintenance fee."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 1,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause explicitly states that the monthly maintenance fee is waived if the account maintains a daily balance of at least $1,000, confirming the condition and the amount implied by the claim."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 2,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The claim accurately reflects the waiver condition stipulated in clause MTF-002 and the fee amount mentioned in clause MTF-001."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 3,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-001 v2",
+       "reason": "The claim correctly states the fee amount and the condition for waiver which is described in clause MTF-001 for the amount and MTF-002 for the condition."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 4,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause confirms the waiver conditions, and the fee amount is established in MTF-001."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 5,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause explicitly confirms that the monthly maintenance fee is waived if the account balance remains at or above $1,000."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 6,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The claim correctly states the waiver condition, and the fee amount is supported by clause MTF-001."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 7,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "Clause MTF-002 confirms the waiver condition, and clause MTF-001 confirms the $15 amount."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 8,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause confirms that maintaining a balance of $1,000 waives the monthly maintenance fee, which aligns with the claim."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 9,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause explicitly confirms that the monthly maintenance fee is waived if the minimum daily balance of $1,000 is maintained."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 0,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause allows small cats in the cabin within the stated weight limit."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the $100 fee."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 1,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause allows small cats in the cabin if they weigh 8 kg or less, and the 8-hour restriction mentioned in the claim is not prohibited by any clause."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the pet fee is $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 2,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms that cats weighing no more than 8 kg with their carrier are allowed in the cabin."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the pet fee is $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 3,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms that small cats are permitted in the cabin if the weight is under 8 kg, and there are no flight duration restrictions for 6-hour flights."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the $100 fee for pets."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 4,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms small cats can travel in the cabin given the weight requirement."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the $100 fee."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 5,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms the weight limit for small cats in the cabin, and the claim correctly identifies that the flight duration restriction does not apply to 6-hour flights."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the pet fee is $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 6,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms small cats can travel in the cabin if they meet the weight requirement."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause clearly states the fee is $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 7,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin.",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "No clause explicitly states that cats are permitted on flights 8 hours or less, although the pet policy implies it by restricting long-haul flights."
+      },
+      {
+       "text": "A small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the weight condition for a small cat to travel in the cabin."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause directly specifies the $100 fee per way for pets in the cabin."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 8,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms that small cats are permitted if they meet the weight requirement; the 8-hour flight restriction mentioned in the claim is not restricted by the clauses, as pets are only prohibite"
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the fee for bringing a pet in the cabin."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 9,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms that small cats are allowed in the cabin given the weight constraint of 8kg."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the $100 pet fee per way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 0,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family for the bereavement fare.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists grandparent as an immediate family member."
+      },
+      {
+       "text": "You qualify for the bereavement fare.",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "While the policy defines eligibility for the fare, the documentation requirements and request timing constraints mean we cannot confirm the customer qualifies without further information."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 1,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists a grandparent as an immediate family member."
+      },
+      {
+       "text": "You qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "The claim states the user qualifies, but eligibility requires providing documentation and meeting conditions which are not confirmed in the question."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 2,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The policy explicitly lists 'grandparent' as a member of the immediate family."
+      },
+      {
+       "text": "You qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Eligibility depends on providing required documentation and requesting it before travel, which is not stated in the question."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 3,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly includes grandparents in the definition of immediate family."
+      },
+      {
+       "text": "you qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Qualifying for the fare requires providing documentation (BRV-003) and following timing rules (BRV-002), which the user has not confirmed."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 4,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists grandparent as part of the immediate family."
+      },
+      {
+       "text": "You qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Qualification depends on providing documentation and requesting the fare prior to travel, which is not yet established."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 5,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists grandparent as immediate family."
+      },
+      {
+       "text": "you qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "While the customer is eligible based on relationship, they have not yet met the documentation or booking requirements specified in the other clauses."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 6,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family for the bereavement fare",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The policy explicitly lists grandparent as an immediate family member."
+      },
+      {
+       "text": "You qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Eligibility depends on specific documentation and timing requirements not confirmed in the question."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 7,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family for the bereavement fare.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists grandparent as immediate family."
+      },
+      {
+       "text": "You qualify for the bereavement fare.",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Eligibility depends on providing required documentation, which is not stated by the customer."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 8,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "a grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly defines a grandparent as immediate family."
+      },
+      {
+       "text": "you qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Eligibility depends on providing documentation and requesting the fare according to other policy rules, which are not confirmed by the customer's question."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 9,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family for the bereavement fare.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The policy explicitly lists grandparent as immediate family for bereavement fare eligibility."
+      },
+      {
+       "text": "You qualify for the bereavement fare as a grandparent counts as immediate family.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The policy lists grandparent as immediate family, making the customer eligible provided they meet other documentation requirements."
+      }
+     ],
+     "second": []
+    }
+   ]
+  },
+  "D": {
+   "description": "today's code with the premise-sentence rule of 822608e turned off",
+   "tripwire_calls": 0,
+   "records": [
+    {
+     "id": "ET09",
+     "rep": 0,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer stated they bought the ticket three days ago, which is past the 24-hour window specified in the policy."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy confirms non-refundable fares can be cancelled before departure after the 24-hour period."
+      },
+      {
+       "text": "You can cancel your non-refundable fare for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy specifies a $100 cancellation fee per passenger for non-refundable fares after the 24-hour window."
+      },
+      {
+       "text": "The remaining value of a non-refundable fare after cancellation is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy states that after the 24-hour window, the value of the cancelled non-refundable ticket is provided as travel credit."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 1,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer purchased their ticket three days ago, which is beyond the 24-hour window."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy explicitly allows cancellation of non-refundable fares before departure after the 24-hour period."
+      },
+      {
+       "text": "You can cancel your non-refundable fare for a $100 cancellation fee per passenger",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause specifies the exact fee amount mentioned in the claim."
+      },
+      {
+       "text": "The remaining value of the non-refundable fare is issued as a travel credit upon cancellation",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms that the residual value is provided as travel credit after the fee is deducted."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 2,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer stated the purchase was three days ago, which exceeds the 24-hour limit."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly allows cancellation of non-refundable fares before departure after the 24-hour window."
+      },
+      {
+       "text": "The cancellation fee is $100 per passenger for your non-refundable fare.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause specifies the cancellation fee is $100 per passenger for non-refundable fares."
+      },
+      {
+       "text": "The remaining value of the non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause states the remaining value is issued as a travel credit for such cancellations."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 3,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer purchased the ticket three days ago, which exceeds the 24-hour limit."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy allows cancellation of non-refundable fares before departure after the 24-hour window."
+      },
+      {
+       "text": "There is a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy explicitly states a $100 fee per passenger for cancelling after 24 hours."
+      },
+      {
+       "text": "The remaining value of your non-refundable fare is issued as a travel credit after cancellation.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy confirms that the remaining value for such cancellations is issued as travel credit."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 4,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed for your ticket.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer purchased the ticket three days ago, which is outside the 24-hour window specified in the policy."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy confirms that non-refundable fares can be cancelled for a $100 fee after the initial 24-hour window."
+      },
+      {
+       "text": "After cancelling your non-refundable fare, the remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy explicitly states that after the fee is deducted, the remaining value is provided as a travel credit."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 5,
+     "decision": "CORRECTED",
+     "reason": "CORRECTED_FROM_CLAUSES",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "CONTRADICTED",
+       "llm": "SUPPORTED",
+       "rule": "MISMATCH",
+       "clause": "CXL-003 v1",
+       "reason": "rule check overrides the judge: claim says free; CXL-003 says cancellation_fee_usd=100"
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy allows cancellation of non-refundable fares before departure after the initial 24-hour window."
+      },
+      {
+       "text": "Cancelling your non-refundable fare incurs a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly states a $100 cancellation fee per passenger for non-refundable fares cancelled after the 24-hour period."
+      },
+      {
+       "text": "The remaining value after the cancellation fee is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms that the remaining value is provided as travel credit."
+      }
+     ],
+     "second": [
+      {
+       "text": "You may cancel your non-refundable fare before departure for a cancellation fee of $100 per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly permits cancellation of non-refundable fares for a $100 fee after the 24-hour period."
+      },
+      {
+       "text": "The remaining value will be issued as a travel credit rather than a refund.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms that the remaining value for such cancellations is issued as a travel credit."
+      }
+     ]
+    },
+    {
+     "id": "ET09",
+     "rep": 6,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed for your ticket.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer purchased the ticket three days ago, which exceeds the 24-hour window specified in the policy."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy explicitly allows non-refundable fare cancellations before departure after the initial 24-hour period."
+      },
+      {
+       "text": "You can cancel your non-refundable fare for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy confirms the $100 fee for cancelling non-refundable fares after the 24-hour period."
+      },
+      {
+       "text": "The remaining value of your cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy specifies that the remaining value for such cancellations is provided as a travel credit."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 7,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer bought the ticket three days ago, which is outside the 24-hour window specified in the clause."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly allows for the cancellation of non-refundable fares before departure after the 24-hour window."
+      },
+      {
+       "text": "You pay a $100 cancellation fee per passenger for non-refundable fares after the 24-hour window.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms the $100 fee for non-refundable fares after the 24-hour period."
+      },
+      {
+       "text": "The remaining value of a cancelled non-refundable fare is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause states that the remaining value for such cancellations is issued as a travel credit."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET09",
+     "rep": 8,
+     "decision": "CORRECTED",
+     "reason": "CORRECTED_FROM_CLAUSES",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "Since the 24-hour free cancellation period has passed, you can still cancel your non-refundable fare before departure.",
+       "verdict": "CONTRADICTED",
+       "llm": "SUPPORTED",
+       "rule": "MISMATCH",
+       "clause": "CXL-003 v1",
+       "reason": "rule check overrides the judge: claim says free; CXL-003 says cancellation_fee_usd=100"
+      },
+      {
+       "text": "You can cancel your non-refundable fare for a $100 cancellation fee per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy explicitly states the $100 fee for cancelling non-refundable fares after 24 hours."
+      },
+      {
+       "text": "The remaining value after the cancellation fee is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy confirms that the remaining value is provided as a travel credit."
+      }
+     ],
+     "second": [
+      {
+       "text": "After the 24-hour period, a non-refundable fare can be cancelled before departure.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause explicitly confirms that non-refundable fares can be cancelled after the 24-hour period."
+      },
+      {
+       "text": "A non-refundable fare can be cancelled before departure for a cancellation fee of $100 per passenger.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The clause confirms cancellation is permitted subject to a $100 fee."
+      },
+      {
+       "text": "The remaining value is issued as a travel credit.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause states the remaining value is provided as a travel credit."
+      },
+      {
+       "text": "The remaining value is not issued as a refund.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The clause specifies the value is not issued as a refund."
+      }
+     ]
+    },
+    {
+     "id": "ET09",
+     "rep": 9,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The 24-hour free cancellation period has passed",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-001 v1",
+       "reason": "The customer bought the ticket three days ago, which exceeds the 24-hour free cancellation window."
+      },
+      {
+       "text": "You can cancel your non-refundable fare before departure",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "CXL-003 v1",
+       "reason": "The policy allows cancellation of non-refundable fares before departure after the initial 24-hour period."
+      },
+      {
+       "text": "The cancellation fee is $100 per passenger",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy explicitly specifies a $100 cancellation fee per passenger for non-refundable fares after the 24-hour period."
+      },
+      {
+       "text": "The remaining value after the $100 cancellation fee is issued as a travel credit",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "CXL-003 v1",
+       "reason": "The policy confirms that the residual value after the fee is deducted is provided as a travel credit."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 0,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee for Everyday Checking is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause explicitly confirms the waiver condition for the $15 monthly maintenance fee stated in the claim."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 1,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause confirms that the fee is waived if the account keeps a minimum daily balance of at least $1,000, and the fee amount is confirmed by clause MTF-001."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 2,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause confirms the waiver condition and the minimum balance amount, and the maintenance fee amount is confirmed in a separate clause."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 3,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause confirms that maintaining a minimum daily balance of $1,000 waives the fee, while the fee amount itself is confirmed in another clause."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 4,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "Clause MTF-002 confirms the waiver condition, and the monthly fee amount is confirmed in clause MTF-001."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 5,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause explicitly states the waiver condition, and the monthly fee amount is confirmed in clause MTF-001."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 6,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "Clause MTF-002 confirms the waiver condition, and Clause MTF-001 confirms the fee amount."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 7,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The Everyday Checking monthly maintenance fee is $15.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-001 v2",
+       "reason": "The clause confirms the $15 fee for the Everyday Checking account."
+      },
+      {
+       "text": "The $15 monthly maintenance fee for Everyday Checking is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause confirms the condition for the fee waiver."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 8,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause confirms the $1,000 minimum balance requirement and implies the fee amount exists, while the $15 fee is confirmed in MTF-001."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET12",
+     "rep": 9,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "The $15 monthly maintenance fee is waived for any statement period in which you keep a minimum daily balance of at least $1,000.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "MTF-002 v2",
+       "reason": "The clause clearly states the waiver condition and matches the fee amount mentioned in clause MTF-001."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 0,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms small cats may travel in the cabin under the 8 kg weight limit."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the pet fee is $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 1,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms the weight limit for cats in the cabin."
+      },
+      {
+       "text": "The pet fee is $100 each way",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the fee for pets in the cabin."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 2,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "on flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms the weight and cabin travel allowance for small cats."
+      },
+      {
+       "text": "The pet fee is $100 each way",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the pet fee is $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 3,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause states the weight limit and permission for cats in the cabin, and there is no restriction for flights under 8 hours."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the $100 pet fee for the cabin."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 4,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause allows small cats in the cabin provided the pet and carrier weigh no more than 8 kg, and there is no restriction for 6-hour flights."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the $100 fee per way for pets in the cabin."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 5,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause permits small cats in the cabin with a weight limit of 8 kg, and the flight duration limit does not contradict the 6-hour flight duration."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The fee amount matches the policy clause exactly."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 6,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "on flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause allows cats under 8kg in the cabin, and the flight duration limit in the claim is consistent with the lack of prohibition for shorter flights."
+      },
+      {
+       "text": "The pet fee is $100 each way",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The claim exactly matches the policy regarding the pet fee."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 7,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "NOT_APPLICABLE",
+       "clause": "PET-001 v1",
+       "reason": "The clause permits small cats to travel in the cabin, and the 6-hour flight duration is within the accepted limits for pets."
+      },
+      {
+       "text": "the pet and its carrier together must weigh no more than 8 kg to travel in the cabin",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the weight limit of 8 kg for the pet and carrier together."
+      },
+      {
+       "text": "The pet fee is $100 each way",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause confirms the $100 fee for pet travel."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 8,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "On flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause allows small cats in the cabin within the weight limit, and does not restrict this by flight duration."
+      },
+      {
+       "text": "The pet fee is $100 each way.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the pet fee is $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "ET14",
+     "rep": 9,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "on flights scheduled for 8 hours or less, a small cat can travel in the cabin if the pet and its carrier together weigh no more than 8 kg",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause allows small cats in the cabin within the weight limit specified."
+      },
+      {
+       "text": "The pet fee is $100 each way",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "PET-001 v1",
+       "reason": "The clause explicitly states the pet fee is $100 each way."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 0,
+     "decision": "PASS",
+     "reason": "ALL_SUPPORTED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family for the bereavement fare.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly includes grandparent in its definition of immediate family."
+      },
+      {
+       "text": "You qualify for the bereavement fare for the death of a grandparent.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "Since a grandparent is defined as immediate family, the customer qualifies based on the provided policy."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 1,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly includes grandparent in the definition of immediate family."
+      },
+      {
+       "text": "You qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "The clauses define eligibility criteria but do not determine if this specific customer qualifies as it depends on them providing the required documentation and booking correctly."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 2,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists grandparent as a member of the immediate family."
+      },
+      {
+       "text": "You qualify for the bereavement fare.",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Qualification depends on providing specific documentation and meeting conditions, which are not established by the customer's question."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 3,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The policy explicitly lists grandparent as an immediate family member."
+      },
+      {
+       "text": "You qualify for the bereavement fare.",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Qualification depends on providing required documentation and requesting the fare before travel, which is not established in the question."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 4,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "a grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The policy explicitly lists a grandparent as a member of the immediate family."
+      },
+      {
+       "text": "you qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Eligibility depends on providing required documentation as specified in BRV-003, which is not addressed in the claim."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 5,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "a grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists grandparent as a member of the immediate family."
+      },
+      {
+       "text": "you qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "While a grandparent qualifies as immediate family, the policy requires specific documentation and requests before travel, which cannot be verified with the information provided."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 6,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists grandparent as an immediate family member."
+      },
+      {
+       "text": "You qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "The clauses provide eligibility criteria but cannot confirm if the specific customer qualifies without verifying if they meet the documentation and procedural requirements."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 7,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly lists grandparent as part of the immediate family definition."
+      },
+      {
+       "text": "You qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Eligibility depends on documentation and requesting the fare before travel, which is not established for this customer."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 8,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The clause explicitly defines a grandparent as an immediate family member."
+      },
+      {
+       "text": "You qualify for the bereavement fare",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Eligibility depends on documentation not yet provided, so it cannot be confirmed if the customer qualifies."
+      }
+     ],
+     "second": []
+    },
+    {
+     "id": "L10",
+     "rep": 9,
+     "decision": "ESCALATED",
+     "reason": "NOT_COVERED",
+     "error": null,
+     "unchecked": [],
+     "first": [
+      {
+       "text": "A grandparent counts as immediate family.",
+       "verdict": "SUPPORTED",
+       "llm": "SUPPORTED",
+       "rule": "MATCH",
+       "clause": "BRV-001 v1",
+       "reason": "The policy explicitly lists grandparent as an immediate family member."
+      },
+      {
+       "text": "You qualify for the bereavement fare.",
+       "verdict": "NOT_COVERED",
+       "llm": "NOT_COVERED",
+       "rule": "NOT_APPLICABLE",
+       "clause": null,
+       "reason": "Qualification depends on providing documentation and requesting the fare before travel, which is not confirmed for this customer."
+      }
+     ],
+     "second": []
+    }
+   ]
+  }
+ }
+}

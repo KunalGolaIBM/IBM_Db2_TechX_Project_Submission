@@ -1,0 +1,206 @@
+# AsOf CI. Lives in submissions/asof/.github so it runs in the standalone repository
+# (github.com/JustJay7/asof), where this folder is the root. It does nothing in the hackathon
+# submission repository, whose own workflow validates every submission folder.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'pr' || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}  # every push to main runs to the end
+
+env:
+  PYTHONUNBUFFERED: "1"
+  HF_HUB_DISABLE_TELEMETRY: "1"
+
+jobs:
+  quality:
+    name: Lint, unit tests, secret check, dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - name: Install (CPU-only torch, everything else pinned by requirements.lock)
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt -c requirements.lock
+          pip install -e . --no-deps
+          pip install -r requirements-dev.txt
+      - name: Langflow component tests (own virtualenv; Langflow pins its own LangChain)
+        run: |
+          python -m venv /tmp/lf-venv
+          /tmp/lf-venv/bin/pip install -q -r langflow/requirements-langflow.txt
+          /tmp/lf-venv/bin/python -m pytest -q langflow/tests -p no:cacheprovider
+      - name: MCP server tests, mypy --strict and dependency audit (own virtualenv; MCP SDK and httpx only)
+        run: |
+          python -m venv /tmp/mcp-venv
+          /tmp/mcp-venv/bin/pip install -q -r mcp_server/requirements-mcp.txt pip-audit==2.10.1 mypy==2.4.0
+          /tmp/mcp-venv/bin/python -m pytest -q mcp_server/tests -p no:cacheprovider
+          /tmp/mcp-venv/bin/mypy --strict mcp_server/asof_mcp.py
+          /tmp/mcp-venv/bin/pip-audit -r mcp_server/requirements-mcp.txt --progress-spinner off
+      - name: Lint (ruff, including its SQL-injection rule)
+        run: ruff check .
+      - name: Type check (mypy, strict except the glue modules listed in pyproject.toml)
+        run: mypy
+      - name: Secret check over every tracked file
+        run: python scripts/check_secrets.py --all
+      - name: Dependency audit (pip-audit over all locked packages)
+        run: python scripts/audit_deps.py
+      - name: Unit tests (no database)
+        run: pytest -q -m "not db2"
+      - name: watsonx.ai packages (optional extra) install cleanly, pass pip check and pip-audit, and match the API AsOf calls
+        run: |
+          python -m venv /tmp/wx-venv
+          /tmp/wx-venv/bin/pip install -q torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
+          /tmp/wx-venv/bin/pip install -q -r requirements.txt -r requirements-watsonx.txt -c requirements.lock -r requirements-dev.txt
+          /tmp/wx-venv/bin/pip install -q -e . --no-deps
+          /tmp/wx-venv/bin/pip check
+          # Exact installed pins, audited as pinned (no re-resolution: the CPU-only torch wheel is not on PyPI;
+          # torch itself is audited through requirements.lock by the step above).
+          /tmp/wx-venv/bin/pip freeze --exclude-editable | grep -v '^torch==' > /tmp/wx-freeze.txt
+          /tmp/wx-venv/bin/pip-audit -r /tmp/wx-freeze.txt --no-deps --disable-pip --strict --progress-spinner off
+          /tmp/wx-venv/bin/python -m pytest -q tests/test_watsonx.py -m "not db2" -p no:cacheprovider
+
+  db2:
+    name: Db2 integration on x86 Linux (IBM's stock image, README path B)
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - name: Cache the embedding model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-all-MiniLM-L6-v2
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt -c requirements.lock
+          pip install -e . --no-deps
+          pip install -r requirements-dev.txt
+      - name: Configure (.env from .env.example, random owner password)
+        run: |
+          cp .env.example .env
+          PW="$(python -c 'import secrets; print(secrets.token_hex(12))')"
+          echo "::add-mask::$PW"
+          sed -i "s/^DB2_PASSWORD=.*/DB2_PASSWORD=$PW/" .env
+          sed -i "s/^OPENROUTER_API_KEY=.*/OPENROUTER_API_KEY=/" .env
+      - name: Start Db2 exactly as README path B does
+        run: |
+          docker run -itd --name db2server --privileged=true -p 127.0.0.1:50000:50000 -p 127.0.0.1:50001:50001 \
+            -e LICENSE=accept -e DBNAME=testdb \
+            -e DB2INST1_PASSWORD="$(sed -n 's/^DB2_PASSWORD=//p' .env)" \
+            -v db2data:/database icr.io/db2_community/db2:12.1.5.0
+      # IBM's entrypoint creates testdb, then enables LOGARCHMETH1, restarts Db2 and takes a backup,
+      # so a first successful connect is not the end of setup (a run once raced that restart). Wait
+      # for its "Setup has completed" line, as README path B says, and then for a connect.
+      - name: Wait until IBM's setup has completed and testdb accepts connections (up to 30 minutes)
+        run: |
+          for i in $(seq 1 120); do
+            if docker logs db2server 2>&1 | grep -q "Setup has completed" && \
+               docker exec db2server su - db2inst1 -c "db2 connect to testdb > /dev/null && db2 terminate > /dev/null"; then
+              echo "Db2 ready after $((i * 15)) s"; exit 0
+            fi
+            sleep 15
+          done
+          docker logs db2server | tail -80
+          exit 1
+      # The suite installs and drops about a hundred throwaway schemas. Under IBM's archive logging the active log
+      # filled three times (SQL0964C), and Db2 said why: ADM1822W, the log held by dirty pages not yet written, which
+      # Db2 lets age up to PAGE_AGE_TRGT_MCR (240 s) before the page cleaners must write them. A 30 s target keeps the
+      # log moving, and more secondary files absorb a burst; the page target applies after a reactivation, done here
+      # before anything connects. (CLP exit 2 is a warning: SQL1363W, applied at the next activation.)
+      - name: Keep testdb's transaction log moving under the suite's throwaway schemas
+        run: |
+          docker exec db2server su - db2inst1 -c "db2 connect to testdb > /dev/null; db2 update db cfg for testdb using LOGSECOND 100 PAGE_AGE_TRGT_MCR 30; rc=\$?; db2 terminate > /dev/null; [ \$rc -le 2 ]"
+          docker exec db2server su - db2inst1 -c "db2 deactivate db testdb; db2 activate db testdb; rc=\$?; [ \$rc -le 2 ]"
+          docker exec db2server su - db2inst1 -c "db2 get db cfg for testdb | grep -E 'LOGSECOND|PAGE_AGE_TRGT_MCR'"
+      - name: Db2 feature check
+        run: python -m asof.db2check
+      - name: Setup (schema, users in the container, seed, grants, self-check)
+        run: python -m asof.setup
+      - name: Turn on TLS in Db2 (self-signed, port 50001), so the TLS tests run too
+        run: DB2_CONTAINER=db2server scripts/enable_db2_tls.sh
+      - name: All tests, including Db2 integration, TLS and the backup drill (online BACKUP, RESTORE into a new database)
+        run: |
+          set -o pipefail
+          ASOF_RUN_BACKUP_TESTS=1 pytest -q -rs --cov=asof --cov-report=term --cov-fail-under=78 | tee /tmp/pytest.log
+          if grep -q "TLS not enabled" /tmp/pytest.log; then echo "TLS tests were skipped"; exit 1; fi
+      - name: Access plans for the hot queries
+        run: python -m asof.explain
+      - name: dbt marts and their audit tests (own virtualenv; ibm-dbt-db2 pins ibm_db 3.2.8)
+        run: |
+          python -m venv /tmp/dbt-venv
+          /tmp/dbt-venv/bin/pip install -q -r dbt/requirements-dbt.txt
+          export ASOF_MART_PASSWORD="$(sed -n 's/^ASOF_MART_PASSWORD=//p' .env)"
+          cd dbt && DBT_PROFILES_DIR=. DBT_SEND_ANONYMOUS_USAGE_STATS=False /tmp/dbt-venv/bin/dbt build
+      - name: Airflow nightly audit DAG (own virtualenv; tests, then a real run against Db2)
+        run: |
+          python -m venv /tmp/af-venv
+          /tmp/af-venv/bin/pip install -q -r airflow/requirements-airflow.txt
+          APP_PW="$(sed -n 's/^ASOF_APP_PASSWORD=//p' .env)"
+          echo "::add-mask::$APP_PW"
+          export AIRFLOW_HOME=/tmp/af-home AIRFLOW__CORE__LOAD_EXAMPLES=False AIRFLOW__CORE__DAGS_FOLDER="$PWD/airflow/dags"
+          export AIRFLOW_CONN_ASOF_DB2_APP="{\"conn_type\": \"ibmdb2\", \"host\": \"localhost\", \"port\": 50000, \"schema\": \"testdb\", \"login\": \"asofapp\", \"password\": \"$APP_PW\"}"
+          /tmp/af-venv/bin/pytest -q airflow/tests -p no:cacheprovider
+          /tmp/af-venv/bin/airflow db migrate > /dev/null
+          /tmp/af-venv/bin/airflow dags test asof_nightly_audit > /tmp/dag-run.log 2>&1 || true
+          grep -E "VERIFY_CHAIN:|nightly audit:" /tmp/dag-run.log | tail -3
+          grep -q "state=success" /tmp/dag-run.log
+      - name: Db2 logs on failure
+        if: failure()
+        run: |
+          docker logs db2server 2>&1 | tail -150
+          df -h / || true
+          docker exec db2server su - db2inst1 -c "db2 get db cfg for testdb | grep -i -E 'LOGFILSIZ|LOGPRIMARY|LOGSECOND|LOGARCHMETH1|NUM_LOG_SPAN'" || true
+          # A full log names the application holding it (ADM1823E); the tail is usually archive messages.
+          docker exec db2server bash -c 'grep -B4 -A12 -E "ADM1823E|ADM1822W|SQL0964" /database/config/db2inst1/sqllib/db2dump/DIAG0000/db2diag.log | tail -80' || true
+          docker exec db2server bash -c 'grep -v -E "ADM184[46]I|sqlpgArchiveLogFile|archive for log file" /database/config/db2inst1/sqllib/db2dump/DIAG0000/db2diag.log | tail -120' || true
+
+  quickstart:
+    name: One-command quick start on a bare runner (./quickstart.sh, Compose path)
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: ./quickstart.sh --no-serve (no .env, no Db2 yet)
+        run: ./quickstart.sh --no-serve
+      - name: The app answers from Db2
+        run: |
+          .venv/bin/python src/main.py --port 8000 > /tmp/app.log 2>&1 &
+          for i in $(seq 1 40); do curl -sf localhost:8000/healthz > /dev/null && break; sleep 3; done
+          curl -sf localhost:8000/healthz
+          test "$(curl -sf localhost:8000/api/policy/timeline | python -c 'import json,sys; print(len(json.load(sys.stdin)))')" = 53  # 52 airline and bank clauses + the Indian Railways CAN-001
+          curl -sf localhost:8000/api/chain/verify
+      - name: A real check end to end with no key (replay mode, which quickstart picked)
+        run: |
+          grep -q '^LLM_PROVIDER=replay$' .env
+          .venv/bin/python scripts/smoke_check.py http://127.0.0.1:8000
+      - name: Logs on failure
+        if: failure()
+        run: |
+          tail -80 /tmp/app.log || true
+          docker logs asof-db2 2>&1 | tail -80 || true
+

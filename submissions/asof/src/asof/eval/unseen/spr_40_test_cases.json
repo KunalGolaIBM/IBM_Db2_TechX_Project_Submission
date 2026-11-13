@@ -1,0 +1,322 @@
+[
+  {
+    "id": "R01",
+    "customer_question": "I bought a confirmed 2A ticket on 30 April for INR 1,000 base fare. I cancel exactly 48 hours before scheduled departure. What comes back?",
+    "customer_date": "2026-04-30",
+    "assistant_draft": "Your base-fare refund is INR 800; the INR 20 booking fee remains non-refundable.",
+    "label": "correct",
+    "reason": "v1 P-01, P-03 (T=48 included in >=48; 2A charge INR 200), P-04."
+  },
+  {
+    "id": "R02",
+    "customer_question": "I booked a confirmed 2A ticket on 1 May for INR 1,000 base fare and cancel exactly 36 hours before departure.",
+    "customer_date": "2026-05-01",
+    "assistant_draft": "You receive INR 800 of base fare after a INR 200 cancellation charge.",
+    "label": "wrong",
+    "reason": "v2 P-01, P-03: >=36-hour 2A charge INR 220, so refund INR 780; INR 200 is the v1 figure."
+  },
+  {
+    "id": "R03",
+    "customer_question": "My SL ticket was booked on 31 August, base fare INR 800, cancelled exactly 10 hours before departure.",
+    "customer_date": "2026-08-31",
+    "assistant_draft": "The cancellation charge is INR 70 and the base-fare refund is INR 730.",
+    "label": "correct",
+    "reason": "v2 P-03: exactly 10 hours falls into 10<=T<36, SL charge INR 70, refund INR 730."
+  },
+  {
+    "id": "R04",
+    "customer_question": "A confirmed SL base fare INR 800 booked on 1 September is cancelled exactly 8 hours before departure.",
+    "customer_date": "2026-09-01",
+    "assistant_draft": "SPR deducts INR 80, so INR 720 of base fare is refunded.",
+    "label": "correct",
+    "reason": "v3 P-01, P-03: T=8 falls into 8<=T<24, SL charge INR 80."
+  },
+  {
+    "id": "R05",
+    "customer_question": "A confirmed 1A ticket, INR 2,000 base fare, booked 31 August is cancelled 2 hours 59 minutes before scheduled departure.",
+    "customer_date": "2026-08-31",
+    "assistant_draft": "A 50% charge applies, so you get INR 1,000 back.",
+    "label": "wrong",
+    "reason": "v2 P-03: T<3 hours gives no voluntary base-fare refund, not the 3<=T<10 50% charge."
+  },
+  {
+    "id": "R06",
+    "customer_question": "A confirmed 1A ticket, INR 2,000 base fare, bought 1 September is cancelled exactly 2 hours before departure.",
+    "customer_date": "2026-09-01",
+    "assistant_draft": "You get INR 800 back after a 60% deduction.",
+    "label": "correct",
+    "reason": "v3 P-03: T=2 is included in the 2<=T<8 60% charge window."
+  },
+  {
+    "id": "R07",
+    "customer_question": "I booked 2S with INR 500 base fare on 1 January, cancelling 12 hours before the train.",
+    "customer_date": "2026-01-01",
+    "assistant_draft": "The charge is INR 60 and the base-fare refund is INR 440.",
+    "label": "wrong",
+    "reason": "v1 P-03: T=12 is in the middle 12<=T<48 band, 2S charge INR 30, refund INR 470; INR 60 belongs to >=48h."
+  },
+  {
+    "id": "R08",
+    "customer_question": "I booked 2S for INR 500 on 30 April, but I cancel on 2 May, 40 hours before departure.",
+    "customer_date": "2026-04-30",
+    "assistant_draft": "The new May policy applies since you are cancelling after 1 May, so the charge is INR 70.",
+    "label": "wrong",
+    "reason": "v1 P-01: booking date governs, so T=40 lies 12<=T<48, 2S charge INR 30; cancellation date irrelevant."
+  },
+  {
+    "id": "R09",
+    "customer_question": "My 2S booking was purchased on 1 May for INR 500 and I cancel 40 hours out.",
+    "customer_date": "2026-05-01",
+    "assistant_draft": "You owe a INR 60 cancellation charge and get INR 440 of base fare back.",
+    "label": "wrong",
+    "reason": "v2 P-03: >=36 hours, 2S charge INR 70; INR 60 was v1. Actual refund INR 430."
+  },
+  {
+    "id": "R10",
+    "customer_question": "Booked 2A on 31 August, INR 1,500 base fare. I cancel exactly 3 hours before departure.",
+    "customer_date": "2026-08-31",
+    "assistant_draft": "There is no refund since the 3-hour limit is already reached.",
+    "label": "wrong",
+    "reason": "v2 P-03: at exactly 3 hours, the 3<=T<10 band still applies; 50% charge INR 750 and refund INR 750."
+  },
+  {
+    "id": "R11",
+    "customer_question": "Booked 2A on 1 September, fare INR 1,500, cancel exactly 24 hours out.",
+    "customer_date": "2026-09-01",
+    "assistant_draft": "The flat cancellation charge is INR 240, so the base-fare refund is INR 1,260.",
+    "label": "correct",
+    "reason": "v3 P-03: 2A first band starts at 24 hours; fee retained per P-04."
+  },
+  {
+    "id": "R12",
+    "customer_question": "I bought Premium QuickBook confirmed 1A on 30 April, fare INR 4,000. I cancel 8 days before departure.",
+    "customer_date": "2026-04-30",
+    "assistant_draft": "You get INR 3,760 because early cancellations only cost INR 240.",
+    "label": "wrong",
+    "reason": "v1 P-05 overrides v1 P-03: confirmed PQ voluntary tickets receive no base-fare refund regardless of lead time."
+  },
+  {
+    "id": "R13",
+    "customer_question": "My confirmed PQ ticket bought 1 May has base fare INR 2,000. I cancel exactly 36 hours out.",
+    "customer_date": "2026-05-01",
+    "assistant_draft": "SPR returns INR 1,400 in base fare; the INR 25 PNR fee is retained.",
+    "label": "correct",
+    "reason": "v2 P-05: PQ at >=36 hours pays 30% charge = INR 600; P-04 retains INR 25."
+  },
+  {
+    "id": "R14",
+    "customer_question": "A confirmed PQ booking made 31 August is cancelled 35h59m before departure, fare INR 2,000.",
+    "customer_date": "2026-08-31",
+    "assistant_draft": "Because this is close to the 36-hour boundary, only a 30% premium charge is deducted.",
+    "label": "wrong",
+    "reason": "v2 P-05: T<36 hours is non-refundable; no grace period or rounding."
+  },
+  {
+    "id": "R15",
+    "customer_question": "My confirmed PQ fare is INR 2,000, booked on 1 September, cancellation exactly 24 hours before train.",
+    "customer_date": "2026-09-01",
+    "assistant_draft": "Your base-fare refund is INR 1,300 after a 35% PQ charge.",
+    "label": "correct",
+    "reason": "v3 P-05: >=24h 35% charge on INR 2,000 = INR 700."
+  },
+  {
+    "id": "R16",
+    "customer_question": "I booked confirmed PQ on 31 August and cancel on 2 September, exactly 30 hours before departure. Fare INR 2,000.",
+    "customer_date": "2026-08-31",
+    "assistant_draft": "The September premium rule gives you a 65% refund, INR 1,300.",
+    "label": "wrong",
+    "reason": "v2 P-01/P-05: booking in August fixes v2, which makes PQ cancellations under 36h non-refundable; v3 cannot apply."
+  },
+  {
+    "id": "R17",
+    "customer_question": "My v1 waitlisted 2A ticket is still waitlisted when I cancel 48 hours ahead, base fare INR 1,000.",
+    "customer_date": "2026-01-01",
+    "assistant_draft": "You receive INR 980 of base fare after INR 20 clerkage, and the booking fee is not returned.",
+    "label": "correct",
+    "reason": "v1 P-06: waitlisted clerkage INR 20 and no class-based cancellation; P-04."
+  },
+  {
+    "id": "R18",
+    "customer_question": "My booking on 1 May is still waitlisted, base fare INR 900, I cancel 2 hours before departure.",
+    "customer_date": "2026-05-01",
+    "assistant_draft": "You can self-cancel now and collect INR 875, less INR 25 clerkage.",
+    "label": "wrong",
+    "reason": "v2 P-06: self-cancellation closed at T<3; if still waitlisted at departure it is automatically refunded INR 875, but that is not an available voluntary cancellation now."
+  },
+  {
+    "id": "R19",
+    "customer_question": "I booked waitlist on 1 September, INR 900 base fare. I am still waitlisted at scheduled departure and never submitted cancellation.",
+    "customer_date": "2026-09-01",
+    "assistant_draft": "The automatic base-fare refund is INR 870 and the INR 30 booking fee stays non-refundable.",
+    "label": "correct",
+    "reason": "v3 P-06: automatic final-waitlist refund minus INR 30 clerkage, no cancellation request required."
+  },
+  {
+    "id": "R20",
+    "customer_question": "I booked 2A waitlist on 31 August, but it became confirmed before I cancelled 12h ahead. Fare INR 1,000.",
+    "customer_date": "2026-08-31",
+    "assistant_draft": "You are charged only the INR 25 waitlist clerkage, because you originally booked waitlist.",
+    "label": "wrong",
+    "reason": "v2 P-02/P-06: use status at request; confirmed 2A T=12 has INR 110 charge under P-03, base-fare refund INR 890."
+  },
+  {
+    "id": "R21",
+    "customer_question": "Three people share a PNR booked April 30. We want to cancel only one confirmed SL passenger 55h ahead; their base fare is INR 700. Two stay.",
+    "customer_date": "2026-04-30",
+    "assistant_draft": "Partial cancellation is valid; the passenger gets INR 580 of base fare, but a new INR 20 partial-cancellation processing fee is also charged.",
+    "label": "wrong",
+    "reason": "v1 P-07: partial cancellation eligible and INR 580 base-fare refund, but P-04 explicitly prohibits an additional processing fee; original INR 20 fee is only collected once."
+  },
+  {
+    "id": "R22",
+    "customer_question": "Two people are on one PNR booked April 30. One wants to cancel a 2A passenger 60h ahead.",
+    "customer_date": "2026-04-30",
+    "assistant_draft": "That partial cancellation is supported because one passenger remains on the PNR.",
+    "label": "wrong",
+    "reason": "v1 P-07 requires at least 3 original passengers and 2 remaining; two-passenger PNR fails eligibility. That rule changes in v2."
+  },
+  {
+    "id": "R23",
+    "customer_question": "Two people share a booking dated 1 May; one cancels a confirmed 2A base fare INR 1,000 40h early.",
+    "customer_date": "2026-05-01",
+    "assistant_draft": "One passenger may cancel alone; base-fare refund INR 780, and the INR 25 PNR fee stays charged once.",
+    "label": "correct",
+    "reason": "v2 P-07 permits 2 original/1 remaining; v2 P-03 2A >=36h charge INR 220; P-04."
+  },
+  {
+    "id": "R24",
+    "customer_question": "Three passengers share a September PNR: one confirmed SL at INR 900, another waitlisted at INR 900, third remains. We cancel both 20h ahead.",
+    "customer_date": "2026-09-01",
+    "assistant_draft": "Each cancellation incurs an INR 80 SL charge, giving INR 820 back for each passenger.",
+    "label": "wrong",
+    "reason": "v3 P-07 requires passenger-specific status. Confirmed SL T=20 charge INR 80 -> INR 820; waitlist P-06 clerkage INR 30 -> INR 870."
+  },
+  {
+    "id": "R25",
+    "customer_question": "SPR cancelled my train; I bought a confirmed PQ ticket in January. I filed my claim six calendar days after scheduled departure. Base fare INR 2,000, booking fee INR 20.",
+    "customer_date": "2026-01-01",
+    "assistant_draft": "The full INR 2,020 is refundable under the operator-cancellation exception.",
+    "label": "correct",
+    "reason": "v1 E1: <=7 days, full PQ base fare and the affected PNR booking fee once, overriding P-05."
+  },
+  {
+    "id": "R26",
+    "customer_question": "For an April booking SPR cancelled the train. I filed the refund claim 8 calendar days after scheduled departure.",
+    "customer_date": "2026-04-30",
+    "assistant_draft": "You can still claim the full fare and fee because operator cancellations have a 10-day claim period.",
+    "label": "wrong",
+    "reason": "v1 P-01/E1: 7-calendar-day claim deadline; 10 days is v2, not applicable."
+  },
+  {
+    "id": "R27",
+    "customer_question": "I booked on May 1, SPR cancelled the train, and I filed my claim exactly 10 calendar days after scheduled departure.",
+    "customer_date": "2026-05-01",
+    "assistant_draft": "Your E1 claim is within the v2 filing limit and a full fare refund is available, including the fee if all PNR travellers were affected.",
+    "label": "correct",
+    "reason": "v2 E1: <=10 calendar days; conditional PNR fee treatment correctly stated."
+  },
+  {
+    "id": "R28",
+    "customer_question": "My September booking was for a train cancelled by SPR. I claimed 14 calendar days after scheduled departure.",
+    "customer_date": "2026-09-01",
+    "assistant_draft": "Your claim is too late: SPR only accepts cancellation claims for up to 10 days.",
+    "label": "wrong",
+    "reason": "v3 E1: 14 days inclusive; 10-day deadline belongs to v2."
+  },
+  {
+    "id": "R29",
+    "customer_question": "Booked April 30; SPR officially delayed the train departure by exactly 180 minutes. I did not board and filed before actual departure. Base fare INR 1,000.",
+    "customer_date": "2026-04-30",
+    "assistant_draft": "The full INR 1,000 base fare is refundable under the major-delay exception, but not the INR 20 booking fee.",
+    "label": "correct",
+    "reason": "v1 E2: >=180-minute delay, pre-actual-departure claim, non-travel; fee retained."
+  },
+  {
+    "id": "R30",
+    "customer_question": "Booked May 1. Departure delay was 119 minutes, not 120, and I did not travel. I claimed before actual departure.",
+    "customer_date": "2026-05-01",
+    "assistant_draft": "A 119-minute delay qualifies for a full major-delay refund.",
+    "label": "wrong",
+    "reason": "v2 E2 requires at least 120 minutes; 119 is ineligible."
+  },
+  {
+    "id": "R31",
+    "customer_question": "I booked September 1, officially delayed departure 90 minutes, did not board and claimed before actual departure. Base fare INR 1,000, booking fee INR 30.",
+    "customer_date": "2026-09-01",
+    "assistant_draft": "You receive INR 1,000, but the INR 30 booking fee cannot be refunded on delay claims.",
+    "label": "wrong",
+    "reason": "v3 E2: >=90-minute delay; both base fare AND booking service fee refunded, total INR 1,030."
+  },
+  {
+    "id": "R32",
+    "customer_question": "Booking made 31 August. Official delay 180 minutes; I never boarded but sent my delay claim one minute after the train actually left.",
+    "customer_date": "2026-08-31",
+    "assistant_draft": "The delay is long enough so the claim will still be paid in full.",
+    "label": "wrong",
+    "reason": "v2 E2: claim must be submitted BEFORE actual departure, irrespective of delay duration."
+  },
+  {
+    "id": "R33",
+    "customer_question": "Booked April 30, confirmed 2S fare INR 900, acute medical emergency documented before travel; never boarded, and claimed 20 hours after scheduled departure.",
+    "customer_date": "2026-04-30",
+    "assistant_draft": "The v1 medical exception returns INR 800 of base fare after a INR 100 medical deduction; the fee remains withheld.",
+    "label": "correct",
+    "reason": "v1 E3: documented, <=24h, non-premium, INR 100 flat deduction; P-04 booking fee retained."
+  },
+  {
+    "id": "R34",
+    "customer_question": "I booked confirmed 2S May 1, fare INR 900. Medical emergency documented before departure, claim 40 hours later, not boarded.",
+    "customer_date": "2026-05-01",
+    "assistant_draft": "The medical refund is INR 800 after the old INR 100 flat deduction.",
+    "label": "wrong",
+    "reason": "v2 E3: <=48h eligible but INR 125 medical deduction, so base-fare refund INR 775; INR 100 was v1."
+  },
+  {
+    "id": "R35",
+    "customer_question": "Booked a confirmed PQ ticket August 31, fare INR 3,000. Doctor certified acute illness before scheduled departure; claim filed within 2h; did not board.",
+    "customer_date": "2026-08-31",
+    "assistant_draft": "A doctor certificate always overrides premium non-refundability, so medical deduction INR 125 applies.",
+    "label": "wrong",
+    "reason": "v2 E3 expressly excludes PQ passengers; P-05 premium restriction still applies. v3 later permits PQ medical claims."
+  },
+  {
+    "id": "R36",
+    "customer_question": "I booked confirmed PQ September 1, base fare INR 3,000; predeparture certified emergency, no boarding, E3 claim filed 48h after scheduled departure.",
+    "customer_date": "2026-09-01",
+    "assistant_draft": "You qualify for the medical exception and receive INR 2,800 of base fare; the INR 30 fee is retained.",
+    "label": "correct",
+    "reason": "v3 E3: <=72h; PQ permitted with INR 200 special medical deduction; P-04."
+  },
+  {
+    "id": "R37",
+    "customer_question": "I bought through an unauthorized resale broker on May 1. I have a real predeparture medical certificate, did not board, and claimed within 24h.",
+    "customer_date": "2026-05-01",
+    "assistant_draft": "The medical exception applies to any buyer with a valid certificate.",
+    "label": "wrong",
+    "reason": "v2 E3 explicitly excludes unauthorized resale-broker purchases, notwithstanding medical proof."
+  },
+  {
+    "id": "R38",
+    "customer_question": "Second identical ticket bought April 30 at 12:00; I identified the accidental duplicate at 12:16, before departure.",
+    "customer_date": "2026-04-30",
+    "assistant_draft": "You can get the full second-PNR fare and its fee back because the duplicate window is 20 minutes.",
+    "label": "wrong",
+    "reason": "v1 E4 permits identification only <=15 minutes from second purchase; v2 extends it to 20 minutes."
+  },
+  {
+    "id": "R39",
+    "customer_question": "My accidental second PNR on May 1 exactly duplicates passenger, train, date, origin, destination and class; I flagged it at exactly 20 minutes, before departure.",
+    "customer_date": "2026-05-01",
+    "assistant_draft": "The entire second-PNR base fare and its INR 25 booking fee are refundable, but a mandatory INR 10 duplicate-verification charge is deducted.",
+    "label": "wrong",
+    "reason": "v2 E4: exact 20 minutes is eligible for full base fare plus second PNR booking fee; P-04 prohibits invented additional verification charges."
+  },
+  {
+    "id": "R40",
+    "customer_question": "I booked on September 1. Government issued only a general advisory not to take trains, with no evacuation order. I never boarded and claimed E5 within a week.",
+    "customer_date": "2026-09-01",
+    "assistant_draft": "You automatically qualify for a full fare refund under the September evacuation exception.",
+    "label": "wrong",
+    "reason": "v3 E5 requires an actual government evacuation order explicitly prohibiting boarding at origin; an advisory is insufficient."
+  }
+]

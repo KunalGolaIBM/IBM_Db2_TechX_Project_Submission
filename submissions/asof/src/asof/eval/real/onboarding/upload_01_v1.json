@@ -1,0 +1,37 @@
+{
+ "model": "openrouter:google/gemini-3.1-flash-lite",
+ "messages_sha256": "2411f00a52df30fb563240223eb5483de011846966eaf37eb7037c8f55d076d4",
+ "latency_ms": 1586,
+ "input_tokens": 1604,
+ "output_tokens": 296,
+ "result": {
+  "clauses": [
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Refund timelines and scope",
+    "clause_text": "(b)(5) Where ticket refunds are due, providing prompt refunds, as required by 14 CFR 374.3 and 12 CFR part 226 for credit card purchases, and within 20 days after receiving a complete refund request for cash and check purchases, including refunding fees charged to a passenger for optional services that the passenger was unable to use due to an oversale situation or flight cancellation;",
+    "effective_from": "2020-01-01",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2020-01-01.",
+    "rule": [
+     {
+      "key": "max_days_cash_check_refund",
+      "number": 20.0,
+      "flag": null,
+      "items": null
+     },
+     {
+      "key": "optional_service_fee_refund_required",
+      "number": null,
+      "flag": true,
+      "items": null
+     }
+    ]
+   }
+  ]
+ },
+ "upload": 1,
+ "version": 1,
+ "pdf_sha256": "fdcf0a283b0ac6152b1e32492c1100ac302e6c8a230949f1fcfc7e66984c4593"
+}

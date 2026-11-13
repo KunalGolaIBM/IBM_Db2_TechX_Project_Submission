@@ -1,0 +1,174 @@
+{
+ "model": "openrouter:google/gemini-3.1-flash-lite",
+ "messages_sha256": "8ab644a59b663ed739eb3d5c91acc2c426f4a296c449e0d7a7aadd49b2367f07",
+ "latency_ms": 8019,
+ "input_tokens": 3362,
+ "output_tokens": 3279,
+ "result": {
+  "clauses": [
+   {
+    "existing_clause_id": "REF-001",
+    "area": "refund",
+    "title": "Providing prompt refunds",
+    "clause_text": "Providing prompt refunds in the original form of payment (i.e., money is returned to an individual using whatever payment method the individual used to make the original payment, such as a check, credit card, debit card, cash, or airline miles) when ticket or ancillary service fee refunds, including checked bag fee refunds, are due pursuant to 14 CFR part 260 unless the consumer agrees to receive the refunds in a different form of payment that is a cash equivalent payment as defined in 14 CFR 260.2. Carriers may not retain a processing fee for issuing refunds that are due",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": [
+     {
+      "key": "oversale_cancellation_fee_refund_required",
+      "number": null,
+      "flag": true,
+      "items": null
+     },
+     {
+      "key": "processing_fee_allowed",
+      "number": null,
+      "flag": false,
+      "items": null
+     }
+    ]
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Carriers' obligation to provide prompt refunds",
+    "clause_text": "Carriers' obligation to provide prompt refunds. A covered carrier that is the merchant of record must provide a prompt and automatic refund of the airfare (including all government-imposed taxes and fees and all mandatory carrier-imposed charges) to a consumer for a cancelled flight or a significantly changed flight as set forth in paragraph (b) of this section.",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Automatic refunds",
+    "clause_text": "Automatic refunds. Automatic refunds of the airfare are due to a consumer when the consumer's right to a refund is undisputed because a carrier cancels a flight or makes a significant change of flight itinerary as described in paragraphs (b)(1) through (b)(6) of this section:(1) A carrier does not offer alternative transportation for a canceled flight or travel credits, vouchers, or other compensation in lieu of a refund to a consumer (the date the flight was canceled is considered the date the consumer requested a refund).(2) A carrier does not offer alternative transportation for the significantly changed flight or travel credits, vouchers, or other compensation in lieu of a refund to the consumer who rejected a significantly changed flight (the date the consumer rejects the significantly changed flight itinerary is considered the date the consumer requested a refund);(3) A carrier offers a significantly changed flight or alternative transportation for a significantly changed or a canceled flight, or offers travel credits, vouchers, or other compensation in lieu of a refund to the consumer, but the consumer rejects the alternative transportation and compensation offered (the date the passenger rejects the offers is considered the date the passenger requested a refund);(4) A carrier offers a significantly changed flight or alternative transportation for a significantly changed or a canceled flight, but the consumer does not respond to the offers on or before a response deadline set by the carrier as described in paragraph (d) of this section and the consumer has not accepted any offer for travel credits, vouchers, or other compensation in lieu of a refund, and the carrier's policy is to treat a lack of a response as a rejection of the alternative transportation offered (the date the carrier-imposed deadline expired is considered the date the consumer requested a refund);(5) A carrier does not offer the consumer the options of traveling on a significantly changed flight or traveling on an alternative flight, but offers travel credits, vouchers, or other compensation in lieu of a refund to the consumer, and the consumer does not respond to the alternative compensation offered within a reasonable time, in which case the lack of a response is deemed a rejection (the date the reasonable time has passed as determined by the carrier is considered the date the consumer requested a refund); or(6) A carrier offers a significantly changed flight or alternative transportation for a significantly changed or a canceled flight and offers travel credits, vouchers, or other compensation in lieu of a refund and the carrier has not set a deadline to respond, the consumer does not respond to the alternatives offered, and the consumer does not take the flight (the date the alternative flight was operated without the passenger on board is considered the date the passenger requested a refund).",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Individuals with a Disability",
+    "clause_text": "Individuals with a Disability. A carrier that is the merchant of record must provide a prompt refund to an individual with a disability upon notification by the individual with a disability that he/she does not want to continue travel because of the significant changes described in paragraphs (c)(1) through (c)(3) of this section. The carrier must also provide a prompt refund to any individuals in the same reservation as the individual with a disability who do not want to continue travel without the individual with a disability in situations described in § 260(c)(1) through (c)(3).(1) The individual with a disability is downgraded to a lower class of service that results in one or more accessibility features needed by the individual becoming unavailable.(2) The individual with a disability is scheduled to travel through one or more connecting airports that are different from the original itinerary.(3) The individual with a disability is scheduled to travel on a substitute aircraft on which one or more accessibility features available on the original aircraft needed by the individual are unavailable.",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Carrier-imposed response deadline for alternative transportation",
+    "clause_text": "Carrier-imposed response deadline for alternative transportation. A carrier may establish a reasonable deadline for a consumer to accept or reject an offer of a significantly changed flight or alternative transportation following a canceled flight or a significantly changed flight itinerary. Carrier refund obligations when a deadline is established are as described in paragraphs (d)(1) through (d)(3) of this section.",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Refund deadlines for rejected offers",
+    "clause_text": "(1) For a consumer who rejected the offer of a significantly changed flight or alternative transportation for a significantly changed or a canceled flight by the deadline established by the carrier and has rejected any offer of travel credit, voucher, or other compensation in lieu of a refund, the carrier must provide a refund within 7 business days of the rejection date for tickets purchased with credit cards and within 20 calendar days of the rejection date for tickets purchased with other payments.",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": [
+     {
+      "key": "max_days_credit_card_refund_business_days",
+      "number": 7.0,
+      "flag": null,
+      "items": null
+     },
+     {
+      "key": "max_days_other_payment_refund_days",
+      "number": 20.0,
+      "flag": null,
+      "items": null
+     }
+    ]
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Refund not due",
+    "clause_text": "(2) A refund is not due to the consumer if the offer of a significantly changed flight or alternative transportation for a significantly changed or a canceled flight is accepted by the deadline established by the carrier, or if an offer of travel credit, vouchers, or compensation in lieu of a refund is accepted.",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Policy adoption and posting requirements",
+    "clause_text": "(3) A carrier that sets a deadline must adopt and post on its website its policy specifying whether, upon receiving no response from the consumer at the expiration of the deadline of the offer of a significantly changed flight or offer of an alternative transportation, the carrier will deem that the offer of significantly changed flight or alternative transportation has been rejected by the consumer and issue an automatic refund for the airfare or will deem that the offer of significantly changed flight or alternative transportation has been accepted by the consumer. A carrier must not deem an offer for travel credits, vouchers, or other compensation in lieu of a refund to be an acceptance when the consumer does not respond to the offer. Carriers must adhere to their published policies.",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": [
+     {
+      "key": "travel_credit_deemed_acceptance_allowed",
+      "number": null,
+      "flag": false,
+      "items": null
+     }
+    ]
+   },
+   {
+    "existing_clause_id": null,
+    "area": "other",
+    "title": "Notification to consumers",
+    "clause_text": "(1) Upon the occurrence of a flight cancellation or a significant change, a covered carrier must timely notify affected consumers about the cancellation or significant change, consumers' rights to a refund if this is the case, any offer of alternative transportation and other options such as travel credits, vouchers, or other compensation in lieu of a refund, any deadline that the carrier imposes for consumers to reject the offer of significantly changed flight or alternative transportation, and the policy that the carrier has adopted regarding consumers' not responding by any deadline established by the carrier, as provided in paragraph (d) of this section.",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": null,
+    "area": "other",
+    "title": "Notification delivery methods",
+    "clause_text": "(2) For carriers that provide notification subscription services to passengers, notification under paragraph (e)(1) of this section must be provided through media that the carriers offer and the subscribers choose, including emails, text messages, and push notices from mobile apps.",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Carriers' obligation to notify ticket agents",
+    "clause_text": "(f) Carriers' obligation to notify ticket agents. In situations where a ticket agent is the merchant of record for the transaction, after receiving a refund request by a consumer through the ticket agent, the carrier that canceled or significantly changed the flight must inform the ticket agent without delay whether the consumer is eligible for a refund under this section (i.e., whether the consumer has accepted the significantly changed flight, the alternative transportation, or other compensation offered in lieu of refunds). A ticket agent's obligation to provide a refund starts when the ticket agent receives such notification from the carrier.",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": "REF-001",
+    "area": "refund",
+    "title": "Providing prompt refunds",
+    "clause_text": "When a refund of a fare or a fee for an ancillary service, including a fee for lost or significantly delayed checked baggage, is due pursuant to this part, the refund must be issued promptly in the original form of payment (i.e., money is returned to an individual using whatever payment method the individual used to make the original payment, such as a check, credit card, debit card, cash, or airline miles) unless the consumer agrees to receive the refunds in a different form of payment that is a cash equivalent as defined in § 260.2. Carriers may not retain a processing fee for issuing refunds that are due.",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": [
+     {
+      "key": "processing_fee_allowed",
+      "number": null,
+      "flag": false,
+      "items": null
+     }
+    ]
+   }
+  ]
+ },
+ "upload": 2,
+ "version": 2,
+ "pdf_sha256": "73f24cae1b61b653d5a064b98f54b41c686752785e8524094c21ee61f9cae97b"
+}

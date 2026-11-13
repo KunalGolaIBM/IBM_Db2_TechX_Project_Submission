@@ -1,0 +1,167 @@
+{
+ "model": "openrouter:google/gemini-3.1-flash-lite",
+ "messages_sha256": "f011d90016c166dae881cfe6ed05ea534d3f16f95bd18c535eb3bf3db1214a2b",
+ "latency_ms": 6405,
+ "input_tokens": 3598,
+ "output_tokens": 2603,
+ "result": {
+  "clauses": [
+   {
+    "existing_clause_id": "REF-001",
+    "area": "refund",
+    "title": "Providing prompt refunds",
+    "clause_text": "Providing prompt refunds in the original form of payment (i.e., money is returned to an individual using whatever payment method the individual used to make the original payment, such as a check, credit card, debit card, cash, or airline miles) when ticket or ancillary service fee refunds, including checked bag fee refunds, are due pursuant to 14 CFR part 260 unless the consumer agrees to receive the refunds in a different form of payment that is a cash equivalent payment as defined in 14 CFR 260.2. Carriers may not retain a processing fee for issuing refunds that are due",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": [
+     {
+      "key": "oversale_cancellation_fee_refund_required",
+      "number": null,
+      "flag": true,
+      "items": null
+     },
+     {
+      "key": "processing_fee_allowed",
+      "number": null,
+      "flag": false,
+      "items": null
+     }
+    ]
+   },
+   {
+    "existing_clause_id": "REF-002",
+    "area": "refund",
+    "title": "Carriers' obligation to provide prompt refunds",
+    "clause_text": "A covered carrier that is the merchant of record must provide a prompt and automatic refund of the airfare (including all government-imposed taxes and fees and all mandatory carrier-imposed charges) to a consumer for a cancelled flight or a significantly changed flight as set forth in paragraph (b) of this section.",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Automatic refunds condition 1",
+    "clause_text": "A carrier does not offer alternative transportation for a canceled flight or travel credits, vouchers, or other compensation in lieu of a refund to a consumer (the date the flight was canceled is considered the date the consumer requested a refund).",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Automatic refunds condition 2",
+    "clause_text": "A carrier does not offer alternative transportation for the significantly changed flight or travel credits, vouchers, or other compensation in lieu of a refund to the consumer who rejected a significantly changed flight (the date the consumer rejects the significantly changed flight itinerary is considered the date the consumer requested a refund);",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Automatic refunds condition 3",
+    "clause_text": "A carrier offers a significantly changed flight or alternative transportation for a significantly changed or a canceled flight, or offers travel credits, vouchers, or other compensation in lieu of a refund to the consumer, but the consumer rejects the alternative transportation and compensation offered (the date the passenger rejects the offers is considered the date the passenger requested a refund);",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Automatic refunds condition 4",
+    "clause_text": "A carrier offers a significantly changed flight or alternative transportation for a significantly changed or a canceled flight, but the consumer does not respond to the offers on or before a response deadline set by the carrier as described in paragraph (d) of this section and the consumer has not accepted any offer for travel credits, vouchers, or other compensation in lieu of a refund, and the carrier's policy is to treat a lack of a response as a rejection of the alternative transportation offered (the date the carrier-imposed deadline expired is considered the date the consumer requested a refund);",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": "REF-005",
+    "area": "refund",
+    "title": "Automatic refunds condition 5",
+    "clause_text": "A carrier does not offer the consumer the options of traveling on a significantly changed flight or traveling on an alternative flight, but offers travel credits, vouchers, or other compensation in lieu of a refund to the consumer, and the consumer does not respond to the alternative compensation offered within a reasonable time, in which case the lack of a response is deemed a rejection (the date the reasonable time has passed as determined by the carrier is considered the date the consumer requested a refund); or",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Automatic refunds condition 6",
+    "clause_text": "A carrier offers a significantly changed flight or alternative transportation for a significantly changed or a canceled flight and offers travel credits, vouchers, or other compensation in lieu of a refund and the carrier has not set a deadline to respond, the consumer does not respond to the alternatives offered, and the consumer does not take the flight (the date the alternative flight was operated without the passenger on board is considered the date the passenger requested a refund).",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": "REF-006",
+    "area": "refund",
+    "title": "Refund deadlines",
+    "clause_text": "For a consumer who rejected the offer of a significantly changed flight or alternative transportation for a significantly changed or a canceled flight by the deadline established by the carrier and has rejected any offer of travel credit, voucher, or other compensation in lieu of a refund, the carrier must provide a refund within 7 business days of the rejection date for tickets purchased with credit cards and within 20 calendar days of the rejection date for tickets purchased with other payments.",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": [
+     {
+      "key": "max_days_credit_card_refund_business_days",
+      "number": 7.0,
+      "flag": null,
+      "items": null
+     },
+     {
+      "key": "max_days_other_payment_refund_days",
+      "number": 20.0,
+      "flag": null,
+      "items": null
+     }
+    ]
+   },
+   {
+    "existing_clause_id": "REF-007",
+    "area": "refund",
+    "title": "Refund not due",
+    "clause_text": "A refund is not due to the consumer if the offer of a significantly changed flight or alternative transportation for a significantly changed or a canceled flight is accepted by the deadline established by the carrier, or if an offer of travel credit, vouchers, or compensation in lieu of a refund is accepted.",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": "REF-008",
+    "area": "refund",
+    "title": "Carrier website posting and policy obligations",
+    "clause_text": "A carrier that sets a deadline must adopt and post on its website its policy specifying whether, upon receiving no response from the consumer at the expiration of the deadline of the offer of a significantly changed flight or offer of an alternative transportation, the carrier will deem that the offer of significantly changed flight or alternative transportation has been rejected by the consumer and issue an automatic refund for the airfare or will deem that the offer of significantly changed flight or alternative transportation has been accepted by the consumer. A carrier must not deem an offer for travel credits, vouchers, or other compensation in lieu of a refund to be an acceptance when the consumer does not respond to the offer. Carriers must adhere to their published policies.",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": [
+     {
+      "key": "travel_credit_deemed_acceptance_allowed",
+      "number": null,
+      "flag": false,
+      "items": null
+     }
+    ]
+   },
+   {
+    "existing_clause_id": "OTH-001",
+    "area": "other",
+    "title": "Notification to consumers",
+    "clause_text": "Upon the occurrence of a flight cancellation or a significant change, a covered carrier must timely notify affected consumers about the cancellation or significant change, consumers' rights to a refund if this is the case, any offer of alternative transportation and other options such as travel credits, vouchers, or other compensation in lieu of a refund, any deadline that the carrier imposes for consumers to reject the offer of significantly changed flight or alternative transportation, and the policy that the carrier has adopted regarding consumers' not responding by any deadline established by the carrier, as provided in paragraph (d) of this section.",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": []
+   }
+  ]
+ },
+ "upload": 3,
+ "version": 2,
+ "pdf_sha256": "73f24cae1b61b653d5a064b98f54b41c686752785e8524094c21ee61f9cae97b"
+}

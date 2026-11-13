@@ -1,0 +1,248 @@
+-- The claim citations of one decision
+-- Schema: ASOF
+-- Statement (as the app runs it, values bound as parameters):
+-- SELECT PASS_NO, CLAIM_NO, CLAIM_TEXT, AREA, VERDICT, LLM_VERDICT, RULE_CHECK, CLAUSE_ID, CLAUSE_VERSION, CLAUSE_BUS_START, CLAUSE_SYS_START, DISTANCE, QUOTED_SPAN FROM CLAIM_CITATION WHERE LEDGER_ID = ? ORDER BY PASS_NO, CLAIM_NO
+
+Access Plan:
+-----------
+	Total Cost: 		0.00227029
+	Query Degree:		1
+
+
+              Rows 
+             RETURN
+             (   1)
+              Cost 
+               I/O 
+               |
+                0 
+             FETCH 
+             (   2)
+           0.00227029 
+                0 
+          /----+----\
+         0             0 
+      IXSCAN    TABLE: ASOF    
+      (   3)    CLAIM_CITATION
+    0.00222014        Q1
+         0 
+        |
+         0 
+  INDEX: ASOF    
+ PK_CLAIM_CITATION
+        Q1
+
+Plan Details:
+-------------
+
+
+	1) RETURN: (Return Result)
+		Cumulative Total Cost: 		0.00227029
+		Cumulative CPU Cost: 		41198
+		Cumulative I/O Cost: 		0
+		Cumulative Re-Total Cost: 	0.000316148
+		Cumulative Re-CPU Cost: 	5737
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	0.00227029
+		Estimated Bufferpool Buffers: 	1
+
+		Arguments:
+		---------
+		BLDLEVEL: (Build level)
+			DB2 v12.1.5.0 : special_85816
+		CPUCACHE: (Per-thread CPU cache size)
+			2097152
+		HEAPUSE : (Maximum Statement Heap Usage)
+			176 Pages
+		PLANID  : (Access plan identifier)
+			f83d5c6ad7d7a8fb
+		PREPTIME: (Statement prepare time)
+			        27 milliseconds
+		SEMEVID : (Semantic environment identifier)
+			03584f1d775a74f4
+		STMTHEAP: (Statement heap size)
+			8192
+		STMTID  : (Normalized statement identifier)
+			56652dcdc89770fc
+		TENANTID: (Compiled In Tenant ID)
+			0
+		TENANTNM: (Compiled In Tenant Name)
+			SYSTEM
+
+		Input Streams:
+		-------------
+			4) From Operator #2
+
+				Estimated number of rows: 	0
+				Number of columns: 		13
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.PASS_NO(A)+Q2.CLAIM_NO(A)+Q2.QUOTED_SPAN
+				+Q2.DISTANCE+Q2.CLAUSE_SYS_START
+				+Q2.CLAUSE_BUS_START+Q2.CLAUSE_VERSION
+				+Q2.CLAUSE_ID+Q2.RULE_CHECK+Q2.LLM_VERDICT
+				+Q2.VERDICT+Q2.AREA+Q2.CLAIM_TEXT
+
+
+	2) FETCH : (Fetch)
+		Cumulative Total Cost: 		0.00227029
+		Cumulative CPU Cost: 		41198
+		Cumulative I/O Cost: 		0
+		Cumulative Re-Total Cost: 	0.000316148
+		Cumulative Re-CPU Cost: 	5737
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	0.00227029
+		Estimated Bufferpool Buffers: 	1
+
+		Arguments:
+		---------
+		CUR_COMM: (Currently Committed)
+			TRUE
+		LCKAVOID: (Lock Avoidance)
+			TRUE
+		MAXPAGES: (Maximum pages for prefetch)
+			1
+		PREFETCH: (Type of Prefetch)
+			SEQUENTIAL,READAHEAD
+		ROWLOCK : (Row Lock intent)
+			SHARE (CS/RS)
+		SKIP_INS: (Skip Inserted Rows)
+			TRUE
+		SPEED   : (Assumed speed of scan, in sharing structures)
+			SLOW
+		TABLOCK : (Table Lock intent)
+			INTENT SHARE
+		TBISOLVL: (Table access Isolation Level)
+			CURSOR STABILITY
+		THROTTLE: (Scan may be throttled, for scan sharing)
+			FALSE
+		VISIBLE : (May be included in scan sharing structures)
+			FALSE
+		WRAPPING: (Scan may start anywhere and wrap)
+			FALSE
+
+		Input Streams:
+		-------------
+			2) From Operator #3
+
+				Estimated number of rows: 	0
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.PASS_NO(A)+Q1.CLAIM_NO(A)+Q1.$RID$
+
+			3) From Object ASOF.CLAIM_CITATION
+
+				Estimated number of rows: 	0
+				Number of columns: 		11
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.QUOTED_SPAN+Q1.DISTANCE
+				+Q1.CLAUSE_SYS_START+Q1.CLAUSE_BUS_START
+				+Q1.CLAUSE_VERSION+Q1.CLAUSE_ID+Q1.RULE_CHECK
+				+Q1.LLM_VERDICT+Q1.VERDICT+Q1.AREA
+				+Q1.CLAIM_TEXT
+
+
+		Output Streams:
+		--------------
+			4) To Operator #1
+
+				Estimated number of rows: 	0
+				Number of columns: 		13
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q2.PASS_NO(A)+Q2.CLAIM_NO(A)+Q2.QUOTED_SPAN
+				+Q2.DISTANCE+Q2.CLAUSE_SYS_START
+				+Q2.CLAUSE_BUS_START+Q2.CLAUSE_VERSION
+				+Q2.CLAUSE_ID+Q2.RULE_CHECK+Q2.LLM_VERDICT
+				+Q2.VERDICT+Q2.AREA+Q2.CLAIM_TEXT
+
+
+	3) IXSCAN: (Index Scan)
+		Cumulative Total Cost: 		0.00222014
+		Cumulative CPU Cost: 		40288
+		Cumulative I/O Cost: 		0
+		Cumulative Re-Total Cost: 	0.000266001
+		Cumulative Re-CPU Cost: 	4827
+		Cumulative Re-I/O Cost: 	0
+		Cumulative First Row Cost: 	0.00222014
+		Estimated Bufferpool Buffers: 	1
+
+		Arguments:
+		---------
+		CUR_COMM: (Currently Committed)
+			TRUE
+		LCKAVOID: (Lock Avoidance)
+			TRUE
+		MAXPAGES: (Maximum pages for prefetch)
+			ALL
+		PREFETCH: (Type of Prefetch)
+			NONE                
+		ROWLOCK : (Row Lock intent)
+			SHARE (CS/RS)
+		SCANDIR : (Scan Direction)
+			FORWARD
+		SKIP_INS: (Skip Inserted Rows)
+			TRUE
+		TABLOCK : (Table Lock intent)
+			INTENT SHARE
+		TBISOLVL: (Table access Isolation Level)
+			CURSOR STABILITY
+
+		Predicates:
+		----------
+		2) Start Key Predicate, 
+			Comparison Operator: 		Equal (=)
+			Subquery Input Required: 	No
+			Filter Factor: 			0.04
+
+			Predicate Text:
+			--------------
+			(Q1.LEDGER_ID = ?)
+
+
+		2) Stop Key Predicate, 
+			Comparison Operator: 		Equal (=)
+			Subquery Input Required: 	No
+			Filter Factor: 			0.04
+
+			Predicate Text:
+			--------------
+			(Q1.LEDGER_ID = ?)
+
+
+
+		Input Streams:
+		-------------
+			1) From Object ASOF.PK_CLAIM_CITATION
+
+				Estimated number of rows: 	0
+				Number of columns: 		4
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.PASS_NO(A)+Q1.CLAIM_NO(A)+Q1.$RID$
+				+Q1.LEDGER_ID
+
+
+		Output Streams:
+		--------------
+			2) To Operator #2
+
+				Estimated number of rows: 	0
+				Number of columns: 		3
+				Subquery predicate ID: 		Not Applicable
+
+				Column Names:
+				------------
+				+Q1.PASS_NO(A)+Q1.CLAIM_NO(A)+Q1.$RID$

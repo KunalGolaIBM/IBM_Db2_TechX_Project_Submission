@@ -1,0 +1,6 @@
+# The AsOf MCP server (mcp_server/asof_mcp.py) runs in its own small virtualenv: it talks to AsOf over HTTP,
+# so it needs only the MCP SDK and httpx, not Db2, torch or LangChain.
+#   python -m venv .venv-mcp && .venv-mcp/bin/pip install -r mcp_server/requirements-mcp.txt
+mcp==2.3.0
+httpx==0.28.1
+pytest==9.2.0

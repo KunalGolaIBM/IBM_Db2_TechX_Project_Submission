@@ -1,0 +1,88 @@
+"""The fictional policy corpora (Aurelia Air, Fernhollow Bank), loaded and validated before they are seeded."""
+
+from __future__ import annotations
+
+import json
+from datetime import date
+from functools import lru_cache
+from pathlib import Path
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from .schemas import AnyArea
+
+CORPUS_PATH = Path(__file__).with_name("data") / "policy_corpus.json"
+BANK_CORPUS_PATH = Path(__file__).with_name("data") / "bank_corpus.json"
+CORPUS_PATHS = (CORPUS_PATH, BANK_CORPUS_PATH)
+OPEN_END = date(9999, 12, 31)
+
+
+class _Strict(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+
+class PolicyDocument(_Strict):
+    doc_id: str = Field(pattern=r"^[A-Z][A-Z0-9-]{2,31}$")
+    title: str = Field(min_length=1, max_length=200)
+    owner_team: str = Field(max_length=100)
+    source_note: str = Field(max_length=400)
+
+
+class ClauseVersion(_Strict):
+    version_label: str = Field(pattern=r"^v[0-9]{1,3}$")
+    bus_start: date
+    bus_end: date
+    clause_text: str = Field(min_length=1, max_length=4000)
+    rule: dict[str, Any]
+
+    @model_validator(mode="after")
+    def _period(self) -> ClauseVersion:
+        if self.bus_end <= self.bus_start:
+            raise ValueError(f"{self.version_label}: bus_end must be after bus_start")
+        return self
+
+
+class Clause(_Strict):
+    clause_id: str = Field(pattern=r"^[A-Z]{3}-[0-9]{3}$")
+    doc_id: str
+    area: AnyArea
+    title: str = Field(min_length=1, max_length=200)
+    versions: list[ClauseVersion] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _no_overlap(self) -> Clause:
+        ordered = sorted(self.versions, key=lambda v: v.bus_start)
+        for prev, nxt in zip(ordered, ordered[1:], strict=False):
+            if nxt.bus_start < prev.bus_end:
+                raise ValueError(f"{self.clause_id}: versions {prev.version_label} and {nxt.version_label} overlap")
+        if len({v.version_label for v in self.versions}) != len(self.versions):
+            raise ValueError(f"{self.clause_id}: duplicate version labels")
+        return self
+
+
+class Corpus(_Strict):
+    notice: str
+    documents: list[PolicyDocument] = Field(min_length=1)
+    clauses: list[Clause] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _references(self) -> Corpus:
+        doc_ids = {d.doc_id for d in self.documents}
+        seen: set[str] = set()
+        for c in self.clauses:
+            if c.doc_id not in doc_ids:
+                raise ValueError(f"{c.clause_id}: unknown doc_id {c.doc_id}")
+            if c.clause_id in seen:
+                raise ValueError(f"duplicate clause_id {c.clause_id}")
+            seen.add(c.clause_id)
+        return self
+
+
+@lru_cache(maxsize=4)
+def load_corpus(paths: tuple[Path, ...] = CORPUS_PATHS) -> Corpus:
+    """Every corpus file, merged into one validated corpus (clause IDs are unique across them)."""
+    parts = [json.loads(p.read_text(encoding="utf-8")) for p in paths]
+    return Corpus.model_validate({"notice": " ".join(p["notice"] for p in parts),
+                                  "documents": [d for p in parts for d in p["documents"]],
+                                  "clauses": [c for p in parts for c in p["clauses"]]})

@@ -1,0 +1,147 @@
+{
+ "model": "openrouter:google/gemini-3.1-flash-lite",
+ "messages_sha256": "749313c0b49f3d5efe7931b3f64f2d3dd8a05277ebfe4f705a2140898cfb351c",
+ "latency_ms": 5639,
+ "input_tokens": 3220,
+ "output_tokens": 2528,
+ "result": {
+  "clauses": [
+   {
+    "existing_clause_id": "REF-001",
+    "area": "refund",
+    "title": "Prompt refunds (14 CFR 259.5(b)(5))",
+    "clause_text": "Providing prompt refunds in the original form of payment (i.e., money is returned to an individual using whatever payment method the individual used to make the original payment, such as a check, credit card, debit card, cash, or airline miles) when ticket or ancillary service fee refunds, including checked bag fee refunds, are due pursuant to 14 CFR part 260 unless the consumer agrees to receive the refunds in a different form of payment that is a cash equivalent payment as defined in 14 CFR 260.2. Carriers may not retain a processing fee for issuing refunds that are due;",
+    "effective_from": "2024-08-12",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-08-12.",
+    "rule": [
+     {
+      "key": "original_form_of_payment_required",
+      "number": null,
+      "flag": true,
+      "items": null
+     },
+     {
+      "key": "processing_fee_allowed",
+      "number": null,
+      "flag": false,
+      "items": null
+     }
+    ]
+   },
+   {
+    "existing_clause_id": "REF-002",
+    "area": "refund",
+    "title": "Carriers' obligation to provide refunds",
+    "clause_text": "A covered carrier that is the merchant of record must provide a full and prompt refund of the airfare, including any taxes and ancillary fees, as set forth in paragraph (a)(2) of this section to a consumer that holds a nonrefundable ticket on a scheduled flight to, from, or within the United States for any cancelled flight or significantly delayed or changed flight where the consumer chooses not to: (i) Fly on the significantly delayed or changed flight or accept rebooking on an alternative flight; or (ii) Accept any voucher, credit, or other form of compensation offered by the air carrier or foreign air carrier pursuant to paragraph (c) of this section.",
+    "effective_from": "2024-08-12",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-08-12.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": "REF-010",
+    "area": "refund",
+    "title": "Automatic refunds condition 1",
+    "clause_text": "A full refund of the airfare, including any taxes and ancillary fees, is due to a consumer as described in paragraphs (a)(2)(i) through (iii) of this section: (i) A flight is canceled and a consumer is not offered an alternative flight or any voucher, credit, or other form of compensation by the air carrier or foreign air carrier pursuant to paragraph (c) of this section;",
+    "effective_from": "2024-08-12",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-08-12.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": "REF-011",
+    "area": "refund",
+    "title": "Automatic refunds condition 2",
+    "clause_text": "(ii) A consumer rejects the significantly delayed or changed flight, rebooking on an alternative flight, or any voucher, credit, or other form of compensation offered by the covered carrier pursuant to paragraph (c) of this section; or",
+    "effective_from": "2024-08-12",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-08-12.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": "REF-012",
+    "area": "refund",
+    "title": "Automatic refunds condition 3",
+    "clause_text": "(iii) A consumer does not respond to an offer of: (A) A significantly delayed or changed flight or an alternative flight and the flight departs without the consumer; or (B) A voucher, credit, or other form of compensation by the date on which the cancelled flight was scheduled to depart or the date that the significantly delayed or changed flight departs.",
+    "effective_from": "2024-08-12",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-08-12.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Individuals with a disability",
+    "clause_text": "A carrier that is the merchant of record must provide a full and prompt refund to an individual with a disability upon notification by the individual with a disability that he/she does not want to continue travel because of the significant changes described in paragraphs (b)(1) through (3) of this section. The covered carrier must also provide a full and prompt refund to any individuals in the same reservation as the individual with a disability who do not want to continue travel without the individual with a disability in situations described in paragraphs (b)(1) through (3). (1) The individual with a disability is downgraded to a lower class of service that results in one or more accessibility features needed by the individual becoming unavailable. (2) The individual with a disability is scheduled to travel through one or more connecting airports that are different from the original itinerary. (3) The individual with a disability is scheduled to travel on a substitute aircraft on which one or more accessibility features available on the original aircraft needed by the individual are unavailable.",
+    "effective_from": "2024-08-12",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-08-12.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": "REF-008",
+    "area": "refund",
+    "title": "Alternative to refund",
+    "clause_text": "A covered carrier may offer a voucher, credit, or other form of compensation as an explicit alternative to providing a refund required by paragraph (a) of this section if: (1) The offer includes a clear and conspicuous notice of- (i) The terms of the offer as specified in § 260.8; and (ii) The consumer's right to a full refund under this section. (2) The voucher, credit, or other form of compensation offered explicitly as an alternative to providing a refund required by paragraph (a) of this section remains valid and redeemable by the consumer for a period of at least five years from the date on which such voucher, credit, or other form of compensation is issued; (3) Upon the issuance of such voucher, credit, or other form of compensation, a covered carrier notifies the recipient of the expiration date of the voucher, credit, or other form of compensation; and (4) Upon request by an individual who self identifies as an individual with a disability a covered carrier provides a notification under paragraph (c)(3) of this section in an electronic format accessible to the recipient.",
+    "effective_from": "2024-08-12",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-08-12.",
+    "rule": [
+     {
+      "key": "min_years_voucher_validity",
+      "number": 5.0,
+      "flag": null,
+      "items": null
+     }
+    ]
+   },
+   {
+    "existing_clause_id": "REF-009",
+    "area": "refund",
+    "title": "Carriers' obligation to notify ticket agents",
+    "clause_text": "In situations where a ticket agent is the merchant of record for the transaction, after receiving a refund request by a consumer through the ticket agent, the carrier that canceled or significantly delayed or changed the flight must inform the ticket agent without delay whether the consumer is eligible for a refund under this section (i.e., whether the consumer has accepted the significantly changed flight, the alternative flight, or other compensation offered in lieu of refunds).",
+    "effective_from": "2024-08-12",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-08-12.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": null,
+    "area": "refund",
+    "title": "Carriers' obligation to transfer funds to ticket agents",
+    "clause_text": "In situations where a ticket agent is responsible for providing the refund to the consumer pursuant to 14 CFR 399.80(l) and the ticket agent does not possess the funds of the consumer, that carrier that has the funds must promptly transfer the funds to the ticket agent.",
+    "effective_from": "2024-08-12",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-08-12.",
+    "rule": []
+   },
+   {
+    "existing_clause_id": "REF-002",
+    "area": "refund",
+    "title": "Providing prompt refunds (260.10)",
+    "clause_text": "When a refund of a fare or a fee for an ancillary service, including a fee for lost or significantly delayed checked baggage, is due pursuant to this part, the refund must be issued promptly in the original form of payment (i.e., money is returned to an individual using whatever payment method the individual used to make the original payment, such as a check, credit card, debit card, cash, or airline miles) unless the consumer agrees to receive the refunds in a different form of payment that is a cash equivalent as defined in § 260.2. Carriers may not retain a processing fee for issuing refunds that are due.",
+    "effective_from": "2024-08-12",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-08-12.",
+    "rule": [
+     {
+      "key": "original_form_of_payment_required",
+      "number": null,
+      "flag": true,
+      "items": null
+     },
+     {
+      "key": "processing_fee_allowed",
+      "number": null,
+      "flag": false,
+      "items": null
+     }
+    ]
+   }
+  ]
+ },
+ "upload": 4,
+ "version": 3,
+ "pdf_sha256": "8886e19a5881d6e9dec63f5ba1fade7fdd93df0ead798760578a2e7f81291ead"
+}

@@ -1,0 +1,427 @@
+{
+ "split": "situation-test",
+ "provider": "openrouter",
+ "model": "google/gemini-3.1-flash-lite",
+ "started_at": "2026-11-07T18:27:52+00:00",
+ "git_commit": "1725710",
+ "prompt_version": "2026-11-07.1 + bank-2026-11-07.1",
+ "cases_sha256": "d0e0ec60d809c7678bf1bcb0a8b93e0a974e3d02f32682ea45fdccf2264a3393",
+ "workers": 4,
+ "wall_time_s": 12.0,
+ "ledger_chain": "OK",
+ "summary": {
+  "overall": {
+   "n": 12,
+   "wrong_drafts": 7,
+   "false_allows": 3,
+   "correct_drafts": 5,
+   "false_blocks": 0,
+   "false_allow_rate": 0.428571,
+   "false_block_rate": 0.0,
+   "safe_rate": 0.75,
+   "ideal_rate": 0.5,
+   "escalation_rate": 0.25,
+   "correction_rate": 0.083333,
+   "citation_accuracy": 0.75,
+   "rule_overrides": 0,
+   "errors": 0,
+   "latency_p50_ms": 2342,
+   "latency_p90_ms": 6189,
+   "llm_calls_mean": 3.17
+  },
+  "by_category": {
+   "premise_conflict": {
+    "n": 7,
+    "wrong_drafts": 7,
+    "false_allows": 3,
+    "correct_drafts": 0,
+    "false_blocks": 0,
+    "false_allow_rate": 0.428571,
+    "false_block_rate": null,
+    "safe_rate": 0.571429,
+    "ideal_rate": 0.142857,
+    "escalation_rate": 0.428571,
+    "correction_rate": 0.142857,
+    "citation_accuracy": 0.571429,
+    "rule_overrides": 0,
+    "errors": 0,
+    "latency_p50_ms": 5000,
+    "latency_p90_ms": 6189,
+    "llm_calls_mean": 4.0
+   },
+   "premise_consistent": {
+    "n": 5,
+    "wrong_drafts": 0,
+    "false_allows": 0,
+    "correct_drafts": 5,
+    "false_blocks": 0,
+    "false_allow_rate": null,
+    "false_block_rate": 0.0,
+    "safe_rate": 1.0,
+    "ideal_rate": 1.0,
+    "escalation_rate": 0.0,
+    "correction_rate": 0.0,
+    "citation_accuracy": 1.0,
+    "rule_overrides": 0,
+    "errors": 0,
+    "latency_p50_ms": 2042,
+    "latency_p90_ms": 2423,
+    "llm_calls_mean": 2.0
+   }
+  }
+ },
+ "records": [
+  {
+   "id": "ST01",
+   "category": "premise_conflict",
+   "as_of": "2026-02-14",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "ESCALATED",
+   "reason": "CORRECTION_FAILED",
+   "ideal": false,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": false,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 5603,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MATCH) DLY-002 v1: you are entitled to $250 in compensation if the delay was within our control and you arriv",
+    "p2#1 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) DLY-004 v1: Compensation of $250 for a delay of 6 to 9 hours is provided only for delays within Aureli"
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 5
+  },
+  {
+   "id": "ST02",
+   "category": "premise_conflict",
+   "as_of": "2026-05-20",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "ESCALATED",
+   "reason": "CORRECTION_FAILED",
+   "ideal": false,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 7982,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) DLY-004 v1: You are entitled to $125 if you arrived 4 hours late because of a delay within our control",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) DLY-004 v1: Delays caused by air traffic control restrictions are considered outside Aurelia Air's con",
+    "p2#2 NOT_COVERED (llm SUPPORTED, rule NOT_APPLICABLE) -: Delays caused by air traffic control restrictions are not eligible for compensation.",
+    "p2#3 SUPPORTED (llm SUPPORTED, rule MATCH) DLY-004 v1: For delays of 3 hours or more, meal vouchers are provided."
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [],
+   "agent_tool_calls": 2,
+   "agent_new_clauses": [],
+   "llm_calls": 7
+  },
+  {
+   "id": "ST03",
+   "category": "premise_conflict",
+   "as_of": "2026-09-03",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "CORRECTED",
+   "reason": "CORRECTED_FROM_CLAUSES",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": false,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 5000,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) DLY-003 v1: Since you arrived 9 hours late, you are entitled to $400 in compensation.",
+    "p2#1 SUPPORTED (llm SUPPORTED, rule MATCH) DLY-003 v1: For a delay within Aurelia Air's control that makes the passenger arrive 9 hours or more l"
+   ],
+   "final_answer": "For a delay within Aurelia Air's control that makes the passenger arrive 9 hours or more late, the passenger is entitled to $400 in compensation.\n\nPolicy references: DLY-003 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 5
+  },
+  {
+   "id": "ST04",
+   "category": "premise_conflict",
+   "as_of": "2026-07-29",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "ESCALATED",
+   "reason": "CORRECTION_FAILED",
+   "ideal": false,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": false,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 6189,
+   "claims": [
+    "p1#1 CONTRADICTED (llm CONTRADICTED, rule NOT_APPLICABLE) DLY-003 v1: For an 8 hour delay caused by the airline, we will pay you $250.",
+    "p2#1 CONTRADICTED (llm CONTRADICTED, rule MISMATCH) DLY-004 v1: For delays within Aurelia Air's control that result in an arrival 9 hours or more late, th"
+   ],
+   "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly.",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 5
+  },
+  {
+   "id": "ST05",
+   "category": "premise_conflict",
+   "as_of": "2026-03-30",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": false,
+   "safe": false,
+   "false_allow": true,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 3153,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) CLS-001 v1: An early closure fee of $25 applies if you close your checking account within 90 days of o"
+   ],
+   "final_answer": "Since you're closing within 90 days of opening, an early closure fee of $25 applies.\n\nPolicy references: CLS-001 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 2
+  },
+  {
+   "id": "ST06",
+   "category": "premise_conflict",
+   "as_of": "2026-08-26",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": false,
+   "safe": false,
+   "false_allow": true,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 1796,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) FRV-001 v2: You can ask for a courtesy refund for an overdraft fee within 60 days of the date the fee "
+   ],
+   "final_answer": "Since this would be your first courtesy refund this year, you can ask for one within 60 days of the date the fee was charged.\n\nPolicy references: FRV-001 v2 (in effect from 2026-08-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 2
+  },
+  {
+   "id": "ST07",
+   "category": "premise_conflict",
+   "as_of": "2026-06-16",
+   "draft_ok": false,
+   "expected": "CORRECTED",
+   "acceptable": [
+    "CORRECTED",
+    "ESCALATED"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": false,
+   "safe": false,
+   "false_allow": true,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 2110,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) BRV-005 v1: The bereavement fare applies to passengers travelling in Economy.",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule MATCH) BRV-001 v1: The bereavement fare is 40% off the lowest available Economy fare."
+   ],
+   "final_answer": "Since you're travelling in Economy, the bereavement fare applies, and it is 40% off the lowest available Economy fare.\n\nPolicy references: BRV-005 v1 (in effect from 2026-01-01), BRV-001 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 2
+  },
+  {
+   "id": "ST08",
+   "category": "premise_consistent",
+   "as_of": "2026-10-14",
+   "draft_ok": true,
+   "expected": "PASS",
+   "acceptable": [
+    "PASS"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 1998,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) DLY-004 v1: Delays caused by weather are not eligible for compensation.",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule MATCH) DLY-004 v1: Meal vouchers are provided for delays of 3 hours or more."
+   ],
+   "final_answer": "I'm sorry for the wait. Because the delay was caused by weather, it is outside our control and not eligible for compensation, but meal vouchers are provided for delays of 3 hours or more.\n\nPolicy references: DLY-004 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 2
+  },
+  {
+   "id": "ST09",
+   "category": "premise_consistent",
+   "as_of": "2026-11-24",
+   "draft_ok": true,
+   "expected": "PASS",
+   "acceptable": [
+    "PASS"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 2042,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) DLY-003 v1: Since a crew shortage is within our control and you arrived 9 hours late, you are entitled"
+   ],
+   "final_answer": "I'm very sorry. Since a crew shortage is within our control and you arrived 9 hours late, you are entitled to $400 in compensation.\n\nPolicy references: DLY-003 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 2
+  },
+  {
+   "id": "ST10",
+   "category": "premise_consistent",
+   "as_of": "2026-11-09",
+   "draft_ok": true,
+   "expected": "PASS",
+   "acceptable": [
+    "PASS"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 2261,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) CLS-001 v2: There is no fee to close an account, however soon after opening it is closed."
+   ],
+   "final_answer": "No. Even though your account is only three weeks old, there is no fee to close an account, however soon after opening it is closed.\n\nPolicy references: CLS-001 v2 (in effect from 2026-10-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 2
+  },
+  {
+   "id": "ST11",
+   "category": "premise_consistent",
+   "as_of": "2026-04-22",
+   "draft_ok": true,
+   "expected": "PASS",
+   "acceptable": [
+    "PASS"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 1972,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule MATCH) FXF-001 v1: A foreign transaction fee of 3% of the amount applies for purchases in a currency other th"
+   ],
+   "final_answer": "Yes. Because the purchase was in a currency other than US dollars, a foreign transaction fee of 3% of the amount applies.\n\nPolicy references: FXF-001 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 2
+  },
+  {
+   "id": "ST12",
+   "category": "premise_consistent",
+   "as_of": "2026-08-06",
+   "draft_ok": true,
+   "expected": "PASS",
+   "acceptable": [
+    "PASS"
+   ],
+   "decision": "PASS",
+   "reason": "ALL_SUPPORTED",
+   "ideal": true,
+   "safe": true,
+   "false_allow": false,
+   "false_block": false,
+   "cited_key_clause": true,
+   "error": null,
+   "rule_overrides": 0,
+   "latency_ms": 2423,
+   "claims": [
+    "p1#1 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) RFD-004 v1: Since we cancelled your flight, you can get a full refund of the unused portion of your ti",
+    "p1#2 SUPPORTED (llm SUPPORTED, rule NOT_APPLICABLE) RFD-004 v1: you can get a full refund of the unused portion of your ticket, even though it was non-ref"
+   ],
+   "final_answer": "Since we cancelled your flight, you can get a full refund of the unused portion of your ticket, even though it was non-refundable.\n\nPolicy references: RFD-004 v1 (in effect from 2026-01-01).",
+   "unchecked": [],
+   "agent_tool_calls": 0,
+   "agent_new_clauses": [],
+   "llm_calls": 2
+  }
+ ]
+}

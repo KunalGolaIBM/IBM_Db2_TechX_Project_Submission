@@ -1,0 +1,1552 @@
+{
+ "upload 1 (v1)": {
+  "version": 1,
+  "sections": [
+   {
+    "section": "P-01",
+    "title": "VERSION AND CONTRACT DATE",
+    "outcome": "complete",
+    "values_in_text": 0
+   },
+   {
+    "section": "P-02",
+    "title": "DEFINITIONS AND PRIORITY",
+    "outcome": "complete",
+    "values_in_text": 0
+   },
+   {
+    "section": "P-03",
+    "title": "ORDINARY VOLUNTARY CANCELLATION: CONFIRMED NON-PREMIUM TICKETS",
+    "outcome": "complete",
+    "values_in_text": 10
+   },
+   {
+    "section": "P-04",
+    "title": "BOOKING SERVICE FEE AND OTHER CHARGES",
+    "outcome": "complete",
+    "values_in_text": 1
+   },
+   {
+    "section": "P-05",
+    "title": "PREMIUM QUICKBOOK (PQ) TICKETS",
+    "outcome": "complete",
+    "values_in_text": 0
+   },
+   {
+    "section": "P-06",
+    "title": "WAITLISTED TICKETS",
+    "outcome": "complete",
+    "values_in_text": 2
+   },
+   {
+    "section": "P-07",
+    "title": "PARTIAL CANCELLATIONS AND SEPARATE PASSENGER STATUS",
+    "outcome": "missed",
+    "values_in_text": 3
+   },
+   {
+    "section": "P-08",
+    "title": "CLAIM SUBMISSION, PROOF AND PROCESSING",
+    "outcome": "complete",
+    "values_in_text": 0
+   },
+   {
+    "section": "E1",
+    "title": "OPERATOR-CANCELLED SERVICE - OVERRIDES P-03, P-05, P-06, P-07 DEADLINES",
+    "outcome": "complete",
+    "values_in_text": 2
+   },
+   {
+    "section": "E2",
+    "title": "MAJOR DEPARTURE DELAY AND NON-TRAVEL - OVERRIDES P-03 AND P-05",
+    "outcome": "complete",
+    "values_in_text": 2
+   },
+   {
+    "section": "E3",
+    "title": "CERTIFIED MEDICAL EMERGENCY - OVERRIDES ORDINARY TIME CUTOFFS",
+    "outcome": "complete",
+    "values_in_text": 2
+   },
+   {
+    "section": "E4",
+    "title": "DOCUMENTED ACCIDENTAL DUPLICATE PURCHASE - OVERRIDES P-03 AND P-05",
+    "outcome": "complete",
+    "values_in_text": 1
+   },
+   {
+    "section": "E5",
+    "title": "",
+    "outcome": "partial",
+    "values_in_text": 0
+   },
+   {
+    "section": "P-09",
+    "title": "EXCLUSIONS AND INTERPRETIVE RULES",
+    "outcome": "complete",
+    "values_in_text": 0
+   }
+  ],
+  "proposals": [
+   {
+    "item_no": 1,
+    "kind": "NEW",
+    "clause_id": "OTH-001",
+    "area": "other",
+    "title": "Version and contract date",
+    "sections": [
+     "P-01"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 1,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 2,
+    "kind": "NEW",
+    "clause_id": "OTH-002",
+    "area": "other",
+    "title": "Definitions and priority",
+    "sections": [
+     "P-02"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 1,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 3,
+    "kind": "NEW",
+    "clause_id": "CAN-001",
+    "area": "cancellation",
+    "title": "Ordinary voluntary cancellation: confirmed non-premium tickets",
+    "sections": [
+     "P-03"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 13,
+    "params_pass": 4,
+    "params_warn": 8,
+    "params_fail": 3,
+    "values_in_text": 10,
+    "values_captured": 8,
+    "values_not_in_text": [],
+    "blocked": true,
+    "failures": [
+     "rule keys: min_t_hours is given twice",
+     "rule keys: min_t_hours is given twice",
+     "rule values: min_t_hours = 48 is not stated in the clause text"
+    ]
+   },
+   {
+    "item_no": 4,
+    "kind": "NEW",
+    "clause_id": "OTH-003",
+    "area": "other",
+    "title": "Booking service fee and other charges",
+    "sections": [
+     "P-04"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 1,
+    "params_fail": 0,
+    "values_in_text": 1,
+    "values_captured": 1,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 5,
+    "kind": "NEW",
+    "clause_id": "CAN-002",
+    "area": "cancellation",
+    "title": "Premium QuickBook (PQ) tickets",
+    "sections": [
+     "P-05"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 1,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 6,
+    "kind": "NEW",
+    "clause_id": "CAN-003",
+    "area": "cancellation",
+    "title": "Waitlisted tickets",
+    "sections": [
+     "P-06"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 2,
+    "params_pass": 1,
+    "params_warn": 1,
+    "params_fail": 0,
+    "values_in_text": 2,
+    "values_captured": 2,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 7,
+    "kind": "NEW",
+    "clause_id": "CAN-004",
+    "area": "cancellation",
+    "title": "Partial cancellations and separate passenger status",
+    "sections": [],
+    "coverage": [],
+    "verbatim": false,
+    "invented": true,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 2,
+    "params_pass": 0,
+    "params_warn": 2,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [
+     2.0,
+     3.0
+    ],
+    "blocked": true,
+    "failures": [
+     "verbatim text: this text is not in the document word for word"
+    ]
+   },
+   {
+    "item_no": 8,
+    "kind": "NEW",
+    "clause_id": "REF-001",
+    "area": "refund",
+    "title": "Claim submission, proof and processing",
+    "sections": [
+     "P-08"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 0,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 9,
+    "kind": "NEW",
+    "clause_id": "CAN-005",
+    "area": "cancellation",
+    "title": "Operator-cancelled service",
+    "sections": [
+     "E1"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 2,
+    "params_pass": 1,
+    "params_warn": 0,
+    "params_fail": 1,
+    "values_in_text": 2,
+    "values_captured": 2,
+    "values_not_in_text": [],
+    "blocked": true,
+    "failures": [
+     "rule values: max_claim_deadline_days = 7 is not stated in the clause text"
+    ]
+   },
+   {
+    "item_no": 10,
+    "kind": "NEW",
+    "clause_id": "DEL-001",
+    "area": "delay",
+    "title": "Major departure delay and non-travel",
+    "sections": [
+     "E2"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 2,
+    "params_pass": 1,
+    "params_warn": 1,
+    "params_fail": 0,
+    "values_in_text": 2,
+    "values_captured": 2,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 11,
+    "kind": "NEW",
+    "clause_id": "OTH-004",
+    "area": "other",
+    "title": "Certified medical emergency",
+    "sections": [
+     "E3"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 2,
+    "params_pass": 1,
+    "params_warn": 1,
+    "params_fail": 0,
+    "values_in_text": 2,
+    "values_captured": 2,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 12,
+    "kind": "NEW",
+    "clause_id": "OTH-005",
+    "area": "other",
+    "title": "Documented accidental duplicate purchase",
+    "sections": [
+     "E4"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 1,
+    "params_fail": 0,
+    "values_in_text": 1,
+    "values_captured": 1,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 13,
+    "kind": "NEW",
+    "clause_id": "OTH-006",
+    "area": "other",
+    "title": "Not in force",
+    "sections": [
+     "E5"
+    ],
+    "coverage": [
+     "partial"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 1,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 14,
+    "kind": "NEW",
+    "clause_id": "OTH-007",
+    "area": "other",
+    "title": "Exclusions and interpretive rules",
+    "sections": [
+     "P-09"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 0,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   }
+  ],
+  "discarded": [],
+  "summary": {
+   "sections": 14,
+   "proposed": 14,
+   "complete": 12,
+   "partial": 1,
+   "merged": 0,
+   "missed": 1,
+   "invented": 1,
+   "blocked": 3,
+   "wrong_start": 0,
+   "wrong_end": 0,
+   "values_in_text": 23,
+   "values_captured": 18,
+   "values_not_in_text": 2
+  }
+ },
+ "upload 2 (v1)": {
+  "version": 1,
+  "sections": [
+   {
+    "section": "P-01",
+    "title": "VERSION AND CONTRACT DATE",
+    "outcome": "complete",
+    "values_in_text": 0
+   },
+   {
+    "section": "P-02",
+    "title": "DEFINITIONS AND PRIORITY",
+    "outcome": "complete",
+    "values_in_text": 0
+   },
+   {
+    "section": "P-03",
+    "title": "ORDINARY VOLUNTARY CANCELLATION: CONFIRMED NON-PREMIUM TICKETS",
+    "outcome": "complete",
+    "values_in_text": 10
+   },
+   {
+    "section": "P-04",
+    "title": "BOOKING SERVICE FEE AND OTHER CHARGES",
+    "outcome": "complete",
+    "values_in_text": 1
+   },
+   {
+    "section": "P-05",
+    "title": "PREMIUM QUICKBOOK (PQ) TICKETS",
+    "outcome": "complete",
+    "values_in_text": 0
+   },
+   {
+    "section": "P-06",
+    "title": "WAITLISTED TICKETS",
+    "outcome": "complete",
+    "values_in_text": 2
+   },
+   {
+    "section": "P-07",
+    "title": "PARTIAL CANCELLATIONS AND SEPARATE PASSENGER STATUS",
+    "outcome": "complete",
+    "values_in_text": 3
+   },
+   {
+    "section": "P-08",
+    "title": "CLAIM SUBMISSION, PROOF AND PROCESSING",
+    "outcome": "complete",
+    "values_in_text": 0
+   },
+   {
+    "section": "E1",
+    "title": "OPERATOR-CANCELLED SERVICE - OVERRIDES P-03, P-05, P-06, P-07 DEADLINES",
+    "outcome": "complete",
+    "values_in_text": 2
+   },
+   {
+    "section": "E2",
+    "title": "MAJOR DEPARTURE DELAY AND NON-TRAVEL - OVERRIDES P-03 AND P-05",
+    "outcome": "complete",
+    "values_in_text": 2
+   },
+   {
+    "section": "E3",
+    "title": "CERTIFIED MEDICAL EMERGENCY - OVERRIDES ORDINARY TIME CUTOFFS",
+    "outcome": "complete",
+    "values_in_text": 2
+   },
+   {
+    "section": "E4",
+    "title": "DOCUMENTED ACCIDENTAL DUPLICATE PURCHASE - OVERRIDES P-03 AND P-05",
+    "outcome": "complete",
+    "values_in_text": 1
+   },
+   {
+    "section": "E5",
+    "title": "",
+    "outcome": "partial",
+    "values_in_text": 0
+   },
+   {
+    "section": "P-09",
+    "title": "EXCLUSIONS AND INTERPRETIVE RULES",
+    "outcome": "complete",
+    "values_in_text": 0
+   }
+  ],
+  "proposals": [
+   {
+    "item_no": 1,
+    "kind": "UNCHANGED",
+    "clause_id": "OTH-001",
+    "area": "other",
+    "title": "Version and contract date",
+    "sections": [
+     "P-01"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 2,
+    "kind": "UNCHANGED",
+    "clause_id": "OTH-002",
+    "area": "other",
+    "title": "Definitions and priority",
+    "sections": [
+     "P-02"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 3,
+    "kind": "CHANGE",
+    "clause_id": "CAN-002",
+    "area": "cancellation",
+    "title": "Premium QuickBook (PQ) tickets",
+    "sections": [
+     "P-03"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 1,
+    "params_fail": 0,
+    "values_in_text": 10,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 4,
+    "kind": "UNCHANGED",
+    "clause_id": "OTH-003",
+    "area": "other",
+    "title": "Booking service fee and other charges",
+    "sections": [
+     "P-04"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 1,
+    "values_captured": 1,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 5,
+    "kind": "UNCHANGED",
+    "clause_id": "CAN-002",
+    "area": "cancellation",
+    "title": "Premium QuickBook (PQ) tickets",
+    "sections": [
+     "P-05"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 6,
+    "kind": "UNCHANGED",
+    "clause_id": "CAN-003",
+    "area": "cancellation",
+    "title": "Waitlisted tickets",
+    "sections": [
+     "P-06"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 2,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 2,
+    "values_captured": 2,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 7,
+    "kind": "NEW",
+    "clause_id": "OTH-008",
+    "area": "other",
+    "title": "Partial cancellations and separate passenger status",
+    "sections": [
+     "P-07"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 1,
+    "params_fail": 0,
+    "values_in_text": 3,
+    "values_captured": 1,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 8,
+    "kind": "UNCHANGED",
+    "clause_id": "REF-001",
+    "area": "refund",
+    "title": "Claim submission, proof and processing",
+    "sections": [
+     "P-08"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 0,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 9,
+    "kind": "NEW",
+    "clause_id": "CAN-004",
+    "area": "cancellation",
+    "title": "Operator-cancelled service - overrides P-03, P-05, P-06, P-07 deadlines",
+    "sections": [
+     "E1"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 1,
+    "values_in_text": 2,
+    "values_captured": 1,
+    "values_not_in_text": [],
+    "blocked": true,
+    "failures": [
+     "rule values: max_claim_deadline_days = 7 is not stated in the clause text"
+    ]
+   },
+   {
+    "item_no": 10,
+    "kind": "UNCHANGED",
+    "clause_id": "DEL-001",
+    "area": "delay",
+    "title": "Major departure delay and non-travel",
+    "sections": [
+     "E2"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 2,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 2,
+    "values_captured": 2,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 11,
+    "kind": "UNCHANGED",
+    "clause_id": "OTH-004",
+    "area": "other",
+    "title": "Certified medical emergency",
+    "sections": [
+     "E3"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 2,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 2,
+    "values_captured": 2,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 12,
+    "kind": "UNCHANGED",
+    "clause_id": "OTH-005",
+    "area": "other",
+    "title": "Documented accidental duplicate purchase",
+    "sections": [
+     "E4"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 1,
+    "values_captured": 1,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 13,
+    "kind": "UNCHANGED",
+    "clause_id": "OTH-006",
+    "area": "other",
+    "title": "Not in force",
+    "sections": [
+     "E5"
+    ],
+    "coverage": [
+     "partial"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 14,
+    "kind": "UNCHANGED",
+    "clause_id": "OTH-007",
+    "area": "other",
+    "title": "Exclusions and interpretive rules",
+    "sections": [
+     "P-09"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 0,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   }
+  ],
+  "discarded": [],
+  "summary": {
+   "sections": 14,
+   "proposed": 14,
+   "complete": 13,
+   "partial": 1,
+   "merged": 0,
+   "missed": 0,
+   "invented": 0,
+   "blocked": 1,
+   "wrong_start": 0,
+   "wrong_end": 0,
+   "values_in_text": 23,
+   "values_captured": 10,
+   "values_not_in_text": 0
+  }
+ },
+ "upload 3 (v1)": {
+  "version": 1,
+  "sections": [
+   {
+    "section": "P-01",
+    "title": "VERSION AND CONTRACT DATE",
+    "outcome": "complete",
+    "values_in_text": 0
+   },
+   {
+    "section": "P-02",
+    "title": "DEFINITIONS AND PRIORITY",
+    "outcome": "complete",
+    "values_in_text": 0
+   },
+   {
+    "section": "P-03",
+    "title": "ORDINARY VOLUNTARY CANCELLATION: CONFIRMED NON-PREMIUM TICKETS",
+    "outcome": "complete",
+    "values_in_text": 10
+   },
+   {
+    "section": "P-04",
+    "title": "BOOKING SERVICE FEE AND OTHER CHARGES",
+    "outcome": "complete",
+    "values_in_text": 1
+   },
+   {
+    "section": "P-05",
+    "title": "PREMIUM QUICKBOOK (PQ) TICKETS",
+    "outcome": "complete",
+    "values_in_text": 0
+   },
+   {
+    "section": "P-06",
+    "title": "WAITLISTED TICKETS",
+    "outcome": "complete",
+    "values_in_text": 2
+   },
+   {
+    "section": "P-07",
+    "title": "PARTIAL CANCELLATIONS AND SEPARATE PASSENGER STATUS",
+    "outcome": "complete",
+    "values_in_text": 3
+   },
+   {
+    "section": "P-08",
+    "title": "CLAIM SUBMISSION, PROOF AND PROCESSING",
+    "outcome": "complete",
+    "values_in_text": 0
+   },
+   {
+    "section": "E1",
+    "title": "OPERATOR-CANCELLED SERVICE - OVERRIDES P-03, P-05, P-06, P-07 DEADLINES",
+    "outcome": "complete",
+    "values_in_text": 2
+   },
+   {
+    "section": "E2",
+    "title": "MAJOR DEPARTURE DELAY AND NON-TRAVEL - OVERRIDES P-03 AND P-05",
+    "outcome": "complete",
+    "values_in_text": 2
+   },
+   {
+    "section": "E3",
+    "title": "CERTIFIED MEDICAL EMERGENCY - OVERRIDES ORDINARY TIME CUTOFFS",
+    "outcome": "complete",
+    "values_in_text": 2
+   },
+   {
+    "section": "E4",
+    "title": "DOCUMENTED ACCIDENTAL DUPLICATE PURCHASE - OVERRIDES P-03 AND P-05",
+    "outcome": "complete",
+    "values_in_text": 1
+   },
+   {
+    "section": "E5",
+    "title": "",
+    "outcome": "partial",
+    "values_in_text": 0
+   },
+   {
+    "section": "P-09",
+    "title": "EXCLUSIONS AND INTERPRETIVE RULES",
+    "outcome": "complete",
+    "values_in_text": 0
+   }
+  ],
+  "proposals": [
+   {
+    "item_no": 1,
+    "kind": "UNCHANGED",
+    "clause_id": "OTH-001",
+    "area": "other",
+    "title": "Version and contract date",
+    "sections": [
+     "P-01"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 2,
+    "kind": "UNCHANGED",
+    "clause_id": "OTH-002",
+    "area": "other",
+    "title": "Definitions and priority",
+    "sections": [
+     "P-02"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 3,
+    "kind": "CHANGE",
+    "clause_id": "CAN-002",
+    "area": "cancellation",
+    "title": "Premium QuickBook (PQ) tickets",
+    "sections": [
+     "P-03"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 1,
+    "params_fail": 0,
+    "values_in_text": 10,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 4,
+    "kind": "UNCHANGED",
+    "clause_id": "OTH-003",
+    "area": "other",
+    "title": "Booking service fee and other charges",
+    "sections": [
+     "P-04"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 1,
+    "values_captured": 1,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 5,
+    "kind": "UNCHANGED",
+    "clause_id": "CAN-002",
+    "area": "cancellation",
+    "title": "Premium QuickBook (PQ) tickets",
+    "sections": [
+     "P-05"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 6,
+    "kind": "UNCHANGED",
+    "clause_id": "CAN-003",
+    "area": "cancellation",
+    "title": "Waitlisted tickets",
+    "sections": [
+     "P-06"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 2,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 2,
+    "values_captured": 2,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 7,
+    "kind": "UNCHANGED",
+    "clause_id": "OTH-008",
+    "area": "other",
+    "title": "Partial cancellations and separate passenger status",
+    "sections": [
+     "P-07"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 3,
+    "values_captured": 1,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 8,
+    "kind": "UNCHANGED",
+    "clause_id": "REF-001",
+    "area": "refund",
+    "title": "Claim submission, proof and processing",
+    "sections": [
+     "P-08"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 0,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 9,
+    "kind": "NEW",
+    "clause_id": "CAN-004",
+    "area": "cancellation",
+    "title": "OPERATOR-CANCELLED SERVICE - OVERRIDES P-03, P-05, P-06, P-07 DEADLINES",
+    "sections": [
+     "E1"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 1,
+    "values_in_text": 2,
+    "values_captured": 1,
+    "values_not_in_text": [],
+    "blocked": true,
+    "failures": [
+     "rule values: max_claim_days = 7 is not stated in the clause text"
+    ]
+   },
+   {
+    "item_no": 10,
+    "kind": "UNCHANGED",
+    "clause_id": "DEL-001",
+    "area": "delay",
+    "title": "Major departure delay and non-travel",
+    "sections": [
+     "E2"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 2,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 2,
+    "values_captured": 2,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 11,
+    "kind": "UNCHANGED",
+    "clause_id": "OTH-004",
+    "area": "other",
+    "title": "Certified medical emergency",
+    "sections": [
+     "E3"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 2,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 2,
+    "values_captured": 2,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 12,
+    "kind": "UNCHANGED",
+    "clause_id": "OTH-005",
+    "area": "other",
+    "title": "Documented accidental duplicate purchase",
+    "sections": [
+     "E4"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 1,
+    "values_captured": 1,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 13,
+    "kind": "UNCHANGED",
+    "clause_id": "OTH-006",
+    "area": "other",
+    "title": "Not in force",
+    "sections": [
+     "E5"
+    ],
+    "coverage": [
+     "partial"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 1,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   },
+   {
+    "item_no": 14,
+    "kind": "UNCHANGED",
+    "clause_id": "OTH-007",
+    "area": "other",
+    "title": "Exclusions and interpretive rules",
+    "sections": [
+     "P-09"
+    ],
+    "coverage": [
+     "complete"
+    ],
+    "verbatim": true,
+    "invented": false,
+    "from": "2026-01-01",
+    "to": null,
+    "from_ok": true,
+    "to_ok": true,
+    "to_gap": false,
+    "params": 0,
+    "params_pass": 0,
+    "params_warn": 0,
+    "params_fail": 0,
+    "values_in_text": 0,
+    "values_captured": 0,
+    "values_not_in_text": [],
+    "blocked": false,
+    "failures": []
+   }
+  ],
+  "discarded": [],
+  "summary": {
+   "sections": 14,
+   "proposed": 14,
+   "complete": 13,
+   "partial": 1,
+   "merged": 0,
+   "missed": 0,
+   "invented": 0,
+   "blocked": 1,
+   "wrong_start": 0,
+   "wrong_end": 0,
+   "values_in_text": 23,
+   "values_captured": 10,
+   "values_not_in_text": 0
+  }
+ }
+}

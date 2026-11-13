@@ -1,0 +1,5 @@
+# Its own virtualenv: Langflow pins its own LangChain. lfx is the Langflow executor (runs flows headless);
+# lfx-ibm is IBM's Langflow bundle (Db2 vector store, watsonx.ai), installed alongside.
+lfx==1.13.1
+lfx-ibm==0.3.2
+pytest==9.2.0

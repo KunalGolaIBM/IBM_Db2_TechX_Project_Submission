@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+"""End-to-end smoke check of a running AsOf: real checks through the HTTP API, decisions in Db2.
+
+    python scripts/smoke_check.py                  # http://127.0.0.1:8000
+    python scripts/smoke_check.py http://host:port
+
+1. /healthz (retried for up to 2 minutes while the app starts): Db2 reachable as the runtime user, a model
+   (or replay mode) configured.
+2. The Moffatt question for a March booking, through the demo assistant and the check. With a live
+   model it must not be released as written; in replay mode (what ./quickstart.sh picks without a key)
+   the decision must equal the recorded one, and the ledger row must say "replay:".
+3. Replay mode only: a draft that was never recorded must be held for a specialist (fail closed).
+4. The receipt (row hash) the check returned must match the ledger, VERIFY_CHAIN over the whole
+   ledger must report OK, and the chain-head anchors kept outside Db2 must match and cover that row.
+
+Prints each result and exits non-zero on the first mismatch. CI runs it after ./quickstart.sh.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+import httpx
+
+ROOT = Path(__file__).resolve().parents[1]
+MOFFATT = "My grandmother just died. Can I get the bereavement fare after I travel?"
+MARCH = "2026-03-10"
+
+
+STARTUP_WAIT_S = 120  # the app loads the embedding model before it answers, which takes a while on first run
+
+
+def wait_until_up(client: httpx.Client) -> dict | None:
+    """/healthz once the app answers, retrying for up to STARTUP_WAIT_S: the README starts the app in the
+    background on the line before this script, so the first attempts may find nothing listening yet."""
+    deadline = time.monotonic() + STARTUP_WAIT_S
+    while True:
+        try:
+            r = client.get("/healthz", timeout=10.0)
+            if r.status_code == 200:
+                return r.json()
+        except httpx.HTTPError:
+            pass
+        if time.monotonic() > deadline:
+            return None
+        time.sleep(2)
+
+
+def fail(msg: str) -> int:
+    print(f"FAIL: {msg}")
+    return 1
+
+
+def main(base: str) -> int:
+    token = os.environ.get("ASOF_API_TOKEN", "")  # only needed when the API token is switched on
+    client = httpx.Client(base_url=base, timeout=httpx.Timeout(360.0, connect=10.0),
+                          headers={"Authorization": f"Bearer {token}"} if token else {})
+    health = wait_until_up(client)
+    if health is None:
+        return fail(f"no answer from {base}/healthz within {STARTUP_WAIT_S} s: is `python src/main.py` running?")
+    print("healthz:", {k: health.get(k) for k in ("status", "db2", "llm", "llm_ready", "replay", "replay_model")})
+    if health.get("db2") != "ok" or not health.get("llm_ready"):
+        return fail("Db2 is not reachable as the runtime user, or no model is configured")
+    replay = bool(health.get("replay"))
+
+    body = client.post("/api/assistant/ask", json={"question": MOFFATT, "as_of_date": MARCH}).json()
+    if "decision" not in body:
+        return fail(f"the check did not run: {json.dumps(body)[:300]}")
+    claims = [(c["verdict"], c.get("clause_id"), c.get("clause_version")) for c in body["claims"] if c["pass_no"] == 1]
+    print(f"Moffatt, March booking: {body['decision']} ({body['reason_code']}), ledger #{body['ledger_id']}, "
+          f"model {body['model']}, claims {claims}")
+    if replay:
+        recording = json.loads((ROOT / "src/asof/data/replay.json").read_text(encoding="utf-8"))
+        expected = next(c for c in recording["scenarios"]["checks"]
+                        if c["question"] == MOFFATT and c["as_of"] == MARCH and c["draft"] is None)
+        if (body["decision"], body["reason_code"]) != (expected["decision"], expected["reason_code"]):
+            return fail(f"replay gave {body['decision']}/{body['reason_code']}, the recording says "
+                        f"{expected['decision']}/{expected['reason_code']}")
+        if not body["model"].startswith("replay:"):
+            return fail(f"a replayed decision must be labelled replay: in the ledger, got {body['model']}")
+        held = client.post("/api/gate", json={"question": "Can I bring my bike?", "as_of_date": "2026-05-05",
+                                              "draft_answer": "Yes, bikes fly free on every Aurelia Air flight."}).json()
+        print(f"Unrecorded draft in replay mode: {held['decision']} ({held['reason_code']})")
+        if (held["decision"], held["reason_code"]) != ("ESCALATED", "ERROR_FAIL_CLOSED"):
+            return fail("an unrecorded draft must be held for a specialist in replay mode")
+    elif body["decision"] == "PASS":
+        return fail("the stale retroactive-refund promise was released as written")
+
+    receipt = client.post("/api/ledger/receipt", json={"ledger_id": body["ledger_id"], "row_hash": body["row_hash"]}).json()
+    print(f"Receipt for #{body['ledger_id']}: {receipt['verdict']}")
+    if receipt["verdict"] != "INTACT":
+        return fail(f"the receipt the check returned does not match the ledger: {receipt}")
+
+    chain = client.get("/api/chain/verify").json()
+    print(f"VERIFY_CHAIN: {chain['status']} over {chain['rows_checked']} rows")
+    if chain["status"] != "OK":
+        return fail(f"hash chain broken at #{chain['first_bad_ledger_id']}: {chain['detail']}")
+
+    anchors = client.get("/api/chain/anchors").json()
+    print(f"Chain-head anchors: {anchors['status']}, entries 1 to {anchors.get('covered_through')} covered")
+    if anchors["status"] != "OK" or (anchors.get("covered_through") or 0) < body["ledger_id"]:
+        return fail(f"the chain head was not anchored outside Db2 after the check: {anchors}")
+    print("smoke check passed")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8000"))

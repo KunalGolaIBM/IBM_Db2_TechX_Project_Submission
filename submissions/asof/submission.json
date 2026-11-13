@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "AsOf",
+    "slug": "asof",
+    "short_description": "AsOf checks each policy claim in an AI assistant's answer against the policy version in force on the customer's date, stops answers that contradict it, and keeps a tamper-evident Db2 record of what was said and why. Built for the kind of failure at issue in Moffatt v. Air Canada.",
+    "category": "AI / Compliance / Data Engineering",
+    "demo_url": "https://136-108-251-170.sslip.io",
+    "video_url": "https://www.youtube.com/watch?v=mntehVWQn8E",
+    "repo_url": "https://github.com/JustJay7/asof"
+  },
+  "team": {
+    "name": "Jay Malhotra",
+    "members": [
+      {
+        "name": "Jay Malhotra",
+        "github": "JustJay7",
+        "email": "jaymalhotra106@gmail.com",
+        "role": "Solo developer: design, Db2, AI pipeline, UI"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition 12.1.5.0 (Docker)",
+    "connector": "ibm_db / ibm_db_dbi (parameter markers only), LangChain langchain-db2 (DB2VS), SQLAlchemy with ibm_db_sa, IBM's db2-sqlglot-dialect (SQLGlot), IBM's ibm-dbt-db2 adapter, the Apache Airflow IBM Db2 provider, IBM's lfx-ibm Langflow bundle, langchain-ibm (IBM watsonx.ai, optional)",
+    "features_used": [
+      "Bitemporal tables (BUSINESS_TIME and SYSTEM_TIME periods, history table)",
+      "FOR BUSINESS_TIME AS OF and FOR SYSTEM_TIME AS OF queries (as-of lookup and replay)",
+      "UPDATE ... FOR PORTION OF BUSINESS_TIME for policy changes",
+      "Native VECTOR(384, FLOAT32) with VECTOR_DISTANCE in the same query as temporal predicates",
+      "PRIMARY KEY ... BUSINESS_TIME WITHOUT OVERLAPS",
+      "SQL PL stored procedures (APPEND_LEDGER, VERIFY_CHAIN, APPLY_POLICY_CHANGE, CHANGE_IMPACT with a dynamic result set) and SQL scalar and table functions",
+      "In-database SHA-256 hash chain with HASH(..., 2)",
+      "BEFORE UPDATE / BEFORE DELETE triggers making ledger tables append-only",
+      "SQL/JSON: JSON_TABLE (citations and the policy timeline view), JSON_EXISTS check constraints",
+      "Views for the policy timeline and analytics",
+      "Indexes, foreign keys and check constraints, including a composite index (DOC_ID, BUS_START, BUS_END) that the as-of query uses for its start and stop keys",
+      "Least-privilege Db2 users: SELECT plus EXECUTE only, PUBLIC defaults revoked",
+      "LangChain DB2VS vector store (langchain-db2)",
+      "Catalog views (SYSCAT) for idempotent, self-checking setup",
+      "CURRENT SCHEMA and CURRENT PATH special registers set through parameter markers, so runtime SQL is literal",
+      "Native vector index (CREATE VECTOR INDEX ... WITH DISTANCE COSINE, type VANN) in a dedicated 32K tablespace and bufferpool, benchmarked against exact search",
+      "FETCH EXACT / FETCH APPROX vector search control",
+      "Adaptive row compression on the append-only ledger tables",
+      "RUNSTATS and EXPLAIN (db2exfmt) access plans for the hot queries",
+      "In-database embeddings: CREATE EXTERNAL MODEL over HTTPS and TO_EMBEDDING in seeding and inside the APPLY_POLICY_CHANGE procedure (Db2 12.1.5)",
+      "SQL PL procedures ADD_SUGGESTION and DECIDE_SUGGESTION: an agent-drafted help-centre correction is stored by the runtime user and published only by the editor, split in time at the change date",
+      "Row and column access control: column masks on the ledger's text (VERIFY_ROLE_FOR_USER, roles ASOF_TEXT_READER and ASOF_ANALYST), SECURED triggers, ACTIVATE COLUMN ACCESS CONTROL",
+      "Read-only analyst user with SELECT on six audit views only, queried through SQLAlchemy (ibm_db_sa) and LangChain's SQLDatabase",
+      "LLM-generated SQL checked with SQLGlot and IBM's db2-sqlglot-dialect, then run with a Db2 statement timeout (SQL_ATTR_QUERY_TIMEOUT)",
+      "Two fictional policy documents (an airline and a bank fee schedule) in the same bitemporal tables, separated by DOC_ID in every as-of query, with a CHECK constraint covering both domains' areas",
+      "dbt marts over the ledger with IBM's ibm-dbt-db2 adapter, with audit tests (CORRECTED implies a contradiction, every cited clause version exists in current or history rows, marts add up to the ledger)",
+      "Apache Airflow DAG with the IBM Db2 provider: nightly VERIFY_CHAIN, system-time detection of changed clauses, CHANGE_IMPACT per clause as mapped tasks",
+      "SET CURRENT LOCK TIMEOUT (bound parameter) for the runtime users, so a held ledger lock fails a check closed in seconds",
+      "TLS client connections (SECURITY=SSL, SSLServerCertificate pinning) for a remote Db2, tested against a GSKit-configured TLS listener (SSL_SVR_KEYDB, SSL_SVCENAME, DB2COMM=SSL,TCPIP) locally and in CI",
+      "Per-user API access in an API_USER table holding only SHA-256 token hashes, with role flags and check constraints; the runtime user may only SELECT it",
+      "Policy intake: an uploaded PDF stored as a BLOB with a SHA-256 computed by Db2 (HASH over the BLOB) that must match the application's, proposals in POLICY_DRAFT / POLICY_DRAFT_ITEM written only by editor procedures (ADD_POLICY_DRAFT, ADD_POLICY_DRAFT_ITEM, DECIDE_POLICY_DRAFT, APPLY_DRAFT_ITEM), approval applied through APPLY_POLICY_CHANGE (nested CALL) in one transaction, four-eyes enforced in SQL PL, provenance in each version's change note",
+      "CREATE EXTERNAL MODEL ... PROVIDER WATSONX (IBM watsonx.ai) as an option for Db2's own embedder, with the key passed as a validated literal and never stored in plain text in the catalog",
+      "Monthly range partitioning of ANSWER_LEDGER on CREATED_AT (PARTITION BY RANGE ... EVERY 1 MONTH, open-ended first and last partitions; partitioned and global indexes), with DETACH refused by Db2 while CLAIM_CITATION's foreign key references the ledger (tested)",
+      "REFRESH IMMEDIATE materialized query tables (MQT_DECISION_STATS, MQT_CLAIM_OUTCOMES) behind the analytics views, refreshed by setup; MQT_DECISION_STATS gets a row permission, since column access control on its base table otherwise hides every row of it; benchmarked against the unpartitioned design at 1,000,000 decisions (asof.ledgerbench)",
+      "Online backup and restore drill: BACKUP DATABASE ... ONLINE COMPRESS INCLUDE LOGS of an archive-logging database while the app writes, RESTORE ... INTO a new database, ROLLFORWARD TO END OF BACKUP AND STOP, then VERIFY_CHAIN and chain-head anchors on the copy (asof.backup, run in CI on IBM's image)",
+      "A fourth ledger decision, REVIEWED: a specialist's reply to a held decision, appended to the same hash chain by the SQL PL procedure RESOLVE_ESCALATION, which re-counts the reply's verdicts with JSON_TABLE, copies the question from the held row, takes the chain lock, and refuses a contradiction, a second answer and self-review; APPEND_LEDGER_ROW is granted to no one",
+      "Correction notices (CORRECTION_NOTICE) for answers a policy change made stale for their date, stored by ADD_NOTICE after Db2 cross-checks the answer, the version in force FOR BUSINESS_TIME AS OF the customer's date and the correction's check; one open notice per answer and version enforced by a generated column with a unique index EXCLUDE NULL KEYS; a trigger allows a notice to change once",
+      "Routing between policy documents: one statement ranks every document's clauses in force on a date by VECTOR_DISTANCE and keeps each document's nearest three with ROW_NUMBER() OVER (PARTITION BY DOC_ID ...); measured on a split pinned before the router existed",
+      "Clause version diff: two rows of one clause from anywhere in its system-time history (FOR SYSTEM_TIME FROM ... TO ...) in one statement, with VECTOR_DISTANCE between their embeddings",
+      "Row and column access control: row permissions per policy domain (CREATE PERMISSION, roles mapped in a DOMAIN_ACCESS table)",
+      "Workload management: a dedicated workload for AI-generated SQL with STOP EXECUTION thresholds (estimated cost, rows returned, activity time)",
+      "A secured BEFORE INSERT trigger that refuses a release unless every claim cites a clause version in force on the date (JSON_TABLE joined to FOR BUSINESS_TIME AS OF)",
+      "PREVIEW_POLICY_CHANGE: apply a change, compute its impact, ROLLBACK TO SAVEPOINT inside one procedure",
+      "DEMO_SPEND: a daily live-check cap enforced by a procedure that SIGNALs at the cap",
+      "Backtest runs written through procedures, with money at stake read from RULE_JSON with JSON_VALUE",
+      "Trusted context: the API switches SESSION_USER per request (optional), so Db2 records and authorizes the real requester",
+      "CHAIN_CHECKPOINT and VERIFY_CHAIN_FROM_CHECKPOINT: incremental hash-chain verification from Db2-recorded checkpoints"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "SQL",
+      "JavaScript"
+    ],
+    "frameworks": [
+      "Apache Airflow",
+      "dbt",
+      "FastAPI",
+      "LangChain",
+      "Langflow",
+      "LangGraph",
+      "Model Context Protocol (MCP) SDK",
+      "Pydantic",
+      "pypdf",
+      "SQLAlchemy",
+      "SQLGlot"
+    ],
+    "ai_models": [
+      "google/gemini-3.1-flash-lite via OpenRouter (default)",
+      "qwen2.5:7b-instruct via Ollama (local, no key)",
+      "IBM watsonx.ai via langchain-ibm (optional; ibm/granite-4-h-small by default)",
+      "sentence-transformers/all-MiniLM-L6-v2 (local embeddings)",
+      "Replay mode: outputs of the default model recorded for the built-in scenarios, so the full check runs with no key (anything unrecorded fails closed)"
+    ]
+  }
+}

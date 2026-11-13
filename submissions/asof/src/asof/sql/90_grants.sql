@@ -1,0 +1,364 @@
+-- Least-privilege grants. Applied after the schema exists and seed data is loaded.
+-- ASOF_APP_USER, ASOF_EDITOR_USER, ASOF_REVIEW_USER, ASOF_ANALYST_USER and ASOF_MART_USER are replaced by the
+-- validated user names
+-- from .env.
+-- "ASOF." is replaced by the target schema. REVOKEs that find nothing to revoke are skipped.
+
+-- Db2 grants these to PUBLIC by default. Take them away so only named users can connect,
+-- and nobody but the owner can create tables, packages or schemas.
+-- grant: REVOKE_PUBLIC_CONNECT
+REVOKE CONNECT ON DATABASE FROM PUBLIC
+@
+-- grant: REVOKE_PUBLIC_CREATETAB
+REVOKE CREATETAB ON DATABASE FROM PUBLIC
+@
+-- grant: REVOKE_PUBLIC_BINDADD
+REVOKE BINDADD ON DATABASE FROM PUBLIC
+@
+-- grant: REVOKE_PUBLIC_IMPLICIT_SCHEMA
+REVOKE IMPLICIT_SCHEMA ON DATABASE FROM PUBLIC
+@
+
+-- Runtime user: connect and read. No INSERT, UPDATE, DELETE or DDL anywhere.
+-- Ledger writes happen only through EXECUTE on the procedures added in 03_procedures.sql.
+-- grant: APP_CONNECT
+GRANT CONNECT ON DATABASE TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_POLICY_DOC
+GRANT SELECT ON TABLE ASOF.POLICY_DOC TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_POLICY_CLAUSE
+GRANT SELECT ON TABLE ASOF.POLICY_CLAUSE TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_POLICY_CLAUSE_HIST
+GRANT SELECT ON TABLE ASOF.POLICY_CLAUSE_HIST TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_ANSWER_LEDGER
+GRANT SELECT ON TABLE ASOF.ANSWER_LEDGER TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_CLAIM_CITATION
+GRANT SELECT ON TABLE ASOF.CLAIM_CITATION TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_PUBLISHED_ANSWER
+GRANT SELECT ON TABLE ASOF.PUBLISHED_ANSWER TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_FAQ_KB
+GRANT SELECT ON TABLE ASOF.FAQ_KB TO USER ASOF_APP_USER
+@
+-- The runtime user looks API users up by token hash to authenticate requests (ASOF_AUTH=users).
+-- Only the owner adds, rotates or disables them.
+-- grant: APP_SELECT_API_USER
+GRANT SELECT ON TABLE ASOF.API_USER TO USER ASOF_APP_USER
+@
+
+-- Policy editor: connect and read policy. Changes go only through APPLY_POLICY_CHANGE.
+-- grant: EDITOR_CONNECT
+GRANT CONNECT ON DATABASE TO USER ASOF_EDITOR_USER
+@
+-- grant: EDITOR_SELECT_POLICY_DOC
+GRANT SELECT ON TABLE ASOF.POLICY_DOC TO USER ASOF_EDITOR_USER
+@
+-- grant: EDITOR_SELECT_POLICY_CLAUSE
+GRANT SELECT ON TABLE ASOF.POLICY_CLAUSE TO USER ASOF_EDITOR_USER
+@
+-- grant: EDITOR_SELECT_POLICY_CLAUSE_HIST
+GRANT SELECT ON TABLE ASOF.POLICY_CLAUSE_HIST TO USER ASOF_EDITOR_USER
+@
+
+-- Runtime user: the only way to write to the ledger, and the chain check.
+-- grant: APP_EXECUTE_APPEND_LEDGER
+GRANT EXECUTE ON PROCEDURE ASOF.APPEND_LEDGER TO USER ASOF_APP_USER
+@
+-- grant: APP_EXECUTE_VERIFY_CHAIN
+GRANT EXECUTE ON PROCEDURE ASOF.VERIFY_CHAIN TO USER ASOF_APP_USER
+@
+
+-- Runtime user: change impact report and the read-only views.
+-- grant: APP_EXECUTE_CHANGE_IMPACT
+GRANT EXECUTE ON PROCEDURE ASOF.CHANGE_IMPACT TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_V_POLICY_TIMELINE
+GRANT SELECT ON TABLE ASOF.V_POLICY_TIMELINE TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_V_DECISION_STATS
+GRANT SELECT ON TABLE ASOF.V_DECISION_STATS TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_V_CLAIM_OUTCOMES_BY_AREA
+GRANT SELECT ON TABLE ASOF.V_CLAIM_OUTCOMES_BY_AREA TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_V_RULE_OVERRIDES
+GRANT SELECT ON TABLE ASOF.V_RULE_OVERRIDES TO USER ASOF_APP_USER
+@
+
+-- Policy editor: the only way to change policy, and the impact report that follows it.
+-- grant: EDITOR_EXECUTE_APPLY_POLICY_CHANGE
+GRANT EXECUTE ON PROCEDURE ASOF.APPLY_POLICY_CHANGE TO USER ASOF_EDITOR_USER
+@
+-- grant: EDITOR_EXECUTE_CHANGE_IMPACT
+GRANT EXECUTE ON PROCEDURE ASOF.CHANGE_IMPACT TO USER ASOF_EDITOR_USER
+@
+-- Change-impact suggestions: the runtime user stores drafts; only the editor decides them.
+-- grant: APP_SELECT_ANSWER_SUGGESTION
+GRANT SELECT ON TABLE ASOF.ANSWER_SUGGESTION TO USER ASOF_APP_USER
+@
+-- grant: APP_EXECUTE_ADD_SUGGESTION
+GRANT EXECUTE ON PROCEDURE ASOF.ADD_SUGGESTION TO USER ASOF_APP_USER
+@
+-- grant: EDITOR_SELECT_ANSWER_SUGGESTION
+GRANT SELECT ON TABLE ASOF.ANSWER_SUGGESTION TO USER ASOF_EDITOR_USER
+@
+-- grant: EDITOR_EXECUTE_DECIDE_SUGGESTION
+GRANT EXECUTE ON PROCEDURE ASOF.DECIDE_SUGGESTION TO USER ASOF_EDITOR_USER
+@
+-- Policy intake: only the editor stores and decides drafts, through the four procedures; it holds no
+-- INSERT or UPDATE on any table. The runtime user reads drafts, so auditors can trace a clause
+-- version back to the document it came from.
+-- grant: EDITOR_SELECT_POLICY_DRAFT
+GRANT SELECT ON TABLE ASOF.POLICY_DRAFT TO USER ASOF_EDITOR_USER
+@
+-- grant: EDITOR_SELECT_POLICY_DRAFT_ITEM
+GRANT SELECT ON TABLE ASOF.POLICY_DRAFT_ITEM TO USER ASOF_EDITOR_USER
+@
+-- grant: EDITOR_EXECUTE_ADD_POLICY_DRAFT
+GRANT EXECUTE ON PROCEDURE ASOF.ADD_POLICY_DRAFT TO USER ASOF_EDITOR_USER
+@
+-- grant: EDITOR_EXECUTE_ADD_POLICY_DRAFT_ITEM
+GRANT EXECUTE ON PROCEDURE ASOF.ADD_POLICY_DRAFT_ITEM TO USER ASOF_EDITOR_USER
+@
+-- grant: EDITOR_EXECUTE_DECIDE_POLICY_DRAFT
+GRANT EXECUTE ON PROCEDURE ASOF.DECIDE_POLICY_DRAFT TO USER ASOF_EDITOR_USER
+@
+-- grant: EDITOR_EXECUTE_APPLY_DRAFT_ITEM
+GRANT EXECUTE ON PROCEDURE ASOF.APPLY_DRAFT_ITEM TO USER ASOF_EDITOR_USER
+@
+-- grant: APP_SELECT_POLICY_DRAFT
+GRANT SELECT ON TABLE ASOF.POLICY_DRAFT TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_POLICY_DRAFT_ITEM
+GRANT SELECT ON TABLE ASOF.POLICY_DRAFT_ITEM TO USER ASOF_APP_USER
+@
+
+-- Specialist inbox: the runtime user reads the queue and checks a reply; only the reviewer user (below) appends a
+-- specialist's reply, through RESOLVE_ESCALATION, which writes the REVIEWED ledger row and the link in one
+-- transaction.
+-- grant: APP_SELECT_ESCALATION_REVIEW
+GRANT SELECT ON TABLE ASOF.ESCALATION_REVIEW TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_V_REVIEW_QUEUE
+GRANT SELECT ON TABLE ASOF.V_REVIEW_QUEUE TO USER ASOF_APP_USER
+@
+-- Installs before 8 Nov 2026 granted this to the runtime user; a person's actions now run as the reviewer user.
+-- grant: APP_REVOKE_RESOLVE_ESCALATION
+REVOKE EXECUTE ON PROCEDURE ASOF.RESOLVE_ESCALATION FROM USER ASOF_APP_USER RESTRICT
+@
+
+-- Correction notices: the runtime user stores the agent's drafts and records a specialist's decision, only
+-- through the two procedures; it holds no INSERT or UPDATE on the table.
+-- grant: APP_SELECT_CORRECTION_NOTICE
+GRANT SELECT ON TABLE ASOF.CORRECTION_NOTICE TO USER ASOF_APP_USER
+@
+-- grant: APP_EXECUTE_ADD_NOTICE
+GRANT EXECUTE ON PROCEDURE ASOF.ADD_NOTICE TO USER ASOF_APP_USER
+@
+-- grant: APP_REVOKE_DECIDE_NOTICE
+REVOKE EXECUTE ON PROCEDURE ASOF.DECIDE_NOTICE FROM USER ASOF_APP_USER RESTRICT
+@
+
+-- Roles (database-wide, shared by every AsOf schema). Created if missing; need SECADM.
+-- ASOF_TEXT_READER: may read the ledger's free text (see the masks in 05_masks.sql).
+-- role: ASOF_TEXT_READER
+CREATE ROLE ASOF_TEXT_READER
+@
+-- ASOF_ANALYST: the read-only analyst behind "Ask the ledger". Audit views only.
+-- role: ASOF_ANALYST
+CREATE ROLE ASOF_ANALYST
+@
+-- Only the runtime user reads the real values: it writes and verifies the chain and serves the
+-- ledger screens. The owner is masked too (Db2 does not let it grant itself a role, SQL0554N).
+-- It holds SECADM and could drop the masks, but that is a catalog change, not a silent read.
+-- grant: TEXT_READER_APP
+GRANT ROLE ASOF_TEXT_READER TO USER ASOF_APP_USER
+@
+-- Reviewer: a specialist's decisions, kept apart from the account the model-facing check runs as, as policy changes
+-- are (the editor). Connect, read the ledger text (RESOLVE_ESCALATION refuses a caller who would see it masked),
+-- and two procedures; no table privileges at all.
+-- grant: REVIEW_CONNECT
+GRANT CONNECT ON DATABASE TO USER ASOF_REVIEW_USER
+@
+-- grant: TEXT_READER_REVIEW
+GRANT ROLE ASOF_TEXT_READER TO USER ASOF_REVIEW_USER
+@
+-- grant: REVIEW_EXECUTE_RESOLVE_ESCALATION
+GRANT EXECUTE ON PROCEDURE ASOF.RESOLVE_ESCALATION TO USER ASOF_REVIEW_USER
+@
+-- grant: REVIEW_EXECUTE_DECIDE_NOTICE
+GRANT EXECUTE ON PROCEDURE ASOF.DECIDE_NOTICE TO USER ASOF_REVIEW_USER
+@
+-- Read-only analyst: connect, and SELECT on the audit and analytics views. No tables, no
+-- procedures, and not in ASOF_TEXT_READER, so the ledger's free text comes back masked.
+-- grant: ANALYST_ROLE
+GRANT ROLE ASOF_ANALYST TO USER ASOF_ANALYST_USER
+@
+-- grant: ANALYST_CONNECT
+GRANT CONNECT ON DATABASE TO ROLE ASOF_ANALYST
+@
+-- grant: ANALYST_SELECT_V_AUDIT_DECISIONS
+GRANT SELECT ON TABLE ASOF.V_AUDIT_DECISIONS TO ROLE ASOF_ANALYST
+@
+-- grant: ANALYST_SELECT_V_AUDIT_CLAIMS
+GRANT SELECT ON TABLE ASOF.V_AUDIT_CLAIMS TO ROLE ASOF_ANALYST
+@
+-- grant: ANALYST_SELECT_V_POLICY_TIMELINE
+GRANT SELECT ON TABLE ASOF.V_POLICY_TIMELINE TO ROLE ASOF_ANALYST
+@
+-- grant: ANALYST_SELECT_V_DECISION_STATS
+GRANT SELECT ON TABLE ASOF.V_DECISION_STATS TO ROLE ASOF_ANALYST
+@
+-- grant: ANALYST_SELECT_V_CLAIM_OUTCOMES_BY_AREA
+GRANT SELECT ON TABLE ASOF.V_CLAIM_OUTCOMES_BY_AREA TO ROLE ASOF_ANALYST
+@
+-- grant: ANALYST_SELECT_V_RULE_OVERRIDES
+GRANT SELECT ON TABLE ASOF.V_RULE_OVERRIDES TO ROLE ASOF_ANALYST
+@
+
+-- dbt's user (the optional analytics marts): reads the four tables the marts are built from, never the
+-- masked ledger text (the masks would return '[masked]' anyway), and creates tables and views only in its
+-- own schema, ASOF_MART for ASOF. CREATETAB is the database authority to create tables at all; the schema
+-- privileges confine it to ASOF_MART, since PUBLIC no longer holds IMPLICIT_SCHEMA. A schema Db2 created
+-- implicitly (owner SYSIBM) gives PUBLIC CREATEIN, which would let this user create tables next to the
+-- ledger, so that goes first.
+-- grant: REVOKE_PUBLIC_CREATEIN
+REVOKE CREATEIN ON SCHEMA ASOF_TARGET_SCHEMA FROM PUBLIC
+@
+-- grant: MART_CONNECT
+GRANT CONNECT ON DATABASE TO USER ASOF_MART_USER
+@
+-- grant: MART_CREATETAB
+GRANT CREATETAB ON DATABASE TO USER ASOF_MART_USER
+@
+-- grant: MART_SCHEMA
+GRANT CREATEIN, ALTERIN, DROPIN ON SCHEMA ASOF_MART_SCHEMA TO USER ASOF_MART_USER
+@
+-- The marts' tables go where every AsOf table goes (00_storage.sql).
+-- grant: MART_TABLESPACE
+GRANT USE OF TABLESPACE ASOF_TS32K TO USER ASOF_MART_USER
+@
+-- grant: MART_SELECT_ANSWER_LEDGER
+GRANT SELECT ON TABLE ASOF.ANSWER_LEDGER TO USER ASOF_MART_USER
+@
+-- grant: MART_SELECT_CLAIM_CITATION
+GRANT SELECT ON TABLE ASOF.CLAIM_CITATION TO USER ASOF_MART_USER
+@
+-- grant: MART_SELECT_POLICY_CLAUSE
+GRANT SELECT ON TABLE ASOF.POLICY_CLAUSE TO USER ASOF_MART_USER
+@
+-- grant: MART_SELECT_POLICY_CLAUSE_HIST
+GRANT SELECT ON TABLE ASOF.POLICY_CLAUSE_HIST TO USER ASOF_MART_USER
+@
+
+-- lane d-live-demo: the public demo's daily live-check budget (10_demo_spend.sql). The runtime user reads it and
+-- changes it only through the two procedures; nobody holds INSERT, UPDATE or DELETE on DEMO_SPEND.
+-- grant: APP_SELECT_DEMO_SPEND
+GRANT SELECT ON TABLE ASOF.DEMO_SPEND TO USER ASOF_APP_USER
+@
+-- grant: APP_EXECUTE_CLAIM_DEMO_CHECK
+GRANT EXECUTE ON PROCEDURE ASOF.CLAIM_DEMO_CHECK TO USER ASOF_APP_USER
+@
+-- grant: APP_EXECUTE_RECORD_DEMO_SPEND
+GRANT EXECUTE ON PROCEDURE ASOF.RECORD_DEMO_SPEND TO USER ASOF_APP_USER
+@
+
+-- Lane c-release-chain (08_release_rules.sql): the policy editor previews a change through PREVIEW_POLICY_CHANGE,
+-- which Db2 rolls back itself before it returns.
+-- grant: EDITOR_EXECUTE_PREVIEW_POLICY_CHANGE
+GRANT EXECUTE ON PROCEDURE ASOF.PREVIEW_POLICY_CHANGE TO USER ASOF_EDITOR_USER
+@
+
+-- Lane b-rcac-wlm: domain row permissions (06_domain_permissions.sql, docs/row-permissions.md).
+-- ASOF_ALL_DOMAINS: every policy domain's decisions. The runtime user appends and verifies over every row; the
+-- editor's change impact, the all-domain specialist and analyst, and dbt's marts read across domains. The
+-- domain-scoped users get a role per domain instead (asof/rowaccess.py), never this one.
+-- role: ASOF_ALL_DOMAINS
+CREATE ROLE ASOF_ALL_DOMAINS
+@
+-- grant: ALL_DOMAINS_APP
+GRANT ROLE ASOF_ALL_DOMAINS TO USER ASOF_APP_USER
+@
+-- grant: ALL_DOMAINS_EDITOR
+GRANT ROLE ASOF_ALL_DOMAINS TO USER ASOF_EDITOR_USER
+@
+-- grant: ALL_DOMAINS_REVIEW
+GRANT ROLE ASOF_ALL_DOMAINS TO USER ASOF_REVIEW_USER
+@
+-- grant: ALL_DOMAINS_ANALYST
+GRANT ROLE ASOF_ALL_DOMAINS TO USER ASOF_ANALYST_USER
+@
+-- grant: ALL_DOMAINS_MART
+GRANT ROLE ASOF_ALL_DOMAINS TO USER ASOF_MART_USER
+@
+-- ASOF_SPECIALIST: what a domain-scoped specialist may do, the same as the all-domain reviewer user above: connect,
+-- read ledger text, and the two procedures. Which held decisions and notices it reaches is the row permissions' call.
+-- role: ASOF_SPECIALIST
+CREATE ROLE ASOF_SPECIALIST
+@
+-- grant: SPECIALIST_CONNECT
+GRANT CONNECT ON DATABASE TO ROLE ASOF_SPECIALIST
+@
+-- grant: SPECIALIST_TEXT_READER
+GRANT ROLE ASOF_TEXT_READER TO ROLE ASOF_SPECIALIST
+@
+-- grant: SPECIALIST_EXECUTE_RESOLVE_ESCALATION
+GRANT EXECUTE ON PROCEDURE ASOF.RESOLVE_ESCALATION TO ROLE ASOF_SPECIALIST
+@
+-- grant: SPECIALIST_EXECUTE_DECIDE_NOTICE
+GRANT EXECUTE ON PROCEDURE ASOF.DECIDE_NOTICE TO ROLE ASOF_SPECIALIST
+@
+-- Every analyst (all-domain or domain-scoped) can ask which policy documents Db2 lets it see.
+-- grant: ANALYST_SELECT_V_DOMAIN_SCOPE
+GRANT SELECT ON TABLE ASOF.V_DOMAIN_SCOPE TO ROLE ASOF_ANALYST
+@
+
+-- Lane f-backtest: backtests (11_backtest.sql). The runtime user runs them: EXECUTE on the four procedures that
+-- write the run, its items and their money (no table write privileges), and SELECT for the exposure report.
+-- grant: APP_EXECUTE_START_BACKTEST
+GRANT EXECUTE ON PROCEDURE ASOF.START_BACKTEST TO USER ASOF_APP_USER
+@
+-- grant: APP_EXECUTE_ADD_BACKTEST_ITEM
+GRANT EXECUTE ON PROCEDURE ASOF.ADD_BACKTEST_ITEM TO USER ASOF_APP_USER
+@
+-- grant: APP_EXECUTE_ADD_BACKTEST_COST
+GRANT EXECUTE ON PROCEDURE ASOF.ADD_BACKTEST_COST TO USER ASOF_APP_USER
+@
+-- grant: APP_EXECUTE_FINISH_BACKTEST
+GRANT EXECUTE ON PROCEDURE ASOF.FINISH_BACKTEST TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_BACKTEST_RUN
+GRANT SELECT ON TABLE ASOF.BACKTEST_RUN TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_BACKTEST_ITEM
+GRANT SELECT ON TABLE ASOF.BACKTEST_ITEM TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_BACKTEST_COST
+GRANT SELECT ON TABLE ASOF.BACKTEST_COST TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_V_BACKTEST_RUNS
+GRANT SELECT ON TABLE ASOF.V_BACKTEST_RUNS TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_V_BACKTEST_CONTRADICTIONS
+GRANT SELECT ON TABLE ASOF.V_BACKTEST_CONTRADICTIONS TO USER ASOF_APP_USER
+@
+
+-- Lane b-rcac-wlm: Db2 workload management (07_wlm.sql, docs/wlm.md). Without USAGE, Db2 would map the analysts'
+-- connections to its default workload, past the thresholds.
+-- grant: ANALYST_USAGE_WL_ASOF_ANALYST
+GRANT USAGE ON WORKLOAD WL_ASOF_ANALYST TO ROLE ASOF_ANALYST
+@
+
+-- Lane c2-checkpoints (12_chain_checkpoints.sql): the runtime user verifies from the latest checkpoint and records the
+-- new one only through the procedure, and reads the checkpoints; it writes none directly.
+-- grant: APP_EXECUTE_VERIFY_CHAIN_FROM_CHECKPOINT
+GRANT EXECUTE ON PROCEDURE ASOF.VERIFY_CHAIN_FROM_CHECKPOINT TO USER ASOF_APP_USER
+@
+-- grant: APP_SELECT_CHAIN_CHECKPOINT
+GRANT SELECT ON TABLE ASOF.CHAIN_CHECKPOINT TO USER ASOF_APP_USER
+@

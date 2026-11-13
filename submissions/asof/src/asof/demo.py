@@ -1,0 +1,88 @@
+"""Record a handful of real decisions so the UI has history to show.
+
+    python -m asof.demo
+
+Asks the naive demo assistant each question below for the given customer date, checks its
+draft with the gate (real LLM, real Db2), and records the decision in the ASOF ledger. The
+two pet questions (November and December trips) are what the change-impact screen uses
+after the "pet fee to $125 from 1 Dec 2026" preset. The bank drafts below are checked as written
+(the demo assistant only knows the airline), against Fernhollow Bank's fee schedule. The held
+drafts are ones no clause fully covers, so they wait in the specialist inbox. Last, the fictional backtest sample
+(asof/backtest.py) runs once, so the Backtest page has a report; the public demo shows it read-only.
+"""
+
+from __future__ import annotations
+
+import sys
+from datetime import date
+
+from . import backtest, db
+from .anchor import AnchorLog
+from .assistant import DemoAssistant
+from .config import ConfigError, get_settings
+from .embeddings import get_embeddings
+from .gate import Gate, GateRequest
+from .llm import LLMError, build_llm
+
+MOFFATT = "My grandmother just died. Can I get the bereavement fare after I travel?"
+PETS = "Can my cat fly in the cabin with me, and what does it cost?"
+SCENARIOS = [
+    (MOFFATT, date(2026, 3, 10)),
+    (MOFFATT, date(2026, 6, 2)),
+    ("How much is the first checked bag?", date(2026, 7, 15)),
+    ("Can I transfer my ticket to a friend?", date(2026, 4, 1)),
+    (PETS, date(2026, 11, 20)),
+    (PETS, date(2026, 12, 15)),
+    ("Can my 12-year-old fly alone?", date(2026, 8, 1)),
+]
+REFUND = "I was charged an overdraft fee yesterday. Will you refund it?"
+BANK_DRAFTS = [  # (question, a bank assistant's draft, customer date)
+    (REFUND, "Yes, don't worry: overdraft fees are refunded automatically within a few days.", date(2026, 3, 15)),
+    (REFUND, "Overdraft fees are not refunded automatically, but you can ask us for a courtesy refund of up to two "
+             "overdraft fees in any 12-month period, within 60 days of the date the fee was charged.", date(2026, 9, 10)),
+    ("How much is the overdraft fee?", "The overdraft fee is $35 for each item we pay.", date(2026, 8, 3)),
+]
+# Drafts the check holds for a person: they land in the specialist inbox (scenarios.json has a suggested reply for
+# the two airline ones). (doc_id, question, draft, customer date)
+HELD_DRAFTS = [
+    ("AURELIA-CSP", "Can my 12-year-old fly alone to her grandmother's funeral?",
+     "Yes. Children aged 12 can fly alone with our escort service for $150 each way.", date(2026, 3, 12)),
+    ("AURELIA-CSP", "My father died last week and I fly tomorrow. Can I still get the bereavement fare?",
+     "Yes. Request it before you travel. There is a $25 processing fee for bereavement requests.", date(2026, 3, 20)),
+    ("FERNHOLLOW-FEES", "Is there a fee for a safe deposit box?", "Yes, a small safe deposit box costs $60 a year.",
+     date(2026, 9, 1)),
+]
+
+
+def main() -> int:
+    settings = get_settings()
+    try:
+        llm = build_llm(settings)
+        emb = get_embeddings(settings.embedding_model)
+        connect = db.ConnectionPool(settings, "app").connect
+        # The demo writes to the real ledger, so its decisions are anchored like the API's.
+        assistant, gate = DemoAssistant(llm, emb, connect), Gate(llm, emb, connect, anchors=AnchorLog.from_settings(settings))
+        for question, as_of in SCENARIOS:
+            draft = assistant.answer(question)
+            r = gate.check(GateRequest(question, draft.text, as_of, "AURELIA-CSP", "demo"))
+            print(f"#{r.ledger_id}  {as_of}  {r.decision:<9} {r.reason_code:<24} {question}")
+        for question, draft_text, as_of in BANK_DRAFTS:
+            r = gate.check(GateRequest(question, draft_text, as_of, "FERNHOLLOW-FEES", "demo"))
+            print(f"#{r.ledger_id}  {as_of}  {r.decision:<9} {r.reason_code:<24} {question} (bank)")
+        for doc_id, question, draft_text, as_of in HELD_DRAFTS:
+            r = gate.check(GateRequest(question, draft_text, as_of, doc_id, "chat"))
+            print(f"#{r.ledger_id}  {as_of}  {r.decision:<9} {r.reason_code:<24} {question} (for the specialist inbox)")
+        from .router import Router
+
+        sample = backtest.sample_upload()
+        run_id, status = backtest.run_upload(gate, connect, sample, "auto", settings.asof_backtest_deadline_s,
+                                             router=Router(emb, connect), sample=True)
+        print(f"backtest run {run_id}: {status}, the fictional sample's {len(sample.rows)} past answers (Backtest page)")
+    except (ConfigError, LLMError, db.DatabaseError) as exc:
+        print(f"Demo failed: {exc}")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

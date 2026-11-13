@@ -1,0 +1,552 @@
+{
+  "what": "Five live runs of each 'Same draft' playground scenario (README top image): the identical draft and question, checked for a March and a June booking, through POST /api/gate on the hosted model.",
+  "draft": "Yes. You can request the bereavement fare after you travel, within 90 days of the date your ticket was issued, with a death certificate or a letter from the attending physician or funeral home.",
+  "question": "My grandmother died. Can I get the bereavement fare after I travel?",
+  "source": "Exported from the dev ledger (schema ASOF, ledger rows 11 to 20) on 7 Nov 2026, as asofapp, with: SELECT LEDGER_ID, CREATED_AT, AS_OF_DATE, DECISION, MODEL_INFO, LATENCY_MS, FINAL_ANSWER, VERDICTS_JSON, ROW_HASH FROM ANSWER_LEDGER WHERE LEDGER_ID BETWEEN 11 AND 20 ORDER BY LEDGER_ID",
+  "summary": {
+    "2026-03-10": {
+      "CORRECTED": 5
+    },
+    "2026-06-02": {
+      "PASS": 4,
+      "ESCALATED": 1
+    }
+  },
+  "runs": [
+    {
+      "ledger_id": 11,
+      "recorded_at": "2026-11-07T20:25:19",
+      "as_of": "2026-03-10",
+      "decision": "CORRECTED",
+      "model": "openrouter:google/gemini-3.1-flash-lite",
+      "latency_ms": 11572,
+      "prompt_version": "2026-11-07.1",
+      "row_hash": "ad332bc3a2f5011f53a2e150960f427dfd49d07f0141167a8f3ec07dc5f3d99b",
+      "claims": [
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare after you travel",
+          "verdict": "CONTRADICTED",
+          "llm_verdict": "CONTRADICTED",
+          "rule_check": "MISMATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The policy states that bereavement fares cannot be applied after travel has occurred."
+        },
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare within 90 days of the date your ticket was issued",
+          "verdict": "NOT_COVERED",
+          "llm_verdict": "NOT_COVERED",
+          "rule_check": "NOT_APPLICABLE",
+          "clause": null,
+          "reason": "No policy clause mentions a 90-day time limit for requesting bereavement fares."
+        },
+        {
+          "pass": 1,
+          "text": "You must provide a death certificate or a letter from the attending physician or funeral home to request the bereavement fare",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "NOT_APPLICABLE",
+          "clause": "BRV-003 v1",
+          "reason": "The policy clearly lists the required documentation for a bereavement fare."
+        },
+        {
+          "pass": 2,
+          "text": "Bereavement fares must be requested before travel begins.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The clause explicitly states that bereavement fares must be requested before travel begins."
+        },
+        {
+          "pass": 2,
+          "text": "A bereavement fare cannot be applied retroactively once any part of the journey has been flown.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The clause explicitly forbids retroactive application after any part of the journey has been flown."
+        },
+        {
+          "pass": 2,
+          "text": "No refund of the fare difference is available after travel.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The clause confirms no refund of the fare difference is available after travel."
+        }
+      ],
+      "final_answer": "Bereavement fares must be requested before travel begins. A bereavement fare cannot be applied retroactively once any part of the journey has been flown, and no refund of the fare difference is available after travel.\n\nPolicy references: BRV-002 v1 (in effect from 2026-01-01)."
+    },
+    {
+      "ledger_id": 12,
+      "recorded_at": "2026-11-07T20:25:22",
+      "as_of": "2026-06-02",
+      "decision": "PASS",
+      "model": "openrouter:google/gemini-3.1-flash-lite",
+      "latency_ms": 3530,
+      "prompt_version": "2026-11-07.1",
+      "row_hash": "ec6437fd1e03aaebb7f8fdb8ba0c5e93b3b962ca1a62a5e75c50b1d4e7dcfd46",
+      "claims": [
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare after you travel",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v2",
+          "reason": "The policy explicitly states that bereavement fares can be requested retroactively."
+        },
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare within 90 days of the date your ticket was issued",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v2",
+          "reason": "The policy specifies a 90-day window from the ticket issuance date for retroactive requests."
+        },
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare with a death certificate or a letter from the attending physician or funeral home",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "NOT_APPLICABLE",
+          "clause": "BRV-003 v1",
+          "reason": "The required documentation for the fare includes the documents listed in the claim."
+        }
+      ],
+      "final_answer": "Yes. You can request the bereavement fare after you travel, within 90 days of the date your ticket was issued, with a death certificate or a letter from the attending physician or funeral home.\n\nPolicy references: BRV-002 v2 (in effect from 2026-05-01), BRV-003 v1 (in effect from 2026-01-01)."
+    },
+    {
+      "ledger_id": 13,
+      "recorded_at": "2026-11-07T20:27:59",
+      "as_of": "2026-03-10",
+      "decision": "CORRECTED",
+      "model": "openrouter:google/gemini-3.1-flash-lite",
+      "latency_ms": 6450,
+      "prompt_version": "2026-11-07.1",
+      "row_hash": "de46f6d35cb6b25df30d81b33f752b82c2972fe0e5a506d6af24c53217b818d2",
+      "claims": [
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare after you travel",
+          "verdict": "CONTRADICTED",
+          "llm_verdict": "CONTRADICTED",
+          "rule_check": "MISMATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The policy explicitly states that bereavement fares cannot be applied retroactively after travel."
+        },
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare within 90 days of the date your ticket was issued",
+          "verdict": "CONTRADICTED",
+          "llm_verdict": "CONTRADICTED",
+          "rule_check": "MISMATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The policy requires the fare to be requested before travel, making a 90-day post-travel window non-existent."
+        },
+        {
+          "pass": 1,
+          "text": "You must provide a death certificate or a letter from the attending physician or funeral home to request the bereavement fare",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "NOT_APPLICABLE",
+          "clause": "BRV-003 v1",
+          "reason": "The policy requires one of these documents to qualify for the fare."
+        },
+        {
+          "pass": 2,
+          "text": "Bereavement fares must be requested before travel begins.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The clause explicitly states that bereavement fares must be requested before travel begins."
+        },
+        {
+          "pass": 2,
+          "text": "A bereavement fare cannot be applied retroactively once any part of the journey has been flown.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The clause explicitly forbids retroactive application of bereavement fares after travel has commenced."
+        },
+        {
+          "pass": 2,
+          "text": "No refund of the fare difference is available after travel.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The clause confirms that no refund of the fare difference is provided after travel has occurred."
+        }
+      ],
+      "final_answer": "Bereavement fares must be requested before travel begins. A bereavement fare cannot be applied retroactively once any part of the journey has been flown, and no refund of the fare difference is available after travel.\n\nPolicy references: BRV-002 v1 (in effect from 2026-01-01)."
+    },
+    {
+      "ledger_id": 14,
+      "recorded_at": "2026-11-07T20:28:03",
+      "as_of": "2026-06-02",
+      "decision": "PASS",
+      "model": "openrouter:google/gemini-3.1-flash-lite",
+      "latency_ms": 2901,
+      "prompt_version": "2026-11-07.1",
+      "row_hash": "4c3052cce3f0ab23e4f689757dd61556ff46e3ddecbd2be6c86f5122be00b4d7",
+      "claims": [
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare after you travel",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v2",
+          "reason": "The clause explicitly states that bereavement fares can be requested retroactively."
+        },
+        {
+          "pass": 1,
+          "text": "You must request the bereavement fare within 90 days of the date your ticket was issued",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v2",
+          "reason": "The clause explicitly requires retroactive requests to be submitted within 90 days of ticket issuance."
+        },
+        {
+          "pass": 1,
+          "text": "You must provide a death certificate or a letter from the attending physician or funeral home to request the bereavement fare",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "NOT_APPLICABLE",
+          "clause": "BRV-003 v1",
+          "reason": "The clause mandates the provision of a death certificate or a letter from a physician or funeral home."
+        }
+      ],
+      "final_answer": "Yes. You can request the bereavement fare after you travel, within 90 days of the date your ticket was issued, with a death certificate or a letter from the attending physician or funeral home.\n\nPolicy references: BRV-002 v2 (in effect from 2026-05-01), BRV-003 v1 (in effect from 2026-01-01)."
+    },
+    {
+      "ledger_id": 15,
+      "recorded_at": "2026-11-07T20:28:45",
+      "as_of": "2026-03-10",
+      "decision": "CORRECTED",
+      "model": "openrouter:google/gemini-3.1-flash-lite",
+      "latency_ms": 8654,
+      "prompt_version": "2026-11-07.1",
+      "row_hash": "5a6f99f2c98994457f26d05c5fc3a9e72ada36ce62e784f540c91116d82c958c",
+      "claims": [
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare after you travel",
+          "verdict": "CONTRADICTED",
+          "llm_verdict": "CONTRADICTED",
+          "rule_check": "MISMATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The policy explicitly states that bereavement fares must be requested before travel begins and cannot be applied retroactively."
+        },
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare within 90 days of the date your ticket was issued",
+          "verdict": "NOT_COVERED",
+          "llm_verdict": "NOT_COVERED",
+          "rule_check": "NOT_APPLICABLE",
+          "clause": null,
+          "reason": "There is no clause mentioning a 90-day window for requesting the bereavement fare after ticket issuance."
+        },
+        {
+          "pass": 1,
+          "text": "You must provide a death certificate or a letter from the attending physician or funeral home to request the bereavement fare",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "NOT_APPLICABLE",
+          "clause": "BRV-003 v1",
+          "reason": "The policy requires a death certificate or a letter from an attending physician or funeral home."
+        },
+        {
+          "pass": 2,
+          "text": "Bereavement fares must be requested before travel begins.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The clause explicitly states that bereavement fares must be requested before travel begins."
+        },
+        {
+          "pass": 2,
+          "text": "A bereavement fare cannot be applied retroactively once any part of the journey has been flown.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The clause confirms bereavement fares cannot be applied retroactively after travel has commenced."
+        },
+        {
+          "pass": 2,
+          "text": "No refund of the fare difference is available after travel.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The clause explicitly prohibits refunds of the fare difference after travel has occurred."
+        }
+      ],
+      "final_answer": "Bereavement fares must be requested before travel begins. A bereavement fare cannot be applied retroactively once any part of the journey has been flown, and no refund of the fare difference is available after travel.\n\nPolicy references: BRV-002 v1 (in effect from 2026-01-01)."
+    },
+    {
+      "ledger_id": 16,
+      "recorded_at": "2026-11-07T20:28:49",
+      "as_of": "2026-06-02",
+      "decision": "PASS",
+      "model": "openrouter:google/gemini-3.1-flash-lite",
+      "latency_ms": 2612,
+      "prompt_version": "2026-11-07.1",
+      "row_hash": "f5e3c331d6f4ceb778919ef255fac0dc23ef2c6994db1e740af63032aec890ad",
+      "claims": [
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare after you travel",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v2",
+          "reason": "The clause explicitly states that bereavement fares can be requested retroactively."
+        },
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare within 90 days of the date your ticket was issued",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v2",
+          "reason": "The clause confirms the 90-day time limit for submitting a retroactive request."
+        },
+        {
+          "pass": 1,
+          "text": "You must provide a death certificate or a letter from the attending physician or funeral home to request the bereavement fare",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "NOT_APPLICABLE",
+          "clause": "BRV-003 v1",
+          "reason": "The clause requires either a death certificate or a letter from a physician or funeral home."
+        }
+      ],
+      "final_answer": "Yes. You can request the bereavement fare after you travel, within 90 days of the date your ticket was issued, with a death certificate or a letter from the attending physician or funeral home.\n\nPolicy references: BRV-002 v2 (in effect from 2026-05-01), BRV-003 v1 (in effect from 2026-01-01)."
+    },
+    {
+      "ledger_id": 17,
+      "recorded_at": "2026-11-07T20:29:22",
+      "as_of": "2026-03-10",
+      "decision": "CORRECTED",
+      "model": "openrouter:google/gemini-3.1-flash-lite",
+      "latency_ms": 7895,
+      "prompt_version": "2026-11-07.1",
+      "row_hash": "cdf7e1edaa14d545d4ff8368aebf5433e066838e549ea2b567d207c20b39a28e",
+      "claims": [
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare after you travel.",
+          "verdict": "CONTRADICTED",
+          "llm_verdict": "CONTRADICTED",
+          "rule_check": "MISMATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The policy explicitly prohibits applying a bereavement fare retroactively after travel has begun."
+        },
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare within 90 days of the date your ticket was issued.",
+          "verdict": "NOT_COVERED",
+          "llm_verdict": "NOT_COVERED",
+          "rule_check": "NOT_APPLICABLE",
+          "clause": null,
+          "reason": "No clause defines a 90-day time limit for bereavement fare requests."
+        },
+        {
+          "pass": 1,
+          "text": "You must provide a death certificate or a letter from the attending physician or funeral home to request the bereavement fare.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "NOT_APPLICABLE",
+          "clause": "BRV-003 v1",
+          "reason": "The clause requires a death certificate or a letter from a physician or funeral home."
+        },
+        {
+          "pass": 2,
+          "text": "Bereavement fares must be requested before travel begins.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The clause explicitly states that the bereavement fare must be requested before travel begins."
+        },
+        {
+          "pass": 2,
+          "text": "A bereavement fare cannot be applied retroactively once any part of the journey has been flown.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The clause clearly states that bereavement fares cannot be applied retroactively after travel has commenced."
+        },
+        {
+          "pass": 2,
+          "text": "No refund of the fare difference is available after travel.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The clause explicitly prohibits refunds for fare differences once travel has occurred."
+        }
+      ],
+      "final_answer": "Bereavement fares must be requested before travel begins. A bereavement fare cannot be applied retroactively once any part of the journey has been flown, and no refund of the fare difference is available after travel.\n\nPolicy references: BRV-002 v1 (in effect from 2026-01-01)."
+    },
+    {
+      "ledger_id": 18,
+      "recorded_at": "2026-11-07T20:29:28",
+      "as_of": "2026-06-02",
+      "decision": "ESCALATED",
+      "model": "openrouter:google/gemini-3.1-flash-lite",
+      "latency_ms": 4269,
+      "prompt_version": "2026-11-07.1",
+      "row_hash": "3f7b7d7de1544674531140a6306df3e20f45cef07b32313cf703478f19522c4e",
+      "claims": [
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare after you travel.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v2",
+          "reason": "The policy explicitly states that bereavement fares can be requested retroactively."
+        },
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare within 90 days of the date your ticket was issued.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v2",
+          "reason": "The policy specifies a 90-day window from the ticket issuance date for retroactive requests."
+        },
+        {
+          "pass": 1,
+          "text": "You must provide a death certificate or a letter from the attending physician or funeral home to request the bereavement fare.",
+          "verdict": "NOT_COVERED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "NOT_APPLICABLE",
+          "clause": null,
+          "reason": "the quoted text does not appear in the cited clause"
+        }
+      ],
+      "final_answer": "Thanks for your patience. A specialist will confirm what our policy says for your dates and get back to you shortly."
+    },
+    {
+      "ledger_id": 19,
+      "recorded_at": "2026-11-07T20:29:57",
+      "as_of": "2026-03-10",
+      "decision": "CORRECTED",
+      "model": "openrouter:google/gemini-3.1-flash-lite",
+      "latency_ms": 8347,
+      "prompt_version": "2026-11-07.1",
+      "row_hash": "19665f2c7b7f43188d9164593f8cee0afb9de0a61cf1080bcf20fc51f456b7c2",
+      "claims": [
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare after you travel",
+          "verdict": "CONTRADICTED",
+          "llm_verdict": "CONTRADICTED",
+          "rule_check": "MISMATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The policy explicitly states that bereavement fares cannot be applied retroactively once travel has commenced."
+        },
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare within 90 days of the date your ticket was issued",
+          "verdict": "NOT_COVERED",
+          "llm_verdict": "NOT_COVERED",
+          "rule_check": "NOT_APPLICABLE",
+          "clause": null,
+          "reason": "There is no clause mentioning a 90-day window for requesting the fare after the ticket is issued."
+        },
+        {
+          "pass": 1,
+          "text": "You must provide a death certificate or a letter from the attending physician or funeral home to request the bereavement fare",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "NOT_APPLICABLE",
+          "clause": "BRV-003 v1",
+          "reason": "The clause lists the required documentation for a bereavement fare request."
+        },
+        {
+          "pass": 2,
+          "text": "Bereavement fares must be requested before travel begins.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The clause explicitly states that bereavement fares must be requested before travel begins."
+        },
+        {
+          "pass": 2,
+          "text": "A bereavement fare cannot be applied retroactively once any part of the journey has been flown.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The clause explicitly states that bereavement fares cannot be applied retroactively after travel has commenced."
+        },
+        {
+          "pass": 2,
+          "text": "No refund of the fare difference is available after travel.",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v1",
+          "reason": "The clause explicitly states that no refund of the fare difference is available after travel."
+        }
+      ],
+      "final_answer": "Bereavement fares must be requested before travel begins. A bereavement fare cannot be applied retroactively once any part of the journey has been flown, and no refund of the fare difference is available after travel.\n\nPolicy references: BRV-002 v1 (in effect from 2026-01-01)."
+    },
+    {
+      "ledger_id": 20,
+      "recorded_at": "2026-11-07T20:30:01",
+      "as_of": "2026-06-02",
+      "decision": "PASS",
+      "model": "openrouter:google/gemini-3.1-flash-lite",
+      "latency_ms": 2371,
+      "prompt_version": "2026-11-07.1",
+      "row_hash": "bca426f694dc7f4cf95370f5599b4d318bef35677c9e7823778e92fcf4bdb930",
+      "claims": [
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare after you travel",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v2",
+          "reason": "The clause explicitly allows for retroactive requests."
+        },
+        {
+          "pass": 1,
+          "text": "You can request the bereavement fare within 90 days of the date your ticket was issued",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "MATCH",
+          "clause": "BRV-002 v2",
+          "reason": "The clause specifies the 90-day time limit for retroactive requests."
+        },
+        {
+          "pass": 1,
+          "text": "You must provide a death certificate or a letter from the attending physician or funeral home to request the bereavement fare",
+          "verdict": "SUPPORTED",
+          "llm_verdict": "SUPPORTED",
+          "rule_check": "NOT_APPLICABLE",
+          "clause": "BRV-003 v1",
+          "reason": "The clause lists the required documentation for bereavement fare claims."
+        }
+      ],
+      "final_answer": "Yes. You can request the bereavement fare after you travel, within 90 days of the date your ticket was issued, with a death certificate or a letter from the attending physician or funeral home.\n\nPolicy references: BRV-002 v2 (in effect from 2026-05-01), BRV-003 v1 (in effect from 2026-01-01)."
+    }
+  ]
+}

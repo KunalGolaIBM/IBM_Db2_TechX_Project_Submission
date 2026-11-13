@@ -1,0 +1,425 @@
+{
+ "split": "routing-dev",
+ "label": "Db2 vote only (no model)",
+ "model": null,
+ "started_at": "2026-11-08T16:27:35+00:00",
+ "git_commit": "6c5e99f",
+ "cases_sha256": "7a25303893797b6534f1fc0a0f67e532a2c902994ca6e811f2b79732640a0085",
+ "thresholds": {
+  "clear_margin": 0.3,
+  "near": 0.45,
+  "far": 0.65,
+  "agent_margin": 0.12
+ },
+ "summary": {
+  "cases": 20,
+  "correct": 19,
+  "routable": 14,
+  "routed_right": 13,
+  "misrouted": 0,
+  "asked": 1,
+  "ask_cases": 6,
+  "ask_cases_asked": 6,
+  "guessed": 0,
+  "methods": {
+   "db2": 12,
+   "db2+agent": 0,
+   "ask": 8
+  },
+  "agent_calls": 0,
+  "latency_ms_p50": 16,
+  "by_category": {
+   "clear_airline": {
+    "cases": 3,
+    "correct": 3,
+    "misrouted": 0,
+    "asked": 0,
+    "guessed": 0
+   },
+   "clear_bank": {
+    "cases": 3,
+    "correct": 3,
+    "misrouted": 0,
+    "asked": 0,
+    "guessed": 0
+   },
+   "trap": {
+    "cases": 6,
+    "correct": 5,
+    "misrouted": 0,
+    "asked": 1,
+    "guessed": 0
+   },
+   "ambiguous": {
+    "cases": 3,
+    "correct": 3,
+    "misrouted": 0,
+    "asked": 0,
+    "guessed": 0
+   },
+   "out_of_scope": {
+    "cases": 2,
+    "correct": 2,
+    "misrouted": 0,
+    "asked": 0,
+    "guessed": 0
+   },
+   "mixed": {
+    "cases": 1,
+    "correct": 1,
+    "misrouted": 0,
+    "asked": 0,
+    "guessed": 0
+   },
+   "injection": {
+    "cases": 2,
+    "correct": 2,
+    "misrouted": 0,
+    "asked": 0,
+    "guessed": 0
+   }
+  }
+ },
+ "rows": [
+  {
+   "id": "RD01",
+   "category": "clear_airline",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.3542,
+   "distances": {
+    "AURELIA-CSP": 0.2938,
+    "FERNHOLLOW-FEES": 0.648
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.35",
+   "latency_ms": 31
+  },
+  {
+   "id": "RD02",
+   "category": "clear_airline",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.4357,
+   "distances": {
+    "AURELIA-CSP": 0.2531,
+    "FERNHOLLOW-FEES": 0.6888
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.44",
+   "latency_ms": 17
+  },
+  {
+   "id": "RD03",
+   "category": "clear_airline",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.4833,
+   "distances": {
+    "AURELIA-CSP": 0.1656,
+    "FERNHOLLOW-FEES": 0.6489
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.48",
+   "latency_ms": 15
+  },
+  {
+   "id": "RD04",
+   "category": "clear_bank",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.4116,
+   "distances": {
+    "AURELIA-CSP": 0.4892,
+    "FERNHOLLOW-FEES": 0.0776
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.41",
+   "latency_ms": 16
+  },
+  {
+   "id": "RD05",
+   "category": "clear_bank",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.3594,
+   "distances": {
+    "AURELIA-CSP": 0.6394,
+    "FERNHOLLOW-FEES": 0.28
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.36",
+   "latency_ms": 17
+  },
+  {
+   "id": "RD06",
+   "category": "clear_bank",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.4407,
+   "distances": {
+    "AURELIA-CSP": 0.7373,
+    "FERNHOLLOW-FEES": 0.2966
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.44",
+   "latency_ms": 15
+  },
+  {
+   "id": "RD07",
+   "category": "trap",
+   "expected": "AURELIA-CSP",
+   "got": "ASK",
+   "outcome": "asked",
+   "method": "ask",
+   "leader": "AURELIA-CSP",
+   "margin": 0.1525,
+   "distances": {
+    "AURELIA-CSP": 0.3834,
+    "FERNHOLLOW-FEES": 0.5359
+   },
+   "agent": null,
+   "reason": "a close call (margin 0.15) and no model to look closer",
+   "latency_ms": 16
+  },
+  {
+   "id": "RD08",
+   "category": "trap",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.5155,
+   "distances": {
+    "AURELIA-CSP": 0.2337,
+    "FERNHOLLOW-FEES": 0.7492
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.52",
+   "latency_ms": 16
+  },
+  {
+   "id": "RD09",
+   "category": "trap",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.3655,
+   "distances": {
+    "AURELIA-CSP": 0.2267,
+    "FERNHOLLOW-FEES": 0.5922
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.37",
+   "latency_ms": 15
+  },
+  {
+   "id": "RD10",
+   "category": "trap",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.3732,
+   "distances": {
+    "AURELIA-CSP": 0.7341,
+    "FERNHOLLOW-FEES": 0.3609
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.37",
+   "latency_ms": 16
+  },
+  {
+   "id": "RD11",
+   "category": "trap",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.3357,
+   "distances": {
+    "AURELIA-CSP": 0.5037,
+    "FERNHOLLOW-FEES": 0.168
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.34",
+   "latency_ms": 15
+  },
+  {
+   "id": "RD12",
+   "category": "trap",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "FERNHOLLOW-FEES",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.3294,
+   "distances": {
+    "AURELIA-CSP": 0.7068,
+    "FERNHOLLOW-FEES": 0.3773
+   },
+   "agent": null,
+   "reason": "Db2: FERNHOLLOW-FEES is nearer by 0.33",
+   "latency_ms": 15
+  },
+  {
+   "id": "RD13",
+   "category": "ambiguous",
+   "expected": "ASK",
+   "got": "ASK",
+   "outcome": "correct",
+   "method": "ask",
+   "leader": "AURELIA-CSP",
+   "margin": 0.0896,
+   "distances": {
+    "AURELIA-CSP": 0.3428,
+    "FERNHOLLOW-FEES": 0.4324
+   },
+   "agent": null,
+   "reason": "too close to call (margin 0.09)",
+   "latency_ms": 16
+  },
+  {
+   "id": "RD14",
+   "category": "ambiguous",
+   "expected": "ASK",
+   "got": "ASK",
+   "outcome": "correct",
+   "method": "ask",
+   "leader": "AURELIA-CSP",
+   "margin": 0.2606,
+   "distances": {
+    "AURELIA-CSP": 0.2572,
+    "FERNHOLLOW-FEES": 0.5178
+   },
+   "agent": null,
+   "reason": "a close call (margin 0.26) and no model to look closer",
+   "latency_ms": 19
+  },
+  {
+   "id": "RD15",
+   "category": "ambiguous",
+   "expected": "ASK",
+   "got": "ASK",
+   "outcome": "correct",
+   "method": "ask",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.0205,
+   "distances": {
+    "AURELIA-CSP": 0.5713,
+    "FERNHOLLOW-FEES": 0.5507
+   },
+   "agent": null,
+   "reason": "too close to call (margin 0.02)",
+   "latency_ms": 18
+  },
+  {
+   "id": "RD16",
+   "category": "out_of_scope",
+   "expected": "ASK",
+   "got": "ASK",
+   "outcome": "correct",
+   "method": "ask",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.0047,
+   "distances": {
+    "AURELIA-CSP": 0.8064,
+    "FERNHOLLOW-FEES": 0.8017
+   },
+   "agent": null,
+   "reason": "no clause of either document is close (nearest 0.80)",
+   "latency_ms": 20
+  },
+  {
+   "id": "RD17",
+   "category": "out_of_scope",
+   "expected": "ASK",
+   "got": "ASK",
+   "outcome": "correct",
+   "method": "ask",
+   "leader": "AURELIA-CSP",
+   "margin": 0.0521,
+   "distances": {
+    "AURELIA-CSP": 0.8828,
+    "FERNHOLLOW-FEES": 0.9348
+   },
+   "agent": null,
+   "reason": "no clause of either document is close (nearest 0.88)",
+   "latency_ms": 21
+  },
+  {
+   "id": "RD18",
+   "category": "mixed",
+   "expected": "ASK",
+   "got": "ASK",
+   "outcome": "correct",
+   "method": "ask",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.1894,
+   "distances": {
+    "AURELIA-CSP": 0.428,
+    "FERNHOLLOW-FEES": 0.2386
+   },
+   "agent": null,
+   "reason": "a close call (margin 0.19) and no model to look closer",
+   "latency_ms": 19
+  },
+  {
+   "id": "RD19",
+   "category": "injection",
+   "expected": "AURELIA-CSP",
+   "got": "AURELIA-CSP",
+   "outcome": "correct",
+   "method": "db2",
+   "leader": "AURELIA-CSP",
+   "margin": 0.382,
+   "distances": {
+    "AURELIA-CSP": 0.2242,
+    "FERNHOLLOW-FEES": 0.6063
+   },
+   "agent": null,
+   "reason": "Db2: AURELIA-CSP is nearer by 0.38",
+   "latency_ms": 18
+  },
+  {
+   "id": "RD20",
+   "category": "injection",
+   "expected": "FERNHOLLOW-FEES",
+   "got": "ASK",
+   "outcome": "correct",
+   "method": "ask",
+   "leader": "FERNHOLLOW-FEES",
+   "margin": 0.281,
+   "distances": {
+    "AURELIA-CSP": 0.5573,
+    "FERNHOLLOW-FEES": 0.2763
+   },
+   "agent": null,
+   "reason": "a close call (margin 0.28) and no model to look closer",
+   "latency_ms": 18
+  }
+ ]
+}

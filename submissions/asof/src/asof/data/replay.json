@@ -1,0 +1,2649 @@
+{
+ "entries": {
+  "0403616445b791481dcacdbeae7c65707e8e003ca30bb6efa2f30fec98c790c2": {
+   "kind": "chat",
+   "name": "chat",
+   "output": "Hello! Thank you for reaching out to us. Unfortunately, travel credits can only be applied toward the base fare of your flight and are not valid for seat upgrades or lounge access. We hope this information helps with your travel planning!"
+  },
+  "048f376e636b36626182b61c744beb4a5169336bd097e78d851612ee4dc8c106": {
+   "kind": "chat",
+   "name": "chat",
+   "output": "I’m sorry, but our provided information does not cover policies regarding minors traveling alone. Please contact our support team directly so we can assist you with the specific rules for unaccompanied minors."
+  },
+  "04f7446b3157d4fb53934a3a3b21fe057ff2bebd5645c5e6063ae17e4dddd6d1": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "OVD-001",
+      "quoted_span": "An overdraft fee of $25 is charged for each item we pay when the account does not have enough available funds.",
+      "reason": "The claim matches the text of clause OVD-001 word for word.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "058fa16645ba4274e4edec551440a86b9520290a8269b3fc7efb6208696c7779": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "CAN-001",
+      "quoted_span": "For a confirmed ticket cancelled between 12 hours and 4 hours before the scheduled departure, the charge is 50% of the fare, subject to the minimum flat charge for the class.",
+      "reason": "The clause states that cancelling between 12 and 4 hours before departure results in a 50% charge, not no refund.",
+      "situation_conflict": false,
+      "verdict": "CONTRADICTED"
+     }
+    ]
+   }
+  },
+  "05bb32e2411c99b58048a6fe883ebc690da681c948713bf041d44c83a59cee90": {
+   "kind": "structured",
+   "name": "RailIntakeResult",
+   "output": {
+    "clauses": [
+     {
+      "area": "cancellation",
+      "clause_text": "For a confirmed ticket cancelled more than 48 hours before the scheduled departure of the train, the cancellation charge is a flat amount per passenger, plus GST on AC classes: Rs 240 for AC First Class and Executive Class, Rs 200 for AC 2-tier and First Class, Rs 180 for AC 3-tier, AC Chair Car and AC 3 Economy, Rs 120 for Sleeper Class and Rs 60 for Second Class. For a confirmed ticket cancelled between 48 hours and 12 hours before the scheduled departure, the charge is 25% of the fare, subject to the minimum flat charge for the class. For a confirmed ticket cancelled between 12 hours and 4 hours before the scheduled departure, the charge is 50% of the fare, subject to the minimum flat charge for the class. For a confirmed ticket cancelled less than 4 hours before the scheduled departure, no refund is given.",
+      "date_quote": "Loaded into AsOf as in force from 2020-01-01, the earliest date AsOf stores.",
+      "effective_from": "2020-01-01",
+      "effective_to": null,
+      "existing_clause_id": null,
+      "rule": [
+       {
+        "flag": null,
+        "items": null,
+        "key": "min_cancellation_hours_hours",
+        "number": 48.0
+       },
+       {
+        "flag": null,
+        "items": null,
+        "key": "cancellation_fee_ac_first_class_inr",
+        "number": 240.0
+       },
+       {
+        "flag": null,
+        "items": null,
+        "key": "cancellation_fee_ac_2_tier_inr",
+        "number": 200.0
+       },
+       {
+        "flag": null,
+        "items": null,
+        "key": "cancellation_fee_ac_3_tier_inr",
+        "number": 180.0
+       },
+       {
+        "flag": null,
+        "items": null,
+        "key": "cancellation_fee_sleeper_inr",
+        "number": 120.0
+       },
+       {
+        "flag": null,
+        "items": null,
+        "key": "cancellation_fee_second_class_inr",
+        "number": 60.0
+       },
+       {
+        "flag": null,
+        "items": null,
+        "key": "fee_48_to_12_hours_pct",
+        "number": 25.0
+       },
+       {
+        "flag": null,
+        "items": null,
+        "key": "fee_12_to_4_hours_pct",
+        "number": 50.0
+       },
+       {
+        "flag": false,
+        "items": null,
+        "key": "refund_less_than_4_hours_allowed",
+        "number": null
+       }
+      ],
+      "title": "Cancellation of confirmed tickets"
+     }
+    ]
+   }
+  },
+  "0787a36dd0c057476e7a74c11de5c6961250c0de7b6cfd4cdec466857ac40f23": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "bereavement",
+      "claim_type": "eligibility",
+      "text": "You can request the bereavement fare after you travel."
+     },
+     {
+      "area": "bereavement",
+      "claim_type": "deadline",
+      "text": "You can request the bereavement fare within 90 days of the date your ticket was issued."
+     },
+     {
+      "area": "bereavement",
+      "claim_type": "procedure",
+      "text": "You must provide a death certificate or a letter from the attending physician or funeral home to request the bereavement fare."
+     }
+    ]
+   }
+  },
+  "0aa07049753d716c7bfe1ef0c763c837db88a00e75faf851daa5a218619563f9": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no clause in the provided schedule that mentions fees for safe deposit boxes.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
+  },
+  "0b18293ebdd8e2b3ac3396cb68ae3c85e680ecd5f6184e3d04b6705ccc637610": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "other",
+      "claim_type": "eligibility",
+      "text": "Tickets cannot be transferred to another person."
+     },
+     {
+      "area": "other",
+      "claim_type": "amount",
+      "text": "Spelling corrections of up to 3 characters in a passenger name are made free of charge."
+     }
+    ]
+   }
+  },
+  "0c07bfcdb38c7485295c4e43988042cc64a40187b2f84a98f14c142a30f7a8ab": {
+   "kind": "structured",
+   "name": "RewriteResult",
+   "output": {
+    "answer": "Bereavement fares must be requested before travel begins. A bereavement fare cannot be applied retroactively once any part of the journey has been flown, and no refund of the fare difference is available after travel."
+   }
+  },
+  "1081e24ef9017de43ae81e0b1ef6c662b12464b4513f58ab27d9d90261c39a84": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "CHG-004",
+      "quoted_span": "Tickets cannot be transferred to another person.",
+      "reason": "The policy explicitly prohibits ticket transfers between different people.",
+      "situation_conflict": false,
+      "verdict": "CONTRADICTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "CHG-004",
+      "quoted_span": "Tickets cannot be transferred to another person.",
+      "reason": "Since transfers are not allowed, there is no name change fee for this purpose.",
+      "situation_conflict": false,
+      "verdict": "CONTRADICTED"
+     }
+    ]
+   }
+  },
+  "10a74d4a1490031ba852470da48e9a5810c0709abdd8f6da0fe5f7011f647083": {
+   "kind": "structured",
+   "name": "LedgerSql",
+   "output": {
+    "explanation": "This query counts the number of contradicted claims for each clause ID and version, returning them in descending order of frequency.",
+    "sql": "SELECT clause_id, clause_version, COUNT(*) AS contradicted_count FROM v_audit_claims WHERE verdict = 'CONTRADICTED' GROUP BY clause_id, clause_version ORDER BY contradicted_count DESC"
+   }
+  },
+  "129e38b6a39b26b00bc4805267f0ba8fc14d7454b53b2899b8334bfba2916932": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "bereavement",
+      "claim_type": "deadline",
+      "text": "bereavement fares must be requested before travel begins"
+     }
+    ]
+   }
+  },
+  "14dc302e75c43a3836ac190c6a1851441d5d3845297dfd8f25ad74fb7e37251c": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "other",
+      "claim_type": "eligibility",
+      "text": "Children aged 12 can fly alone with our escort service"
+     },
+     {
+      "area": "other",
+      "claim_type": "amount",
+      "text": "Children aged 12 can fly alone with our escort service for $150 each way"
+     }
+    ]
+   }
+  },
+  "18576a867dd16b7177a1a6ebe832148ac77af9f4771d40590350bfe21635cd31": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "For the demo channel, there were 7 decisions marked as CORRECTED and 6 decisions marked as PASS."
+   }
+  },
+  "19cdce6f3fba56b093fa247c29b5316c334486082f800791290754eac4b72c94": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "BRV-002",
+      "quoted_span": "A bereavement fare cannot be applied retroactively once any part of the journey has been flown",
+      "reason": "The policy explicitly states that bereavement fares cannot be applied retroactively once travel has commenced.",
+      "situation_conflict": false,
+      "verdict": "CONTRADICTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "BRV-002",
+      "quoted_span": "no refund of the fare difference is available after travel.",
+      "reason": "The policy prohibits fare difference refunds after travel, contradicting the implication that it can be done within 90 days.",
+      "situation_conflict": false,
+      "verdict": "CONTRADICTED"
+     },
+     {
+      "claim_no": 3,
+      "clause_id": "BRV-003",
+      "quoted_span": "either a death certificate or a letter from the attending physician or funeral home.",
+      "reason": "The clause lists the exact documents required for the bereavement fare.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 4,
+      "clause_id": "BRV-002",
+      "quoted_span": "no refund of the fare difference is available after travel.",
+      "reason": "The policy clearly states that no refund of the fare difference is available after travel has taken place.",
+      "situation_conflict": false,
+      "verdict": "CONTRADICTED"
+     }
+    ]
+   }
+  },
+  "1aab77776bcf4dac681642ac7ec8c42c34fc53e5260173684a8eaf80f77a7aea": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "Clause version BRV-002 v1 had the most contradicted claims with a count of 5."
+   }
+  },
+  "1d617382c5bfcb8cdac8652d486df6d1e4d11eb3d68d616f4651b4df6dd34caf": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "<answer>\n<question>Can I get a bereavement fare after I have travelled?</question>\nYes. You can request the bereavement fare retroactively within 60 days of the date your ticket was issued. Send the required documentation (the name of the deceased or ill family member, their relationship to you, and either a death certificate or a letter from the attending physician or funeral home), and we will refund the fare difference to your original form of payment.\n</answer>",
+    "tool_calls": []
+   }
+  },
+  "1dbc9d629ad4080ce59d3e5aa123c753403f7d17392120923214d78f1320c80e": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "CAN-001",
+      "quoted_span": "For a confirmed ticket cancelled between 12 hours and 4 hours before the scheduled departure, the charge is 50% of the fare",
+      "reason": "The clause explicitly states that for cancellations between 12 and 4 hours, the charge is 50% of the fare.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "CAN-001",
+      "quoted_span": "For a confirmed ticket cancelled between 12 hours and 4 hours before the scheduled departure, the charge is 50% of the fare, subject to the minimum flat charge for the class.",
+      "reason": "The clause confirms the 50% charge is subject to the minimum flat charge for the class, which is Rs 120 for Sleeper.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "2101943f2353dfc4a598df8780b2af6451237c13f52bdcf3ea28d27e556e431d": {
+   "kind": "structured",
+   "name": "BankExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "overdraft",
+      "claim_type": "amount",
+      "text": "An overdraft fee of $20 is charged for each item we pay when the account does not have enough available funds."
+     }
+    ]
+   }
+  },
+  "21efbddc3c53855b4650c70e55d0f66ed2b514f296877a0b3682b8fe7903f9a2": {
+   "kind": "structured",
+   "name": "BankExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "overdraft",
+      "claim_type": "amount",
+      "text": "The overdraft fee is $35 for each item we pay."
+     }
+    ]
+   }
+  },
+  "2474c2ae4f0549b375f516de5f93e8677bba3fef3d704545c76cf7fec9944028": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "The share of checks for March 2026 travel dates that were escalated is 0.0."
+   }
+  },
+  "2926e1013fe2bcb0131e914873aa57d0ab6bd393fd72bb7165da2c81b519efc8": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "The share of checks for March 2026 travel dates that were escalated is 0.4."
+   }
+  },
+  "2aa27435e95c30fcee4545ec1ce6215caef4c13865bc142d5fa95ae710a345b7": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "What documentation is required for a bereavement fare?"
+      },
+      "id": "call_1695615138705487241",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
+  "2c59c19b847f479ec12943aa005b9cb0039e62276e339622901e810d410027f6": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "fee for bereavement fare request processing"
+      },
+      "id": "call_13541039804453091671",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
+  "2f27553c69286ef38c81da62bb0bce24369b3e4cf2401d3994a800294fcaaf09": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "pets",
+      "claim_type": "eligibility",
+      "text": "your cat is welcome to fly in the cabin with you as long as the combined weight of your pet and carrier does not exceed 8 kg"
+     },
+     {
+      "area": "pets",
+      "claim_type": "amount",
+      "text": "The fee for bringing your pet on board is $100 each way"
+     }
+    ]
+   }
+  },
+  "2f5f34e1ddb1d772a6a3e5ee330532ca8ed360467efb5eaa7697e35e9f1b7a32": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "pet carrier requirements documents"
+      },
+      "id": "call_9114288211862526549",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
+  "2f7fe6bc0678e7a202f35ef516c0fbcdd656ecfac6fbaf4e87ef6118be105365": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "To update the help-center answer for dates from 2026-12-01, I have reviewed the updated fee and checked for other relevant pet policies (such as limits on the number of pets, service animal requirements, and flight duration restrictions). \n\nHere is the updated answer:\n\n<answer>\n<question>Can my pet travel in the cabin with me?</question>\nYes. Small cats and dogs can travel in the cabin if the pet and its carrier together weigh no more than 8 kg. Please note that pets are not accepted on flights longer than 8 hours, and there is a limit of 4 pets per flight. The pet fee is $125 each way.\n</answer>",
+    "tool_calls": []
+   }
+  },
+  "3075395f70082e8efe1fbd526764f15d5697794dace6a682f72b5926ed65f7c5": {
+   "kind": "structured",
+   "name": "LedgerSql",
+   "output": {
+    "explanation": "This query aggregates the number of decisions made by each channel, categorized by the type of decision (PASS, CORRECTED, or ESCALATED).",
+    "sql": "SELECT channel, decision, COUNT(*) AS count FROM v_audit_decisions GROUP BY channel, decision"
+   }
+  },
+  "321f994eb78777bf969eae064877a47d136801f2e6b50f31955cd8c96434f185": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "BRV-002",
+      "quoted_span": "Bereavement fares may be requested before travel or retroactively.",
+      "reason": "The clause explicitly states that bereavement fares can be requested retroactively.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "BRV-002",
+      "quoted_span": "A retroactive request must be submitted within 90 days of the date the original ticket was issued",
+      "reason": "The clause confirms the 90-day time limit for submitting documentation for retroactive requests.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 3,
+      "clause_id": "BRV-003",
+      "quoted_span": "either a death certificate or a letter from the attending physician or funeral home",
+      "reason": "The clause lists the required documents, which matches the claim.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 4,
+      "clause_id": "BRV-002",
+      "quoted_span": "Approved retroactive requests are refunded the fare difference to the original form of payment.",
+      "reason": "The policy confirms that approved retroactive requests are eligible for a refund of the fare difference.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "32ac744c753e52c59e9a258fcb125450f39dd8292c5a5073b24aa62d7af83cf2": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "PET-001",
+      "quoted_span": "weigh no more than 8 kg",
+      "reason": "The clause limits weight to 8 kg, contradicting the 12 kg limit in the claim.",
+      "situation_conflict": false,
+      "verdict": "CONTRADICTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "PET-001",
+      "quoted_span": "weigh no more than 8 kg",
+      "reason": "While the fee matches, the weight limit in the claim is higher than the one allowed by policy.",
+      "situation_conflict": false,
+      "verdict": "CONTRADICTED"
+     }
+    ]
+   }
+  },
+  "378ec60004f9cfe8ddfb6ee457cd04b01f6c34775456f270f224914a5c73ef14": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "baggage",
+      "claim_type": "amount",
+      "text": "Your first checked bag costs $35 each way on all Economy fares."
+     }
+    ]
+   }
+  },
+  "3a4b55d1885a17021a18f3ccd145a20c90f2bc874f04c1aa54e8ecfce4fab5ff": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There are no clauses addressing unaccompanied minors or escort services.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There are no clauses addressing unaccompanied minors, escort services, or fees associated with them.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
+  },
+  "3b55bbb33ae7d50c0eef32f060f66242f8ae289bff047fd10ad4337f2bf38d9e": {
+   "kind": "structured",
+   "name": "RailIntakeResult",
+   "output": {
+    "clauses": [
+     {
+      "area": "cancellation",
+      "clause_text": "For a confirmed ticket cancelled more than 72 hours before the scheduled departure of the train, only the minimum flat cancellation charge per passenger applies. For a confirmed ticket cancelled between 72 hours and 24 hours before the scheduled departure, 25% of the fare is charged. For a confirmed ticket cancelled between 24 hours and 8 hours before the scheduled departure, 50% of the fare is charged and 50% is refunded. For a confirmed ticket cancelled less than 8 hours before the scheduled departure, no refund is given.",
+      "date_quote": "Loaded into AsOf as in force from 2026-04-15.",
+      "effective_from": "2026-04-15",
+      "effective_to": null,
+      "existing_clause_id": "CAN-001",
+      "rule": [
+       {
+        "flag": null,
+        "items": null,
+        "key": "min_cancellation_hours_hours",
+        "number": 72.0
+       },
+       {
+        "flag": null,
+        "items": null,
+        "key": "fee_72_to_24_hours_pct",
+        "number": 25.0
+       },
+       {
+        "flag": null,
+        "items": null,
+        "key": "fee_24_to_8_hours_pct",
+        "number": 50.0
+       },
+       {
+        "flag": false,
+        "items": null,
+        "key": "refund_less_than_8_hours_allowed",
+        "number": null
+       }
+      ],
+      "title": "Cancellation of confirmed tickets"
+     }
+    ]
+   }
+  },
+  "40ad2512b00e1f1aef7bb8a3dfb1ca50f28712ec45d1b93b20859cebc6a7ff25": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no clause mentioning unaccompanied minor or escort services.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no clause defining age restrictions or requirements for flying with an adult.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
+  },
+  "4193f72b679c67cbd2a44e0a3433faa1489f6574076ca7be48cf26fd5fc54aa9": {
+   "kind": "structured",
+   "name": "RailExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "refund",
+      "claim_type": "amount",
+      "text": "For a confirmed ticket cancelled less than 8 hours before the scheduled departure, no refund is given."
+     }
+    ]
+   }
+  },
+  "43d0f515ff384bf88d989bb9a142118477fa5aa80dbdd4677251742362efe970": {
+   "kind": "structured",
+   "name": "RewriteResult",
+   "output": {
+    "answer": "An overdraft fee of $25 is charged for each item we pay when the account does not have enough available funds."
+   }
+  },
+  "4596042a3a1d131797c72b90368fdcbf9c4a55c49ac7fb958de8b8e9b034574b": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "bereavement",
+      "claim_type": "eligibility",
+      "text": "You can request a 40% bereavement discount retroactively"
+     },
+     {
+      "area": "bereavement",
+      "claim_type": "deadline",
+      "text": "You must provide the required documentation within 90 days of your ticket's issuance to get the 40% bereavement discount"
+     },
+     {
+      "area": "bereavement",
+      "claim_type": "procedure",
+      "text": "You must send a death certificate or a letter from the funeral home or physician to request the bereavement discount"
+     },
+     {
+      "area": "refund",
+      "claim_type": "procedure",
+      "text": "We will refund the fare difference for you if you provide the required documentation"
+     }
+    ]
+   }
+  },
+  "46f1d7bbfdb6dd12af5a499c2027379950469a7fa072c0853f6574189dfdcc6b": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "service fee bereavement fare"
+      },
+      "id": "call_13388308752297279482",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
+  "47419ceb371a1deb7b1477a1518be6248193b511b71f5cbe6e6d5c9300454f53": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "annual rental fee for safe deposit box"
+      },
+      "id": "call_9270480733073616651",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
+  "47d8788e55704c32d7784603bfcbb34d5c01ceae4638bee00113a1ac56fcef6c": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "what can travel credits be used for and exclusions"
+      },
+      "id": "call_9273202283672103879",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
+  "489f07f2974374b2cf1b40a8c61565b352bb81a79c6b5c6d1b58ef02e036777c": {
+   "kind": "structured",
+   "name": "LedgerSql",
+   "output": {
+    "explanation": "This query calculates the proportion of audit decisions for March 2026 as-of-dates that resulted in an ESCALATED status.",
+    "sql": "SELECT CAST(SUM(CASE WHEN decision = 'ESCALATED' THEN 1 ELSE 0 END) AS DOUBLE) / NULLIF(COUNT(*), 0) AS escalation_share FROM v_audit_decisions WHERE as_of_date >= DATE('2026-03-01') AND as_of_date <= DATE('2026-03-31')"
+   }
+  },
+  "498d60911d9f482736ff863a81dd7e3501bc32c733f5ee45c7a5fededd5814af": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "All three escalated decisions contain masked content for both the customer's question and the reply, so the specific details are not available."
+   }
+  },
+  "4d6459ee5afdacb575032b0bb10316c1ee8fb93bda9468f6afb173d5e1b3a483": {
+   "kind": "structured",
+   "name": "RewriteResult",
+   "output": {
+    "answer": "Yes, bereavement fares may be requested retroactively. A retroactive request must be submitted within 60 days of the date the original ticket was issued, along with the required documentation, which includes the name of the deceased or ill family member, their relationship to you, and either a death certificate or a letter from the attending physician or funeral home. Approved retroactive requests are refunded the fare difference to the original form of payment."
+   }
+  },
+  "4d97c44d97ab43d71d29af0711612907017fdf0d6fb5178e04b14b225e65ce98": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "pets",
+      "claim_type": "eligibility",
+      "text": "dogs up to 12 kg including the carrier can fly in the cabin"
+     },
+     {
+      "area": "pets",
+      "claim_type": "amount",
+      "text": "dogs up to 12 kg including the carrier cost $100 each way to fly in the cabin"
+     }
+    ]
+   }
+  },
+  "4de754536d7b3007bbce198ac4956113a5f4a87dc34a83171bb43b802be2ce0a": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "BRV-002",
+      "quoted_span": "A bereavement fare cannot be applied retroactively once any part of the journey has been flown",
+      "reason": "The policy explicitly states that bereavement fares cannot be applied retroactively after travel has begun.",
+      "situation_conflict": false,
+      "verdict": "CONTRADICTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "BRV-002",
+      "quoted_span": "Bereavement fares must be requested before travel begins.",
+      "reason": "The policy requires the request to be made before travel begins, so there is no provision for a 90-day post-travel window.",
+      "situation_conflict": false,
+      "verdict": "CONTRADICTED"
+     },
+     {
+      "claim_no": 3,
+      "clause_id": "BRV-003",
+      "quoted_span": "a death certificate or a letter from the attending physician or funeral home",
+      "reason": "The clause confirms that these specific documents are required to qualify for the bereavement fare.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "4e708c50acf4c4f11f9dfb437588e693552ce98d4079f760fbe138ef7fe8697c": {
+   "kind": "structured",
+   "name": "BankExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "overdraft",
+      "claim_type": "amount",
+      "text": "An overdraft fee of $25 is charged for each item we pay when the account does not have enough available funds."
+     }
+    ]
+   }
+  },
+  "50e67ad4bd798544734941b9be258c4dc7a71766f61469c811be530861e15243": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "children travelling alone unaccompanied minor service age limit fee"
+      },
+      "id": "call_19282542162391579",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
+  "556ccae014ff26cf091166e91882849d4e40f8dd9d15c8967b6026473fdb97be": {
+   "kind": "structured",
+   "name": "LedgerSql",
+   "output": {
+    "explanation": "This query identifies the specific claim texts, clause IDs, and versions where the deterministic rule check ('MISMATCH') produced a different outcome than the model's judgment.",
+    "sql": "SELECT DISTINCT claim_text, clause_id, clause_version FROM v_audit_claims WHERE rule_check = 'MISMATCH' AND llm_verdict <> verdict"
+   }
+  },
+  "55823d6f4a2ed397889986df96cf3e8ab7d90ed56d51568ab104012d6133692d": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "bereavement",
+      "claim_type": "deadline",
+      "text": "Bereavement fares must be requested before travel begins."
+     },
+     {
+      "area": "bereavement",
+      "claim_type": "eligibility",
+      "text": "A bereavement fare cannot be applied retroactively once any part of the journey has been flown."
+     },
+     {
+      "area": "bereavement",
+      "claim_type": "amount",
+      "text": "No refund of the fare difference is available after travel."
+     }
+    ]
+   }
+  },
+  "563ab2ac4034e1decf315cf55da9d99201ea0c39e28d135e2d12537fcf5345ff": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "BRV-002",
+      "quoted_span": "Bereavement fares may be requested before travel or retroactively.",
+      "reason": "The policy explicitly permits retroactive bereavement fare requests.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "BRV-002",
+      "quoted_span": "A retroactive request must be submitted within 90 days of the date the original ticket was issued",
+      "reason": "The policy confirms the 90-day window for retroactive requests from the ticket issuance date.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 3,
+      "clause_id": "BRV-003",
+      "quoted_span": "either a death certificate or a letter from the attending physician or funeral home.",
+      "reason": "The policy requires one of the listed documents to qualify for the fare.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "56b50b277bc68dd08f497476133cd3b21c1ea8c450e195a6967578a6091790ae": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "bereavement",
+      "claim_type": "procedure",
+      "text": "bereavement fares must be requested before travel begins"
+     },
+     {
+      "area": "bereavement",
+      "claim_type": "eligibility",
+      "text": "A bereavement fare cannot be applied retroactively once any part of the journey has been flown"
+     },
+     {
+      "area": "refund",
+      "claim_type": "eligibility",
+      "text": "no refund of the fare difference is available after travel has taken place"
+     }
+    ]
+   }
+  },
+  "57099ffdc5357579792e7d9b42b6c71fb79b7104d11aad61b103a49cfed348a5": {
+   "kind": "structured",
+   "name": "BankExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "overdraft",
+      "claim_type": "eligibility",
+      "text": "Overdraft fees are not refunded automatically."
+     },
+     {
+      "area": "fee_refund",
+      "claim_type": "amount",
+      "text": "You can ask us for a courtesy refund of up to two overdraft fees in any 12-month period."
+     },
+     {
+      "area": "fee_refund",
+      "claim_type": "deadline",
+      "text": "You can ask for a courtesy refund within 60 days of the date the fee was charged."
+     }
+    ]
+   }
+  },
+  "57d1b8beb37e9e2a59b9b1f11106b622625c2a692b649168c12588f2033953ea": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "unaccompanied minor travel policy"
+      },
+      "id": "call_10164353934737549873",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
+  "58d1ae17b756efb028840da79bda950f7c7405f011b019ccec5387a9e70b3c07": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "In the demo channel, there were 7 corrected decisions, 4 escalated decisions, and 6 pass decisions."
+   }
+  },
+  "5a0daeba3b8d7ccd08259762fb0d8c7932986faca07d3f13b495956ca7816fbf": {
+   "kind": "chat",
+   "name": "chat",
+   "output": "Yes, your cat is welcome to fly in the cabin with you as long as the combined weight of your pet and carrier does not exceed 8 kg. The fee for bringing your pet on board is $100 each way. We look forward to having both of you on your next flight!"
+  },
+  "5c11f689c188cab598f49d9dbbe612c7f090f510cd03513b1714e330e5b13367": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "For the demo channel, there were 5 CORRECTED decisions, 3 ESCALATED decisions, and 5 PASS decisions."
+   }
+  },
+  "5cb74fa987acc953a4104af3039f09d026c4e65b4626583b4efdfe0c01bb98c0": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "To update the answer for dates from 2027-01-01, we must reflect the new fee amount of $20 and include the relevant limits and refund information identified in the policy search.\n\n<answer>\n<question>How much is the overdraft fee?</question>\nWe charge an overdraft fee of $20 for each item we pay when your account does not have enough available funds.\n\nWe charge no more than 3 overdraft fees per business day, and no overdraft fee is charged if your account is overdrawn by $5 or less at the end of the business day. You may ask for a courtesy refund of up to two overdraft fees in any 12-month period by submitting a request within 60 days of the date the fee was charged.\n</answer>",
+    "tool_calls": []
+   }
+  },
+  "5e2ac1bada813ebf7a49d779f914adcf154298fc21543ce1fc68810f2e544cbc": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "travel credit usage restrictions seat upgrades lounge access base fare"
+      },
+      "id": "call_8828731296145601206",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
+  "62ae542285813d1b244e1e5eae8bfc5eb10a6ab09190e1be84dbf39582cc4f0f": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "PET-001",
+      "quoted_span": "Small cats and dogs may travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+      "reason": "The clause explicitly states the condition for small cats and dogs to travel in the cabin.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "PET-001",
+      "quoted_span": "The pet fee is $125 each way.",
+      "reason": "The clause explicitly states the pet fee is $125 each way.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 3,
+      "clause_id": "PET-002",
+      "quoted_span": "Each passenger may bring 1 pet in the cabin",
+      "reason": "The clause confirms each passenger may bring 1 pet in the cabin.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 4,
+      "clause_id": "PET-002",
+      "quoted_span": "no more than 4 pets are accepted in the cabin per flight.",
+      "reason": "The clause confirms no more than 4 pets are accepted per flight.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 5,
+      "clause_id": "PET-004",
+      "quoted_span": "Pets are not accepted in the cabin on flights scheduled for more than 8 hours.",
+      "reason": "The clause explicitly states the restriction on long flights.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 6,
+      "clause_id": "PET-003",
+      "quoted_span": "Trained service dogs travel in the cabin free of charge.",
+      "reason": "The clause confirms trained service dogs travel for free.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 7,
+      "clause_id": "PET-003",
+      "quoted_span": "Documentation must be submitted at least 48 hours before departure.",
+      "reason": "The clause confirms the 48-hour documentation requirement for service dogs.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "63b84c3419178f17e491234f523f87351ab11f0f6a4ed21804bfee895fc7cdc0": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "BRV-002",
+      "quoted_span": "Bereavement fares must be requested before travel begins.",
+      "reason": "The clause explicitly states that bereavement fares must be requested before travel.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "BRV-002",
+      "quoted_span": "A bereavement fare cannot be applied retroactively once any part of the journey has been flown",
+      "reason": "The clause confirms that retroactive application is not permitted after travel has commenced.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 3,
+      "clause_id": "BRV-002",
+      "quoted_span": "no refund of the fare difference is available after travel.",
+      "reason": "The clause states that no refund for the fare difference is available once travel is complete.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "64bd00e40bce3639cafb8a778b12d28394a440cf11409b4dbdd6c96b755a0d8d": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "PET-001",
+      "quoted_span": "Small cats and dogs may travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+      "reason": "The clause explicitly permits small cats and dogs in the cabin given the weight limit stated in the claim.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "PET-001",
+      "quoted_span": "The pet fee is $100 each way.",
+      "reason": "The clause explicitly states the fee for pets in the cabin.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "652a281d43f7de43846868790d160529284afe19ccb0b8f92574084c0446bee7": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "first checked bag fee Economy fares"
+      },
+      "id": "call_16059518765489868295",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
+  "672648efc49a78834ea8b5b60f3674a7d2541d6bbc498bfa2c214697f3895c5b": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "In the demo channel, there were 2 CORRECTED decisions, 1 ESCALATED decision, and 1 PASS decision."
+   }
+  },
+  "6a0c0481acb30a2c81805794ae8da90478fc505eb18e3f1278511087e8a6343a": {
+   "kind": "structured",
+   "name": "RewriteResult",
+   "output": {
+    "answer": "The first checked bag costs $45 each way on Economy fares."
+   }
+  },
+  "6bb7c0817dfca6f46bb4fc207b73f7b92ac8ae05e6407c6ab160ee8cfaf9023e": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": []
+   }
+  },
+  "6c7b25ff9e1d5c9d77009ca65329fac43b6c934ef5f8d767c077ebe6676172e4": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "The provided clauses do not mention any fees related to safe deposit boxes.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
+  },
+  "6ce41820957e5d514b36d97a1bb8fa421c91272a1266762885caba4fcb82b95c": {
+   "kind": "structured",
+   "name": "IntakeResult",
+   "output": {
+    "clauses": [
+     {
+      "area": "baggage",
+      "clause_text": "The first checked bag costs $45 each way on Economy fares.",
+      "date_quote": "This revision of the Aurelia Air Customer Service Plan takes effect on 1 February 2027.",
+      "effective_from": "2027-02-01",
+      "effective_to": null,
+      "existing_clause_id": "BAG-001",
+      "rule": [
+       {
+        "flag": null,
+        "items": null,
+        "key": "first_bag_fee_usd",
+        "number": 45.0
+       }
+      ],
+      "title": "First checked bag fee"
+     },
+     {
+      "area": "baggage",
+      "clause_text": "One set of golf clubs, skis or a snowboard may be checked in place of a standard bag for a fee of $75 each way. The equipment may weigh up to 23 kg.",
+      "date_quote": "This revision of the Aurelia Air Customer Service Plan takes effect on 1 February 2027.",
+      "effective_from": "2027-02-01",
+      "effective_to": null,
+      "existing_clause_id": null,
+      "rule": [
+       {
+        "flag": true,
+        "items": null,
+        "key": "sports_equipment_allowed",
+        "number": null
+       },
+       {
+        "flag": null,
+        "items": null,
+        "key": "sports_equipment_fee_usd",
+        "number": 75.0
+       },
+       {
+        "flag": null,
+        "items": null,
+        "key": "max_sports_weight_kg",
+        "number": 23.0
+       }
+      ],
+      "title": "Sports equipment"
+     },
+     {
+      "area": "travel_credit",
+      "clause_text": "Travel credits are valid for 24 months from the date they are issued. The booking must be made before the credit expires, but the flight itself may take place after the expiry date.",
+      "date_quote": "This section applies to travel credits issued on or after 1 March 2027.",
+      "effective_from": "2027-03-01",
+      "effective_to": null,
+      "existing_clause_id": "CRD-001",
+      "rule": [
+       {
+        "flag": null,
+        "items": null,
+        "key": "credit_validity_months",
+        "number": 24.0
+       }
+      ],
+      "title": "Travel credit validity"
+     },
+     {
+      "area": "delay",
+      "clause_text": "Delay compensation must be claimed within 1 year of the flight date through the online claims form.",
+      "date_quote": "This revision of the Aurelia Air Customer Service Plan takes effect on 1 February 2027.",
+      "effective_from": "2027-02-01",
+      "effective_to": null,
+      "existing_clause_id": "DLY-005",
+      "rule": [
+       {
+        "flag": null,
+        "items": null,
+        "key": "claim_window_days",
+        "number": 365.0
+       }
+      ],
+      "title": "Claiming delay compensation"
+     }
+    ]
+   }
+  },
+  "6f05af9325c5474c58f6e6953d8bd006fb05be720c7d56b6017854a7dabe8a4b": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "The rule check overruled the model judge for the following claims: ledger 1 claim 1, ledger 3 claim 1, ledger 3 claim 2, ledger 1 claim 2, ledger 6 claim 2, ledger 6 claim 1, ledger 9 claim 1, ledger 8 claim 1, ledger 8 claim 2, ledger 5 claim 1, and ledger 10 claim 1."
+   }
+  },
+  "6fa7f112a77e842269d57c77ee68a840f1a0d5a978fd0c957af7c9ad4a27a4d4": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "CAN-001",
+      "quoted_span": "For a confirmed ticket cancelled less than 8 hours before the scheduled departure, no refund is given.",
+      "reason": "The clause states that no refund is given for cancellations made less than 8 hours before departure, contradicting the claim of a 50% refund.",
+      "situation_conflict": false,
+      "verdict": "CONTRADICTED"
+     }
+    ]
+   }
+  },
+  "71f350f671d2ea6312737b567356108ab2603a4eacb86ed53436eae4b974d02c": {
+   "kind": "structured",
+   "name": "RewriteResult",
+   "output": {
+    "answer": "Small cats and dogs may travel in the cabin if the pet and its carrier together weigh no more than 8 kg. The pet fee is $125 each way. Each passenger may bring 1 pet in the cabin, and no more than 4 pets are accepted in the cabin per flight. Additionally, pets are not accepted in the cabin on flights scheduled for more than 8 hours. Trained service dogs travel in the cabin free of charge, provided documentation is submitted at least 48 hours before departure."
+   }
+  },
+  "72894c36c34762b60421cde40d788ee5ce1f2609b1133c665841a24988f6613d": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "FRV-001",
+      "quoted_span": "Overdraft fees are not refunded automatically.",
+      "reason": "The clause explicitly states that overdraft fees are not refunded automatically.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "FRV-001",
+      "quoted_span": "A customer may ask for a courtesy refund of one overdraft fee in any 12-month period.",
+      "reason": "The clause confirms that a customer can request a courtesy refund for one fee per 12-month period.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 3,
+      "clause_id": "FRV-001",
+      "quoted_span": "The request must be made within 30 days of the date the fee was charged.",
+      "reason": "The clause specifies the 30-day window for requesting a courtesy refund.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "758c2e3c1a32808edf4dfa9b86a0c266d44473bbb19076a2a063a9136a54854a": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "safe deposit box rental annual fee"
+      },
+      "id": "call_11875470600564309392",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
+  "77b35fcfa9b526d5da1f14b20af802cdaad2767886232621868c334c5037c4db": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "CAN-001",
+      "quoted_span": "For a confirmed ticket cancelled between 12 hours and 4 hours before the scheduled departure, the charge is 50% of the fare",
+      "reason": "The cancellation 6 hours before departure falls within the 12 to 4-hour window, resulting in a 50% charge (leaving a 50% refund).",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "77d0acd5cfa10033d44f8aa3fda2795b86ac18eb2ecd6fd171814a9da537c9ea": {
+   "kind": "structured",
+   "name": "RewriteResult",
+   "output": {
+    "answer": "The first checked bag costs $40 each way on Economy fares."
+   }
+  },
+  "77fe318e4108abca845d169360841db5c55a43955dd3df4a8efb1dec22959f03": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "overdraft fee limits or waivers 2027-01-01"
+      },
+      "id": "call_11756722580938987621",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
+  "79bbfd36b3bc69a5d973fb02d77b509281d2b11b22775af2b101268d2334a1ca": {
+   "kind": "structured",
+   "name": "RewriteResult",
+   "output": {
+    "answer": "For a confirmed ticket cancelled less than 8 hours before the scheduled departure, no refund is given."
+   }
+  },
+  "8230588a62680f3720bd4f08093a2ec8eb5aeaedf3441bffb469b0a1f233c0a7": {
+   "kind": "structured",
+   "name": "RewriteResult",
+   "output": {
+    "answer": "Small cats and dogs may travel in the cabin if the pet and its carrier together weigh no more than 8 kg. The pet fee is $100 each way."
+   }
+  },
+  "83b2e63a3b4ab4ec714753547af73f1608ce073b3922c7cf4f3f8ef21401ec7b": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "baggage",
+      "claim_type": "amount",
+      "text": "The first checked bag costs $40 each way on Economy fares."
+     }
+    ]
+   }
+  },
+  "88bf599f30b24a15c4dc2fd5c53d14f6fb9993cc71e6abb5a9c8442ca55ad551": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "pets",
+      "claim_type": "eligibility",
+      "text": "Small cats and dogs may travel in the cabin if the pet and its carrier together weigh no more than 8 kg."
+     },
+     {
+      "area": "pets",
+      "claim_type": "amount",
+      "text": "The pet fee is $125 each way."
+     },
+     {
+      "area": "pets",
+      "claim_type": "eligibility",
+      "text": "Each passenger may bring 1 pet in the cabin."
+     },
+     {
+      "area": "pets",
+      "claim_type": "eligibility",
+      "text": "No more than 4 pets are accepted in the cabin per flight."
+     },
+     {
+      "area": "pets",
+      "claim_type": "eligibility",
+      "text": "Pets are not accepted in the cabin on flights scheduled for more than 8 hours."
+     },
+     {
+      "area": "pets",
+      "claim_type": "amount",
+      "text": "Trained service dogs travel in the cabin free of charge."
+     },
+     {
+      "area": "pets",
+      "claim_type": "procedure",
+      "text": "Trained service dogs travel in the cabin provided documentation is submitted at least 48 hours before departure."
+     }
+    ]
+   }
+  },
+  "895405de8a899beb30201da291dbc5a03212f86807ef9a347573cb92a0f6751e": {
+   "kind": "structured",
+   "name": "BankExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "overdraft",
+      "claim_type": "deadline",
+      "text": "overdraft fees are refunded automatically within a few days"
+     }
+    ]
+   }
+  },
+  "8cfafe8d1a9000c24805664df2b450bdf298963d9098a4d534458d8b482ef42e": {
+   "kind": "structured",
+   "name": "LedgerSql",
+   "output": {
+    "explanation": "This query aggregates the total number of decisions by channel and decision type using the v_decision_stats view.",
+    "sql": "SELECT channel, decision, SUM(decisions) AS total_decisions FROM v_decision_stats GROUP BY channel, decision"
+   }
+  },
+  "917907f092aad1cce5962b84d40e17c75596ed104d4b615452227d23f25e46da": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "BRV-002",
+      "quoted_span": "Bereavement fares must be requested before travel begins.",
+      "reason": "The claim directly restates the policy requirement for requesting bereavement fares.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "951eac1d11a39dcb1db95191cfe7a03b46225da83f7795a22bab697f2a967ba0": {
+   "kind": "structured",
+   "name": "LedgerSql",
+   "output": {
+    "explanation": "This query aggregates the number of contradicted claims for each clause and version, ranking them to identify which ones have the highest count.",
+    "sql": "SELECT clause_id, clause_version, COUNT(*) AS contradicted_count FROM v_audit_claims WHERE verdict = 'CONTRADICTED' GROUP BY clause_id, clause_version ORDER BY contradicted_count DESC"
+   }
+  },
+  "95e3f5fd09bf993beb5e5b5792257a859ad5c57f22e84d9e8d132928246912b1": {
+   "kind": "structured",
+   "name": "BankExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "overdraft",
+      "claim_type": "procedure",
+      "text": "Overdraft fees are not refunded automatically."
+     },
+     {
+      "area": "fee_refund",
+      "claim_type": "eligibility",
+      "text": "A customer may ask for a courtesy refund of one overdraft fee in any 12-month period."
+     },
+     {
+      "area": "fee_refund",
+      "claim_type": "deadline",
+      "text": "Requests for a courtesy refund must be made within 30 days of the date the fee was charged."
+     }
+    ]
+   }
+  },
+  "97ddc31dd475a9f54c7cf385cfc79fe0105828089e6e26d4d3d56fb03d96431c": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "bereavement",
+      "claim_type": "eligibility",
+      "text": "Bereavement fares may be requested retroactively."
+     },
+     {
+      "area": "bereavement",
+      "claim_type": "deadline",
+      "text": "A retroactive request must be submitted within 60 days of the date the original ticket was issued."
+     },
+     {
+      "area": "bereavement",
+      "claim_type": "procedure",
+      "text": "A retroactive request must be submitted along with the required documentation, which includes the name of the deceased or ill family member, their relationship to you, and either a death certificate or a letter from the attending physician or funeral home."
+     },
+     {
+      "area": "refund",
+      "claim_type": "amount",
+      "text": "Approved retroactive requests are refunded the fare difference to the original form of payment."
+     }
+    ]
+   }
+  },
+  "9ab9afaf476b5e3ab5111ef022ca5295e0db24617905f86c0cc351774150bc22": {
+   "kind": "structured",
+   "name": "RewriteResult",
+   "output": {
+    "answer": "Overdraft fees are not refunded automatically. A customer may ask for a courtesy refund of one overdraft fee in any 12-month period, provided the request is made within 30 days of the date the fee was charged."
+   }
+  },
+  "a1032c5281dedd03fed316a61b5b6f9298592e4c4e7b0e7f748105092c2d5d98": {
+   "kind": "structured",
+   "name": "LedgerSql",
+   "output": {
+    "explanation": "This query retrieves the ledger entries and specific claim details where the deterministic rule check resulted in a mismatch with the model's judgment.",
+    "sql": "SELECT DISTINCT ledger_id, claim_no, claim_text, clause_id, clause_version FROM v_audit_claims WHERE rule_check = 'MISMATCH'"
+   }
+  },
+  "a1cd351103897f692d914727d1eaa9e911df6b1b07c3e3a659ec1b1175d84a7f": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "child travelling alone requirements"
+      },
+      "id": "call_10035350340699659947",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
+  "a216753f2918f798a7d3c51f6723c9cce1d07ec32727e0d9835ed9c8b064b65c": {
+   "kind": "structured",
+   "name": "RewriteResult",
+   "output": {
+    "answer": "I am very sorry for your loss. According to our policy, bereavement fares must be requested before travel begins. A bereavement fare cannot be applied retroactively once any part of the journey has been flown, and no refund of the fare difference is available after travel has taken place."
+   }
+  },
+  "a3126bc2e112c08646764fe536b88de15a89ee401fb5d2b64b0b1ea565204f75": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There are no clauses in the policy addressing unaccompanied minors or escort services.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There are no clauses in the policy addressing unaccompanied minors or associated fees.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
+  },
+  "a434c8f3c18d70667b8e8ef4c0fe77a39bd6cb4b6861999aef21d944237e5c99": {
+   "kind": "structured",
+   "name": "RailExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "refund",
+      "claim_type": "amount",
+      "text": "Cancelling within 8 hours gets no refund."
+     }
+    ]
+   }
+  },
+  "a786b6118b3a3e6e9e38c3bde047ee63cffbd3b35306adca2a450c21a4d72f22": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "bereavement",
+      "claim_type": "procedure",
+      "text": "You can request the bereavement fare before you travel."
+     },
+     {
+      "area": "bereavement",
+      "claim_type": "amount",
+      "text": "There is a $25 processing fee for bereavement requests."
+     }
+    ]
+   }
+  },
+  "a7c19b3106b609fcc60055427d9e5b808691cec5349b1e4b987299851a66a0aa": {
+   "kind": "structured",
+   "name": "RewriteResult",
+   "output": {
+    "answer": "For a confirmed Sleeper Class ticket cancelled between 12 hours and 4 hours before the scheduled departure, the cancellation charge is 50% of the fare, subject to a minimum flat charge of Rs 120."
+   }
+  },
+  "a832c131e2f3610274aac15673dd6e1eb3dd2177bd0a9280d91a8d8bdf56e285": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "CAN-001",
+      "quoted_span": "For a confirmed ticket cancelled less than 8 hours before the scheduled departure, no refund is given.",
+      "reason": "The clause explicitly states that no refund is given for confirmed tickets cancelled less than 8 hours before departure.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "a8e8bad2d4f3834bb8b72257c01ea906a0d06a23abd3541de5d0e72b38b149a0": {
+   "kind": "structured",
+   "name": "RewriteResult",
+   "output": {
+    "answer": "An overdraft fee of $20 is charged for each item we pay when the account does not have enough available funds."
+   }
+  },
+  "ab532afa3f745206f3c37a8c617deef0acfca7ee51c936a4faa99cdd787f8999": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "BAG-001",
+      "quoted_span": "The first checked bag costs $40 each way on Economy fares.",
+      "reason": "The clause explicitly states the fee for the first checked bag on Economy fares.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "ad5afcdce54f2f52743b74e272a902ecdae05bf69107b76ca688187e8f0f35e1": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "BRV-002",
+      "quoted_span": "Bereavement fares must be requested before travel begins.",
+      "reason": "The clause explicitly states bereavement fares must be requested before travel begins.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no mention of a processing fee in the provided clauses.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
+  },
+  "af226c7b3c03af394a33f961bca611144d9cfff56631b7c7828c3a9202a969e1": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "",
+    "tool_calls": [
+     {
+      "args": {
+       "query": "unaccompanied minor escort service age requirements fees"
+      },
+      "id": "call_2711814770339682439",
+      "name": "search_policy"
+     }
+    ]
+   }
+  },
+  "b4f13ca406dcd7dbb3a46c45e02fbd64447157521f8c5583d7bc6d5b78d40511": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "The clause version with the most contradicted claims is BRV-002 version v1, which has 5 contradicted claims."
+   }
+  },
+  "b762abdbac8148bb5b24b1f21a02d7d759bae7ac308ecb2073efc787c09d6bf1": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "FRV-001",
+      "quoted_span": "Overdraft fees are not refunded automatically.",
+      "reason": "The fee schedule explicitly states that overdraft fees are not refunded automatically.",
+      "situation_conflict": false,
+      "verdict": "CONTRADICTED"
+     }
+    ]
+   }
+  },
+  "ba1b20eb1b26f57a8a82b91b79e4b6bb81582d1535abe224a86c1493af78197f": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "BAG-001",
+      "quoted_span": "The first checked bag costs $45 each way on Economy fares.",
+      "reason": "The claim text matches the policy clause exactly.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "bbb5a5c5f3523dc420c94c5944a1c47805a9ecaced054a797dc9caf7e9843594": {
+   "kind": "structured",
+   "name": "RailExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "cancellation",
+      "claim_type": "amount",
+      "text": "For a confirmed Sleeper Class ticket cancelled between 12 hours and 4 hours before the scheduled departure, the cancellation charge is 50% of the fare."
+     },
+     {
+      "area": "cancellation",
+      "claim_type": "amount",
+      "text": "For a confirmed Sleeper Class ticket cancelled between 12 hours and 4 hours before the scheduled departure, the cancellation charge is subject to a minimum flat charge of Rs 120."
+     }
+    ]
+   }
+  },
+  "bc277a82a5bff1a496e5a8886dfef6976f501213831c4ca69ea6a67d1a677bbc": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no clause that specifies what travel credits can be used for.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no clause that specifies whether travel credits are valid for seat upgrades.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     },
+     {
+      "claim_no": 3,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no clause that specifies whether travel credits are valid for lounge access.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
+  },
+  "bd70fad8676213f83f4d422a024a0fd9876daad3b3176707509acc67a5c6b006": {
+   "kind": "structured",
+   "name": "RewriteResult",
+   "output": {
+    "answer": "Tickets cannot be transferred to another person. Spelling corrections of up to 3 characters in a passenger name are made free of charge."
+   }
+  },
+  "bfe2508e58899365945cf264aef76b8f7a918bf4ae984f321dfed73e08514ef8": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "PET-001",
+      "quoted_span": "Small cats and dogs may travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+      "reason": "The clause explicitly permits cats in the cabin within the stated weight limit.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "PET-001",
+      "quoted_span": "The pet fee is $100 each way.",
+      "reason": "The clause confirms the pet fee matches the amount stated in the claim.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "c8b72c6f57b033f18a7f0016cb8369ac6bebf61a925fe3e4f407ce5797ac7490": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "PET-001",
+      "quoted_span": "Small cats and dogs may travel in the cabin if the pet and its carrier together weigh no more than 8 kg.",
+      "reason": "The clause explicitly permits cats in the cabin within the 8 kg weight limit mentioned in the claim.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "PET-001",
+      "quoted_span": "The pet fee is $100 each way.",
+      "reason": "The clause confirms the $100 fee per way for bringing a pet on board.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "cbdade1e578491e026f9b673fa752c4c29835af7725f6417aee268856f98d096": {
+   "kind": "chat",
+   "name": "chat",
+   "output": "Yes, you can certainly transfer your ticket to a friend! We simply charge a $50 name change fee to process the update for you."
+  },
+  "cd42ee140fc49e1da12ea767a9e7969714a1c52fff15fd457af6c35adb227566": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "Clause versions FRV-001 version v1 and OVD-001 version v2 both had the most contradicted claims, each with a count of 1."
+   }
+  },
+  "cddf73b6c0353024c909bde94c440d10deeda29d8f0ca62c53bc48041dd2cadf": {
+   "kind": "structured",
+   "name": "BankExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "other",
+      "claim_type": "amount",
+      "text": "a small safe deposit box costs $60 a year"
+     }
+    ]
+   }
+  },
+  "d02f9cc571c49574bc59e743c27a2f04e95591ddaea9a98461fb05a00625d56b": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "The share of checks for March 2026 travel dates that were escalated is 0.0."
+   }
+  },
+  "d0d3e0a5f6109dff7d1715fef8db4c6621320a77617fcbd766e24537ae4302a4": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "BRV-002",
+      "quoted_span": "Bereavement fares may be requested before travel or retroactively.",
+      "reason": "The clause explicitly states that bereavement fares may be requested retroactively.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "BRV-002",
+      "quoted_span": "A retroactive request must be submitted within 60 days of the date the original ticket was issued",
+      "reason": "The clause confirms the 60-day requirement for retroactive requests.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 3,
+      "clause_id": "BRV-003",
+      "quoted_span": "the name of the deceased or ill family member, their relationship to the customer, and either a death certificate or a letter from the attending physician or funeral home.",
+      "reason": "The claim accurately lists the documentation requirements specified in the clause.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 4,
+      "clause_id": "BRV-002",
+      "quoted_span": "Approved retroactive requests are refunded the fare difference to the original form of payment.",
+      "reason": "The clause explicitly confirms that approved requests result in a refund of the fare difference to the original form of payment.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "d380b85fb47c51c1556299f4d656a66c91bca392337f5fd9f6972985800da276": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "FRV-001",
+      "quoted_span": "Overdraft fees are not refunded automatically.",
+      "reason": "The clause explicitly states that overdraft fees are not automatically refunded.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "FRV-001",
+      "quoted_span": "A customer may ask for a courtesy refund of up to two overdraft fees in any 12-month period.",
+      "reason": "The clause confirms the eligibility to request a courtesy refund for up to two overdraft fees per 12-month period.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 3,
+      "clause_id": "FRV-001",
+      "quoted_span": "The request must be made within 60 days of the date the fee was charged.",
+      "reason": "The clause sets the 60-day window for requesting a courtesy refund.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "d789ed67963c9c26a1d6cfc50e649809673541e6e6d2799e26ad3af2f7c6a410": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "other",
+      "claim_type": "eligibility",
+      "text": "We do not offer an escort service for children flying alone"
+     },
+     {
+      "area": "other",
+      "claim_type": "eligibility",
+      "text": "a 12-year-old needs to travel with an adult"
+     }
+    ]
+   }
+  },
+  "d7bd44d94460a117181336b981bcb2b5e7a0fe3d7a79a729582d1c8ad351888a": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "other",
+      "claim_type": "eligibility",
+      "text": "you can certainly transfer your ticket to a friend"
+     },
+     {
+      "area": "change_fee",
+      "claim_type": "amount",
+      "text": "We charge a $50 name change fee to process the update for you"
+     }
+    ]
+   }
+  },
+  "d92252eae38f7489e33badf0a298a14baa043e94b924c6547694f944f90388b2": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "BAG-001",
+      "quoted_span": "$40",
+      "reason": "The clause states the cost is $40 for the first checked bag, which contradicts the $35 claim.",
+      "situation_conflict": false,
+      "verdict": "CONTRADICTED"
+     }
+    ]
+   }
+  },
+  "da2163f83591e4525ba9836b5e36676dc4674cb179258f2264d3b07c9acd23f9": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "The customer's questions and our replies are masked for all four escalated decisions returned."
+   }
+  },
+  "dd641aa899bfd57fde0c2e0a64795ec099f3a53a3012cbe134ae983bb9318f4c": {
+   "kind": "chat",
+   "name": "chat",
+   "output": "Hello! I'd be happy to help you with that. Your first checked bag costs $35 each way on all Economy fares. We look forward to seeing you on your flight!"
+  },
+  "de4f48bb90c9d14fbb630953084d6da11dd7d9945267664c375a37ec9a8bef7c": {
+   "kind": "structured",
+   "name": "LedgerSql",
+   "output": {
+    "explanation": "This query retrieves the masked question and final answer for all decisions where the policy check was escalated.",
+    "sql": "SELECT question_redacted, final_answer FROM v_audit_decisions WHERE decision = 'ESCALATED'"
+   }
+  },
+  "df2a6ac97909c1f1b32d152637fc5d808f8fb60b25df23ec5ff3f958698d4554": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "CHG-004",
+      "quoted_span": "Tickets cannot be transferred to another person.",
+      "reason": "The policy explicitly states that tickets cannot be transferred to another person.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "CHG-004",
+      "quoted_span": "Spelling corrections of up to 3 characters in a passenger name are made free of charge.",
+      "reason": "The policy explicitly permits spelling corrections of up to 3 characters free of charge.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "df78ed4f304f63c1a4f8a3e845947f7234f00b20c206d64bb9a671e0117e6bad": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "No clause defines the specific permitted uses for travel credits.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "No clause addresses restrictions on using travel credits for seat upgrades.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     },
+     {
+      "claim_no": 3,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "No clause addresses restrictions on using travel credits for lounge access.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
+  },
+  "e2735f4934a81326b3680bfd8039d06f4f9fa9ffd796caef30e9c9f20d2a3d19": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "BRV-002",
+      "quoted_span": "Bereavement fares must be requested before travel begins.",
+      "reason": "The clause explicitly states the requirement for bereavement fares to be requested before travel begins.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": "BRV-002",
+      "quoted_span": "A bereavement fare cannot be applied retroactively once any part of the journey has been flown",
+      "reason": "The clause directly supports that these fares cannot be applied once travel has occurred.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     },
+     {
+      "claim_no": 3,
+      "clause_id": "BRV-002",
+      "quoted_span": "no refund of the fare difference is available after travel.",
+      "reason": "The clause confirms that fare differences cannot be refunded after travel has taken place.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "e3976cfb433c6d02badcee94ed1d4e38b6572afd3af5838f49eebc6d8b81efb4": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "The customer's question and our reply are both masked in the provided data, so I cannot display them."
+   }
+  },
+  "e3a0a4767b82a2b75a63ef0f908433be4562adfd64259b37fca02fbbf68dc70d": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "OVD-001",
+      "quoted_span": "An overdraft fee of $20 is charged for each item we pay when the account does not have enough available funds.",
+      "reason": "The claim matches the overdraft fee amount and the condition described in clause OVD-001.",
+      "situation_conflict": false,
+      "verdict": "SUPPORTED"
+     }
+    ]
+   }
+  },
+  "e5269d40417fdc0d13fe71c661cd4a262ab8c2575f96cb88335e055a12402eb4": {
+   "kind": "chat",
+   "name": "chat",
+   "output": "I am so incredibly sorry for your loss. You can certainly request a 40% bereavement discount retroactively as long as you provide the required documentation within 90 days of your ticket's issuance. Simply send us a death certificate or a letter from the funeral home or physician, and we will happily refund the fare difference for you."
+  },
+  "e99b051591634ce40a47050cd473089b3416587d583ab2f9b53184c908925970": {
+   "kind": "structured",
+   "name": "LedgerSql",
+   "output": {
+    "explanation": "This query retrieves the masked question and answer text for all audit records where the final decision was set to ESCALATED.",
+    "sql": "SELECT question_redacted, final_answer FROM v_audit_decisions WHERE decision = 'ESCALATED'"
+   }
+  },
+  "eaaadebddc43c98f8a9425d554ca98cf942c02c72c5e477ae84d76692ba57706": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "travel_credit",
+      "claim_type": "eligibility",
+      "text": "Travel credits can only be applied toward the base fare of your flight."
+     },
+     {
+      "area": "travel_credit",
+      "claim_type": "eligibility",
+      "text": "Travel credits are not valid for seat upgrades."
+     },
+     {
+      "area": "travel_credit",
+      "claim_type": "eligibility",
+      "text": "Travel credits are not valid for lounge access."
+     }
+    ]
+   }
+  },
+  "ef148e648c58fd184084f2b8e288a5bad511959d8a2e208f19378b08a9f22f2f": {
+   "kind": "structured",
+   "name": "LedgerAnswer",
+   "output": {
+    "answer": "The share of checks for March 2026 travel dates that were escalated is 0.5."
+   }
+  },
+  "f0c4b820bf409e21e7f1dae4d013d0668e90ccb4fce7d6bd261a4aab2ca1ad55": {
+   "kind": "structured",
+   "name": "RailExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "refund",
+      "claim_type": "amount",
+      "text": "For a confirmed Sleeper ticket cancelled 6 hours before departure, you get 50% back."
+     }
+    ]
+   }
+  },
+  "f25f508ed638165672a896cfb6402afc90e6566f94686c08e33889e0ed4785b8": {
+   "kind": "structured",
+   "name": "LedgerSql",
+   "output": {
+    "explanation": "The query calculates the ratio of escalated decisions to total decisions for all audit events where the customer travel date falls within March 2026.",
+    "sql": "SELECT 1.0 * SUM(CASE WHEN decision = 'ESCALATED' THEN 1 ELSE 0 END) / COUNT(*) FROM v_audit_decisions WHERE as_of_date >= DATE('2026-03-01') AND as_of_date <= DATE('2026-03-31')"
+   }
+  },
+  "f4f0d1469e1305ef2755f437e2fdf260dd748d3bbff4f84a364420e76db5c789": {
+   "kind": "tools",
+   "name": "tools",
+   "output": {
+    "content": "<answer>\n<question>How much is the first checked bag?</question>\nThe first checked bag costs $45 each way on Economy fares.\n</answer>",
+    "tool_calls": []
+   }
+  },
+  "f8b2319158c720fcf3eb89bf88a2889a421e65277fa4a345522fa154a3a41261": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": "OVD-001",
+      "quoted_span": "An overdraft fee of $25",
+      "reason": "The clause specifies the fee is $25, not $35.",
+      "situation_conflict": false,
+      "verdict": "CONTRADICTED"
+     }
+    ]
+   }
+  },
+  "f97522187279e4ddce8ff24ff40bcc299537c7c5156228799bda5d680c9da3ef": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "baggage",
+      "claim_type": "amount",
+      "text": "The first checked bag costs $45 each way on Economy fares."
+     }
+    ]
+   }
+  },
+  "fb41b748e76b9fb2d9edb3962b76fb39ae6bfe63f88d1363e9d66fb271d776f1": {
+   "kind": "structured",
+   "name": "ExtractionResult",
+   "output": {
+    "claims": [
+     {
+      "area": "pets",
+      "claim_type": "eligibility",
+      "text": "Small cats and dogs may travel in the cabin if the pet and its carrier together weigh no more than 8 kg."
+     },
+     {
+      "area": "pets",
+      "claim_type": "amount",
+      "text": "The pet fee is $100 each way."
+     }
+    ]
+   }
+  },
+  "ff62f82623a82a3e14f57d731c55f10e10c74ec6cc4dc8f3283bbb1d7152f898": {
+   "kind": "structured",
+   "name": "JudgeResult",
+   "output": {
+    "verdicts": [
+     {
+      "claim_no": 1,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no clause in the provided text regarding unaccompanied minor services.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     },
+     {
+      "claim_no": 2,
+      "clause_id": null,
+      "quoted_span": null,
+      "reason": "There is no clause in the provided text regarding travel requirements for children.",
+      "situation_conflict": false,
+      "verdict": "NOT_COVERED"
+     }
+    ]
+   }
+  }
+ },
+ "format": 2,
+ "model": "openrouter:google/gemini-3.1-flash-lite",
+ "note": "Model outputs recorded by `python -m asof.replay record`; read by LLM_PROVIDER=replay.",
+ "recorded_on": "2026-11-07",
+ "scenarios": {
+  "ask": [
+   {
+    "question": "How many decisions of each kind were made, per channel?",
+    "sql": "SELECT channel, decision, SUM(decisions) AS total_decisions FROM v_decision_stats GROUP BY channel, decision FETCH FIRST 201 ROWS ONLY",
+    "status": "ANSWERED"
+   },
+   {
+    "question": "Which clause versions had the most contradicted claims?",
+    "sql": "SELECT clause_id, clause_version, COUNT(*) AS contradicted_count FROM v_audit_claims WHERE verdict = 'CONTRADICTED' GROUP BY clause_id, clause_version ORDER BY contradicted_count DESC FETCH FIRST 201 ROWS ONLY",
+    "status": "ANSWERED"
+   },
+   {
+    "question": "Where did the rule check overrule the model judge?",
+    "sql": "SELECT DISTINCT claim_text, clause_id, clause_version FROM v_audit_claims WHERE rule_check = 'MISMATCH' AND llm_verdict <> verdict FETCH FIRST 201 ROWS ONLY",
+    "status": "ANSWERED"
+   },
+   {
+    "question": "What share of checks for March 2026 travel dates were escalated?",
+    "sql": "SELECT CAST(SUM(CASE WHEN decision = 'ESCALATED' THEN 1 ELSE 0 END) AS DOUBLE) / NULLIF(COUNT(*), 0) AS escalation_share FROM v_audit_decisions WHERE as_of_date >= DATE('2026-03-01') AND as_of_date <= DATE('2026-03-31') FETCH FIRST 201 ROWS ONLY",
+    "status": "ANSWERED"
+   },
+   {
+    "question": "Show the escalated decisions with the customer's question and our reply.",
+    "sql": "SELECT question_redacted, final_answer FROM v_audit_decisions WHERE decision = 'ESCALATED' FETCH FIRST 201 ROWS ONLY",
+    "status": "ANSWERED"
+   }
+  ],
+  "checks": [
+   {
+    "as_of": "2026-03-10",
+    "decision": "CORRECTED",
+    "doc_id": "AURELIA-CSP",
+    "draft": null,
+    "draft_checked": "I am so incredibly sorry for your loss. You can certainly request a 40% bereavement discount retroactively as long as you provide the required documentation within 90 days of your ticket's issuance. Simply send us a death certificate or a letter from the funeral home or physician, and we will happily refund the fare difference for you.",
+    "label": "Moffatt: March booking",
+    "question": "My grandmother just died. Can I get the bereavement fare after I travel?",
+    "reason_code": "CORRECTED_FROM_CLAUSES"
+   },
+   {
+    "as_of": "2026-06-02",
+    "decision": "PASS",
+    "doc_id": "AURELIA-CSP",
+    "draft": null,
+    "draft_checked": "I am so incredibly sorry for your loss. You can certainly request a 40% bereavement discount retroactively as long as you provide the required documentation within 90 days of your ticket's issuance. Simply send us a death certificate or a letter from the funeral home or physician, and we will happily refund the fare difference for you.",
+    "label": "Same question: June booking",
+    "question": "My grandmother just died. Can I get the bereavement fare after I travel?",
+    "reason_code": "ALL_SUPPORTED"
+   },
+   {
+    "as_of": "2026-03-10",
+    "decision": "CORRECTED",
+    "doc_id": "AURELIA-CSP",
+    "draft": "Yes. You can request the bereavement fare after you travel, within 90 days of the date your ticket was issued, with a death certificate or a letter from the attending physician or funeral home.",
+    "draft_checked": "Yes. You can request the bereavement fare after you travel, within 90 days of the date your ticket was issued, with a death certificate or a letter from the attending physician or funeral home.",
+    "label": "Same draft: March booking",
+    "question": "My grandmother died. Can I get the bereavement fare after I travel?",
+    "reason_code": "CORRECTED_FROM_CLAUSES"
+   },
+   {
+    "as_of": "2026-06-02",
+    "decision": "PASS",
+    "doc_id": "AURELIA-CSP",
+    "draft": "Yes. You can request the bereavement fare after you travel, within 90 days of the date your ticket was issued, with a death certificate or a letter from the attending physician or funeral home.",
+    "draft_checked": "Yes. You can request the bereavement fare after you travel, within 90 days of the date your ticket was issued, with a death certificate or a letter from the attending physician or funeral home.",
+    "label": "Same draft: June booking",
+    "question": "My grandmother died. Can I get the bereavement fare after I travel?",
+    "reason_code": "ALL_SUPPORTED"
+   },
+   {
+    "as_of": "2026-07-15",
+    "decision": "CORRECTED",
+    "doc_id": "AURELIA-CSP",
+    "draft": null,
+    "draft_checked": "Hello! I'd be happy to help you with that. Your first checked bag costs $35 each way on all Economy fares. We look forward to seeing you on your flight!",
+    "label": "Stale bag fee (July)",
+    "question": "How much is the first checked bag?",
+    "reason_code": "CORRECTED_FROM_CLAUSES"
+   },
+   {
+    "as_of": "2026-04-01",
+    "decision": "CORRECTED",
+    "doc_id": "AURELIA-CSP",
+    "draft": null,
+    "draft_checked": "Yes, you can certainly transfer your ticket to a friend! We simply charge a $50 name change fee to process the update for you.",
+    "label": "Ticket transfer",
+    "question": "Can I transfer my ticket to a friend?",
+    "reason_code": "CORRECTED_FROM_CLAUSES"
+   },
+   {
+    "as_of": "2026-12-15",
+    "decision": "PASS",
+    "doc_id": "AURELIA-CSP",
+    "draft": null,
+    "draft_checked": "Yes, your cat is welcome to fly in the cabin with you as long as the combined weight of your pet and carrier does not exceed 8 kg. The fee for bringing your pet on board is $100 each way. We look forward to having both of you on your next flight!",
+    "label": "Pet fee, December trip",
+    "question": "Can my cat fly in the cabin with me, and what does it cost?",
+    "reason_code": "ALL_SUPPORTED"
+   },
+   {
+    "as_of": "2026-05-05",
+    "decision": "CORRECTED",
+    "doc_id": "AURELIA-CSP",
+    "draft": "Yes, dogs up to 12 kg including the carrier can fly in the cabin for $100 each way.",
+    "draft_checked": "Yes, dogs up to 12 kg including the carrier can fly in the cabin for $100 each way.",
+    "label": "Paste a draft",
+    "question": "Can my dog fly in the cabin with me?",
+    "reason_code": "CORRECTED_FROM_CLAUSES"
+   },
+   {
+    "as_of": "2026-03-15",
+    "decision": "CORRECTED",
+    "doc_id": "FERNHOLLOW-FEES",
+    "draft": "Yes, don't worry: overdraft fees are refunded automatically within a few days.",
+    "draft_checked": "Yes, don't worry: overdraft fees are refunded automatically within a few days.",
+    "label": "Bank: \"refunded automatically\"",
+    "question": "I was charged an overdraft fee yesterday. Will you refund it?",
+    "reason_code": "CORRECTED_FROM_CLAUSES"
+   },
+   {
+    "as_of": "2026-08-03",
+    "decision": "CORRECTED",
+    "doc_id": "FERNHOLLOW-FEES",
+    "draft": "The overdraft fee is $35 for each item we pay.",
+    "draft_checked": "The overdraft fee is $35 for each item we pay.",
+    "label": "Bank: overdraft fee in August",
+    "question": "How much is the overdraft fee?",
+    "reason_code": "CORRECTED_FROM_CLAUSES"
+   },
+   {
+    "as_of": "2026-11-20",
+    "decision": "PASS",
+    "doc_id": "AURELIA-CSP",
+    "draft": null,
+    "draft_checked": "Yes, your cat is welcome to fly in the cabin with you as long as the combined weight of your pet and carrier does not exceed 8 kg. The fee for bringing your pet on board is $100 each way. We look forward to having both of you on your next flight!",
+    "label": "demo: Can my cat fly in the cabin with me, and what does it cost?",
+    "question": "Can my cat fly in the cabin with me, and what does it cost?",
+    "reason_code": "ALL_SUPPORTED"
+   },
+   {
+    "as_of": "2026-08-01",
+    "decision": "PASS",
+    "doc_id": "AURELIA-CSP",
+    "draft": null,
+    "draft_checked": "I’m sorry, but our provided information does not cover policies regarding minors traveling alone. Please contact our support team directly so we can assist you with the specific rules for unaccompanied minors.",
+    "label": "demo: Can my 12-year-old fly alone?",
+    "question": "Can my 12-year-old fly alone?",
+    "reason_code": "NO_POLICY_CLAIMS"
+   },
+   {
+    "as_of": "2026-09-10",
+    "decision": "PASS",
+    "doc_id": "FERNHOLLOW-FEES",
+    "draft": "Overdraft fees are not refunded automatically, but you can ask us for a courtesy refund of up to two overdraft fees in any 12-month period, within 60 days of the date the fee was charged.",
+    "draft_checked": "Overdraft fees are not refunded automatically, but you can ask us for a courtesy refund of up to two overdraft fees in any 12-month period, within 60 days of the date the fee was charged.",
+    "label": "demo: I was charged an overdraft fee yesterday. Will you refund it?",
+    "question": "I was charged an overdraft fee yesterday. Will you refund it?",
+    "reason_code": "ALL_SUPPORTED"
+   },
+   {
+    "as_of": "2026-09-14",
+    "decision": "ESCALATED",
+    "doc_id": "AURELIA-CSP",
+    "draft": null,
+    "draft_checked": "Hello! Thank you for reaching out to us. Unfortunately, travel credits can only be applied toward the base fare of your flight and are not valid for seat upgrades or lounge access. We hope this information helps with your travel planning!",
+    "label": "chat AUR-4C9N: Can I use my travel credit to pay for seat upgrades and lounge access?",
+    "question": "Can I use my travel credit to pay for seat upgrades and lounge access?",
+    "reason_code": "NOT_COVERED"
+   },
+   {
+    "as_of": "2026-03-12",
+    "decision": "ESCALATED",
+    "doc_id": "AURELIA-CSP",
+    "draft": "Yes. Children aged 12 can fly alone with our escort service for $150 each way.",
+    "draft_checked": "Yes. Children aged 12 can fly alone with our escort service for $150 each way.",
+    "label": "held: Can my 12-year-old fly alone to her grandmother's funeral?",
+    "question": "Can my 12-year-old fly alone to her grandmother's funeral?",
+    "reason_code": "NOT_COVERED"
+   },
+   {
+    "as_of": "2026-03-20",
+    "decision": "ESCALATED",
+    "doc_id": "AURELIA-CSP",
+    "draft": "Yes. Request it before you travel. There is a $25 processing fee for bereavement requests.",
+    "draft_checked": "Yes. Request it before you travel. There is a $25 processing fee for bereavement requests.",
+    "label": "held: My father died last week and I fly tomorrow. Can I still get the bereavement fare?",
+    "question": "My father died last week and I fly tomorrow. Can I still get the bereavement fare?",
+    "reason_code": "NOT_COVERED"
+   },
+   {
+    "as_of": "2026-09-01",
+    "decision": "ESCALATED",
+    "doc_id": "FERNHOLLOW-FEES",
+    "draft": "Yes, a small safe deposit box costs $60 a year.",
+    "draft_checked": "Yes, a small safe deposit box costs $60 a year.",
+    "label": "held: Is there a fee for a safe deposit box?",
+    "question": "Is there a fee for a safe deposit box?",
+    "reason_code": "NOT_COVERED"
+   },
+   {
+    "as_of": "2026-05-02",
+    "decision": "CORRECTED",
+    "doc_id": "INDIAN-RAIL-REFUNDS",
+    "draft": "You get 50% back.",
+    "draft_checked": "You get 50% back.",
+    "label": "Indian Railways (summary, not official): travel 2 May 2026",
+    "question": "I cancel my confirmed Sleeper ticket 6 hours before departure; how much do I get back?",
+    "reason_code": "CORRECTED_FROM_CLAUSES"
+   },
+   {
+    "as_of": "2026-03-28",
+    "decision": "CORRECTED",
+    "doc_id": "INDIAN-RAIL-REFUNDS",
+    "draft": "Under the new rules, cancelling within 8 hours gets no refund.",
+    "draft_checked": "Under the new rules, cancelling within 8 hours gets no refund.",
+    "label": "Indian Railways (summary, not official): travel 28 Mar 2026",
+    "question": "I cancel my confirmed Sleeper ticket 6 hours before departure; how much do I get back?",
+    "reason_code": "CORRECTED_FROM_CLAUSES"
+   }
+  ],
+  "impact": [
+   {
+    "clause_id": "PET-001",
+    "drafts": [
+     {
+      "answer_id": "PA-PET-001",
+      "check_decision": "PASS",
+      "check_reason": "ALL_SUPPORTED",
+      "error": null
+     }
+    ],
+    "preset": "Pet fee to $125 from 1 Dec 2026",
+    "version_label": "v2"
+   },
+   {
+    "clause_id": "BRV-002",
+    "drafts": [
+     {
+      "answer_id": "PA-BRV-002",
+      "check_decision": "PASS",
+      "check_reason": "ALL_SUPPORTED",
+      "error": null
+     }
+    ],
+    "preset": "Bereavement window to 60 days from 1 Jan 2027",
+    "version_label": "v3"
+   },
+   {
+    "clause_id": "BAG-001",
+    "drafts": [
+     {
+      "answer_id": "PA-BAG-001",
+      "check_decision": "PASS",
+      "check_reason": "ALL_SUPPORTED",
+      "error": null
+     }
+    ],
+    "preset": "First bag to $45 from 1 Jan 2027",
+    "version_label": "v3"
+   },
+   {
+    "clause_id": "OVD-001",
+    "drafts": [
+     {
+      "answer_id": "PA-OVD-002",
+      "check_decision": "PASS",
+      "check_reason": "ALL_SUPPORTED",
+      "error": null
+     }
+    ],
+    "preset": "Bank: overdraft fee to $20 from 1 Jan 2027",
+    "version_label": "v3"
+   }
+  ],
+  "indian_rail": {
+   "keys": [
+    "058fa16645ba4274e4edec551440a86b9520290a8269b3fc7efb6208696c7779",
+    "05bb32e2411c99b58048a6fe883ebc690da681c948713bf041d44c83a59cee90",
+    "1dbc9d629ad4080ce59d3e5aa123c753403f7d17392120923214d78f1320c80e",
+    "3b55bbb33ae7d50c0eef32f060f66242f8ae289bff047fd10ad4337f2bf38d9e",
+    "4193f72b679c67cbd2a44e0a3433faa1489f6574076ca7be48cf26fd5fc54aa9",
+    "6fa7f112a77e842269d57c77ee68a840f1a0d5a978fd0c957af7c9ad4a27a4d4",
+    "77b35fcfa9b526d5da1f14b20af802cdaad2767886232621868c334c5037c4db",
+    "79bbfd36b3bc69a5d973fb02d77b509281d2b11b22775af2b101268d2334a1ca",
+    "a434c8f3c18d70667b8e8ef4c0fe77a39bd6cb4b6861999aef21d944237e5c99",
+    "a7c19b3106b609fcc60055427d9e5b808691cec5349b1e4b987299851a66a0aa",
+    "a832c131e2f3610274aac15673dd6e1eb3dd2177bd0a9280d91a8d8bdf56e285",
+    "bbb5a5c5f3523dc420c94c5944a1c47805a9ecaced054a797dc9caf7e9843594",
+    "f0c4b820bf409e21e7f1dae4d013d0668e90ccb4fce7d6bd261a4aab2ca1ad55"
+   ],
+   "loaded": true,
+   "versions": [
+    {
+     "clauses": [
+      "CAN-001"
+     ],
+     "draft_id": 1,
+     "items": [
+      1
+     ],
+     "version": 1
+    },
+    {
+     "clauses": [
+      "CAN-001"
+     ],
+     "draft_id": 2,
+     "items": [
+      1
+     ],
+     "version": 2
+    }
+   ]
+  },
+  "intake": {
+   "discarded": [],
+   "document": "aurelia-csp-revision-2027-1.pdf",
+   "items": [
+    {
+     "blocked": false,
+     "clause_id": "BAG-001",
+     "item_no": 1,
+     "kind": "CHANGE"
+    },
+    {
+     "blocked": false,
+     "clause_id": "BAG-006",
+     "item_no": 2,
+     "kind": "NEW"
+    },
+    {
+     "blocked": false,
+     "clause_id": "CRD-001",
+     "item_no": 3,
+     "kind": "CHANGE"
+    },
+    {
+     "blocked": false,
+     "clause_id": "DLY-005",
+     "item_no": 4,
+     "kind": "UNCHANGED"
+    }
+   ],
+   "live_calls": 1,
+   "sha256": "f2b41e117554093e3e3dceac0166ad28717fa6720a73b5372b21ab336ae681b4"
+  },
+  "reviews": [
+   {
+    "held": "NOT_COVERED",
+    "outcome": "SPECIALIST_JUDGMENT",
+    "question": "Can my 12-year-old fly alone to her grandmother's funeral?",
+    "refused": null
+   },
+   {
+    "held": "NOT_COVERED",
+    "outcome": "SPECIALIST_CHECKED",
+    "question": "My father died last week and I fly tomorrow. Can I still get the bereavement fare?",
+    "refused": null
+   }
+  ]
+ }
+}

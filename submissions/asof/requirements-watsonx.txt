@@ -1,0 +1,7 @@
+# Optional: IBM watsonx.ai as the language model (LLM_PROVIDER=watsonx), on top of requirements.txt.
+#   pip install -r requirements.txt -r requirements-watsonx.txt -c requirements.lock
+# Not needed for the default setup, replay mode, Ollama, or Db2's own watsonx.ai embeddings
+# (ASOF_INDB_PROVIDER=watsonx: Db2 calls watsonx.ai itself, so the app needs no IBM package for that).
+# Checked with pip check against the pinned stack; audited with pip-audit (see README, watsonx.ai).
+langchain-ibm==1.1.2
+ibm-watsonx-ai==1.8.1

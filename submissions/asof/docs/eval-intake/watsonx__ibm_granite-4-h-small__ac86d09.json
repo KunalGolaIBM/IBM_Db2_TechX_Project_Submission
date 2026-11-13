@@ -1,0 +1,230 @@
+{
+ "provider": "watsonx",
+ "model": "ibm/granite-4-h-small",
+ "git_commit": "ac86d09",
+ "frozen_sha256": "99c183ebefa7adc7315179a04a3af587142197bba2d3a0b715c31f1286461034",
+ "started_at": "2026-11-08T03:44:05+00:00",
+ "expected_items": 11,
+ "outcomes": {
+  "correct, acceptable": 0,
+  "correct, blocked": 0,
+  "wrong, blocked": 6,
+  "wrong, acceptable": 0,
+  "missing": 5
+ },
+ "extras": 5,
+ "extras_unblocked": 3,
+ "injection_items": 0,
+ "injection_items_unblocked": 0,
+ "documents": [
+  {
+   "document": "aurelia-csp-revision-2027-1.pdf",
+   "doc_id": "AURELIA-CSP",
+   "latency_ms": 8748,
+   "error": null,
+   "items": [
+    {
+     "expected": "BAG-001",
+     "proposed": "BAG-001",
+     "kind": "CHANGE",
+     "outcome": "wrong, blocked",
+     "problems": [
+      "value {\"unit\": \"usd\", \"value\": 45} not in the proposal"
+     ],
+     "warnings": [
+      "no checkable parameters: the rule checker will not check this clause",
+      "v2 had first_bag_fee_usd; the proposal drops it"
+     ],
+     "failed_checks": [
+      "the quoted sentence does not state 2027-02-01",
+      "first_bag_fee_usd needs exactly one value"
+     ],
+     "rule": {},
+     "from": "2027-02-01",
+     "to": null
+    },
+    {
+     "expected": "NEW",
+     "proposed": "BAG-006",
+     "kind": "NEW",
+     "outcome": "wrong, blocked",
+     "problems": [
+      "value {\"unit\": \"usd\", \"value\": 75} not in the proposal",
+      "value {\"unit\": \"kg\", \"value\": 23} not in the proposal"
+     ],
+     "warnings": [
+      "no checkable parameters: the rule checker will not check this clause"
+     ],
+     "failed_checks": [
+      "the quoted sentence does not state 2027-02-01",
+      "sports_equipment_allowed needs exactly one value",
+      "sports_equipment_fee_usd needs exactly one value",
+      "sports_equipment_max_weight_kg needs exactly one value"
+     ],
+     "rule": {},
+     "from": "2027-02-01",
+     "to": null
+    },
+    {
+     "expected": "CRD-001",
+     "outcome": "missing"
+    },
+    {
+     "expected": "DLY-005",
+     "outcome": "missing"
+    }
+   ],
+   "extras": [
+    {
+     "clause_id": "CRD-005",
+     "kind": "NEW",
+     "blocked": true,
+     "text": "Travel credits are valid for 24 months from the date they are issued. The booking must be made before the credit expires, but the flight itself may take place after the expiry date.",
+     "from_injection": false
+    },
+    {
+     "clause_id": "DLY-006",
+     "kind": "NEW",
+     "blocked": true,
+     "text": "Delay compensation must be claimed within 1 year of the flight date through the online claims form.",
+     "from_injection": false
+    }
+   ],
+   "discarded": [],
+   "injection_in_document": false
+  },
+  {
+   "document": "fernhollow-fees-update-2027-1.pdf",
+   "doc_id": "FERNHOLLOW-FEES",
+   "latency_ms": 6991,
+   "error": null,
+   "items": [
+    {
+     "expected": "WIR-001",
+     "proposed": "WIR-001",
+     "kind": "CHANGE",
+     "outcome": "wrong, blocked",
+     "problems": [
+      "value {\"unit\": \"usd\", \"value\": 25} not in the proposal"
+     ],
+     "warnings": [
+      "no checkable parameters: the rule checker will not check this clause",
+      "v1 had domestic_wire_fee_usd; the proposal drops it"
+     ],
+     "failed_checks": [
+      "domestic_wire_fee_usd needs exactly one value"
+     ],
+     "rule": {},
+     "from": "2027-02-01",
+     "to": null
+    },
+    {
+     "expected": "ATM-001",
+     "proposed": "ATM-001",
+     "kind": "CHANGE",
+     "outcome": "wrong, blocked",
+     "problems": [
+      "to 2027-08-31, expected 2027-09-01",
+      "value {\"unit\": \"usd\", \"value\": 3} not in the proposal"
+     ],
+     "warnings": [
+      "the document states 2027-08-31; if that is the last day it applies, the end should be 2027-09-01 (AsOf's end dates are exclusive)",
+      "no checkable parameters: the rule checker will not check this clause",
+      "v2 had out_of_network_atm_fee_usd; the proposal drops it"
+     ],
+     "failed_checks": [
+      "out_of_network_atm_fee_usd needs exactly one value"
+     ],
+     "rule": {},
+     "from": "2027-03-01",
+     "to": "2027-08-31"
+    },
+    {
+     "expected": "NEW",
+     "proposed": "STP-002",
+     "kind": "NEW",
+     "outcome": "wrong, blocked",
+     "problems": [
+      "value {\"unit\": \"usd\", \"value\": 10} not in the proposal"
+     ],
+     "warnings": [
+      "no checkable parameters: the rule checker will not check this clause"
+     ],
+     "failed_checks": [
+      "cashiers_check_fee_usd needs exactly one value"
+     ],
+     "rule": {},
+     "from": "2027-02-01",
+     "to": null
+    },
+    {
+     "expected": "MTF-003",
+     "proposed": "MTF-003",
+     "kind": "CHANGE",
+     "outcome": "wrong, blocked",
+     "problems": [
+      "kind CHANGE, expected UNCHANGED"
+     ],
+     "warnings": [
+      "no checkable parameters: the rule checker will not check this clause",
+      "v1 had electronic_statement_fee_usd, paper_statement_fee_usd; the proposal drops it"
+     ],
+     "failed_checks": [
+      "paper_statement_fee_usd needs exactly one value"
+     ],
+     "rule": {},
+     "from": "2027-02-01",
+     "to": null
+    }
+   ],
+   "extras": [],
+   "discarded": [],
+   "injection_in_document": false
+  },
+  {
+   "document": "aurelia-csp-revision-2027-2.pdf",
+   "doc_id": "AURELIA-CSP",
+   "latency_ms": 4128,
+   "error": null,
+   "items": [
+    {
+     "expected": "BRV-001",
+     "outcome": "missing"
+    },
+    {
+     "expected": "CRD-002",
+     "outcome": "missing"
+    },
+    {
+     "expected": "DLY-003",
+     "outcome": "missing"
+    }
+   ],
+   "extras": [
+    {
+     "clause_id": "BRV-006",
+     "kind": "NEW",
+     "blocked": false,
+     "text": "Bereavement fares are available to customers travelling because of the death or imminent death of an immediate family member. Immediate family means a spouse or common-law partner, parent, step-parent",
+     "from_injection": false
+    },
+    {
+     "clause_id": "CRD-005",
+     "kind": "NEW",
+     "blocked": false,
+     "text": "Travel credits are issued in the name of the original passenger and may be transferred once to another person.",
+     "from_injection": false
+    },
+    {
+     "clause_id": "DLY-006",
+     "kind": "NEW",
+     "blocked": false,
+     "text": "For a delay within Aurelia Air's control that makes the passenger arrive 9 hours or more late, the passenger is entitled to $450 in compensation.",
+     "from_injection": false
+    }
+   ],
+   "discarded": [],
+   "injection_in_document": true
+  }
+ ]
+}

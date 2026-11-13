@@ -1,0 +1,31 @@
+{
+ "model": "openrouter:google/gemini-3.1-flash-lite",
+ "messages_sha256": "5706a1caa3528b203e8c372aa1130bc21b988509a9ada73958e49fd431d0303d",
+ "latency_ms": 1670,
+ "input_tokens": 1689,
+ "output_tokens": 295,
+ "result": {
+  "clauses": [
+   {
+    "existing_clause_id": "REF-001",
+    "area": "refund",
+    "title": "Prompt refunds and fee prohibition",
+    "clause_text": "Providing prompt refunds in the original form of payment (i.e., money is returned to an individual using whatever payment method the individual used to make the original payment, such as a check, credit card, debit card, cash, or airline miles) when ticket or ancillary service fee refunds, including checked bag fee refunds, are due pursuant to 14 CFR part 260 unless the consumer agrees to receive the refunds in a different form of payment that is a cash equivalent payment as defined in 14 CFR 260.2. Carriers may not retain a processing fee for issuing refunds that are due;",
+    "effective_from": "2024-06-25",
+    "effective_to": null,
+    "date_quote": "Loaded into AsOf as in force from 2024-06-25.",
+    "rule": [
+     {
+      "key": "optional_service_fee_refund_required",
+      "number": null,
+      "flag": false,
+      "items": null
+     }
+    ]
+   }
+  ]
+ },
+ "upload": 2,
+ "version": 2,
+ "pdf_sha256": "bea957371c289258032b0fc77e8310464dfe4b3a0cd2a1c0dd87a7b62a3be9cf"
+}

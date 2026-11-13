@@ -1,0 +1,36 @@
+# Exact versions tested on Python 3.12 (macOS arm64 and Linux x86_64).
+# Install with: pip install -r requirements.txt && pip install -e . --no-deps
+
+# IBM Db2 driver and the official LangChain Db2 integration
+ibm_db==3.3.0
+langchain-db2==1.0.0
+# "Ask the ledger": SQLAlchemy over IBM's Db2 dialect, and SQLGlot with the Db2 dialect plugin
+ibm-db-sa==0.4.4
+SQLAlchemy==2.1.8
+sqlglot==30.30.0
+db2-sqlglot-dialect==1.1.0
+
+# LangChain core, providers and local embeddings
+langchain-core==1.7.6
+langchain-community==0.4.2
+langchain-openai==1.7.4
+langchain-ollama==1.1.0
+langchain-huggingface==1.2.3
+langgraph==1.2.20
+sentence-transformers==6.2.0
+torch==2.15.0
+
+# API, validation and configuration
+fastapi==0.162.0
+# imported directly (run_in_threadpool, TrustedHostMiddleware): pinned at the version FastAPI 0.162.0 resolves to
+starlette==1.10.0
+uvicorn[standard]==0.54.0
+pydantic==2.14.3
+pydantic-settings==2.16.2
+python-dotenv==1.2.4
+httpx==0.28.1
+# Policy intake: text from uploaded policy PDFs (pure Python, BSD-3-Clause)
+pypdf==6.21.4
+
+# Tests
+pytest==9.2.0

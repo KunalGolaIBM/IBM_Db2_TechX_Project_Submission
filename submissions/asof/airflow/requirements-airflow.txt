@@ -1,0 +1,4 @@
+# Its own virtualenv: Airflow pins its own dependency world.
+apache-airflow==3.4.0
+apache-airflow-providers-ibm-db2==0.1.0
+pytest==9.2.0

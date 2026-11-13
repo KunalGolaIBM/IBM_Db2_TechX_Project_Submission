@@ -1,0 +1,16 @@
+# Credentials come from the environment (the same names as AsOf's .env); nothing is stored here.
+# Marts are built by dbt's own least-privilege user (asofmart, created by setup) into their own schema,
+# <AsOf schema>_MART (ASOF_MART): it can SELECT the four tables the marts read and create objects only there. The marts read
+# the ledger's decision and verdict columns only, never its text (which the column masks would hide anyway).
+asof:
+  target: dev
+  outputs:
+    dev:
+      type: db2
+      host: "{{ env_var('DB2_HOST', 'localhost') }}"
+      port: "{{ env_var('DB2_PORT', '50000') | int }}"
+      database: "{{ env_var('DB2_DATABASE', 'testdb') }}"
+      schema: "{{ env_var('ASOF_SCHEMA', 'ASOF') ~ '_MART' }}"
+      username: "{{ env_var('ASOF_MART_USER', 'asofmart') }}"
+      password: "{{ env_var('ASOF_MART_PASSWORD') }}"
+      threads: 1

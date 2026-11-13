@@ -1,0 +1,32 @@
+{
+ "ran_at": "2026-11-08T23:45:25+00:00",
+ "git_commit": "91aadc2",
+ "rows": 1000000,
+ "citations_per_row": 2,
+ "points": [
+  {
+   "status": "OK",
+   "rows_checked": 10000,
+   "detail": "every row, link and citation verified",
+   "seconds": 24.3,
+   "rows": 10000,
+   "load_seconds_total": 11.8
+  },
+  {
+   "status": "OK",
+   "rows_checked": 100000,
+   "detail": "every row, link and citation verified",
+   "seconds": 245.6,
+   "rows": 100000,
+   "load_seconds_total": 111.4
+  },
+  {
+   "status": "OK",
+   "rows_checked": 1000000,
+   "detail": "every row, link and citation verified",
+   "seconds": 2755.8,
+   "rows": 1000000,
+   "load_seconds_total": 1127.2
+  }
+ ]
+}

@@ -1,0 +1,43 @@
+version: 2
+
+models:
+  - name: stg_decisions
+    columns:
+      - name: LEDGER_ID
+        data_tests: [unique, not_null]
+      - name: DECISION
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['PASS', 'CORRECTED', 'ESCALATED', 'REVIEWED']
+      - name: DOC_ID
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['AURELIA-CSP', 'FERNHOLLOW-FEES']
+  - name: stg_claims
+    columns:
+      - name: LEDGER_ID
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_decisions')
+                field: LEDGER_ID
+      - name: VERDICT
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['SUPPORTED', 'CONTRADICTED', 'NOT_COVERED']
+  - name: mart_decisions_daily
+    columns:
+      - name: DECISIONS
+        data_tests: [not_null]
+  - name: mart_clause_version_outcomes
+    columns:
+      - name: CLAUSE_ID
+        data_tests: [not_null]
+  - name: mart_coverage_by_area
+    columns:
+      - name: NOT_COVERED_PCT
+        data_tests: [not_null]
