@@ -36,7 +36,7 @@ from .counterexample import (
     prove_semantics,
 )
 from .datasets import DatasetAgent, QueryFeatures
-from .llm import METER
+from .llm import METER, DeadEnds
 from .federation import Corroboration, corroborate
 from .fixmemory import FixMemory
 from .repair import RepairLoop, RepairOutcome
@@ -256,6 +256,8 @@ class MigrationReport:
         ) + [
             f"model calls, all stages  : {len(METER.calls)} "
             f"({METER.total_tokens} tokens)",
+            f"model calls avoided      : {METER.avoided} "
+            "(Db2 records that the model already failed on these)",
             f"wall time                : {self.seconds:.1f}s for {self.total} statements "
             f"({self.loads} dataset loads across all engines)",
         ]
@@ -293,6 +295,11 @@ class Pipeline:
         self.memory = memory
         self.repair_loop = repair_loop or RepairLoop(owner_conn, memory=memory)
         self.learn = learn
+        #: What the model has already failed at, read and written only when
+        #: this run is allowed to learn.
+        self.dead_ends = DeadEnds(app_conn) if learn else None
+        if dataset_agent is not None and getattr(dataset_agent, "store", None) is not None:
+            dataset_agent.dead_ends = self.dead_ends
         self.semantic_repair = semantic_repair
         #: Chooses and builds the datasets per statement. Without one, every
         #: statement is proved on ``variants`` (default: all the hand-built ones).
@@ -572,6 +579,7 @@ class Pipeline:
                         self.owner_conn, source=source, target=self.target,
                         model=self.repair_loop.model, case_name=statement.case_name,
                         memory=self.memory if "memory" in self.repair_loop.tiers else None,
+                        dead_ends=self.dead_ends,
                     )
                     fix = loop.run(
                         source_sql=statement.sql,

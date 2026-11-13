@@ -19,7 +19,9 @@ pipeline does not know or care which one answered.
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import re
 import time
 import urllib.error
@@ -61,6 +63,8 @@ class UsageMeter:
 
     calls: list[LlmCall] = field(default_factory=list)
     _flushed: int = 0
+    #: Model calls not made because Db2 already records the model failing there.
+    avoided: int = 0
 
     def record(self, call: LlmCall) -> None:
         self.calls.append(call)
@@ -86,10 +90,58 @@ class UsageMeter:
     def reset(self) -> None:
         self.calls.clear()
         self._flushed = 0
+        self.avoided = 0
 
 
 #: Process-wide, because the question it answers is "what did this run cost".
 METER = UsageMeter()
+
+
+class DeadEnds:
+    """``PORTPROOF.MODEL_DEAD_END``: questions a model already failed in full.
+
+    The fix memory makes a solved statement free the second time. This makes an
+    unsolved one free the second time too: without it, every rerun pays the
+    model again to fail on exactly the statements it failed on before. Set
+    ``LLM_RETRY_DEAD_ENDS=1`` to ask again anyway, after changing model.
+    """
+
+    def __init__(self, conn) -> None:
+        self.conn = conn
+        self.retry = os.environ.get("LLM_RETRY_DEAD_ENDS", "").strip() in ("1", "true", "yes")
+
+    @staticmethod
+    def subject(*parts: str) -> str:
+        return hashlib.sha256("\x00".join(parts).encode("utf-8")).hexdigest()
+
+    def known(self, stage: str, model: str, *parts: str) -> bool:
+        if self.retry:
+            return False
+        from . import db
+
+        try:
+            row = db.fetch_one(
+                self.conn,
+                "SELECT 1 FROM PORTPROOF.MODEL_DEAD_END "
+                "WHERE SUBJECT_SHA = ? AND STAGE = ? AND MODEL = ?",
+                (self.subject(*parts), stage, model[:80]),
+            )
+        except db.Db2Error:  # an older schema without the table
+            return False
+        if row:
+            METER.avoided += 1
+        return bool(row)
+
+    def record(self, stage: str, model: str, case_name: str, attempts: int, *parts: str) -> None:
+        from . import db
+
+        try:
+            db.call_proc(
+                self.conn, "PORTPROOF.RECORD_DEAD_END",
+                (self.subject(*parts), stage, model[:80], case_name[:80] or None, attempts),
+            )
+        except db.Db2Error:
+            pass
 
 
 # --------------------------------------------------------------------------

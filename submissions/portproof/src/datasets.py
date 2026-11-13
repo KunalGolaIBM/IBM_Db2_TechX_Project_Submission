@@ -1202,7 +1202,13 @@ class DatasetAgent:
             else f"only {verdict.substantive_instances} returned rows and they gave "
                  f"{verdict.distinct_inputs} distinct result(s), which is weak evidence"
         )
+        dead_ends = getattr(self, "dead_ends", None)
+        model_name = getattr(self.model, "model", "a model")
+        subject = (statement.dialect, schema.fingerprint, statement.sql)
+        if dead_ends is not None and dead_ends.known("DATASET", model_name, *subject):
+            return []
         self.stats.model_calls += 1
+        reply = None
         try:
             reply = self.model.ask(
                 DATASET_SYSTEM,
@@ -1219,9 +1225,15 @@ class DatasetAgent:
             )
         except Exception:
             self.stats.model_rejected += 1
+            # An answer that came back and failed validation is a dead end. No
+            # answer at all (a timeout, the budget) is not.
+            if reply is not None and dead_ends is not None:
+                dead_ends.record("DATASET", model_name, statement.case_name, 1, *subject)
             return []
         if variant.fingerprint in have or not self._loads(variant, source, target):
             self.stats.model_rejected += 1
+            if dead_ends is not None:
+                dead_ends.record("DATASET", model_name, statement.case_name, 1, *subject)
             return []
         self.stats.model_accepted += 1
         self._save(schema.fingerprint, [variant])

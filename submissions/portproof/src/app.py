@@ -33,7 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src import db, physical, translate  # noqa: E402
 from src.config import llm_config, runtime_config, setup_config  # noqa: E402
-from src.corpus import CORPUS, VARIANTS, Statement  # noqa: E402
+from src.corpus import BASE, CORPUS, DIALECTS, VARIANTS, Statement  # noqa: E402
 from src.counterexample import (  # noqa: E402
     Db2Target,
     available_sources,
@@ -234,7 +234,12 @@ def _prover(_owner_conn):
     statements come back INCONCLUSIVE rather than being judged by a
     PostgreSQL-compatible stand-in -- see :class:`DuckDbSource`.
     """
-    return available_sources(), Db2Target(_owner_conn)
+    target = Db2Target(_owner_conn)
+    # The compile oracle resolves names against PPTEST, and the proofs now load
+    # their datasets into schemas of their own, so nothing else guarantees the
+    # fixture tables are there on a fresh database.
+    target.load(BASE)
+    return available_sources(), target
 
 
 def _code(sql: str, *, language: str = "sql") -> None:
@@ -290,8 +295,8 @@ c4.metric(
     # substitutes for a model, but what it actually runs is a deterministic
     # rewrite rule set, and calling that a mock on screen understates it: these
     # are the rules that repaired all fourteen rejected statements.
-    "rules" if cfg.is_mock else cfg.provider,
-    "deterministic, no API key" if cfg.is_mock else cfg.label,
+    "tiered" if cfg.is_tiered else ("rules" if cfg.is_mock else cfg.provider),
+    cfg.label if cfg.is_tiered else ("deterministic, no API key" if cfg.is_mock else cfg.label),
     delta_color="off",
 )
 
@@ -317,7 +322,7 @@ def _pick_statement(key: str) -> Statement | None:
         chosen = st.selectbox("case", names, key=f"{key}_case")
         return next(s for s in CORPUS if s.case_name == chosen)
 
-    dialect = st.selectbox("source dialect", ["postgres", "mysql"], key=f"{key}_dialect")
+    dialect = st.selectbox("source dialect", list(DIALECTS), key=f"{key}_dialect")
     sql = st.text_area(
         "source SQL",
         height=140,
@@ -419,7 +424,9 @@ with tab_prove:
                     icon = "✅" if a.ok else "❌"
                     # Attempt 0 is the translator's own output, before any repair
                     # ran, so calling it "attempt 0" misattributes it.
-                    what = "as translated" if a.n == 0 else f"repair attempt {a.n}"
+                    # ...and a repair says who proposed it: the fix memory,
+                    # a rule, or the model. That is the answer to "is this AI".
+                    what = "as translated" if a.n == 0 else f"repair attempt {a.n}, proposed by {a.tier}"
                     label = (
                         f"{icon} {what} · "
                         + ("Db2 accepted" if a.ok else f"Db2 rejected, SQLCODE={a.sqlcode}")
@@ -692,7 +699,7 @@ with tab_ledger:
             value="SQLCODE=-440 no authorized routine named GROUP_CONCAT",
             key="recall_probe",
         )
-        dialect = st.selectbox("filter: source dialect", ["postgres", "mysql"], key="recall_dialect")
+        dialect = st.selectbox("filter: source dialect", list(DIALECTS), key="recall_dialect")
         if st.button("Recall from Db2", key="go_recall"):
             # Kept in session state so the results survive the rerun caused by
             # any other widget on this tab.

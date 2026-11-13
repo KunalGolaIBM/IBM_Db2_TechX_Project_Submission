@@ -822,3 +822,111 @@ def test_sql_server_is_judged_by_a_real_sql_server(owner_conn):
     finally:
         target.close()
         source.close()
+
+
+# --------------------------------------------------------------------------
+# dead ends: the model is not paid twice to fail at the same question
+# --------------------------------------------------------------------------
+class FakeDeadEnds:
+    def __init__(self):
+        self.seen: set[tuple] = set()
+        self.skipped = 0
+
+    def known(self, stage, model, *parts):
+        hit = (stage, model, parts) in self.seen
+        self.skipped += int(hit)
+        return hit
+
+    def record(self, stage, model, case_name, attempts, *parts):
+        self.seen.add((stage, model, parts))
+
+
+def test_a_dataset_the_model_could_not_write_is_not_asked_for_again():
+    dead = FakeDeadEnds()
+    first = DatasetAgent(store=FakeStore(), model=ScriptedModel("I cannot help with that."))
+    first.dead_ends = dead
+    first.register("bank", "mysql", BANK)
+    assert first.escalate(STMT, _vacuous(), used=[]) == []
+    assert first.stats.model_calls == 1 and len(dead.seen) == 1
+
+    model = ScriptedModel(GOOD_REPLY)
+    second = DatasetAgent(store=FakeStore(), model=model)
+    second.dead_ends = dead
+    second.register("bank", "mysql", BANK)
+    assert second.escalate(STMT, _vacuous(), used=[]) == []
+    assert model.prompts == [] and second.stats.model_calls == 0 and dead.skipped == 1
+
+
+def test_a_model_that_never_answered_is_not_a_dead_end():
+    dead = FakeDeadEnds()
+    agent = DatasetAgent(store=FakeStore(), model=ScriptedModel(TimeoutError("no answer")))
+    agent.dead_ends = dead
+    agent.register("bank", "mysql", BANK)
+    assert agent.escalate(STMT, _vacuous(), used=[]) == []
+    assert dead.seen == set()  # a timeout says nothing about the question
+
+
+@pytestmark_db2
+def test_a_statement_the_model_failed_to_repair_is_not_sent_to_it_again(owner_conn):
+    from src.counterexample import Db2Target, ensure_fixture_schema, prove_semantics
+    from src.semantic_repair import SemanticRepairLoop
+
+    ensure_fixture_schema(owner_conn)
+    target, source = Db2Target(owner_conn), SqliteSource()
+    sql = "SELECT id FROM customers WHERE name LIKE '%SMITH%' ORDER BY id"
+    wrong = "SELECT id FROM customers WHERE name LIKE '%SMITH%' ORDER BY id DESC"
+    dead = FakeDeadEnds()
+    try:
+        before = prove_semantics(source_sql=sql, db2_sql=sql, source=source, target=target, dialect="sqlite")
+        first = ScriptedModel(wrong, wrong)
+        fix = SemanticRepairLoop(owner_conn, source=source, target=target, model=first,
+                                 dead_ends=dead).run(
+            source_sql=sql, db2_sql=sql, dialect="sqlite", before=before)
+        assert not fix.repaired and len(first.prompts) == 2 and len(dead.seen) == 1
+
+        second = ScriptedModel("never asked")
+        again = SemanticRepairLoop(owner_conn, source=source, target=target, model=second,
+                                   dead_ends=dead).run(
+            source_sql=sql, db2_sql=sql, dialect="sqlite", before=before)
+        assert not again.repaired and again.model_skipped and second.prompts == []
+
+        # A statement that changed is a new question.
+        other = sql.replace("SMITH", "STONE")
+        before_other = prove_semantics(source_sql=other, db2_sql=other, source=source,
+                                       target=target, dialect="sqlite")
+        third = ScriptedModel(wrong, wrong)
+        SemanticRepairLoop(owner_conn, source=source, target=target, model=third,
+                           dead_ends=dead).run(
+            source_sql=other, db2_sql=other, dialect="sqlite", before=before_other)
+        assert third.prompts
+    finally:
+        target.close()
+        source.close()
+
+
+@pytestmark_db2
+def test_dead_ends_live_in_db2_and_only_the_procedure_can_write_them(app_conn, owner_conn):
+    from src import db
+    from src.llm import METER, DeadEnds
+
+    dead = DeadEnds(app_conn)
+    dead.retry = False
+    parts = ("sqlite", "SELECT 'dead-end-test'", "SELECT 'dead-end-test'")
+    avoided = METER.avoided
+    try:
+        assert not dead.known("SEMANTIC_REPAIR", "test-model-xyz", *parts)
+        dead.record("SEMANTIC_REPAIR", "test-model-xyz", "t/case", 2, *parts)
+        dead.record("SEMANTIC_REPAIR", "test-model-xyz", "t/case", 2, *parts)  # idempotent
+        assert dead.known("SEMANTIC_REPAIR", "test-model-xyz", *parts)
+        assert METER.avoided == avoided + 1
+        assert not dead.known("SEMANTIC_REPAIR", "another-model", *parts)
+        assert not dead.known("DATASET", "test-model-xyz", *parts)
+        row = db.fetch_one(app_conn, "SELECT COUNT(*), SUM(ATTEMPTS) FROM PORTPROOF.MODEL_DEAD_END "
+                                     "WHERE MODEL = 'test-model-xyz'")
+        assert tuple(int(x) for x in row) == (1, 4)
+        with pytest.raises(db.Db2Error) as refused:
+            db.execute(app_conn, "DELETE FROM PORTPROOF.MODEL_DEAD_END")
+        assert refused.value.sqlcode == -551
+    finally:
+        METER.avoided = avoided
+        db.execute(owner_conn, "DELETE FROM PORTPROOF.MODEL_DEAD_END WHERE MODEL = 'test-model-xyz'")

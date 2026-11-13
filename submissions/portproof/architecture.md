@@ -121,7 +121,7 @@ default, `PREPARE` is held back on the client until execution, so
 12.1.5. Without that flag the compile oracle is measuring the client library.
 
 A statement that translated cleanly and is rejected here is a **silent failure**.
-Fourteen of the 38 corpus statements are.
+Seventeen of the 65 corpus statements are (fourteen of the original 38).
 
 ### 3. Compile repair, `src/repair.py` and `src/llm.py`
 
@@ -143,17 +143,56 @@ Two guards on the proposal, before it reaches the connection:
   message) into a generative model.
 - Db2's `PREPARE` is the acceptance test. A repair Db2 rejects is discarded.
 
-The default repair engine is `RuleRepairLLM`, fifteen deterministic rewrites
-each derived from a real SQLCODE on a real Db2, exposed through the LangChain
-`LLM` interface so the pipeline cannot tell it from a model. `LLM_PROVIDER=http`
-substitutes any OpenAI compatible endpoint through the same chain and the same
-guards.
+The repair node is tiered by cost, and `LLM_PROVIDER=tiered` is the default:
+
+| Tier | What proposes the repair | Cost |
+|---|---|---|
+| 1. memory | A verified repair of this exact statement, found in Db2's fix memory by a predicate over its JSON metadata (`FixMemory.exact`). | One indexed Db2 lookup. |
+| 2. rules | `RuleRepairLLM`: fifteen deterministic rewrites, each derived from a real SQLCODE on a real Db2. | None. |
+| 3. model | A language model over any OpenAI compatible endpoint (`HttpRepairLLM`; Gemini by default), with Db2's error text and similar past repairs in the prompt. | One metered call per attempt. |
+
+A tier is asked only if the ones before it produced nothing Db2 would accept.
+Memory and rules are asked once each, because they are deterministic and have
+nothing new to say the second time. The model may be asked again, because
+Db2's next error is new information to it. Each attempt records its tier, and
+the ledger stores which tier's proposal Db2 accepted (`META.fixed_by`), so the
+share of the work done by a model is a query and not a claim.
+
+What the model fails at is remembered as well. A statement it was asked about
+in full and could not repair goes into `PORTPROOF.MODEL_DEAD_END`, keyed by a
+hash of the question, and a later run does not ask again. A call that timed out
+or ran into the budget is not recorded, because it says nothing about whether
+the model could have answered. Every model call, in any stage, passes through
+one function that enforces the call budget, the output ceiling and the timeout
+and meters the tokens into `PORTPROOF.LLM_CALL`. The measured cost, and the
+experiment showing it does not move with the size of the source, are in
+`docs/ai-cost-analysis.md`.
+
+With no API key the third tier is absent and nothing else changes, which is why
+this is safe as the default. `LLM_PROVIDER=mock` pins the rules alone and
+`LLM_PROVIDER=gemini` or `http` pins the model alone, for measuring either.
 
 ### 4. Semantic proof, `src/counterexample.py`
 
 The original statement runs on the source engine, the translated statement runs
-on Db2, both over the six adversarial datasets in `src/corpus.py`, and the
-results are compared.
+on Db2, both over a set of adversarial datasets, and the results are compared.
+For the built in fixture those are the twelve hand built datasets in
+`src/corpus.py`. For any other schema they come from the dataset agent, below.
+
+There are four source engines, each a real one: PostgreSQL, MySQL, SQL Server
+and SQLite (`src/counterexample.py`, `src/engines.py`). A statement is judged
+only by the engine of its own dialect. An engine is a class with `load`, `use`
+and `run`; nothing else in the system knows which engines exist, which is what
+adding the third and fourth cost.
+
+**Datasets are loaded once.** `use(dataset)` loads a dataset into a namespace
+named after its content hash (a schema on Db2 and PostgreSQL, a database on
+MySQL and SQL Server, a connection on SQLite) and afterwards only switches to
+it. Before this, every statement reloaded every dataset into both engines. On
+the same 38 statements and six datasets, with identical verdicts, the run went
+from 158.8 seconds to 11.0. The namespaces also keep generated data away from
+the source engine's own tables, which matters as soon as the source is a
+schema PortProof did not create.
 
 What is compared, and why each part is needed:
 
@@ -188,6 +227,57 @@ result was never determined by the SQL, and Db2 disagreeing is not a migration
 bug. That distinction cannot be made by reading the SQL, because `ORDER BY name`
 is unstable or not depending entirely on the data, so the engine is asked rather
 than the parser.
+
+### 4b. The dataset agent, `src/datasets.py`
+
+A hand built dataset is tied to the schema it was written for. The agent makes
+datasets for whatever the source holds, in four tiers, cheapest first:
+
+```
+schema from the source catalogue  +  the query's syntax tree
+        |
+        v
+1. cached     PORTPROOF.DATASET, keyed by the schema's fingerprint     free
+2. generated  ten deterministic strategies over the schema             free
+3. query      the query's own literals planted in the data             free
+        |
+        v   prove.  still VACUOUS or WEAK?
+4. model      a cached model dataset for this schema if there is one,
+              otherwise one metered call                               paid
+        |
+        v   every dataset: must load on both engines, or it is discarded
+PORTPROOF.DATASET_RUN: what each dataset achieved on each statement
+```
+
+- **Discovery.** `introspect` reads tables, types, nullability and keys from
+  the source engine's own catalogue (`information_schema`, or `PRAGMA` on
+  SQLite) and maps every engine's type names onto one small vocabulary.
+  `profile` runs one aggregate query per table on the source and keeps counts
+  and extremes. This is the only step whose cost grows with the source's size,
+  and it is SQL executed by the source, with no model involved.
+- **Generation.** Each strategy targets one documented difference between
+  engines: letter case, blank padding, accents, NULLs, ties, integer and
+  decimal division, empty child tables, range limits, calendar edges, and one
+  shaped by the source's own statistics. Keys stay unique and foreign keys
+  point at rows that exist, so the data tests the query and not the DDL.
+- **Query awareness.** `features` walks the `sqlglot` tree for the query's
+  literals and plants them: a compared string in several cases and with a
+  trailing blank, a number at the boundary and one step either side, a date
+  the day before, on, and after. This is what stops a filter from selecting
+  nothing, and it is deterministic, so the same query always gets the same
+  dataset.
+- **The model, last.** A proof that is still vacuous or weak escalates. The
+  agent first looks for a model proposed dataset already cached for that
+  schema. Only if there is none does it call the model, sending the schema
+  and the query and no rows. The reply is JSON data, never SQL: it is parsed,
+  checked value by value against the schema, capped at eight rows a table,
+  and kept only if both engines load it.
+- **Memory and learning.** Accepted datasets go into `PORTPROOF.DATASET`
+  through `RECORD_DATASET`, idempotent on the content hash. Every proof logs,
+  per dataset, whether the query returned rows on it and whether it exposed a
+  divergence. `DATASET_YIELD` aggregates that per strategy and dialect, and
+  `plan` ranks by it, so with a budget (`--budget N`) the proof's time goes
+  to the datasets that have been finding things.
 
 ### 5. Semantic repair, `src/semantic_repair.py`
 
@@ -273,12 +363,16 @@ The runtime identity holds no `INSERT` on any table. It can only `CALL`:
 | `src/db.py` | Db2 access. Every value bound. `compile_check` is the oracle; `fetch_described` also returns column names and wraps fetch time errors so a WLM threshold arrives as a `Db2Error` with its SQLCODE. |
 | `src/translate.py` | IBM's translator, and whether it raised. |
 | `src/safety.py` | The read only guard applied to anything a human or a model supplies. |
-| `src/corpus.py` | The 38 statements, the shared fixture DDL, and the six adversarial datasets. `Variant.shuffled()` feeds the stability probe. |
-| `src/counterexample.py` | The source engines, the canonicalisation, the verdict and its strength. |
-| `src/semantic_repair.py` | The five measured rewrite rules and the loop that re proves them. |
+| `src/corpus.py` | The 65 statements in four dialects, the shared fixture DDL, and the twelve hand built adversarial datasets. `Variant.shuffled()` feeds the stability probe. |
+| `src/counterexample.py` | PostgreSQL, MySQL and the DuckDB stand in, the load once namespaces, the canonicalisation, the verdict and its strength. |
+| `src/engines.py` | SQL Server and SQLite as source engines. |
+| `src/datasets.py` | The dataset agent: schema discovery and profiling, the generation strategies, query aware datasets, the model tier with its validation, and the Db2 cache and yield log. |
+| `src/samples.py` | Two schemas (HR and banking) seeded into each source engine and then rediscovered from its catalogue, with a workload of fifteen queries. |
+| `src/cost_scaling.py` | The experiment behind the cost claim: the same queries against a source of a thousand rows and a million. |
+| `src/semantic_repair.py` | The measured rewrite rules, the memory and model tiers, and the loop that re proves every candidate. |
 | `src/federation.py` | The federated cross check: nicknames, the cast reconciliation, and Db2's own symmetric difference over the two copies of the data. |
-| `src/repair.py` | The LangGraph compile repair state machine. |
-| `src/llm.py` | `RuleRepairLLM` (the default) and `HttpRepairLLM`, both as LangChain models. |
+| `src/repair.py` | The LangGraph compile repair state machine and its three tiers. |
+| `src/llm.py` | `RuleRepairLLM` and `HttpRepairLLM`, both as LangChain models, and the usage meter with the call budget every model call passes through. |
 | `src/embeddings.py` | Local sentence transformer embeddings, plus a deterministic fallback for tests. |
 | `src/fixmemory.py` | Db2 as the vector store, through `langchain-db2` `DB2VS`, with the Db2 native hybrid recall and the vector index. |
 | `src/physical.py` | Compression, columnar and package cache measurements, taken from the engine. |
@@ -307,26 +401,34 @@ less reliably in Python.
 | `GRANT` and `CHECK` constraints | Privilege and validity as application conventions rather than as engine rules. |
 | `ADMIN_GET_TAB_COMPRESS_INFO`, `MON_GET_PKG_CACHE_STMT` | Guessed physical design advice. |
 | Federation: JDBC wrapper, nicknames, `EXCEPT ALL` across engines | Two result sets compared in Python, which can tell you the answers differ but never whether the inputs did. |
+| `JSON_VALUE` and `JSON_EXISTS` over stored documents | A second lookup store for "have we repaired this exact statement", and client side validation of a dataset payload. |
+| One schema per dataset with `SET CURRENT SCHEMA` | Reloading every dataset for every statement, or rewriting the SQL under test to qualify its tables. |
+| SQL PL procedures as the only write path to the dataset cache and the model call ledger | Cost and learning data the application could quietly rewrite. |
 
 ---
 
 ## Data flow for one statement
 
 ```
-corpus statement (PostgreSQL or MySQL)
+statement (PostgreSQL, MySQL, SQL Server or SQLite)
+   |
+   v  dataset agent: cached, generated and query aware datasets for its schema
    |
    v  db2-sqlglot-dialect
 candidate Db2 SQL
    |
    v  Db2 PREPARE                      <-- silent failures are caught here
-compiles? ---- no ----> safety check -> recall from FIX_MEMORY -> rewrite -> back to PREPARE
+compiles? ---- no ----> memory, then rules, then model -> safety check -> back to PREPARE
    | yes                                   (bounded, at most MAX_REPAIR_ATTEMPTS)
    v
-load six adversarial datasets into the source engine and into PPTEST
+switch both engines to each dataset in turn (loaded once, in its own namespace)
    |
    v  run both, compare values, columns and (where asserted) order
-agree? ---- no ----> stability probe -> semantic rule -> PREPARE -> prove again
+agree? ---- no ----> stability probe -> memory, rule, then model -> PREPARE -> prove again
    | yes                                   (accepted only if the proof agrees)
+   v
+evidence VACUOUS or WEAK? ---- yes ----> dataset agent: cached model dataset, else one
+   | no                                   model call -> load on both engines -> prove again
    v
 EQUIVALENT with a strength, or DIFFERENT with a witness,
 or UNSTABLE, or VACUOUS, or INCONCLUSIVE with a reason
