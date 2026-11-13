@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Mood-to-Music Memory",
+    "slug": "mood-to-music-memory",
+    "short_description": "A personal music companion that maps an explicitly selected mood to an IBM Db2 playlist and playback profile, while preserving meaningful listening moments as memories.",
+    "category": "AI / RAG / Data Engineering / Analytics",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/NotTushar-dotcom/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "Mood-to-Music Memory",
+    "members": [
+      {
+        "name": "Tushar",
+        "github": "NotTushar-dotcom",
+        "email": "",
+        "role": "Full-stack developer and Db2 integration"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (local or Docker)",
+    "connector": "ibm_db",
+    "features_used": [
+      "Relational tables",
+      "Foreign keys and indexes",
+      "Parameterized playlist and session queries",
+      "Listening-memory persistence"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "TypeScript",
+      "SQL"
+    ],
+    "frameworks": [
+      "React",
+      "Vite",
+      "Tailwind CSS",
+      "Zustand",
+      "LangChain"
+    ],
+    "ai_models": [
+      "Ollama llama3.2:3b (optional local mood interpreter)"
+    ]
+  }
+}

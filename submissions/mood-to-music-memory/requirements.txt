@@ -1,0 +1,14 @@
+# Core Db2 driver
+ibm_db
+python-dotenv
+
+# AI framework — LangChain (already in venv)
+langchain
+langchain-community
+langchain-ollama
+
+# Audio playback
+pygame
+
+# Media import utility
+yt-dlp

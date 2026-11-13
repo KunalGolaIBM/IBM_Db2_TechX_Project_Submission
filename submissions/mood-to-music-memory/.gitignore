@@ -1,0 +1,52 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Environment — NEVER commit real credentials
+.env
+
+# Langflow (dropped, keeping just in case)
+.langflow/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Temp / scratch DB fix scripts
+db/_fix_*.py
+
+# Ollama models are stored in C:\Users\<you>\.ollama\models\
+# They are NOT in this project folder — nothing to ignore here.
+# DO NOT copy model files into this project.
+
+# Downloaded music files — stay on your local disk only, never push to GitHub
+music/
+*.mp3
+*.wav
+*.flac
+*.ogg
+*.m4a
+*.aac
+
+# yt-dlp temp files
+*.part
+*.ytdl
