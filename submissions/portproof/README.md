@@ -598,6 +598,31 @@ Stated plainly, because a prover that oversells itself is the thing this project
 - Widen the workload from a public benchmark such as BIRD Mini-Dev, to report the same measurements at a larger scale.
 - Promote recurring model rewrites into measured rules, so the pattern becomes free for every statement and not only for the one that was repaired.
 
+### Fit with IBM's migration tooling
+
+Future scope, none of it built. PortProof is meant to sit beside IBM's existing tools, not to replace any of them. The descriptions below are from IBM's public documentation and community posts, and the support lists should be checked against the current releases.
+
+| Tool | What it does | How it checks its own work |
+|---|---|---|
+| IBM Database Conversion Workbench (DCW) | A plug in for IBM Data Studio that evaluates source SQL for Db2 compatibility, estimates effort, converts DDL and procedural code, and deploys to Db2. The documented sources are Oracle, Teradata and Netezza. | A compatibility report: the share of statements that convert, and a list of the ones that need attention. Static analysis. |
+| IBM Db2 Bridge | Moves schema objects and data between Db2 systems (Db2 10.5 or later to Db2 11.5 or later), with dependency analysis, parallel streams and compression. | Optional row count and checksum validation of the moved tables. |
+| Db2 Migration Tooling (Db2MT), Db2 Shift | Backup, restore and clone tooling for moving a Db2 database to cloud or container targets. | Not conversion tools. |
+| IBM `db2-sqlglot-dialect` | The open source translator PortProof already wraps. | None. |
+
+Those tools answer two questions: will this SQL convert, and did the rows arrive intact. Neither is the question PortProof answers, which is whether the converted query still returns the same answer.
+
+| Stage of a migration | IBM tool | What it leaves open | What PortProof would add |
+|---|---|---|---|
+| Assess and convert the SQL | DCW | A statement reported as compatible can still be rejected by Db2, or run and return different rows. | `PREPARE` on the target as the compile check, then the differential proof against the source engine, then the tiered repair for what fails either. |
+| Move the data | Db2 Bridge, Db2MT | Identical rows do not mean identical query results. Collation, blank padding and division scale change answers over the same data. | A proof of query behaviour on top of data Bridge has already validated. |
+| Sources outside DCW's documented list | none found | PostgreSQL, MySQL, SQL Server and SQLite have a translator and nothing that verifies it. | These four are what PortProof covers today. |
+
+Three places it could plug in:
+
+1. **Behind DCW, as the verification stage.** DCW's converted SQL goes into PortProof in place of the translator's output, and each statement in the evaluation report gains a verdict: proven equivalent, proven different with a counterexample, or repaired and re proved. What it needs: Oracle as a fifth source engine behind the same three method interface, and a reader for DCW's output.
+2. **After Db2 Bridge, on a Db2 to Db2 move.** Bridge proves the rows match. PortProof would then prove the application's queries behave the same across the version, platform or collation change. What it needs: Db2 itself as a source dialect.
+3. **One sign off record.** DCW or the translator converts, PortProof proves and repairs, Bridge or Db2MT moves the data and validates the rows, and the PortProof ledger in Db2, with its engine computed certificates and temporal history, is the record that the migration was verified statement by statement.
+
 ---
 
 ## Team Members and Credits
