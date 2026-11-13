@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Box Office Inc - AI-Powered Movie Studio Simulator",
+    "slug": "box-office-inc",
+    "short_description": "A movie studio management simulation that combines strategic gameplay with IBM Db2 analytics and AI-powered recommendation workflows.",
+    "category": "AI / Analytics / Simulation",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": ""
+  },
+  "team": {
+    "name": "Box Office Inc",
+    "members": [
+      {
+        "name": "Your Name",
+        "github": "yourusername",
+        "email": "you@example.com",
+        "role": "Project Lead / IBM Db2 Integration"
+      },
+      {
+        "name": "Team Member 2",
+        "github": "member2",
+        "email": "member2@example.com",
+        "role": "Backend / Simulation Logic"
+      },
+      {
+        "name": "Team Member 3",
+        "github": "member3",
+        "email": "member3@example.com",
+        "role": "AI Workflow / Analytics"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 analytics layer / configurable local or cloud connection",
+    "connector": "ibm_db",
+    "features_used": [
+      "Relational Tables",
+      "Analytics Reporting",
+      "AI Insight Storage",
+      "Environment-based Configuration"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python", "JavaScript"],
+    "frameworks": ["React", "Node.js", "Express", "LangChain", "CrewAI"],
+    "ai_models": ["OpenAI-compatible LLM", "Local fallback strategy engine"]
+  }
+}

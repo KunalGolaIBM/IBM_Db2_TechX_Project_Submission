@@ -1,0 +1,6 @@
+ibm_db>=3.3.0
+python-dotenv>=1.0.0
+langchain>=1.0.0
+langchain-openai>=0.3.0
+crewai>=0.100.0
+crewai-tools>=0.100.0
