@@ -26,6 +26,7 @@ SCRIPTS_AFTER_VECTOR: list[tuple[str, bool]] = [
     ("03_grants.sql", True),
     ("04_wlm_leash.sql", False),
     ("05_datasets.sql", True),
+    ("06_dead_ends.sql", True),
 ]
 
 #: DROP statements are expected to fail the first time a database is set up.

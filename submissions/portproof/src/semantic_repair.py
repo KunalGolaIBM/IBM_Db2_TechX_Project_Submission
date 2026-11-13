@@ -432,6 +432,9 @@ class SemanticRepairOutcome:
     partial: bool = False
     #: Who proposed the accepted rewrite: "rules" or "model".
     tier: str = ""
+    #: True when the model was not asked because Db2 already records that it
+    #: failed on this exact statement.
+    model_skipped: bool = False
 
     @property
     def model_calls(self) -> int:
@@ -470,7 +473,11 @@ class SemanticRepairLoop:
         max_model_attempts: int = 2,
         case_name: str = "",
         memory=None,
+        dead_ends=None,
     ) -> None:
+        #: Statements the model was already asked about in full and could not
+        #: repair. It is not asked again.
+        self.dead_ends = dead_ends
         #: The Db2 fix memory. A rewrite that was proved for this exact
         #: statement on an earlier run is tried first, and costs nothing.
         self.memory = memory
@@ -581,16 +588,30 @@ class SemanticRepairLoop:
                     tier="memory" if rule.name == MEMORY_RULE else "rules",
                 )
 
+        skipped = False
         if self.model is not None and before is not None and before.witness is not None:
-            fixed = self._ask_model(
-                source_sql=source_sql, db2_sql=db2_sql, dialect=dialect,
-                variants=variants, before=before, attempts=attempts,
-            )
-            if fixed is not None:
-                return fixed
+            name = getattr(self.model, "model", "model")
+            subject = (dialect, source_sql, db2_sql)
+            if self.dead_ends is not None and self.dead_ends.known("SEMANTIC_REPAIR", name, *subject):
+                skipped = True
+            else:
+                asked = len(attempts)
+                fixed = self._ask_model(
+                    source_sql=source_sql, db2_sql=db2_sql, dialect=dialect,
+                    variants=variants, before=before, attempts=attempts,
+                )
+                if fixed is not None:
+                    return fixed
+                # A dead end only if the model used every attempt it had and
+                # each one produced SQL that was then rejected or disproved. A
+                # timeout or an exhausted budget proves nothing about it.
+                answered = [a for a in attempts[asked:] if a.sql]
+                if self.dead_ends is not None and len(answered) >= self.max_model_attempts:
+                    self.dead_ends.record(
+                        "SEMANTIC_REPAIR", name, self.case_name, len(answered), *subject)
 
         return SemanticRepairOutcome(
-            repaired=False, final_sql=db2_sql, attempts=attempts
+            repaired=False, final_sql=db2_sql, attempts=attempts, model_skipped=skipped
         )
 
     def _ask_model(
@@ -611,10 +632,17 @@ class SemanticRepairLoop:
         witness, history, current = before.witness, "", db2_sql
         name = getattr(self.model, "model", "model")
         for n in range(len(attempts) + 1, len(attempts) + 1 + self.max_model_attempts):
+            # The rows in a counterexample are PortProof's own synthetic data,
+            # with one exception: the source-shaped dataset carries the source
+            # tables' real MIN and MAX. Those never go to a model. The model is
+            # told which kind of dataset disagreed and has to work from that.
+            withheld = witness.strategy == "source_shaped"
+            hidden = "(withheld: this dataset carries values taken from the source)"
             prompt = SEMANTIC_PROMPT.format(
                 dialect=dialect, source_sql=source_sql, db2_sql=current,
-                targets=witness.targets, source_rows=witness.source_rows[:5],
-                db2_rows=witness.db2_rows[:5],
+                targets=witness.targets,
+                source_rows=hidden if withheld else witness.source_rows[:5],
+                db2_rows=hidden if withheld else witness.db2_rows[:5],
                 db2_error=f"Db2 raised: {witness.db2_error}\n" if witness.db2_error else "",
                 history=history,
             )
