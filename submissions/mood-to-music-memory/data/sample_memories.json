@@ -1,0 +1,43 @@
+{
+  "moods": [
+    {"mood_code": "sad", "display_name": "Sad", "description": "Comforting and gentle"},
+    {"mood_code": "happy", "display_name": "Happy", "description": "Bright and energetic"},
+    {"mood_code": "romantic", "display_name": "Romantic", "description": "Warm and wholesome"},
+    {"mood_code": "wholesome", "display_name": "Wholesome", "description": "Positive and reassuring"},
+    {"mood_code": "ghazal", "display_name": "Ghazal", "description": "Ghazal songs"}
+  ],
+  "playback_profiles": [
+    {"profile_code": "gentle", "volume_percent": 30, "speed_multiplier": 0.95, "fade_in_seconds": 4},
+    {"profile_code": "bright", "volume_percent": 65, "speed_multiplier": 1.0, "fade_in_seconds": 2},
+    {"profile_code": "warm", "volume_percent": 50, "speed_multiplier": 1.0, "fade_in_seconds": 3},
+    {"profile_code": "ghazal", "volume_percent": 40, "speed_multiplier": 0.95, "fade_in_seconds": 3}
+  ],
+  "songs": [
+    {
+      "song_title": "Sample Piano Memory",
+      "artist": "Sample Artist",
+      "local_file_path": "C:\\Users\\you\\Music\\sample-piano-memory.mp3"
+    },
+    {
+      "song_title": "Sample Night Ride",
+      "artist": "Sample Artist",
+      "local_file_path": "C:\\Users\\you\\Music\\sample-night-ride.mp3"
+    }
+  ],
+  "memories": [
+    {
+      "memory_text": "Rainy evening after finishing a difficult semester. I felt exhausted but proud while listening to a quiet piano track.",
+      "song_title": "Sample Piano Memory",
+      "artist": "Sample Artist",
+      "mood_tag": "relieved",
+      "saved_at": "2026-01-15T20:30:00"
+    },
+    {
+      "memory_text": "Late-night bus ride home after meeting old friends. I felt nostalgic, warm, and hopeful about what comes next.",
+      "song_title": "Sample Night Ride",
+      "artist": "Sample Artist",
+      "mood_tag": "nostalgic",
+      "saved_at": "2026-02-20T23:10:00"
+    }
+  ]
+}
