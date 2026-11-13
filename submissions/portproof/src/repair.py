@@ -8,6 +8,19 @@ It terminates on success or after ``MAX_REPAIR_ATTEMPTS``, so it cannot spin,
 and every transition is recorded. The model's output is **never trusted**: it
 goes straight back to Db2's ``PREPARE``, and a repair that does not compile is
 discarded exactly like any other failed candidate.
+
+The repair node is tiered by cost (``LLM_PROVIDER=tiered``, the default):
+
+1. **memory** -- if Db2's vector fix-memory holds a verified repair of this
+   exact failing statement, that repair is proposed. No rule runs and no model
+   is called.
+2. **rules** -- the deterministic rewrites in :mod:`src.llm`. Free.
+3. **model** -- a language model, called only for what the first two tiers
+   could not get past Db2, with Db2's own error text in the prompt.
+
+Every tier's proposal goes through the same safety check and the same
+``PREPARE``, and each attempt records which tier produced it, so "how much of
+this was AI" is a column in the ledger rather than a claim.
 """
 from __future__ import annotations
 
@@ -21,8 +34,9 @@ from langgraph.graph import END, StateGraph
 from . import db
 from .config import llm_config
 from .fixmemory import FixMemory, RecalledFix
-from .llm import RuleRepairLLM, build_llm
+from .llm import HttpRepairLLM, RuleRepairLLM, apply_rules, build_llm, build_model
 from .safety import UnsafeSql, check_read_only
+from .translate import normalise
 
 REPAIR_PROMPT = PromptTemplate.from_template(
     """A SQL statement was translated from {dialect} to IBM Db2 and Db2 rejected it.
@@ -79,6 +93,8 @@ class Attempt:
     message: str
     rules_fired: list[str] = field(default_factory=list)
     recalled: int = 0
+    #: Who proposed this candidate: translator | memory | rules | model.
+    tier: str = "translator"
 
 
 @dataclass
@@ -92,6 +108,17 @@ class RepairOutcome:
     def attempt_count(self) -> int:
         return len(self.attempts)
 
+    @property
+    def fixed_by(self) -> str:
+        """The tier whose proposal Db2 accepted, or "" if none was."""
+        if self.repaired and self.attempts and self.attempts[-1].ok:
+            return self.attempts[-1].tier
+        return ""
+
+    @property
+    def model_calls(self) -> int:
+        return sum(1 for a in self.attempts if a.tier == "model")
+
 
 class _State(TypedDict, total=False):
     source_sql: str
@@ -103,6 +130,10 @@ class _State(TypedDict, total=False):
     attempt: int
     attempts: list[Attempt]
     recalled: list[RecalledFix]
+    #: Which tier produced the current candidate, and which are used up.
+    tier: str
+    spent: list[str]
+    rules_fired: list[str]
 
 
 class RepairLoop:
@@ -115,13 +146,30 @@ class RepairLoop:
         memory: FixMemory | None = None,
         llm: Any | None = None,
         max_attempts: int | None = None,
+        tiers: tuple[str, ...] | None = None,
     ):
         self.conn = conn
         self.memory = memory
-        self.llm = llm if llm is not None else build_llm()
-        self.max_attempts = max_attempts or llm_config().max_repair_attempts
+        cfg = llm_config()
+        if llm is not None:
+            # An explicit model is the whole policy: it is asked every time.
+            self.llm = llm
+            self.tiers = tiers or ("chain",)
+        elif cfg.is_tiered:
+            model = build_model(cfg)
+            self.llm = model or RuleRepairLLM()
+            self.tiers = tiers or (("memory", "rules") + (("chain",) if model else ()))
+        else:
+            self.llm = build_llm(cfg)
+            self.tiers = tiers or ("chain",)
+        self.max_attempts = max_attempts or cfg.max_repair_attempts
         self.chain = REPAIR_PROMPT | self.llm | StrOutputParser()
         self._graph = self._build_graph()
+
+    @property
+    def model(self) -> Any | None:
+        """The language model behind this loop, if there is one."""
+        return self.llm if isinstance(self.llm, HttpRepairLLM) else None
 
     # -- graph nodes -----------------------------------------------------
     def _node_prove(self, state: _State) -> _State:
@@ -135,8 +183,9 @@ class RepairLoop:
             message=result.message,
             # Attempt 0 is the translator's own output, before any repair ran,
             # so no rule can be responsible for it.
-            rules_fired=list(getattr(self.llm, "last_rules", []) or []) if n else [],
+            rules_fired=list(state.get("rules_fired", []) or []) if n else [],
             recalled=len(state.get("recalled", []) or []),
+            tier=state.get("tier", "translator") if n else "translator",
         )
         state.setdefault("attempts", []).append(attempt)
         state["ok"] = result.ok
@@ -159,23 +208,62 @@ class RepairLoop:
             state["recalled"] = []
         return state
 
-    def _node_repair(self, state: _State) -> _State:
+    def _propose(self, tier: str, state: _State) -> str:
+        """One tier's candidate for the failing statement, or "" if it has none."""
+        candidate = state["candidate"]
+        state["rules_fired"] = []
+        if tier == "memory":
+            # Only an exact match is replayed. A similar failure is context for
+            # the model (see the prompt); it is not a repair of *this* SQL.
+            exact = getattr(self.memory, "exact", None)
+            if callable(exact):
+                return exact(bad_sql=candidate, dialect=state["dialect"]) or ""
+            wanted = normalise(candidate)
+            for fix in state.get("recalled", []) or []:
+                if fix.dialect == state["dialect"] and normalise(fix.bad_sql) == wanted:
+                    return fix.fixed_sql
+            return ""
+        if tier == "rules":
+            repaired, fired = apply_rules(candidate)
+            state["rules_fired"] = fired
+            return repaired if fired else ""
         try:
             raw = self.chain.invoke(
                 {
                     "dialect": state["dialect"],
                     "dialect_upper": state["dialect"].upper(),
                     "source_sql": state["source_sql"],
-                    "failing_sql": state["candidate"],
+                    "failing_sql": candidate,
                     "sqlcode": state.get("sqlcode"),
                     "error_text": state.get("message", ""),
                     "recalled_block": _recalled_block(state.get("recalled", []) or []),
                 }
             )
-            proposal = clean_sql(raw)
         except Exception as exc:
-            proposal = ""
             state["message"] = f"repair model failed: {exc}"
+            return ""
+        state["rules_fired"] = list(getattr(self.llm, "last_rules", []) or [])
+        return clean_sql(raw)
+
+    def _node_repair(self, state: _State) -> _State:
+        spent = state.setdefault("spent", [])
+        proposal, used = "", ""
+        for tier in self.tiers:
+            if tier in spent:
+                continue
+            proposal = self._propose(tier, state)
+            used = tier
+            # Memory and rules are deterministic: asked once, they have said
+            # all they will say. The model may be asked again with Db2's next
+            # error, which is new information to it.
+            if tier != "chain" or not proposal or proposal == state["candidate"]:
+                spent.append(tier)
+            if proposal and proposal != state["candidate"]:
+                break
+            proposal = ""
+        state["tier"] = (
+            ("rules" if isinstance(self.llm, RuleRepairLLM) else "model") if used == "chain" else used
+        )
 
         # The model's output is untrusted input, and `PREPARE` alone is not a
         # sufficient guard: `DROP TABLE orders` prepares perfectly well, and a
@@ -221,10 +309,14 @@ class RepairLoop:
         return graph.compile()
 
     # -- public ----------------------------------------------------------
-    def run(self, *, source_sql: str, db2_sql: str, dialect: str) -> RepairOutcome:
+    def run(
+        self, *, source_sql: str, db2_sql: str, dialect: str, case_name: str = ""
+    ) -> RepairOutcome:
         # Clear any rule record left by the previous statement.
         if hasattr(self.llm, "last_rules"):
             object.__setattr__(self.llm, "last_rules", [])
+        if hasattr(self.llm, "case_name"):
+            object.__setattr__(self.llm, "case_name", case_name)
         final: _State = self._graph.invoke(
             {
                 "source_sql": source_sql,
@@ -233,6 +325,8 @@ class RepairLoop:
                 "attempt": 0,
                 "attempts": [],
                 "recalled": [],
+                "spent": [],
+                "tier": "translator",
             },
             {"recursion_limit": 4 * (self.max_attempts + 2)},
         )

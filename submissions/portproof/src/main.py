@@ -5,16 +5,24 @@
     python -m src.main --no-prove       # compile proof only (fast)
     python -m src.main --physical       # measured physical-design advice
     python -m src.main --ledger         # read the Db2 ledger back
+    python -m src.main --workload samples   # schemas discovered on the source
+    python -m src.main --datasets original  # the first six datasets only
+    python -m src.main --budget 6       # the agent's best six datasets per query
+    python -m src.main --cost           # what the model calls cost, from Db2
+    python -m src.main --yield          # which datasets have been finding things
 """
 from __future__ import annotations
 
 import argparse
 import sys
 
-from . import db, federation
+from . import db, federation, samples
 from .config import llm_config, runtime_config, setup_config
+from .corpus import DIALECTS, ORIGINAL_VARIANTS, VARIANTS, statements_for
+from .datasets import DatasetAgent, DatasetStore
 from .embeddings import LocalEmbeddings
 from .fixmemory import FixMemory
+from .llm import METER, build_model
 from .pipeline import MigrationReport, Pipeline
 
 BAR = "=" * 74
@@ -25,15 +33,30 @@ def _print_report(report: MigrationReport) -> None:
     for line in report.summary_lines():
         print(f"  {line}")
 
-    print(f"\n{'case':30} {'status':18} {'proof'}")
-    print("-" * 74)
+    print("\n  by source dialect:")
+    for line in report.by_dialect():
+        print(line)
+
+    if report.agent_lines:
+        print("\n  dataset agent:")
+        for line in report.agent_lines:
+            print(f"    {line}")
+
+    stages = METER.by_stage()
+    if stages:
+        print("\n  model calls by stage (tokens as the provider counted them):")
+        for stage, (calls, prompt, completion) in sorted(stages.items()):
+            print(f"    {stage:16} {calls:3} call(s)  {prompt:7} in  {completion:7} out")
+
+    print(f"\n{'case':38} {'status':18} {'proof'}")
+    print("-" * 100)
     for result in report.results:
         proof = ""
         if result.semantic:
             proof = result.semantic.headline
         elif result.status in ("COMPILE_FAIL", "TRANSLATE_FAIL"):
             proof = f"SQLCODE={result.first_sqlcode} unrepaired"
-        print(f"{result.case_name:30} {result.status:18} {proof[:40]}")
+        print(f"{result.case_name:38} {result.status:18} {proof[:42]}")
 
     different = [r for r in report.results if r.status == "PROVEN_DIFFERENT"]
     if different:
@@ -100,7 +123,7 @@ def _print_report(report: MigrationReport) -> None:
             rules = sorted({r for a in result.repair.attempts for r in a.rules_fired})
             print(
                 f"  {result.case_name:30} first SQLCODE={result.first_sqlcode:<8} "
-                f"attempts={result.repair.attempt_count} rules={rules}"
+                f"attempts={result.repair.attempt_count} by={result.repair.fixed_by:6} rules={rules}"
             )
 
 
@@ -138,6 +161,54 @@ def _print_ledger(conn) -> None:
     print(f"    rows the engine has preserved in the history table: {row[0] if row else 0}")
 
 
+def _print_cost(conn) -> None:
+    """The model-call ledger, summed by the engine."""
+    print(f"\n{BAR}\nModel calls recorded in Db2 (PORTPROOF.LLM_CALL)\n{BAR}")
+    rows = db.fetch_all(
+        conn,
+        "SELECT STAGE, MODEL, CALLS, PROMPT_TOKENS, COMPLETION_TOKENS, AVG_LATENCY_MS "
+        "FROM PORTPROOF.LLM_COST ORDER BY STAGE",
+    )
+    if not rows:
+        print("  no model has been called")
+        return
+    print(f"  {'stage':16} {'model':24} {'calls':>5} {'tokens in':>10} {'tokens out':>10} {'avg ms':>7}")
+    for stage, model, calls, prompt, completion, latency in rows:
+        print(
+            f"  {str(stage).strip():16} {str(model).strip():24} {calls:>5} "
+            f"{prompt:>10} {completion:>10} {int(latency or 0):>7}"
+        )
+    row = db.fetch_one(
+        conn,
+        "SELECT COUNT(*), COALESCE(SUM(PROMPT_TOKENS), 0), COALESCE(SUM(COMPLETION_TOKENS), 0), "
+        "COALESCE(MAX(PROMPT_TOKENS), 0) FROM PORTPROOF.LLM_CALL",
+    )
+    print(
+        f"\n  total: {row[0]} call(s), {row[1]} tokens in, {row[2]} tokens out; "
+        f"largest single prompt {row[3]} tokens"
+    )
+
+
+def _print_yield(conn) -> None:
+    """What the dataset agent has learned, read straight from its log."""
+    store = DatasetStore(conn)
+    datasets, runs = store.count()
+    print(f"\n{BAR}\nDataset cache in Db2: {datasets} datasets, {runs} logged runs\n{BAR}")
+    for origin, n in db.fetch_all(
+        conn, "SELECT ORIGIN, COUNT(*) FROM PORTPROOF.DATASET GROUP BY ORIGIN ORDER BY ORIGIN"
+    ):
+        print(f"  {str(origin).strip():10} {n}")
+    print(f"\n  {'strategy':24} {'dialect':9} {'runs':>5} {'returned rows':>14} {'exposed a divergence':>21}")
+    for strategy, dialect, n, substantive, kills in db.fetch_all(
+        conn,
+        "SELECT STRATEGY, SRC_DIALECT, RUNS, SUBSTANTIVE, KILLS FROM PORTPROOF.DATASET_YIELD "
+        "ORDER BY KILLS DESC, SUBSTANTIVE DESC, STRATEGY FETCH FIRST 40 ROWS ONLY",
+    ):
+        print(
+            f"  {str(strategy).strip():24} {str(dialect).strip():9} {n:>5} {substantive:>14} {kills:>21}"
+        )
+
+
 def _print_physical(advice: dict) -> None:
     print(f"\n{BAR}\nPhysical design, measured by Db2\n{BAR}")
     print(f"  {advice['compression'].headline}")
@@ -153,7 +224,33 @@ def _print_physical(advice: dict) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="portproof", description=__doc__)
-    parser.add_argument("--dialect", choices=["postgres", "mysql", "all"], default="all")
+    parser.add_argument("--dialect", choices=[*DIALECTS, "all"], default="all")
+    parser.add_argument(
+        "--workload",
+        choices=["corpus", "samples", "all"],
+        default="all",
+        help="corpus: the fixture statements; samples: two schemas discovered "
+        "on each source engine; all: both (default)",
+    )
+    parser.add_argument(
+        "--datasets",
+        choices=["agent", "all", "original"],
+        default="agent",
+        help="agent: cached, generated and query-aware datasets (default); "
+        "all: the twelve hand-built ones; original: the first six",
+    )
+    parser.add_argument(
+        "--budget",
+        type=int,
+        default=0,
+        help="with --datasets agent, prove each statement on only its N "
+        "best-ranked datasets (0 = all of them)",
+    )
+    parser.add_argument("--cost", action="store_true", help="print the model-call ledger and exit")
+    parser.add_argument(
+        "--yield", dest="show_yield", action="store_true",
+        help="print the dataset cache and its yield log, and exit",
+    )
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--no-prove", action="store_true", help="skip the semantic proof")
     parser.add_argument("--no-learn", action="store_true", help="do not write the fix memory")
@@ -185,6 +282,14 @@ def main(argv: list[str] | None = None) -> int:
         _print_ledger(app_conn)
         return 0
 
+    if args.cost:
+        _print_cost(app_conn)
+        return 0
+
+    if args.show_yield:
+        _print_yield(app_conn)
+        return 0
+
     if args.federation:
         # The owner connection, not the application one: the fixture tables the
         # comparison reads belong to the schema owner, and the least-privilege
@@ -195,10 +300,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"PortProof on Db2 {db.server_version(owner_conn)}")
     print(f"  runtime user : {db.current_identity(app_conn)[0]} (least privilege)")
     print(f"  owner user   : {db.current_identity(owner_conn)[0]}")
-    print(
-        f"  repair model : {cfg.provider}"
-        + ("  (deterministic rules, no API key needed)" if cfg.is_mock else f" / {cfg.model}")
-    )
+    print(f"  repair policy: {cfg.provider} -- {cfg.label}")
 
     memory: FixMemory | None = None
     if not args.no_learn:
@@ -209,17 +311,45 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  fix memory   : unavailable ({str(exc)[:70]})")
             memory = None
 
+    agent: DatasetAgent | None = None
+    if args.datasets == "agent" or args.workload != "corpus":
+        agent = DatasetAgent(
+            store=DatasetStore(app_conn),
+            model=build_model(cfg),
+            max_datasets=args.budget,
+            builtin=ORIGINAL_VARIANTS if args.datasets == "original" else VARIANTS,
+            learn=not args.no_learn,
+        )
     pipeline = Pipeline(
         app_conn=app_conn,
         owner_conn=owner_conn,
         memory=memory,
         learn=not args.no_learn,
+        dataset_agent=agent,
+        variants=ORIGINAL_VARIANTS if args.datasets == "original" else VARIANTS,
     )
+    print(f"  source engines: {pipeline.source_engines}")
     try:
+        dialect = None if args.dialect == "all" else args.dialect
+        statements = [] if args.workload == "samples" else statements_for(dialect)
+        if args.workload != "corpus" and agent is not None:
+            # Play the customer: put two schemas in each source engine, then
+            # find them again through the engine's own catalogue.
+            sources = {
+                d: s for d, s in pipeline.sources.items() if dialect in (None, d)
+            }
+            found = samples.discover(sources, agent)
+            for (name, found_dialect), (schema, prof) in sorted(found.items()):
+                print(
+                    f"  discovered   : {found_dialect}/{name} -- {len(schema.tables)} tables, "
+                    f"{sum(len(t.columns) for t in schema.tables)} columns, "
+                    f"{prof.total_rows} rows profiled (fingerprint {schema.fingerprint})"
+                )
+            statements += samples.statements(tuple(sources))
         report = pipeline.run(
-            dialect=None if args.dialect == "all" else args.dialect,
             prove_meaning=not args.no_prove,
             limit=args.limit,
+            statements=statements,
         )
         _print_report(report)
         if not args.no_escalate:

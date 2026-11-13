@@ -120,6 +120,31 @@ class FixMemory:
         return row is not None
 
     # -- reading ---------------------------------------------------------
+    def exact(self, *, bad_sql: str, dialect: str) -> str | None:
+        """The verified repair of exactly this statement, if one is stored.
+
+        A plain Db2 predicate over the stored JSON, not a similarity search:
+        "have we fixed this very statement before" has a yes-or-no answer, and
+        a nearest neighbour is the wrong tool for it. The answer is what lets a
+        repeat failure be repaired with no rule and no model call. It is still
+        only a proposal; Db2 compiles and proves it again like any other.
+        """
+        try:
+            row = db.fetch_one(
+                self.conn,
+                f"""
+                SELECT JSON_VALUE(METADATA, '$.fixed_sql' RETURNING VARCHAR(4000))
+                  FROM {self.table_name}
+                 WHERE JSON_VALUE(METADATA, '$.dialect' RETURNING VARCHAR(16))   = ?
+                   AND JSON_VALUE(METADATA, '$.bad_sql' RETURNING VARCHAR(4000)) = ?
+                 FETCH FIRST 1 ROW ONLY
+                """,
+                (dialect, bad_sql),
+            )
+        except db.Db2Error:
+            return None
+        return str(row[0]) if row and row[0] else None
+
     def recall(
         self, *, bad_sql: str, sqlcode: int | None, error_text: str, k: int = 3
     ) -> list[RecalledFix]:

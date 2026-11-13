@@ -313,7 +313,8 @@ def clean_llm_env(monkeypatch):
 def test_default_provider_needs_no_key(clean_llm_env):
     cfg = llm_config()
     assert cfg.is_mock
-    assert cfg.label == "deterministic rules"
+    # The default is the tiered policy, which with no key is memory plus rules.
+    assert cfg.is_tiered and "rules" in cfg.label and "no model" in cfg.label
     assert isinstance(build_llm(cfg), RuleRepairLLM)
 
 

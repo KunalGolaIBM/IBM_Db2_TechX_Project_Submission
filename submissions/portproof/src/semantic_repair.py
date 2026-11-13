@@ -46,6 +46,10 @@ from .counterexample import Db2Target, SemanticVerdict, SourceEngine, prove_sema
 #: both return ids 1, 2 and 3 for ``name = 'asha smith'`` where plain Db2 ``=``
 #: returns none.
 UCA_CASE_INSENSITIVE = "UCA500R1_S1"
+#: Strength 2: letter case is ignored and accents are not. That is SQL Server's
+#: default (``SQL_Latin1_General_CP1_CI_AS``: case-insensitive, accent-sensitive),
+#: where MySQL's default ignores both.
+UCA_CASE_INSENSITIVE_ACCENT_SENSITIVE = "UCA500R1_S2"
 
 #: The same algorithm at strength 3: case and accents *do* distinguish, but only
 #: after the letter does. Verified on CE 12.1.5 to reproduce PostgreSQL's
@@ -89,11 +93,40 @@ def _collate_string_equality(sql: str) -> str:
     mixed_case fixture, ``name = 'asha smith'`` returns nothing on Db2 and three
     rows on MySQL; with both sides wrapped at UCA strength 1, Db2 returns the
     same three rows.
+
+    The length comparison was added after the ``trailing_spaces`` dataset
+    disproved the first version of this rule. MySQL 8's default collation is
+    NO PAD, so ``'Asha Smith '`` is not equal to ``'asha smith'`` there. The
+    collation keys of the two are identical on Db2, so the key comparison
+    alone matched a row MySQL does not. Six datasets never noticed; the
+    seventh did. Length is counted in characters (``CODEUNITS32``), because an
+    accent-insensitive match of ``'José'`` and ``'Jose'`` is four characters
+    against four and five bytes against four.
     """
 
     def rewrite(match: re.Match[str]) -> str:
         lhs, op, rhs = match.group("lhs"), match.group("op"), match.group("rhs")
         key = f"COLLATION_KEY_BIT(%s, '{UCA_CASE_INSENSITIVE}')"
+        size = "CHARACTER_LENGTH(%s, CODEUNITS32)"
+        if op == "=":
+            return f"({key % lhs} = {key % rhs} AND {size % lhs} = {size % rhs})"
+        return f"({key % lhs} <> {key % rhs} OR {size % lhs} <> {size % rhs})"
+
+    return _STRING_EQ_RE.sub(rewrite, sql)
+
+
+def _collate_string_equality_tsql(sql: str) -> str:
+    """String equality the way SQL Server's default collation decides it.
+
+    Two things at once, both measured: letter case is ignored, and so are
+    trailing blanks ('Asha Smith ' = 'Asha Smith' is true there). Accents are
+    not ignored, which is why this is strength 2 and the MySQL rule above is
+    strength 1.
+    """
+
+    def rewrite(match: re.Match[str]) -> str:
+        lhs, op, rhs = match.group("lhs"), match.group("op"), match.group("rhs")
+        key = f"COLLATION_KEY_BIT(RTRIM(%s), '{UCA_CASE_INSENSITIVE_ACCENT_SENSITIVE}')"
         return f"{key % lhs} {op} {key % rhs}"
 
     return _STRING_EQ_RE.sub(rewrite, sql)
@@ -270,6 +303,16 @@ class SemanticRule:
 
 SEMANTIC_RULES: list[SemanticRule] = [
     SemanticRule(
+        name="sqlserver-case-insensitive-collation",
+        dialect="tsql",
+        because=(
+            "SQL Server's default collation makes string equality ignore "
+            "letter case and trailing blanks; Db2's ignores neither"
+        ),
+        detect=lambda sql: bool(_STRING_EQ_RE.search(sql)),
+        rewrite=_collate_string_equality_tsql,
+    ),
+    SemanticRule(
         name="mysql-case-insensitive-collation",
         dialect="mysql",
         because=(
@@ -327,9 +370,36 @@ SEMANTIC_RULES: list[SemanticRule] = [
             ),
             rewrite=_db2_format_model,
         )
-        for dialect in ("postgres", "mysql")
+        for dialect in ("postgres", "mysql", "tsql", "sqlite")
     ],
 ]
+
+#: The name the memory tier's replayed rewrite is recorded under.
+MEMORY_RULE = "memory:verified-rewrite"
+
+SEMANTIC_PROMPT = """A {dialect} query was translated to IBM Db2. The Db2 version compiles, and it returns different rows.
+
+Original {dialect} query:
+{source_sql}
+
+Current Db2 query:
+{db2_sql}
+
+Counterexample, on a dataset built to test this: {targets}
+{dialect} returned (first rows): {source_rows}
+Db2 returned (first rows): {db2_rows}
+{db2_error}{history}
+Rewrite the Db2 query so that it returns exactly what {dialect} returns, on any data.
+Keep the same column names. Reason from how {dialect} behaves by default (collation,
+blank padding, NULL ordering, integer and decimal division, string functions that
+count characters where Db2 counts bytes unless told CODEUNITS32).
+
+Reply with the corrected Db2 SQL statement only."""
+
+SEMANTIC_SYSTEM = (
+    "You repair SQL that was migrated to IBM Db2 and changed meaning. "
+    "Reply with one Db2 SELECT statement only: no prose, no markdown fences."
+)
 
 
 @dataclass
@@ -360,6 +430,12 @@ class SemanticRepairOutcome:
     #: determines, and the rows that still differ differ only because the
     #: ORDER BY has ties. Nothing can fix that, and nothing should claim to.
     partial: bool = False
+    #: Who proposed the accepted rewrite: "rules" or "model".
+    tier: str = ""
+
+    @property
+    def model_calls(self) -> int:
+        return sum(1 for a in self.attempts if a.rule.startswith("model:"))
 
     @property
     def attempt_count(self) -> int:
@@ -390,11 +466,23 @@ class SemanticRepairLoop:
         source: SourceEngine,
         target: Db2Target,
         rules: Sequence[SemanticRule] | None = None,
+        model=None,
+        max_model_attempts: int = 2,
+        case_name: str = "",
+        memory=None,
     ) -> None:
+        #: The Db2 fix memory. A rewrite that was proved for this exact
+        #: statement on an earlier run is tried first, and costs nothing.
+        self.memory = memory
         self.conn = conn
         self.source = source
         self.target = target
         self.rules = list(rules if rules is not None else SEMANTIC_RULES)
+        #: A language model, asked only when no measured rule closes the
+        #: divergence. It is shown the counterexample and nothing else.
+        self.model = model
+        self.max_model_attempts = max_model_attempts
+        self.case_name = case_name
 
     def candidates(self, *, source_sql: str, db2_sql: str, dialect: str) -> list[SemanticRule]:
         """Which rules are even relevant. Dialect first, then the construct."""
@@ -415,9 +503,21 @@ class SemanticRepairLoop:
     ) -> SemanticRepairOutcome:
         attempts: list[SemanticAttempt] = []
         agreed_before = before.instances_agreed if before is not None else -1
-        for n, rule in enumerate(
-            self.candidates(source_sql=source_sql, db2_sql=db2_sql, dialect=dialect), start=1
-        ):
+        rules = self.candidates(source_sql=source_sql, db2_sql=db2_sql, dialect=dialect)
+        exact = getattr(self.memory, "exact", None)
+        remembered = exact(bad_sql=db2_sql, dialect=dialect) if callable(exact) else None
+        if remembered and remembered != db2_sql:
+            rules = [
+                SemanticRule(
+                    name=MEMORY_RULE,
+                    dialect=dialect,
+                    because="a rewrite of this exact statement that an earlier run "
+                            "proved, replayed from the Db2 fix memory and proved again",
+                    detect=lambda _sql: True,
+                    rewrite=lambda _sql, fixed=remembered: fixed,
+                )
+            ] + rules
+        for n, rule in enumerate(rules, start=1):
             candidate = rule.rewrite(db2_sql)
             compiled = db.compile_check(self.conn, candidate)
             if not compiled.ok:
@@ -478,8 +578,93 @@ class SemanticRepairLoop:
                     because=rule.because,
                     attempts=attempts,
                     partial=partial,
+                    tier="memory" if rule.name == MEMORY_RULE else "rules",
                 )
+
+        if self.model is not None and before is not None and before.witness is not None:
+            fixed = self._ask_model(
+                source_sql=source_sql, db2_sql=db2_sql, dialect=dialect,
+                variants=variants, before=before, attempts=attempts,
+            )
+            if fixed is not None:
+                return fixed
 
         return SemanticRepairOutcome(
             repaired=False, final_sql=db2_sql, attempts=attempts
         )
+
+    def _ask_model(
+        self, *, source_sql, db2_sql, dialect, variants, before, attempts
+    ) -> "SemanticRepairOutcome | None":
+        """The model tier. Its answer earns nothing until the proof agrees.
+
+        The proposal takes the same road as a rule's rewrite, with one more
+        gate at the start because a model can write anything: it must be a
+        single read-only statement before it is allowed near a connection.
+        Then Db2 compiles it, and then the differential proof that found the
+        divergence is run again, over every dataset. A model that is
+        confidently wrong costs one call and changes nothing.
+        """
+        from .repair import clean_sql
+        from .safety import UnsafeSql, check_read_only
+
+        witness, history, current = before.witness, "", db2_sql
+        name = getattr(self.model, "model", "model")
+        for n in range(len(attempts) + 1, len(attempts) + 1 + self.max_model_attempts):
+            prompt = SEMANTIC_PROMPT.format(
+                dialect=dialect, source_sql=source_sql, db2_sql=current,
+                targets=witness.targets, source_rows=witness.source_rows[:5],
+                db2_rows=witness.db2_rows[:5],
+                db2_error=f"Db2 raised: {witness.db2_error}\n" if witness.db2_error else "",
+                history=history,
+            )
+            try:
+                candidate = clean_sql(
+                    self.model.ask(SEMANTIC_SYSTEM, prompt, stage="SEMANTIC_REPAIR",
+                                   case_name=self.case_name)
+                )
+                check_read_only(candidate)
+            except (UnsafeSql, Exception) as exc:
+                attempts.append(SemanticAttempt(
+                    n=n, rule=f"model:{name}", sql="", compiled=False,
+                    message=f"rejected before execution: {str(exc)[:160]}"))
+                return None
+            compiled = db.compile_check(self.conn, candidate)
+            if not compiled.ok:
+                attempts.append(SemanticAttempt(
+                    n=n, rule=f"model:{name}", sql=candidate, compiled=False,
+                    sqlcode=compiled.sqlcode, message=compiled.message[:200]))
+                history = (
+                    f"\nA previous attempt was rejected by Db2 with SQLCODE={compiled.sqlcode}: "
+                    f"{compiled.message[:200]}\nThat attempt was: {candidate}\n"
+                )
+                continue
+            verdict = prove_semantics(
+                source_sql=source_sql, db2_sql=candidate, source=self.source,
+                target=self.target, variants=variants, dialect=dialect,
+            )
+            attempts.append(SemanticAttempt(
+                n=n, rule=f"model:{name}", sql=candidate, compiled=True,
+                outcome=verdict.outcome, strength=verdict.strength))
+            full = verdict.outcome == "EQUIVALENT" and verdict.strength != "NONE"
+            partial = (
+                not full and verdict.outcome == "DIFFERENT" and verdict.order_unstable
+                and verdict.instances_agreed > before.instances_agreed
+            )
+            if full or partial:
+                return SemanticRepairOutcome(
+                    repaired=True, final_sql=candidate, verdict=verdict,
+                    rule=f"model:{name}",
+                    because=(
+                        f"proposed by {name} from the counterexample, and accepted "
+                        "only because the differential proof now agrees"
+                    ),
+                    attempts=attempts, partial=partial, tier="model",
+                )
+            if verdict.witness is not None:
+                witness, current = verdict.witness, candidate
+                history = (
+                    "\nA previous rewrite compiled and still disagreed; the "
+                    "counterexample above is from that rewrite.\n"
+                )
+        return None
