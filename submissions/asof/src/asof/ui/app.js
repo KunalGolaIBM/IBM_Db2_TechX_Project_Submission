@@ -226,7 +226,7 @@ function renderPlayground() {
     <div class="page-head">
       <div>
         <h1>Check an answer against the policy in force on a date</h1>
-        <p>The naive demo assistant answers from a stale FAQ with no idea which policy applied when. AsOf checks every claim in its draft against the clause version in force on the customer's date, in Db2. Two fictional policy documents: Aurelia Air's customer service plan and Fernhollow Bank's fee schedule.</p>
+        <p>The naive demo assistant answers from a stale FAQ with no idea which policy applied when. AsOf checks every claim in its draft against the clause version in force on the customer's date, in Db2. Two fictional policy documents (Aurelia Air's customer service plan and Fernhollow Bank's fee schedule) and a summary of public Indian Railways refund rules.</p>
         ${headlineView()}
       </div>
     </div>
