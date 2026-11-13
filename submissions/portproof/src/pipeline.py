@@ -18,19 +18,25 @@ and loading adversarial fixtures is a privileged operation and uses the owner.
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass, field
+from typing import Sequence
 
 from . import db, physical, translate
 from .config import llm_config, setup_config
-from .corpus import BASE, FIXTURE_TABLES, VARIANTS, Statement, statements_for
+from .corpus import BASE, FIXTURE_TABLES, VARIANTS, Statement, Variant, statements_for
 from .counterexample import (
     Db2Target,
     SemanticVerdict,
     SourceEngine,
+    activate,
     available_sources,
     ensure_fixture_schema,
+    go_home,
     prove_semantics,
 )
+from .datasets import DatasetAgent, QueryFeatures
+from .llm import METER
 from .federation import Corroboration, corroborate
 from .fixmemory import FixMemory
 from .repair import RepairLoop, RepairOutcome
@@ -64,6 +70,12 @@ class StatementResult:
     compile_cert: str | None = None
     semantic_cert: str | None = None
     learned: bool = False
+    #: How many datasets the proof ran on, and whether the dataset agent had to
+    #: fetch more because the first proof was vacuous or weak.
+    datasets_used: int = 0
+    escalated: bool = False
+    rescued: bool = False
+    model_calls: int = 0
 
     @property
     def case_name(self) -> str:
@@ -88,6 +100,40 @@ class MigrationReport:
     #: ``len(VARIANTS)`` as the evidence for every verdict was a claim the run
     #: had not earned.
     variants: int = 0
+    seconds: float = 0.0
+    #: Dataset loads the engines actually performed, all engines together.
+    loads: int = 0
+    agent_lines: list[str] = field(default_factory=list)
+    repair_policy: str = ""
+
+    # -- who fixed what --------------------------------------------------
+    def fixed_by(self, tier: str) -> int:
+        """Compile repairs Db2 accepted from one tier: memory | rules | model."""
+        return sum(1 for r in self.results if r.repair and r.repair.fixed_by == tier)
+
+    def semantic_fixed_by(self, tier: str) -> int:
+        return sum(
+            1 for r in self.results
+            if r.semantic_repair and r.semantic_repair.repaired and r.semantic_repair.tier == tier
+        )
+
+    @property
+    def model_calls(self) -> int:
+        return sum(r.model_calls for r in self.results)
+
+    def by_dialect(self) -> list[str]:
+        lines = []
+        dialects = list(dict.fromkeys(r.statement.dialect for r in self.results))
+        for dialect in dialects:
+            rows = [r for r in self.results if r.statement.dialect == dialect]
+            lines.append(
+                f"  {dialect:9} {len(rows):3} statements | "
+                f"silent compile failures {sum(1 for r in rows if r.silent_failure):2} | "
+                f"wrong rows {sum(1 for r in rows if r.status == 'PROVEN_DIFFERENT' or r.semantically_repaired):2} "
+                f"(repaired {sum(1 for r in rows if r.semantically_repaired)}) | "
+                f"proven equivalent {sum(1 for r in rows if r.status == 'PROVEN_EQUIVALENT'):2}"
+            )
+        return lines
 
     # -- the numbers the README quotes -----------------------------------
     @property
@@ -173,7 +219,9 @@ class MigrationReport:
         return sum(
             1
             for r in self.results
-            if r.semantic is not None and r.semantic.strength == "STRONG"
+            if r.status == "PROVEN_EQUIVALENT"
+            and r.semantic is not None
+            and r.semantic.strength == "STRONG"
         )
 
     def summary_lines(self) -> list[str]:
@@ -183,7 +231,9 @@ class MigrationReport:
             f"statements migrated      : {self.total}",
             f"translator reported errors: {self.translator_errors}",
             f"SILENT failures (clean translate, rejected by Db2): {self.silent_failures}",
-            f"repaired and re-verified : {self.repaired}",
+            f"repaired and re-verified : {self.repaired} "
+            f"(by fix memory {self.fixed_by('memory')}, by rules {self.fixed_by('rules')}, "
+            f"by the model {self.fixed_by('model')})",
             f"still failing to compile : {self.unrepaired}",
             f"proven equivalent        : {equivalent} "
             f"(mean {mean} of {self.variants} adversarial datasets returned rows; "
@@ -191,7 +241,10 @@ class MigrationReport:
             f"  of those, evidence STRONG: {self.strong_proofs}",
             f"semantic divergences found: {self.semantic_divergences} "
             f"(compiled on Db2, wrong rows)",
-            f"  of those, repaired and re-proved: {self.semantically_repaired}",
+            f"  of those, repaired and re-proved: {self.semantically_repaired} "
+            f"(by fix memory {self.semantic_fixed_by('memory')}, "
+            f"by rules {self.semantic_fixed_by('rules')}, by the model "
+            f"{self.semantic_fixed_by('model')})",
             f"PROVEN DIFFERENT         : {self.proven_different}",
             f"order not determined by the SQL: {self.unstable}",
             f"vacuous (agreed on nothing): {self.vacuous}",
@@ -200,7 +253,12 @@ class MigrationReport:
             [f"divergence cross-checked : {self.federation_note}"]
             if self.federation_note
             else []
-        )
+        ) + [
+            f"model calls, all stages  : {len(METER.calls)} "
+            f"({METER.total_tokens} tokens)",
+            f"wall time                : {self.seconds:.1f}s for {self.total} statements "
+            f"({self.loads} dataset loads across all engines)",
+        ]
 
 
 class Pipeline:
@@ -215,6 +273,8 @@ class Pipeline:
         repair_loop: RepairLoop | None = None,
         learn: bool = True,
         semantic_repair: bool = True,
+        dataset_agent: DatasetAgent | None = None,
+        variants: Sequence[Variant] | None = None,
     ):
         self.app_conn = app_conn
         self.owner_conn = owner_conn
@@ -234,7 +294,24 @@ class Pipeline:
         self.repair_loop = repair_loop or RepairLoop(owner_conn, memory=memory)
         self.learn = learn
         self.semantic_repair = semantic_repair
+        #: Chooses and builds the datasets per statement. Without one, every
+        #: statement is proved on ``variants`` (default: all the hand-built ones).
+        self.dataset_agent = dataset_agent
+        self.variants = list(variants) if variants is not None else list(VARIANTS)
         self._federation: dict[str, Corroboration] = {}
+
+    def _flush_model_calls(self) -> None:
+        """Write this statement's model calls to the Db2 ledger."""
+        for call in METER.unflushed():
+            try:
+                db.call_proc(
+                    self.app_conn,
+                    "PORTPROOF.RECORD_LLM_CALL",
+                    (call.stage, call.model[:80], call.case_name[:80] or None,
+                     call.prompt_tokens, call.completion_tokens, call.latency_ms, int(call.ok)),
+                )
+            except db.Db2Error:  # the cost ledger is optional on an old schema
+                return
 
     def _corroborate(self, dialect: str) -> Corroboration:
         """Db2's federated opinion on the inputs, asked once per dialect.
@@ -292,6 +369,11 @@ class Pipeline:
                 "translator_raised": result.translator_raised,
                 "silent_failure": result.silent_failure,
                 "attempts": result.repair.attempt_count if result.repair else 0,
+                # Who produced the accepted repair: memory | rules | model.
+                "fixed_by": result.repair.fixed_by if result.repair else "",
+                "tiers": [a.tier for a in result.repair.attempts] if result.repair else [],
+                "datasets": result.datasets_used,
+                "dataset_escalated": result.escalated,
                 "rules": sorted(
                     {r for a in (result.repair.attempts if result.repair else []) for r in a.rules_fired}
                 ),
@@ -301,6 +383,7 @@ class Pipeline:
                 "semantic_repair": (
                     {
                         "rule": result.semantic_repair.rule,
+                        "tier": result.semantic_repair.tier,
                         "repaired": result.semantic_repair.repaired,
                         "tried": [a.rule for a in result.semantic_repair.attempts],
                     }
@@ -344,6 +427,67 @@ class Pipeline:
 
     # -- one statement ---------------------------------------------------
     def run_statement(self, statement: Statement, *, prove_meaning: bool = True) -> StatementResult:
+        calls_before = len(METER.calls)
+        try:
+            result = self._run_statement(statement, prove_meaning=prove_meaning)
+        finally:
+            # Back to PPTEST, so nothing after this statement compiles against
+            # a dataset's private schema.
+            go_home(self.target)
+        result.model_calls = len(METER.calls) - calls_before
+        self._flush_model_calls()
+        return result
+
+    def _datasets_for(
+        self, statement: Statement, source: SourceEngine | None
+    ) -> tuple[list[Variant], QueryFeatures | None]:
+        if self.dataset_agent is None:
+            return list(self.variants), None
+        return self.dataset_agent.plan(statement, source, self.target if source else None)
+
+    def _strengthen(
+        self, statement: Statement, result: StatementResult, verdict: SemanticVerdict,
+        variants: list[Variant], source: SourceEngine,
+    ) -> tuple[SemanticVerdict, list[Variant]]:
+        """Fetch more datasets for a proof that is vacuous or weak.
+
+        Agreement on nothing is not a proof. Before settling for VACUOUS or
+        WEAK, the dataset agent is asked for data this query actually selects:
+        a cached model dataset if one exists for the schema, and a model call
+        only if none does. The proof is then run again over everything.
+        """
+        agent = self.dataset_agent
+        if agent is None or not agent.needs_more(verdict):
+            return verdict, variants
+        result.escalated = True
+        extra = agent.escalate(statement, verdict, variants, source, self.target)
+        if not extra:
+            return verdict, variants
+        variants = list(variants) + extra
+        again = prove_semantics(
+            source_sql=statement.sql,
+            db2_sql=result.db2_sql or "",
+            source=source,
+            target=self.target,
+            variants=variants,
+            dialect=statement.dialect,
+        )
+        order = ("NONE", "WEAK", "MODERATE", "STRONG")
+        if order.index(again.strength) > order.index(verdict.strength):
+            result.rescued = True
+            agent.stats.rescued += 1
+        result.datasets_used = len(variants)
+        return again, variants
+
+    def _run_statement(self, statement: Statement, *, prove_meaning: bool = True) -> StatementResult:
+        source = self.sources.get(statement.dialect)
+        variants, feats = self._datasets_for(statement, source)
+        if variants:
+            # PREPARE resolves names against the live catalogue, so the tables
+            # the statement reads have to exist before Db2 is asked about it.
+            # For the fixture that is PPTEST; for a discovered schema it is the
+            # first dataset built for that schema.
+            activate(self.target, variants[0])
         attempt = translate.translate(statement.sql, statement.dialect)
         if not attempt.ok:
             result = StatementResult(
@@ -375,6 +519,7 @@ class Pipeline:
                 source_sql=statement.sql,
                 db2_sql=attempt.db2_sql or "",
                 dialect=statement.dialect,
+                case_name=statement.case_name,
             )
             if result.repair.attempts and result.repair.attempts[-1].ok:
                 result.db2_sql = result.repair.final_sql
@@ -383,9 +528,9 @@ class Pipeline:
                 result.status = "COMPILE_FAIL"
 
         compiles_now = result.status in ("COMPILES", "REPAIRED")
+        pre_semantic_sql = ""
 
         if compiles_now and prove_meaning:
-            source = self.sources.get(statement.dialect)
             if source is None:
                 result.semantic = SemanticVerdict(
                     outcome="INCONCLUSIVE",
@@ -404,8 +549,17 @@ class Pipeline:
                     db2_sql=result.db2_sql or "",
                     source=source,
                     target=self.target,
+                    variants=variants,
                     dialect=statement.dialect,
                 )
+                result.datasets_used = len(variants)
+
+                agent = self.dataset_agent
+                verdict, variants = self._strengthen(statement, result, verdict, variants, source)
+                if agent is not None and feats is not None:
+                    # Logged before any repair: the first verdict is the one
+                    # that says which datasets expose divergences.
+                    agent.observe(statement, feats, verdict)
                 result.semantic = verdict
 
                 # A compiling statement that returns the wrong rows is the
@@ -413,13 +567,17 @@ class Pipeline:
                 # trying to fix rather than merely reporting. Every candidate is
                 # re-proved by the same differential test that caught it.
                 if verdict.outcome == "DIFFERENT" and self.semantic_repair:
+                    pre_semantic_sql = result.db2_sql or ""
                     loop = SemanticRepairLoop(
-                        self.owner_conn, source=source, target=self.target
+                        self.owner_conn, source=source, target=self.target,
+                        model=self.repair_loop.model, case_name=statement.case_name,
+                        memory=self.memory if "memory" in self.repair_loop.tiers else None,
                     )
                     fix = loop.run(
                         source_sql=statement.sql,
                         db2_sql=result.db2_sql or "",
                         dialect=statement.dialect,
+                        variants=variants,
                         before=verdict,
                     )
                     if fix.attempts:
@@ -427,8 +585,13 @@ class Pipeline:
                     if fix.repaired and fix.verdict is not None:
                         result.original_semantic = verdict
                         result.db2_sql = fix.final_sql
-                        result.semantic = fix.verdict
-                        verdict = fix.verdict
+                        # A repair is only as good as the proof behind it, so a
+                        # repaired statement whose proof is thin gets the same
+                        # second look as any other.
+                        verdict, variants = self._strengthen(
+                            statement, result, fix.verdict, variants, source
+                        )
+                        result.semantic = verdict
 
                 # Only once no rewrite worked is instability the useful answer.
                 # A statement that is both unstable and fixable gets the fix; a
@@ -443,7 +606,10 @@ class Pipeline:
                 # can say whether the two engines held the same rows to begin
                 # with, which separates a translation bug from a loading one.
                 # When federation is not configured this is a no-op.
-                if verdict.outcome in ("DIFFERENT", "UNSTABLE"):
+                # Only for the fixture: the nicknames point at its tables, and
+                # corroborating reloads the source's home namespace, which for
+                # a discovered schema is the application's own data.
+                if verdict.outcome in ("DIFFERENT", "UNSTABLE") and not statement.schema:
                     result.federation = self._corroborate(statement.dialect)
 
                 result.status = {
@@ -526,19 +692,67 @@ class Pipeline:
             except Exception:
                 result.learned = False
 
+        # The same for a rewrite that changed the statement's *meaning* back to
+        # the source's. What is remembered is the pair (the SQL that compiled
+        # and was wrong, the SQL that was proved), so the next run replays the
+        # proved rewrite instead of asking a rule or a model to find it again.
+        if (
+            self.learn
+            and self.memory is not None
+            and pre_semantic_sql
+            and result.semantically_repaired
+            and result.semantic_repair is not None
+            and not result.semantic_repair.partial
+            and result.status == "PROVEN_EQUIVALENT"
+        ):
+            try:
+                self.memory.remember(
+                    bad_sql=pre_semantic_sql,
+                    fixed_sql=result.db2_sql or "",
+                    sqlcode=0,
+                    error_text="SEMANTIC: compiled on Db2 and returned different rows",
+                    dialect=statement.dialect,
+                    case_name=statement.case_name,
+                )
+                result.learned = True
+            except Exception:
+                pass
+
         return result
 
     # -- the whole corpus ------------------------------------------------
     def run(
-        self, *, dialect: str | None = None, prove_meaning: bool = True, limit: int | None = None
+        self,
+        *,
+        dialect: str | None = None,
+        prove_meaning: bool = True,
+        limit: int | None = None,
+        statements: Sequence[Statement] | None = None,
     ) -> MigrationReport:
-        statements = statements_for(dialect)
+        statements = list(statements) if statements is not None else statements_for(dialect)
         if limit:
             statements = statements[:limit]
-        report = MigrationReport(source_engine=self.source_engines, variants=len(VARIANTS))
+        report = MigrationReport(
+            source_engine=self.source_engines,
+            variants=len(self.variants),
+            repair_policy=" then ".join(
+                {"chain": "model" if self.repair_loop.model else "rules"}.get(t, t)
+                for t in self.repair_loop.tiers
+            ),
+        )
+        started = time.monotonic()
+        loads_before = self._loads()
         for statement in statements:
             report.results.append(self.run_statement(statement, prove_meaning=prove_meaning))
+        report.seconds = time.monotonic() - started
+        report.loads = self._loads() - loads_before
+        if self.dataset_agent is not None:
+            report.agent_lines = self.dataset_agent.stats.lines()
         return report
+
+    def _loads(self) -> int:
+        engines = list(self.sources.values()) + [self.target]
+        return sum(int(getattr(e, "loads", 0) or 0) for e in engines)
 
     def escalate_stalled(self, *, max_attempts: int | None = None) -> int:
         """Hand the statements the machine could not finish to a human.
@@ -613,6 +827,10 @@ class Pipeline:
         return str(out[-1])
 
     def close(self) -> None:
+        try:
+            self.target.close()
+        except Exception:  # pragma: no cover
+            pass
         for source in self.sources.values():
             try:
                 source.close()

@@ -13,6 +13,15 @@ Three things live here:
   in Db2 and in the source engine so results can be compared.
 * :data:`VARIANTS` -- adversarial datasets, each built to make the source engine
   and Db2 disagree on a specific documented semantic difference.
+
+The corpus covers four source dialects. PostgreSQL and MySQL were the original
+two; SQL Server (``tsql``) and SQLite were added so that the claim "the prover
+is not tied to one engine pair" is something the run measures rather than
+something the README says. Each dialect is judged only by its own real engine.
+
+A :class:`Variant` may also carry its own DDL. The hand-built ones below share
+the four-table fixture; datasets produced by :mod:`src.datasets` for a schema
+discovered on a source engine bring the schema with them.
 """
 from __future__ import annotations
 
@@ -24,6 +33,10 @@ class Statement:
     dialect: str
     name: str
     sql: str
+    #: Which source schema the statement reads. "" is the built-in fixture; any
+    #: other value names a schema discovered on the source engine, whose
+    #: datasets come from the dataset agent rather than from :data:`VARIANTS`.
+    schema: str = ""
 
     @property
     def case_name(self) -> str:
@@ -69,7 +82,43 @@ CORPUS: list[Statement] = [
     Statement("mysql", "concat_func", "SELECT CONCAT(first_name, ' ', last_name) AS full_name FROM customers ORDER BY id"),
     Statement("mysql", "int_division", "SELECT 7 DIV 2 AS q FROM customers WHERE id = 1"),
     Statement("mysql", "limit_only", "SELECT id FROM orders ORDER BY id LIMIT 3"),
+    # -- SQL Server. Its default collation is case-insensitive, '+' is its
+    # string concatenation, LEN ignores trailing blanks and '/' on two integers
+    # truncates: four places where a clean translation changes the answer.
+    Statement("tsql", "top_n", "SELECT TOP 3 id, name FROM customers ORDER BY id"),
+    Statement("tsql", "isnull", "SELECT id, ISNULL(email, 'n/a') AS e FROM customers ORDER BY id"),
+    Statement("tsql", "plus_concat", "SELECT id, first_name + ' ' + last_name AS full_name FROM customers ORDER BY id"),
+    Statement("tsql", "len_trailing", "SELECT id, LEN(name) AS n FROM customers ORDER BY id"),
+    Statement("tsql", "case_insensitive_eq", "SELECT id FROM customers WHERE name = 'asha smith' ORDER BY id"),
+    Statement("tsql", "int_division", "SELECT id, quantity / 2 AS half FROM orders WHERE quantity IS NOT NULL ORDER BY id"),
+    Statement("tsql", "column_division", "SELECT id, amount / quantity AS unit_price FROM orders WHERE quantity <> 0 ORDER BY id"),
+    Statement("tsql", "datediff", "SELECT id, DATEDIFF(day, created_at, '2026-03-01') AS age FROM orders ORDER BY id"),
+    Statement("tsql", "iif", "SELECT id, IIF(amount > 100, 'big', 'small') AS size FROM orders ORDER BY id"),
+    Statement("tsql", "string_agg", "SELECT customer_id, STRING_AGG(sku, ',') WITHIN GROUP (ORDER BY sku) AS skus FROM order_items GROUP BY customer_id ORDER BY customer_id"),
+    Statement("tsql", "offset_fetch", "SELECT id FROM orders ORDER BY id OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY"),
+    Statement("tsql", "convert_month", "SELECT id, CONVERT(varchar(7), created_at, 126) AS m FROM orders ORDER BY id"),
+    Statement("tsql", "null_ordering", "SELECT id, email FROM customers ORDER BY email, id"),
+    Statement("tsql", "charindex", "SELECT id, CHARINDEX(' ', name) AS p FROM customers ORDER BY id"),
+    Statement("tsql", "join_aggregate", "SELECT c.id, COUNT(o.id) AS orders, COALESCE(SUM(o.amount), 0) AS spend FROM customers c LEFT JOIN orders o ON o.customer_id = c.id GROUP BY c.id ORDER BY c.id"),
+    # -- SQLite. Dynamic typing is the trap: a DECIMAL column holding 7.00
+    # stores the integer 7, so amount / quantity is integer division there and
+    # decimal division on Db2. LIKE is case-insensitive, and NULLs sort first.
+    Statement("sqlite", "limit_offset", "SELECT id, name FROM customers ORDER BY id LIMIT 2 OFFSET 1"),
+    Statement("sqlite", "ifnull", "SELECT id, ifnull(email, 'n/a') AS e FROM customers ORDER BY id"),
+    Statement("sqlite", "concat_op", "SELECT id, first_name || ' ' || last_name AS full_name FROM customers ORDER BY id"),
+    Statement("sqlite", "column_division", "SELECT id, amount / quantity AS unit_price FROM orders WHERE quantity <> 0 ORDER BY id"),
+    Statement("sqlite", "int_division", "SELECT id, quantity / 2 AS half FROM orders WHERE quantity IS NOT NULL ORDER BY id"),
+    Statement("sqlite", "strftime_month", "SELECT strftime('%Y-%m', created_at) AS m, count(*) AS n FROM orders WHERE created_at IS NOT NULL GROUP BY strftime('%Y-%m', created_at) ORDER BY m"),
+    Statement("sqlite", "group_concat", "SELECT customer_id, group_concat(sku, ',') AS skus FROM order_items GROUP BY customer_id ORDER BY customer_id"),
+    Statement("sqlite", "like_case", "SELECT id FROM customers WHERE name LIKE '%SMITH%' ORDER BY id"),
+    Statement("sqlite", "null_ordering", "SELECT id, email FROM customers ORDER BY email, id"),
+    Statement("sqlite", "substr_instr", "SELECT id, substr(name, 1, 4) AS s, instr(name, ' ') AS p FROM customers ORDER BY id"),
+    Statement("sqlite", "case_compare", "SELECT id FROM customers WHERE name = 'ASHA SMITH' ORDER BY id"),
+    Statement("sqlite", "join_aggregate", "SELECT c.id, count(o.id) AS orders, coalesce(sum(o.amount), 0) AS spend FROM customers c LEFT JOIN orders o ON o.customer_id = c.id GROUP BY c.id ORDER BY c.id"),
 ]
+
+#: Every source dialect the corpus speaks, in report order.
+DIALECTS: tuple[str, ...] = ("postgres", "mysql", "tsql", "sqlite")
 
 #: Portable DDL: valid on Db2 and on the source engine without change.
 FIXTURE_DDL: list[str] = [
@@ -110,6 +159,36 @@ class Variant:
     name: str
     targets: str
     rows: dict[str, list[tuple]] = field(default_factory=dict)
+    #: Portable ``CREATE TABLE`` statements for a schema other than the fixture.
+    #: Empty means the four fixture tables.
+    ddl: tuple[str, ...] = ()
+    tables: tuple[str, ...] = ()
+    #: Where the dataset came from: BUILTIN (written by hand, below), GENERATED
+    #: (a deterministic strategy in :mod:`src.datasets`) or LLM (proposed by a
+    #: model and kept only because both engines loaded it).
+    origin: str = "BUILTIN"
+    strategy: str = ""
+
+    @property
+    def schema_ddl(self) -> tuple[str, ...]:
+        return self.ddl or tuple(FIXTURE_DDL)
+
+    @property
+    def schema_tables(self) -> tuple[str, ...]:
+        return self.tables or FIXTURE_TABLES
+
+    @property
+    def fingerprint(self) -> str:
+        """Content hash: the same rows under the same DDL are the same dataset.
+
+        Engines use it to load a dataset once and switch back to it, and the
+        Db2 dataset cache uses it as the key, so a dataset that has already
+        earned evidence is found again instead of being generated again.
+        """
+        import hashlib
+
+        body = repr((self.schema_ddl, sorted((t, r) for t, r in self.rows.items())))
+        return hashlib.sha256(body.encode("utf-8")).hexdigest()
 
     def shuffled(self) -> "Variant":
         """The same data, inserted in the opposite order.
@@ -125,6 +204,10 @@ class Variant:
             name=f"{self.name}:reinserted",
             targets=f"{self.targets} (same rows, opposite insertion order)",
             rows={table: list(reversed(rows)) for table, rows in self.rows.items()},
+            ddl=self.ddl,
+            tables=self.tables,
+            origin=self.origin,
+            strategy=self.strategy,
         )
 
 
@@ -279,7 +362,143 @@ VARIANTS: list[Variant] = [
             "events": [],
         },
     ),
+    # -- the second six. The first six were chosen from the differences
+    # between MySQL, PostgreSQL and Db2. These cover what those did not reach,
+    # and what SQL Server and SQLite added when they joined the corpus.
+    Variant(
+        name="trailing_spaces",
+        targets="blank padding: SQL Server's '=' and LEN ignore trailing "
+                "blanks, Db2's VARCHAR comparison and LENGTH do not",
+        rows={
+            "customers": [
+                _c(1, "Asha Smith ", "asha@example.com ", "Asha ", "Smith"),
+                _c(2, "Asha Smith", "asha@example.com", "Asha", "Smith "),
+                _c(3, " Bob Stone", "bob@example.com", " Bob", "Stone"),
+                _c(4, "Cy  Smithers", "cy@example.com", "Cy", "Smithers  "),
+            ],
+            "orders": [
+                _o(60, 1, "12.50", "PAID ", "2026-01-10 10:00:00", 2),
+                _o(61, 2, "12.50", "PAID", "2026-01-11 10:00:00", 5),
+                _o(62, 3, "7.25", " NEW", "2026-01-12 10:00:00", 3),
+            ],
+            "order_items": [(1, "A1 "), (1, "A1"), (2, " B2"), (3, "C3")],
+            "events": [(1, '{"type":"click ","city":"Pune "}')],
+        },
+    ),
+    Variant(
+        name="accents_and_unicode",
+        targets="accent and width sensitivity: MySQL's default collation is "
+                "accent-insensitive ('Jose' = 'José'); Db2, PostgreSQL and "
+                "SQL Server's default compare them as different strings",
+        rows={
+            "customers": [
+                _c(1, "José Núñez", "jose@example.com", "José", "Núñez"),
+                _c(2, "Jose Nunez", "jose2@example.com", "Jose", "Nunez"),
+                _c(3, "Zoë Smith", "zoe@example.com", "Zoë", "Smith"),
+                _c(4, "Zoe Smith", "zoe2@example.com", "Zoe", "Smith"),
+                _c(5, "Asha Smith", "asha@example.com", "Asha", "Smith"),
+            ],
+            "orders": [
+                _o(70, 1, "20.00", "PAID", "2026-01-15 10:00:00", 2),
+                _o(71, 2, "30.00", "PAID", "2026-01-16 10:00:00", 3),
+                _o(72, 3, "40.00", "NEW", "2026-01-17 10:00:00", 4),
+            ],
+            "order_items": [(1, "É1"), (2, "E1"), (3, "e1"), (3, "Z9")],
+            "events": [(1, '{"type":"click","city":"Kraków"}')],
+        },
+    ),
+    Variant(
+        name="date_boundaries",
+        targets="calendar edges: a leap day, the last second of a year and the "
+                "first second of the next, where truncation, formatting and "
+                "date arithmetic are most likely to round the wrong way",
+        rows={
+            "customers": [
+                _c(1, "Asha Smith", "asha@example.com", "Asha", "Smith"),
+                _c(2, "Bob Stone", "bob@example.com", "Bob", "Stone"),
+            ],
+            "orders": [
+                _o(80, 1, "10.00", "PAID", "2024-02-29 00:00:00", 2),
+                _o(81, 1, "20.00", "PAID", "2025-12-31 23:59:59", 3),
+                _o(82, 2, "30.00", "PAID", "2026-01-01 00:00:00", 1),
+                _o(83, 2, "40.00", "NEW", "2026-02-28 23:59:59", 4),
+                _o(84, 2, "50.00", "NEW", "2026-03-01 00:00:00", 5),
+            ],
+            "order_items": [(1, "L1"), (2, "L2")],
+            "events": [(1, '{"type":"rollover","city":"Pune"}')],
+        },
+    ),
+    Variant(
+        name="negatives_and_halves",
+        targets="sign and rounding: -7/2 truncates toward zero, .5 rounds "
+                "differently for DECIMAL and DOUBLE, and a negative quantity "
+                "flips a comparison",
+        rows={
+            "customers": [
+                _c(1, "Asha Smith", "asha@example.com", "Asha", "Smith"),
+                _c(2, "Bob Stone", "bob@example.com", "Bob", "Stone"),
+            ],
+            "orders": [
+                _o(90, 1, "-7.00", "PAID", "2026-01-05 10:00:00", 2),
+                _o(91, 1, "7.00", "PAID", "2026-01-06 10:00:00", -2),
+                _o(92, 2, "2.50", "PAID", "2026-01-07 10:00:00", 5),
+                _o(93, 2, "0.05", "NEW", "2026-01-08 10:00:00", 2),
+                _o(94, 2, "-0.01", "NEW", "2026-01-09 10:00:00", 3),
+                _o(95, 2, "100.00", "PAID", "2026-01-10 10:00:00", 7),
+                _o(96, 1, "100.01", "PAID", "2026-01-11 10:00:00", -7),
+            ],
+            "order_items": [(1, "N1"), (2, "N2"), (2, "N3")],
+            "events": [(1, '{"type":"refund","city":"Agra"}')],
+        },
+    ),
+    Variant(
+        name="like_wildcards",
+        targets="pattern matching: LIKE is case-insensitive on SQLite, MySQL "
+                "and SQL Server and case-sensitive on Db2 and PostgreSQL, and "
+                "literal % and _ in the data are where escaping goes wrong",
+        rows={
+            "customers": [
+                _c(1, "Asha SMITH", "asha@example.com", "Asha", "SMITH"),
+                _c(2, "bob smith", "bob@EXAMPLE.com", "bob", "smith"),
+                _c(3, "Cy Smithers", "cy@example.com", "Cy", "Smithers"),
+                _c(4, "100% Smith_Co", "pct@example.com", "100%", "Smith_Co"),
+                _c(5, "Dev Rao", "dev@other.org", "Dev", "Rao"),
+            ],
+            "orders": [
+                _o(100, 1, "150.00", "PAID", "2026-02-01 10:00:00", 3),
+                _o(101, 2, "100.00", "paid", "2026-02-02 10:00:00", 2),
+                _o(102, 4, "99.99", "NEW", "2026-02-03 10:00:00", 1),
+            ],
+            "order_items": [(1, "sm_1"), (2, "SM%1"), (4, "Sm11")],
+            "events": [(1, '{"type":"search","city":"Smithfield"}')],
+        },
+    ),
+    Variant(
+        name="extreme_values",
+        targets="range limits: the largest DECIMAL(10,2), a zero, a value "
+                "filling its VARCHAR to the last character, and aggregates "
+                "whose sum needs more digits than any one row",
+        rows={
+            "customers": [
+                _c(1, "X" * 60, "a@b.co", "F" * 30, "L" * 30),
+                _c(2, "y", "", "f", "l"),
+                _c(3, "Asha Smith", "asha@example.com", "Asha", "Smith"),
+            ],
+            "orders": [
+                _o(110, 1, "99999999.99", "PAID", "2026-01-05 10:00:00", 1),
+                _o(111, 1, "99999999.99", "PAID", "2026-01-06 10:00:00", 2147483647),
+                _o(112, 2, "0.00", "PAID", "2026-01-07 10:00:00", 1),
+                _o(113, 3, "0.01", "NEW", "2026-01-08 10:00:00", 3),
+            ],
+            "order_items": [(1, "Z" * 10), (2, "0"), (3, "A1")],
+            "events": [(1, '{"type":"bulk","city":"' + "Q" * 40 + '"}')],
+        },
+    ),
 ]
+
+#: The six datasets the project shipped with, kept addressable so a run can be
+#: compared before and after the set of datasets was doubled.
+ORIGINAL_VARIANTS: list[Variant] = VARIANTS[:6]
 
 
 def statements_for(dialect: str | None = None) -> list[Statement]:

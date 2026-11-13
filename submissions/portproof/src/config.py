@@ -177,6 +177,18 @@ def mysql_config() -> MySqlConfig:
     )
 
 
+def sqlserver_config() -> SourceDbConfig:
+    """SQL Server settings. No password means the engine is simply absent, and
+    the SQL Server statements come back INCONCLUSIVE rather than guessed at."""
+    return SourceDbConfig(
+        host=os.getenv("MSSQL_HOST", "localhost"),
+        port=int(os.getenv("MSSQL_PORT", "1434")),
+        database=os.getenv("MSSQL_DATABASE", "pptest"),
+        user=os.getenv("MSSQL_USER", "sa"),
+        password=os.getenv("MSSQL_PASSWORD", ""),
+    )
+
+
 @dataclass(frozen=True)
 class LlmConfig:
     provider: str
@@ -184,14 +196,42 @@ class LlmConfig:
     api_key: str
     base_url: str
     max_repair_attempts: int
+    #: The most model calls one process may make. A spending cap, enforced in
+    #: one place (:meth:`src.llm.HttpRepairLLM.ask`); when it is reached the
+    #: model tiers simply stop answering and the statement is left to the rules
+    #: and, failing those, to human review.
+    call_budget: int = 200
+    #: Passed through as ``reasoning_effort`` when set. Repairs here are short
+    #: rewrites with the engine's error or a counterexample in the prompt, so
+    #: the model does not need a long private deliberation to make them, and
+    #: hidden reasoning tokens were most of the bill before this was set.
+    reasoning_effort: str = ""
+    #: A ceiling on what one answer may cost, reasoning included. A repair is
+    #: one statement and a dataset a few dozen rows; an answer that needs more
+    #: than this is one PortProof would rather not pay for, and the statement
+    #: goes to human review instead.
+    max_output_tokens: int = 3000
+
+    @property
+    def is_tiered(self) -> bool:
+        return self.provider == "tiered"
+
+    @property
+    def has_model(self) -> bool:
+        """True when a language model can actually be reached."""
+        return self.provider not in ("mock", "rules", "") and bool(self.api_key)
 
     @property
     def is_mock(self) -> bool:
-        return self.provider in ("mock", "rules", "")
+        # A tiered run with no key has no model tier, so it is the rules.
+        return self.provider in ("mock", "rules", "") or (self.is_tiered and not self.api_key)
 
     @property
     def label(self) -> str:
         """What to show a reader: the model, not the transport."""
+        if self.is_tiered:
+            last = self.model if self.api_key else "no model (no API key)"
+            return f"fix memory, then rules, then {last}"
         return "deterministic rules" if self.is_mock else self.model
 
 
@@ -215,11 +255,17 @@ _PROVIDER_DEFAULTS: dict[str, tuple[str, str, tuple[str, ...]]] = {
         ("GROQ_API_KEY",),
     ),
 }
+# ``tiered`` is the cost-aware arrangement: the fix memory answers first, the
+# rules second, and the model is called only for what neither could repair.
+# It uses the same endpoint defaults as ``gemini`` and degrades to memory plus
+# rules when no key is present, so it is safe as the default.
+_PROVIDER_DEFAULTS["tiered"] = _PROVIDER_DEFAULTS["gemini"]
 
 
 def llm_config() -> LlmConfig:
-    """LLM settings. ``mock`` is the default so the project runs with no keys."""
-    provider = os.getenv("LLM_PROVIDER", "mock").strip().lower()
+    """LLM settings. ``tiered`` is the default: it runs with no key, as memory
+    plus rules, and adds the model tier the moment a key is present."""
+    provider = os.getenv("LLM_PROVIDER", "tiered").strip().lower() or "tiered"
     base_default, model_default, key_vars = _PROVIDER_DEFAULTS.get(
         provider, ("", "llama-3.3-70b-versatile", ())
     )
@@ -234,6 +280,11 @@ def llm_config() -> LlmConfig:
         api_key=api_key,
         base_url=os.getenv("LLM_BASE_URL", "").strip() or base_default,
         max_repair_attempts=int(os.getenv("MAX_REPAIR_ATTEMPTS", "3")),
+        call_budget=int(os.getenv("LLM_CALL_BUDGET", "200")),
+        max_output_tokens=int(os.getenv("LLM_MAX_OUTPUT_TOKENS", "3000")),
+        reasoning_effort=os.getenv(
+            "LLM_REASONING_EFFORT", "low" if provider in ("gemini", "tiered") else ""
+        ).strip(),
     )
 
 

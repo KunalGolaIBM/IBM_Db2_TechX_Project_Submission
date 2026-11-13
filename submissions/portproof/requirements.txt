@@ -27,6 +27,7 @@ psycopg[binary]==3.2.12          # PostgreSQL, when a real one is reachable
 pymysql==1.1.2                   # MySQL: a *real* one, because MySQL's
                                  # collation and division semantics live in the
                                  # engine and cannot be emulated by DuckDB
+pymssql==2.4.6                   # SQL Server: also a real one, for the tsql statements
 cryptography==46.0.3             # required by pymysql for MySQL 8's default
                                  # caching_sha2_password authentication
 

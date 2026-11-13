@@ -21,14 +21,76 @@ from __future__ import annotations
 
 import json
 import re
+import time
 import urllib.error
 import urllib.request
+from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from langchain_core.callbacks.manager import CallbackManagerForLLMRun
 from langchain_core.language_models.llms import LLM
 
 from .config import LlmConfig, llm_config
+
+# --------------------------------------------------------------------------
+# metering
+# --------------------------------------------------------------------------
+@dataclass(frozen=True)
+class LlmCall:
+    """One request to a language model, as the provider itself counted it."""
+
+    stage: str
+    model: str
+    case_name: str
+    prompt_tokens: int
+    completion_tokens: int
+    latency_ms: int
+    ok: bool
+    #: True when the provider returned no usage block and the counts are a
+    #: characters/4 estimate. Reported, so an estimate is never read as a bill.
+    estimated: bool = False
+
+    @property
+    def tokens(self) -> int:
+        return self.prompt_tokens + self.completion_tokens
+
+
+@dataclass
+class UsageMeter:
+    """Every model call this process made. The cost analysis is a sum over it."""
+
+    calls: list[LlmCall] = field(default_factory=list)
+    _flushed: int = 0
+
+    def record(self, call: LlmCall) -> None:
+        self.calls.append(call)
+
+    def unflushed(self) -> list[LlmCall]:
+        """Calls not yet written to ``PORTPROOF.LLM_CALL``."""
+        pending = self.calls[self._flushed :]
+        self._flushed = len(self.calls)
+        return pending
+
+    def by_stage(self) -> dict[str, tuple[int, int, int]]:
+        """``stage -> (calls, prompt tokens, completion tokens)``."""
+        out: dict[str, tuple[int, int, int]] = {}
+        for call in self.calls:
+            n, p, c = out.get(call.stage, (0, 0, 0))
+            out[call.stage] = (n + 1, p + call.prompt_tokens, c + call.completion_tokens)
+        return out
+
+    @property
+    def total_tokens(self) -> int:
+        return sum(call.tokens for call in self.calls)
+
+    def reset(self) -> None:
+        self.calls.clear()
+        self._flushed = 0
+
+
+#: Process-wide, because the question it answers is "what did this run cost".
+METER = UsageMeter()
+
 
 # --------------------------------------------------------------------------
 # deterministic rewrite rules
@@ -425,7 +487,12 @@ class HttpRepairLLM(LLM):
     model: str = "llama-3.3-70b-versatile"
     api_key: str = ""
     base_url: str = "https://api.groq.com/openai/v1"
-    timeout: int = 60
+    timeout: int = 45
+    #: Which statement the next call is for, so the ledger can attribute it.
+    case_name: str = ""
+    #: Retries on HTTP 429/503 only, with a growing pause: a rate limit is the
+    #: provider asking for time, not a wrong answer.
+    max_retries: int = 4
 
     @property
     def _llm_type(self) -> str:
@@ -438,23 +505,34 @@ class HttpRepairLLM(LLM):
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> str:
-        payload = json.dumps(
-            {
-                "model": self.model,
-                "temperature": 0,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": (
-                            "You rewrite SQL so that IBM Db2 accepts it. "
-                            "Reply with the corrected SQL statement only: no prose, "
-                            "no markdown fences, no explanation."
-                        ),
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-            }
-        ).encode("utf-8")
+        return self.ask(
+            "You rewrite SQL so that IBM Db2 accepts it. "
+            "Reply with the corrected SQL statement only: no prose, "
+            "no markdown fences, no explanation.",
+            prompt,
+            stage="COMPILE_REPAIR",
+            case_name=self.case_name,
+        )
+
+    def ask(self, system: str, user: str, *, stage: str, case_name: str = "") -> str:
+        """One metered chat completion. Every model call in PortProof is this."""
+        budget = llm_config().call_budget
+        if len(METER.calls) >= budget:
+            raise RuntimeError(f"model call budget of {budget} is spent (LLM_CALL_BUDGET)")
+        document = {
+            "model": self.model,
+            "temperature": 0,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+        }
+        settings = llm_config()
+        if settings.reasoning_effort:
+            document["reasoning_effort"] = settings.reasoning_effort
+        if settings.max_output_tokens:
+            document["max_tokens"] = settings.max_output_tokens
+        payload = json.dumps(document).encode("utf-8")
         request = urllib.request.Request(
             f"{self.base_url.rstrip('/')}/chat/completions",
             data=payload,
@@ -463,15 +541,56 @@ class HttpRepairLLM(LLM):
                 "Authorization": f"Bearer {self.api_key}",
             },
         )
+        started = time.monotonic()
+
+        def meter(ok: bool, body: dict | None = None, text: str = "") -> None:
+            usage = (body or {}).get("usage") or {}
+            prompt_tokens = usage.get("prompt_tokens")
+            total = usage.get("total_tokens")
+            completion = usage.get("completion_tokens")
+            estimated = prompt_tokens is None
+            if estimated:
+                prompt_tokens = (len(system) + len(user)) // 4
+                completion = len(text) // 4
+            elif total is not None:
+                # The total includes any reasoning tokens the provider bills
+                # for and does not itemise, so it is the honest output count.
+                completion = max(int(completion or 0), int(total) - int(prompt_tokens))
+            METER.record(
+                LlmCall(
+                    stage=stage,
+                    model=self.model,
+                    case_name=case_name,
+                    prompt_tokens=int(prompt_tokens or 0),
+                    completion_tokens=int(completion or 0),
+                    latency_ms=int((time.monotonic() - started) * 1000),
+                    ok=ok,
+                    estimated=estimated,
+                )
+            )
+
+        body = None
+        for attempt in range(self.max_retries + 1):
+            try:
+                with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                    body = json.loads(response.read().decode("utf-8"))
+                break
+            except urllib.error.HTTPError as exc:
+                if exc.code in (429, 503) and attempt < self.max_retries:
+                    time.sleep(min(60, 4 * 2**attempt))
+                    continue
+                meter(False)
+                raise RuntimeError(f"LLM request failed: HTTP {exc.code}") from exc
+            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+                meter(False)
+                raise RuntimeError(f"LLM request failed: {exc}") from exc
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                body = json.loads(response.read().decode("utf-8"))
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-            raise RuntimeError(f"LLM request failed: {exc}") from exc
-        try:
-            return body["choices"][0]["message"]["content"]
-        except (KeyError, IndexError) as exc:  # pragma: no cover
+            text = body["choices"][0]["message"]["content"] or ""
+        except (KeyError, IndexError, TypeError) as exc:  # pragma: no cover
+            meter(False, body)
             raise RuntimeError(f"Unexpected LLM response shape: {body}") from exc
+        meter(True, body, text)
+        return text
 
 
 def _extract_tagged(prompt: str, tag: str) -> str:
@@ -479,10 +598,28 @@ def _extract_tagged(prompt: str, tag: str) -> str:
     return match.group(1).strip() if match else ""
 
 
+def build_model(cfg: LlmConfig | None = None) -> "HttpRepairLLM | None":
+    """The language model, or None when none is configured.
+
+    Used by the tiers that only make sense with a real model (semantic repair
+    and dataset proposal), which simply do not run without one.
+    """
+    cfg = cfg or llm_config()
+    if not cfg.has_model:
+        return None
+    return HttpRepairLLM(
+        model=cfg.model,
+        api_key=cfg.api_key,
+        base_url=cfg.base_url or "https://api.groq.com/openai/v1",
+    )
+
+
 def build_llm(cfg: LlmConfig | None = None) -> LLM:
     cfg = cfg or llm_config()
     if cfg.provider in ("mock", "rules", ""):
         return RuleRepairLLM()
+    if cfg.provider == "tiered":
+        return build_model(cfg) or RuleRepairLLM()
     if cfg.provider in ("http", "gemini"):
         if not cfg.api_key:
             raise RuntimeError(
@@ -496,5 +633,5 @@ def build_llm(cfg: LlmConfig | None = None) -> LLM:
             base_url=cfg.base_url or "https://api.groq.com/openai/v1",
         )
     raise RuntimeError(
-        f"Unknown LLM_PROVIDER {cfg.provider!r} (use 'mock', 'gemini' or 'http')"
+        f"Unknown LLM_PROVIDER {cfg.provider!r} (use 'tiered', 'mock', 'gemini' or 'http')"
     )

@@ -178,6 +178,121 @@ class SourceEngine(Protocol):
     def close(self) -> None: ...
 
 
+class Namespaced:
+    """Load each dataset once, into a namespace of its own, and switch to it.
+
+    ``load`` drops, creates and fills the tables in the engine's home
+    namespace, every time it is called. That is the right contract for a
+    single proof and the wrong cost for a run: 38 statements over six datasets
+    was 228 full reloads of each engine, all of them reloading rows the engine
+    had held a moment earlier.
+
+    ``use`` is the same promise -- "after this call the engine holds exactly
+    this dataset" -- kept by switching to a namespace named after the dataset's
+    content hash, and loading it only the first time it is asked for. The
+    namespaces belong to the process and are dropped by ``close``.
+
+    A second reason matters more than speed. A dataset generated for a schema
+    discovered on a customer's source engine must never be loaded over the
+    customer's own tables, and a namespace is how it is kept away from them.
+    """
+
+    #: More than this and the least recently created namespace is dropped.
+    MAX_NAMESPACES = 96
+
+    def _spaces(self) -> dict[str, str]:
+        return self.__dict__.setdefault("_ns", {})
+
+    def use(self, variant: Variant) -> None:
+        spaces = self._spaces()
+        key = variant.fingerprint
+        namespace = spaces.get(key)
+        if namespace is not None:
+            self._ns_switch(namespace)
+            return
+        if len(spaces) >= self.MAX_NAMESPACES:
+            oldest = next(iter(spaces))
+            self._ns_switch(None)
+            self._ns_drop(spaces.pop(oldest))
+        namespace = f"ppv_{key[:12]}"
+        self._ns_create(namespace)
+        self._ns_switch(namespace)
+        try:
+            self._load_here(variant)
+        except Exception:
+            # A dataset the engine refuses must not leave half a namespace
+            # behind: nothing would ever know to drop it.
+            try:
+                self._ns_switch(None)
+                self._ns_drop(namespace)
+            except Exception:  # pragma: no cover - cleanup only
+                pass
+            raise
+        spaces[key] = namespace
+
+    def home(self) -> None:
+        """Back to the namespace the engine was opened on."""
+        self._ns_switch(None)
+
+    def drop_namespaces(self) -> None:
+        spaces = self._spaces()
+        try:
+            self._ns_switch(None)
+        except Exception:  # pragma: no cover - connection already gone
+            return
+        for namespace in list(spaces.values()):
+            try:
+                self._ns_drop(namespace)
+            except Exception:  # pragma: no cover - cleanup must never raise
+                pass
+        spaces.clear()
+
+    @property
+    def loads(self) -> int:
+        """How many datasets this engine has actually had to load."""
+        return self.__dict__.get("_loads", 0)
+
+    def _count_load(self) -> None:
+        self.__dict__["_loads"] = self.loads + 1
+
+
+def activate(engine: Any, variant: Variant) -> None:
+    """Make ``engine`` hold ``variant``, as cheaply as the engine allows."""
+    use = getattr(engine, "use", None)
+    if callable(use):
+        use(variant)
+    else:
+        engine.load(variant)
+
+
+def go_home(engine: Any) -> None:
+    home = getattr(engine, "home", None)
+    if callable(home):
+        try:
+            home()
+        except Exception:  # pragma: no cover - never mask the verdict
+            pass
+
+
+def portable_ddl(ddl: str, dialect: str) -> str:
+    """Adapt the shared DDL vocabulary to one engine's spelling of it.
+
+    The fixture and every generated schema are written in one small portable
+    vocabulary (INTEGER, BIGINT, DECIMAL, DOUBLE, VARCHAR, BOOLEAN, DATE,
+    TIMESTAMP). Each engine needs at most a type renamed.
+    """
+    if dialect == "mysql":
+        return _mysql_ddl(ddl)
+    if dialect == "tsql":
+        ddl = re.sub(r"\bBOOLEAN\b", "BIT", ddl, flags=re.IGNORECASE)
+        ddl = re.sub(r"\bTIMESTAMP\b", "DATETIME2(0)", ddl, flags=re.IGNORECASE)
+        ddl = re.sub(r"\bDOUBLE\b", "FLOAT", ddl, flags=re.IGNORECASE)
+        # NVARCHAR, so the accent datasets are stored as written rather than
+        # squeezed through the server's single-byte code page.
+        return re.sub(r"\bVARCHAR\b", "NVARCHAR", ddl, flags=re.IGNORECASE)
+    return ddl
+
+
 def unfaithful(source: Any, sql: str) -> str:
     """Why ``source`` cannot be trusted about ``sql``, or "" if it can.
 
@@ -190,7 +305,7 @@ def unfaithful(source: Any, sql: str) -> str:
     return declare(sql) if callable(declare) else ""
 
 
-class DuckDbSource:
+class DuckDbSource(Namespaced):
     """Embedded PostgreSQL stand-in, so judges need no server.
 
     DuckDB implements PostgreSQL's dialect closely and is the zero-setup default.
@@ -252,14 +367,29 @@ class DuckDbSource:
         return ""
 
     def load(self, variant: Variant) -> None:
-        for table in FIXTURE_TABLES:
+        self.home()
+        self._load_here(variant)
+
+    def _load_here(self, variant: Variant) -> None:
+        self._count_load()
+        for table in variant.schema_tables:
             self._conn.execute(f"DROP TABLE IF EXISTS {table}")
-        for ddl in FIXTURE_DDL:
+        for ddl in variant.schema_ddl:
             self._conn.execute(ddl)
-        for table in FIXTURE_TABLES:
+        for table in variant.schema_tables:
             for row in variant.rows.get(table, []):
                 placeholders = ", ".join("?" for _ in row)
                 self._conn.execute(f"INSERT INTO {table} VALUES ({placeholders})", list(row))
+
+    def _ns_create(self, namespace: str) -> None:
+        self._conn.execute(f"DROP SCHEMA IF EXISTS {namespace} CASCADE")
+        self._conn.execute(f"CREATE SCHEMA {namespace}")
+
+    def _ns_switch(self, namespace: str | None) -> None:
+        self._conn.execute(f"USE memory.{namespace or 'main'}")
+
+    def _ns_drop(self, namespace: str) -> None:
+        self._conn.execute(f"DROP SCHEMA IF EXISTS {namespace} CASCADE")
 
     def run(self, sql: str) -> ResultSet:
         cur = self._conn.execute(sql)
@@ -268,13 +398,14 @@ class DuckDbSource:
         return ResultSet(rows=rows, columns=columns)
 
     def close(self) -> None:
+        self.drop_namespaces()
         try:
             self._conn.close()
         except Exception:  # pragma: no cover
             pass
 
 
-class PostgresSource:
+class PostgresSource(Namespaced):
     """A real PostgreSQL, when one is reachable.
 
     Preferred over :class:`DuckDbSource` for exactly the reasons that class
@@ -305,12 +436,17 @@ class PostgresSource:
         )
 
     def load(self, variant: Variant) -> None:
+        self.home()
+        self._load_here(variant)
+
+    def _load_here(self, variant: Variant) -> None:
+        self._count_load()
         with self._conn.cursor() as cur:
-            for table in FIXTURE_TABLES:
+            for table in variant.schema_tables:
                 cur.execute(f"DROP TABLE IF EXISTS {table}")
-            for ddl in FIXTURE_DDL:
+            for ddl in variant.schema_ddl:
                 cur.execute(ddl)
-            for table in FIXTURE_TABLES:
+            for table in variant.schema_tables:
                 rows = variant.rows.get(table, [])
                 if not rows:
                     continue
@@ -318,6 +454,19 @@ class PostgresSource:
                 cur.executemany(
                     f"INSERT INTO {table} VALUES ({placeholders})", [list(r) for r in rows]
                 )
+
+    def _ns_create(self, namespace: str) -> None:
+        with self._conn.cursor() as cur:
+            cur.execute(f"DROP SCHEMA IF EXISTS {namespace} CASCADE")
+            cur.execute(f"CREATE SCHEMA {namespace}")
+
+    def _ns_switch(self, namespace: str | None) -> None:
+        with self._conn.cursor() as cur:
+            cur.execute(f"SET search_path TO {namespace or 'public'}")
+
+    def _ns_drop(self, namespace: str) -> None:
+        with self._conn.cursor() as cur:
+            cur.execute(f"DROP SCHEMA IF EXISTS {namespace} CASCADE")
 
     def run(self, sql: str) -> ResultSet:
         with self._conn.cursor() as cur:
@@ -327,13 +476,14 @@ class PostgresSource:
         return ResultSet(rows=rows, columns=columns)
 
     def close(self) -> None:
+        self.drop_namespaces()
         try:
             self._conn.close()
         except Exception:  # pragma: no cover
             pass
 
 
-class MySqlSource:
+class MySqlSource(Namespaced):
     """A real MySQL, because MySQL semantics live in the engine.
 
     The two divergences the corpus cares about cannot be emulated by a
@@ -368,6 +518,7 @@ class MySqlSource:
 
         cfg = mysql_config()
         self._pymysql = pymysql
+        self._home = database or cfg.database
         self._conn = pymysql.connect(
             host=host or cfg.host,
             port=int(port or cfg.port),
@@ -379,12 +530,17 @@ class MySqlSource:
         )
 
     def load(self, variant: Variant) -> None:
+        self.home()
+        self._load_here(variant)
+
+    def _load_here(self, variant: Variant) -> None:
+        self._count_load()
         with self._conn.cursor() as cur:
-            for table in FIXTURE_TABLES:
+            for table in variant.schema_tables:
                 cur.execute(f"DROP TABLE IF EXISTS {table}")
-            for ddl in FIXTURE_DDL:
+            for ddl in variant.schema_ddl:
                 cur.execute(_mysql_ddl(ddl))
-            for table in FIXTURE_TABLES:
+            for table in variant.schema_tables:
                 rows = variant.rows.get(table, [])
                 if not rows:
                     continue
@@ -392,6 +548,19 @@ class MySqlSource:
                 cur.executemany(
                     f"INSERT INTO {table} VALUES ({placeholders})", [list(r) for r in rows]
                 )
+
+    def _ns_create(self, namespace: str) -> None:
+        with self._conn.cursor() as cur:
+            cur.execute(f"DROP DATABASE IF EXISTS {namespace}")
+            cur.execute(f"CREATE DATABASE {namespace}")
+
+    def _ns_switch(self, namespace: str | None) -> None:
+        with self._conn.cursor() as cur:
+            cur.execute(f"USE {namespace or self._home}")
+
+    def _ns_drop(self, namespace: str) -> None:
+        with self._conn.cursor() as cur:
+            cur.execute(f"DROP DATABASE IF EXISTS {namespace}")
 
     def run(self, sql: str) -> ResultSet:
         with self._conn.cursor() as cur:
@@ -401,13 +570,16 @@ class MySqlSource:
         return ResultSet(rows=rows, columns=columns)
 
     def close(self) -> None:
+        self.drop_namespaces()
         try:
             self._conn.close()
         except Exception:  # pragma: no cover
             pass
 
 
-def available_sources(*, mysql: bool = True, real_postgres: bool = True) -> dict[str, SourceEngine]:
+def available_sources(
+    *, mysql: bool = True, real_postgres: bool = True, sqlserver: bool = True, sqlite: bool = True
+) -> dict[str, SourceEngine]:
     """The best source engine reachable for each dialect.
 
     A real server is preferred over a stand-in, and an engine that cannot be
@@ -435,6 +607,22 @@ def available_sources(*, mysql: bool = True, real_postgres: bool = True) -> dict
             sources["mysql"] = MySqlSource()
         except Exception:
             pass
+    # Imported here because src.engines imports this module for the protocol.
+    from .engines import SqliteSource, SqlServerSource
+
+    if sqlserver:
+        # Like MySQL, no fallback: nothing else has SQL Server's collation,
+        # its '+' or its LEN, so a missing server means INCONCLUSIVE.
+        try:
+            sources["tsql"] = SqlServerSource()
+        except Exception:
+            pass
+    if sqlite:
+        # The real engine, in process. It needs no server and no stand-in.
+        try:
+            sources["sqlite"] = SqliteSource()
+        except Exception:  # pragma: no cover - sqlite3 ships with Python
+            pass
     return sources
 
 
@@ -449,8 +637,13 @@ def _mysql_ddl(ddl: str) -> str:
     return re.sub(r"\bTIMESTAMP\b", "DATETIME", ddl, flags=re.IGNORECASE)
 
 
-class Db2Target:
-    """The Db2 side of the comparison, in a throwaway fixture schema."""
+class Db2Target(Namespaced):
+    """The Db2 side of the comparison, in throwaway fixture schemas.
+
+    ``PPTEST`` is home. Each dataset loaded through ``use`` gets a schema of
+    its own (``PPV_<hash>``), reached with ``SET CURRENT SCHEMA``, which is
+    also what makes unqualified application SQL resolve against it.
+    """
 
     name = "Db2"
 
@@ -461,31 +654,65 @@ class Db2Target:
         db.execute(conn, f"SET CURRENT SCHEMA {FIXTURE_SCHEMA}")
 
     def load(self, variant: Variant) -> None:
-        for table in FIXTURE_TABLES:
+        self.home()
+        self._load_into(FIXTURE_SCHEMA, variant)
+
+    def _load_here(self, variant: Variant) -> None:
+        self._load_into(self.__dict__["_current"], variant)
+
+    def _load_into(self, schema: str, variant: Variant) -> None:
+        self._count_load()
+        for table in variant.schema_tables:
             try:
-                db.execute(self.conn, f"DROP TABLE {FIXTURE_SCHEMA}.{table}")
+                db.execute(self.conn, f"DROP TABLE {schema}.{table}")
             except db.Db2Error:
                 pass
-        for ddl in FIXTURE_DDL:
-            db.execute(self.conn, _qualify(ddl))
-        for table in FIXTURE_TABLES:
+        for ddl in variant.schema_ddl:
+            db.execute(self.conn, _qualify(ddl, schema))
+        for table in variant.schema_tables:
             rows = variant.rows.get(table, [])
             if not rows:
                 continue
             placeholders = ", ".join("?" for _ in rows[0])
-            sql = f"INSERT INTO {FIXTURE_SCHEMA}.{table} VALUES ({placeholders})"
+            sql = f"INSERT INTO {schema}.{table} VALUES ({placeholders})"
             for row in rows:
                 db.execute(self.conn, sql, row)
+
+    def _ns_create(self, namespace: str) -> None:
+        # IMPLICIT_SCHEMA creates the schema with its first table, so there is
+        # nothing to create here; what may exist is a leftover from a run that
+        # was killed before it could clean up.
+        self._ns_drop(namespace)
+
+    def _ns_switch(self, namespace: str | None) -> None:
+        schema = (namespace or FIXTURE_SCHEMA).upper()
+        self.__dict__["_current"] = schema
+        db.execute(self.conn, f"SET CURRENT SCHEMA {schema}")
+
+    def _ns_drop(self, namespace: str) -> None:
+        schema = namespace.upper()
+        for (table,) in db.fetch_all(
+            self.conn,
+            "SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'T'",
+            (schema,),
+        ):
+            try:
+                db.execute(self.conn, f'DROP TABLE {schema}."{str(table).strip()}"')
+            except db.Db2Error:  # pragma: no cover - cleanup only
+                pass
 
     def run(self, sql: str) -> ResultSet:
         rows, columns = db.fetch_described(self.conn, sql)
         return ResultSet(rows=rows, columns=columns)
 
+    def close(self) -> None:
+        self.drop_namespaces()
 
-def _qualify(ddl: str) -> str:
-    """Point fixture DDL at the throwaway schema."""
+
+def _qualify(ddl: str, schema: str = FIXTURE_SCHEMA) -> str:
+    """Point fixture DDL at a throwaway schema."""
     return re.sub(
-        r"CREATE TABLE (\w+)", lambda m: f"CREATE TABLE {FIXTURE_SCHEMA}.{m.group(1)}", ddl, count=1
+        r"CREATE TABLE (\w+)", lambda m: f"CREATE TABLE {schema}.{m.group(1)}", ddl, count=1
     )
 
 
@@ -531,6 +758,10 @@ class InstanceResult:
     db2_columns: tuple[str, ...] = ()
     #: Why the two sides differ, when they do: 'rows' or 'columns'.
     difference: str = ""
+    #: Which dataset produced this instance, so its yield can be logged.
+    origin: str = "BUILTIN"
+    strategy: str = ""
+    fingerprint: str = ""
 
     @property
     def inconclusive(self) -> bool:
@@ -720,7 +951,7 @@ def _is_order_unstable(
     if original is None:  # pragma: no cover - witness always comes from variants
         return False
     try:
-        source.load(original.shuffled())
+        activate(source, original.shuffled())
         again = canon_rows(source.run(source_sql).rows, ordered=ordered)
     except Exception:  # pragma: no cover - probe must never mask the verdict
         return False
@@ -783,8 +1014,8 @@ def prove_semantics(
         )
 
     for variant in variants:
-        source.load(variant)
-        target.load(variant)
+        activate(source, variant)
+        activate(target, variant)
 
         try:
             source_result = source.run(source_sql)
@@ -848,6 +1079,11 @@ def prove_semantics(
                 difference=difference,
             )
         )
+
+    for result, variant in zip(results, variants):
+        result.origin = variant.origin
+        result.strategy = variant.strategy or variant.name
+        result.fingerprint = variant.fingerprint
 
     conclusive = [r for r in results if not r.inconclusive]
     disagreements = [r for r in conclusive if not r.agreed]

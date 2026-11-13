@@ -266,7 +266,9 @@ def test_no_semantic_rule_ever_crosses_dialects():
             assert rule.dialect == "mysql", rule.name
         if rule.name in postgres_only:
             assert rule.dialect == "postgres", rule.name
-    assert {r.dialect for r in SEMANTIC_RULES} <= {"postgres", "mysql"}
+    assert {r.dialect for r in SEMANTIC_RULES} <= {"postgres", "mysql", "tsql", "sqlite"}
+    by_name = {r.name: r.dialect for r in SEMANTIC_RULES if r.name.startswith("sqlserver-")}
+    assert set(by_name.values()) <= {"tsql"}
 
 
 def test_every_semantic_rule_is_a_no_op_on_sql_it_does_not_match():

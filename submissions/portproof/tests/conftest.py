@@ -6,10 +6,17 @@ so ``pytest -q`` passes on a machine with no container running.
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
 import pytest
+
+# The suite must not depend on, or spend, anybody's API key. Whatever .env says,
+# tests run on the deterministic tiers; the tests that exercise the model tiers
+# bring a scripted model of their own. Set before src.config is imported, and
+# dotenv does not override what is already in the environment.
+os.environ["LLM_PROVIDER"] = os.environ.get("PORTPROOF_TEST_LLM_PROVIDER", "mock")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
