@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Khata AI - Smart Udhaar Ledger",
+    "slug": "khata-ai",
+    "short_description": "Type a Hinglish sentence like 'Sharma ji ne 200 ka udhaar liya' and Khata AI saves a structured credit-ledger entry in IBM Db2, tracks pending dues with SQL and writes polite reminders.",
+    "category": "AI / Text-to-Structured-Data / Small Business",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/yadavashiva97-sun/IBM_Db2_TechX_Project_Submission"
+  },
+  "team": {
+    "name": "Solo - Shiva Yadav",
+    "members": [
+      {
+        "name": "Shiva Yadav",
+        "github": "yadavashiva97-sun",
+        "email": "shiva.yadav2025@glbajajgroup.org",
+        "role": "Backend / AI Developer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition (Docker)",
+    "connector": "ibm_db / ibm_db_dbi",
+    "features_used": [
+      "Relational Tables",
+      "Identity Columns",
+      "Foreign Keys",
+      "SQL Aggregation (SUM / CASE / GROUP BY / HAVING)",
+      "Date Arithmetic (DAYS)"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["Python"],
+    "frameworks": ["LangChain", "Streamlit"],
+    "ai_models": ["Google Gemini"]
+  }
+}

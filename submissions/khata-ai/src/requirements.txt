@@ -1,0 +1,5 @@
+ibm_db
+python-dotenv
+pydantic
+langchain-core
+langchain-google-genai
