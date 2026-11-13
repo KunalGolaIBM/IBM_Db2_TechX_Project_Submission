@@ -173,6 +173,7 @@ For details on scoring and penalty triggers, see [Judging Criteria](docs/judging
 
 ## Documentation Index
 
+- 🏗️ [Repository Architecture & MVP](docs/architecture.md)
 - 📖 [Submission Guide](docs/submission-guide.md)
 - ⚖️ [Judging Criteria](docs/judging-criteria.md)
 - 🛠️ [Db2 Setup & Connector Guide](docs/db2-setup-guide.md)

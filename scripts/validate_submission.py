@@ -123,11 +123,11 @@ def main():
         errors = check_directory(target)
         if errors:
             total_errors += len(errors)
-            print(f"  ❌ FAILED with {len(errors)} error(s):")
+            print(f"  [FAIL] with {len(errors)} error(s):")
             for err in errors:
                 print(f"    - {err}")
         else:
-            print("  ✅ PASSED all validation checks.")
+            print("  [PASS] all validation checks.")
 
     print("\n" + "=" * 50)
     if total_errors > 0:
