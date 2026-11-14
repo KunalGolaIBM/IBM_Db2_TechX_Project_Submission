@@ -42,7 +42,7 @@ jobs:
         run: python -m pytest -q -rs
 
   db2:
-    name: Live IBM Db2 - full suite, 28 proofs, guardrail fuzz
+    name: Live IBM Db2 - full suite, 29 proofs, guardrail fuzz
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
