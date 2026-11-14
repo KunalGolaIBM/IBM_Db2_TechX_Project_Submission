@@ -41,6 +41,14 @@ flowchart TB
 
 ![Red-team attack console: 24/24 blocked](docs/screenshots/red-team-live.gif)
 
+### What's new after the pitch
+- **Hotel-chain isolation enforced by Db2:** two demo hotels, a hotel switcher, and a **Hotel group** tab where the same query run as the AI returns only its own hotel; Db2 rejects its actions on the other one ([details](#ibm-db2-integration)).
+- **Measured at chain scale:** 1,000,000 reservations across 40 hotels; one hotel's agent sees 25,000 and gets its KPIs in 135 ms ([benchmark](docs/scale_benchmark.md)).
+- **Contributed upstream to IBM:** fixes to IBM's Db2 SQLGlot dialect, [IBM/db2-sqlglot-plugin#30](https://github.com/IBM/db2-sqlglot-plugin/pull/30).
+- **CI on every push and daily** against a fresh IBM Db2 container (badge above); date-dependent tests fixed.
+
+![Hotel group: the AI's Db2 login sees 1 of 2 hotels and its ticket for a Kochi room is rejected](docs/screenshots/17-hotel-group.png)
+
 ### 30-second proof: `python src/verify.py`
 ![Proofs tab: every claim checked live against Db2](docs/screenshots/proofs-live.gif)
 
