@@ -47,7 +47,7 @@ flowchart TB
 One command checks every headline claim against the live Db2, with no LLM key, and rolls back anything it writes: Db2 12.1 and native `VECTOR` columns, vector search, IBM `langchain-db2`, temporal tables, the least-privilege agent, RCAC mask and row permission, the `EXPLAIN` cost guard, the **SQLGlot syntax-tree guard**, **bitemporal** `BUSINESS_TIME` + `SYSTEM_TIME` promotions, a **materialized query table**, the change feed, the SQL PL and JSON guardrails, guarded apply + rollback, **concurrent approvals serialised by Db2 row locks**, earned autonomy decided inside Db2, CHECK constraints, the hash-chain trigger, the tamper-evident audit chain, an **external anchor that catches a fully rebuilt ledger**, the red team and the evaluation. It also fuzzes the guardrails with 1,000 random proposals. Expected output ends with **`28/28 checks passed`** in about 10 seconds. The same checks run live, one by one, in the app's **Proofs** tab. With Docker: `docker compose exec app python src/verify.py`.
 
 ### What building this taught us about Db2 (measured)
-Hardening an AI agent against Db2, and then running it at 1,000,000 reservations, surfaced six behaviours anyone putting an LLM on Db2 will hit. Each was measured, fixed and pinned by a test ([details and reproduction](docs/db2_findings.md)):
+Hardening an AI agent against Db2, and then running it at 1,000,000 reservations, surfaced seven behaviours anyone putting an LLM on Db2 will hit. Each was measured, fixed and pinned by a test ([details and reproduction](docs/db2_findings.md)):
 
 | Finding | Measured | Fix + proof |
 |---|---|---|
@@ -57,6 +57,9 @@ Hardening an AI agent against Db2, and then running it at 1,000,000 reservations
 | The Db2 Community container **won't restart**: `DBI20187E` on `fencedid` | a restart loop after a WSL reboot | `scripts/fix_db2_restart.sh` |
 | A fixed `EXPLAIN` cost limit **does not scale with the data**; the MQT is what keeps the agent inside it | at **1,000,000 reservations** the agent's "occupancy tonight" query costs **142,782** timerons on the live view (refused) but **71** on `MQT_DAILY_KPIS`, which is also **~500× faster** for 30 nights of history (0.4 ms vs 221 ms) | [scale benchmark](docs/scale_benchmark.md), `python src/benchmark_scale.py` |
 | A SQL PL **"read the status, then act"** procedure is not serialised under cursor stability, so **two managers could apply the same approved action** | 4 simultaneous approvals: **2 applied it**, the rate was written twice | lock the action row before reading it; 6-thread and 4-thread race tests + `verify.py` check 21 |
+| IBM's Db2 SQLGlot dialect (`db2-sqlglot-dialect` 1.1) **silently changes the meaning of common Db2 date SQL**: `SELECT CURRENT DATE` becomes `SELECT CURRENT AS DATE`, `d + 3 DAYS` becomes `d + 3 AS DAYS`, and `FOR SYSTEM_TIME` is written as invalid `FOR TIMESTAMP` | only **7 of 16** real agent queries parsed natively | pinned rewrites in `sqlguard.py`; **fixed upstream** in [IBM/db2-sqlglot-plugin#30](https://github.com/IBM/db2-sqlglot-plugin/pull/30) (16/16 parse) |
+
+**Upstream contribution.** The last finding is fixed at the source: our pull request to IBM's Db2 dialect for SQLGlot, [IBM/db2-sqlglot-plugin#30](https://github.com/IBM/db2-sqlglot-plugin/pull/30), makes Db2 special registers, labeled durations and `FOR SYSTEM_TIME` / `FOR BUSINESS_TIME` queries parse correctly, with tests.
 
 ### Measured at 1,000,000 reservations
 `python src/benchmark_scale.py` rebuilds the same schema in a separate throwaway schema, loads a 12,000-room hotel group with **1,000,000 reservations** inside Db2 (41 s), and measures it ([full results](docs/scale_benchmark.md)):
