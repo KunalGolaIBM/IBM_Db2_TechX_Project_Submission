@@ -68,6 +68,13 @@ jobs:
             echo "::add-mask::$p"
             echo "$v=$p" >> "$GITHUB_ENV"
           done
+      - name: Pull the IBM Db2 image (retries if icr.io times out)
+        run: |
+          for i in 1 2 3 4 5; do
+            docker pull icr.io/db2_community/db2:latest && exit 0
+            echo "pull failed (attempt $i), retrying in $((i * 20)) s"; sleep $((i * 20))
+          done
+          exit 1
       - name: Start IBM Db2 Community Edition (scripts/run_db2.sh, same as the README)
         run: |
           printf 'DB2_PORT=%s\nDB2_DATABASE=%s\nDB2_USER=%s\nDB2_PASSWORD=%s\nDB2_AGENT_USER=%s\nDB2_AGENT_PASSWORD=%s\n' \
