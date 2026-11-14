@@ -55,22 +55,25 @@ Hardening an AI agent against Db2, and then running it at 1,000,000 reservations
 | An `EXPLAIN` cost guard for AI-written SQL is only as good as the **statistics** | a normal KPI query: **177,163** timerons on fresh tables vs **1,876** after `RUNSTATS` (94×), so the guard refused legitimate questions | `RUNSTATS` at setup; `verify.py` check 15 |
 | `JSON_VALUE ... RETURNING VARCHAR(n)` **raises `SQL0137N`** on an over-long value instead of failing cleanly | found by our guardrail fuzzer on its first run (`"PENTHOUSE"` into `VARCHAR(8)`) | wide variables + validation; **10,000/10,000** fuzzed decisions now match the oracle |
 | The Db2 Community container **won't restart**: `DBI20187E` on `fencedid` | a restart loop after a WSL reboot | `scripts/fix_db2_restart.sh` |
-| A fixed `EXPLAIN` cost limit **does not scale with the data**; the MQT is what keeps the agent inside it | at **1,000,000 reservations** the agent's "occupancy tonight" query costs **142,782** timerons on the live view (refused) but **71** on `MQT_DAILY_KPIS`, which is also **~500× faster** for 30 nights of history (0.4 ms vs 221 ms) | [scale benchmark](docs/scale_benchmark.md), `python src/benchmark_scale.py` |
+| A fixed `EXPLAIN` cost limit **does not scale with the data**; the MQT is what keeps the agent inside it | at **1,000,000 reservations** in a 40-hotel group the agent's "occupancy tonight" query costs **809,270** timerons on the live view (refused) but **1,298** on `MQT_DAILY_KPIS`, which is also **362× faster** for 30 nights of history (4.6 ms vs 1,676 ms) | [scale benchmark](docs/scale_benchmark.md), `python src/benchmark_scale.py` |
 | A SQL PL **"read the status, then act"** procedure is not serialised under cursor stability, so **two managers could apply the same approved action** | 4 simultaneous approvals: **2 applied it**, the rate was written twice | lock the action row before reading it; 6-thread and 4-thread race tests + `verify.py` check 22 |
 | IBM's Db2 SQLGlot dialect (`db2-sqlglot-dialect` 1.1) **silently changes the meaning of common Db2 date SQL**: `SELECT CURRENT DATE` becomes `SELECT CURRENT AS DATE`, `d + 3 DAYS` becomes `d + 3 AS DAYS`, and `FOR SYSTEM_TIME` is written as invalid `FOR TIMESTAMP` | only **7 of 16** real agent queries parsed natively | pinned rewrites in `sqlguard.py`; **fixed upstream** in [IBM/db2-sqlglot-plugin#30](https://github.com/IBM/db2-sqlglot-plugin/pull/30) (16/16 parse) |
 
 **Upstream contribution.** The last finding is fixed at the source: our pull request to IBM's Db2 dialect for SQLGlot, [IBM/db2-sqlglot-plugin#30](https://github.com/IBM/db2-sqlglot-plugin/pull/30), makes Db2 special registers, labeled durations and `FOR SYSTEM_TIME` / `FOR BUSINESS_TIME` queries parse correctly, with tests.
 
 ### Measured at 1,000,000 reservations
-`python src/benchmark_scale.py` rebuilds the same schema in a separate throwaway schema, loads a 12,000-room hotel group with **1,000,000 reservations** inside Db2 (41 s), and measures it ([full results](docs/scale_benchmark.md)):
+`python src/benchmark_scale.py` rebuilds the same schema in a separate throwaway schema, loads a **group of 40 hotels** (12,000 rooms) with **1,000,000 reservations** inside Db2 (46 s), measures it, then switches on the property row permissions and connects as an agent scoped to one hotel ([full results](docs/scale_benchmark.md)):
 
-| At 1M reservations | Measured |
+| At 1M reservations, 40 hotels | Measured |
 |---|---|
-| 30 nights of KPIs: live view vs MQT | 221 ms vs **0.4 ms** (~500× faster) |
-| Time travel `AS OF` before a 38,512-row change | **19 ms** |
-| Change feed pairing 38,512 changes from history | 210 ms |
-| Verify a 50,000-step SHA-256 audit chain inside Db2 | **304 ms** (intact) |
+| 30 nights of KPIs: live view vs MQT | 1,676 ms vs **4.6 ms** (362× faster) |
+| Time travel `AS OF` before a 38,512-row change | **26 ms** |
+| Change feed pairing 38,512 changes from history | 230 ms |
+| Verify a 50,000-step SHA-256 audit chain inside Db2 | **306 ms** (intact) |
 | `EXPLAIN` guard on a runaway self cross join | 79 billion timerons, refused before it runs |
+| Reservations one hotel's agent can see (RCAC) | **25,000 of 1,000,000**, 0 rows of the other 39 hotels |
+| That agent's 30-night KPI history | **135 ms**, identical to the manager's figures for that hotel (48 ms with a hand-written `WHERE`) |
+| Manager's group-wide KPI history, before → after RCAC | 1.8 → 5.2 s, so group-wide history should come from the MQT (4.6 ms) |
 
 ### 5-minute judge tour
 After `docker compose up -d` (or `bash scripts/quickstart.sh`), open http://localhost:8501. Steps 1–4 need **no API key**.
