@@ -123,6 +123,18 @@ def test_db2_workload_management_stops_runaway_and_bulk_queries_from_the_agent_o
     assert r["violations_logged"] >= 2  # Db2's own event monitor recorded both stops
 
 
+def test_lbac_hides_restricted_guest_notes_from_the_agent():
+    from hotelops.lbac import lbac_check
+
+    r = lbac_check()
+    assert set(r["manager"]) == {"PUBLIC", "INTERNAL", "RESTRICTED"}
+    assert set(r["agent"]) == {"PUBLIC", "INTERNAL"}  # Db2 drops RESTRICTED rows for the agent's read label
+    assert len(r["vip_agent"]) == 2 and any("allergy" in n for n in r["vip_manager"])
+    assert not any("allergy" in n for n in r["vip_agent"])
+    assert r["agent_opted_out_notes"] == 0 < r["manager_opted_out_notes"]  # RCAC consent rule on top of LBAC
+    assert not r["agent_can_write"]
+
+
 def test_demo_group_has_a_second_hotel_the_agent_cannot_see():
     assert ADMIN.scalar("SELECT COUNT(*) FROM PROPERTIES") == 2
     kochi = ADMIN.scalar("SELECT COUNT(*) FROM RESERVATIONS WHERE PROPERTY_ID = 2")

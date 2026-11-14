@@ -28,6 +28,8 @@ class Db2Settings:
     agent_user: str
     agent_password: str
     security: bool
+    secadm_user: str = "hotelsec"
+    secadm_password: str = ""
 
     def conn_str(self, user: str, password: str) -> str:
         parts = [
@@ -83,6 +85,8 @@ def load_settings() -> Settings:
         agent_user=_env("DB2_AGENT_USER", "opsagent"),
         agent_password=_env("DB2_AGENT_PASSWORD", ""),
         security=_env("DB2_SECURITY", "false").lower() == "true",
+        secadm_user=_env("DB2_SECADM_USER", "hotelsec"),
+        secadm_password=_env("DB2_SECADM_PASSWORD", ""),
     )
     llm = LlmSettings(
         provider=_env("LLM_PROVIDER", "gemini").lower(),

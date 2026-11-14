@@ -14,6 +14,8 @@ docker run -d --name hotelops-db2 --privileged \
   -e BLU=false -e ENABLE_ORACLE_COMPATIBILITY=false -e PERSISTENT_HOME=true \
   -e AGENT_USER="${DB2_AGENT_USER:-opsagent}" \
   -e AGENT_PASSWORD="${DB2_AGENT_PASSWORD:?set DB2_AGENT_PASSWORD in .env}" \
+  -e SECADM_USER="${DB2_SECADM_USER:-hotelsec}" \
+  -e SECADM_PASSWORD="${DB2_SECADM_PASSWORD:-}" \
   -v hotelops_db2data:/database \
   -v "${HERE}/docker/custom:/var/custom" \
   icr.io/db2_community/db2:latest

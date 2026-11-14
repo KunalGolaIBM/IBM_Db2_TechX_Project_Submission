@@ -19,6 +19,8 @@ services:
       PERSISTENT_HOME: "true"
       AGENT_USER: ${DB2_AGENT_USER:-opsagent}
       AGENT_PASSWORD: ${DB2_AGENT_PASSWORD:?set DB2_AGENT_PASSWORD in .env}
+      SECADM_USER: ${DB2_SECADM_USER:-hotelsec}
+      SECADM_PASSWORD: ${DB2_SECADM_PASSWORD:-}
     volumes:
       - db2data:/database
       # scripts in /var/custom run once Db2 setup has completed

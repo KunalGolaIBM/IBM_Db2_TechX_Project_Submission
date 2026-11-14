@@ -56,6 +56,9 @@ def drop_all(db) -> None:
             db.execute(stmt)
         except Db2Error:
             pass
+    from hotelops import lbac
+
+    lbac.teardown(db)  # LBAC objects are database-wide
     remaining = ["MASK GUEST_EMAIL_MASK", "MASK GUEST_PHONE_MASK", "PERMISSION GUEST_CONSENT_ROWS", *DROP_ORDER]
     for _ in range(3):  # a later pass drops what an earlier one could not (e.g. AGENT_SCOPE, used by permissions)
         failed = []
@@ -272,6 +275,13 @@ def main() -> None:
     collect_statistics(db)
     log("Applying role-based security and column masks ...")
     apply_security(db, settings.db2.agent_user)
+    from hotelops import lbac
+
+    if lbac.configured():
+        log(f"Label-based access control: {lbac.setup(db)} guest notes labelled PUBLIC / INTERNAL / RESTRICTED "
+            "(labels created by the separate security administrator)")
+    else:
+        log("  (LBAC skipped: set DB2_SECADM_USER / DB2_SECADM_PASSWORD to enable label-protected guest notes)")
     from sample_runs import load as load_sample_runs
 
     n_runs = load_sample_runs()

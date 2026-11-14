@@ -333,6 +333,20 @@ def adaptive_compression(admin: Db2, agent: Db2) -> str:
             "pages saved (ADMIN_GET_TAB_COMPRESS_INFO)")
 
 
+def label_based_access(admin: Db2, agent: Db2) -> str:
+    from hotelops.lbac import lbac_check
+
+    r = lbac_check()
+    assert r["manager"].get("RESTRICTED", 0) > 0 and "RESTRICTED" not in r["agent"], r
+    assert len(r["vip_manager"]) == 3 and len(r["vip_agent"]) == 2, r
+    assert not any("allergy" in n for n in r["vip_agent"]) and not r["agent_can_write"], r
+    assert r["manager_opted_out_notes"] > 0 and r["agent_opted_out_notes"] == 0, r
+    total_m, total_a = sum(r["manager"].values()), sum(r["agent"].values())
+    return (f"guest notes carry Db2 security labels: the manager reads {total_m} (incl. "
+            f"{r['manager']['RESTRICTED']} RESTRICTED), the AI login {total_a} with no RESTRICTED note (the VIP's "
+            "allergy note is invisible to it) and cannot write; RCAC also hides opted-out guests' notes")
+
+
 def materialized_view(admin: Db2, agent: Db2) -> str:
     kind = admin.scalar("SELECT TYPE FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TABNAME = 'MQT_DAILY_KPIS'",
                         (SCHEMA,))
@@ -483,7 +497,8 @@ CHECKS: list[tuple[str, str, Callable[[Db2, Db2], str]]] = [
     ("Governance", "External anchor catches a rebuilt ledger", external_anchor),
     ("Governance", "Red-team scoreboard", red_team),
     ("AI quality", "Evaluation set", evaluation),
-    ("Db2 integration", "Adaptive row compression", adaptive_compression),  # last, so earlier numbers stay put
+    ("Db2 integration", "Adaptive row compression", adaptive_compression),  # appended, so earlier numbers stay put
+    ("Security", "Label-based access control (LBAC) on guest notes", label_based_access),
 ]
 
 

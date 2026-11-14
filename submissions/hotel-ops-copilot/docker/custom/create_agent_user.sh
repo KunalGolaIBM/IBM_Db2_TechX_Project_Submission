@@ -15,3 +15,11 @@ if ! id "${AGENT_USER}" >/dev/null 2>&1; then
 fi
 echo "${AGENT_USER}:${AGENT_PASSWORD}" | chpasswd
 echo "[hotelops] agent user ${AGENT_USER} ready"
+# A separate security administrator for label-based access control (LBAC): Db2 does not let an
+# authorization ID grant security labels to itself, so the instance owner cannot hold both roles.
+SECADM_USER="${SECADM_USER:-hotelsec}"
+if [ -n "${SECADM_PASSWORD}" ]; then
+  id "${SECADM_USER}" >/dev/null 2>&1 || useradd -m -s /bin/bash "${SECADM_USER}"
+  echo "${SECADM_USER}:${SECADM_PASSWORD}" | chpasswd
+  echo "[hotelops] security administrator ${SECADM_USER} ready"
+fi

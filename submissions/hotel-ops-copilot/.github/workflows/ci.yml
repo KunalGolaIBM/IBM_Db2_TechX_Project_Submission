@@ -2,7 +2,7 @@
 #
 #   unit  - lint + every test that needs neither Db2 nor an LLM key (~2 min)
 #   db2   - starts IBM Db2 Community Edition, loads the hotel, then runs the full suite against the live
-#           database, the 31 live proofs (python src/verify.py) and a 1,000-proposal guardrail fuzz
+#           database, the 32 live proofs (python src/verify.py) and a 1,000-proposal guardrail fuzz
 #
 # It also runs every day: the demo data is generated relative to "today", so a daily run proves the
 # checks hold on any date. No API keys are used; the Db2 passwords are random per run and never stored.
@@ -42,7 +42,7 @@ jobs:
         run: python -m pytest -q -rs
 
   db2:
-    name: Live IBM Db2 - full suite, 31 proofs, guardrail fuzz
+    name: Live IBM Db2 - full suite, 32 proofs, guardrail fuzz
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -63,7 +63,7 @@ jobs:
           cache-dependency-path: requirements.txt
       - name: Random Db2 passwords for this run only
         run: |
-          for v in DB2_PASSWORD DB2_AGENT_PASSWORD; do
+          for v in DB2_PASSWORD DB2_AGENT_PASSWORD DB2_SECADM_PASSWORD; do
             p="Ci$(openssl rand -hex 10)"
             echo "::add-mask::$p"
             echo "$v=$p" >> "$GITHUB_ENV"
@@ -77,8 +77,9 @@ jobs:
           exit 1
       - name: Start IBM Db2 Community Edition (scripts/run_db2.sh, same as the README)
         run: |
-          printf 'DB2_PORT=%s\nDB2_DATABASE=%s\nDB2_USER=%s\nDB2_PASSWORD=%s\nDB2_AGENT_USER=%s\nDB2_AGENT_PASSWORD=%s\n' \
-            "$DB2_PORT" "$DB2_DATABASE" "$DB2_USER" "$DB2_PASSWORD" "$DB2_AGENT_USER" "$DB2_AGENT_PASSWORD" > .env
+          printf 'DB2_PORT=%s\nDB2_DATABASE=%s\nDB2_USER=%s\nDB2_PASSWORD=%s\nDB2_AGENT_USER=%s\nDB2_AGENT_PASSWORD=%s\nDB2_SECADM_PASSWORD=%s\n' \
+            "$DB2_PORT" "$DB2_DATABASE" "$DB2_USER" "$DB2_PASSWORD" "$DB2_AGENT_USER" "$DB2_AGENT_PASSWORD" \
+            "$DB2_SECADM_PASSWORD" > .env
           bash scripts/run_db2.sh
       - name: Install dependencies (while Db2 initialises)
         run: pip install -r requirements.txt pytest-cov
@@ -91,7 +92,8 @@ jobs:
         run: |
           for i in $(seq 1 120); do
             if docker logs hotelops-db2 2>&1 | grep -q "Setup has completed"; then
-              docker exec hotelops-db2 id "$DB2_AGENT_USER" && { echo "Db2 ready after ~$((i * 10)) s"; exit 0; }
+              docker exec hotelops-db2 id "$DB2_AGENT_USER" && docker exec hotelops-db2 id hotelsec \
+                && { echo "Db2 ready after ~$((i * 10)) s"; exit 0; }
             fi
             sleep 10
           done
