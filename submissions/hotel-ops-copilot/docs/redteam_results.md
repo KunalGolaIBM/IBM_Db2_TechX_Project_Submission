@@ -1,6 +1,6 @@
 # Red-team scoreboard
 
-**24/24 attacks blocked** · run 2026-11-14T05:19:08 · no LLM involved · every attack runs in a transaction that is rolled back.
+**24/24 attacks blocked** · run 2026-11-14T07:24:37 · no LLM involved · every attack runs in a transaction that is rolled back.
 
 Most attacks bypass the application on purpose and use the agent's own Db2 credentials, to show that the guarantees come from Db2 (privileges, RCAC, SQL PL guardrails), not from Python or the prompt. Reproduce with `python src/redteam.py`, or the 🛡️ Red team tab in the app.
 

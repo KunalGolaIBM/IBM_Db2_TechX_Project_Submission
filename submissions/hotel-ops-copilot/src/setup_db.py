@@ -48,6 +48,14 @@ def drop_all(db) -> None:
             db.execute(f"ALTER TABLE {SCHEMA}.{t} DROP VERSIONING")
         except Db2Error:
             pass
+    for stmt in ("SET EVENT MONITOR HOTELOPS_AGENT_VIOLATIONS STATE 0", "DROP EVENT MONITOR HOTELOPS_AGENT_VIOLATIONS",
+                 "DROP TABLE AGENT_THRESHOLD_VIOLATIONS", "DROP THRESHOLD HOTELOPS_AGENT_MAX_COST",
+                 "DROP THRESHOLD HOTELOPS_AGENT_MAX_ROWS", "DROP THRESHOLD HOTELOPS_AGENT_MAX_TIME",
+                 "ALTER WORKLOAD HOTELOPS_AGENT_WL DISABLE", "DROP WORKLOAD HOTELOPS_AGENT_WL"):
+        try:  # Db2 workload management objects are database-wide, not in the HOTELOPS schema
+            db.execute(stmt)
+        except Db2Error:
+            pass
     remaining = ["MASK GUEST_EMAIL_MASK", "MASK GUEST_PHONE_MASK", "PERMISSION GUEST_CONSENT_ROWS", *DROP_ORDER]
     for _ in range(3):  # a later pass drops what an earlier one could not (e.g. AGENT_SCOPE, used by permissions)
         failed = []

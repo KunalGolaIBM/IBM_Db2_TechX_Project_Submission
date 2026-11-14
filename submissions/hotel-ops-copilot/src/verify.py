@@ -151,6 +151,20 @@ def property_isolation(admin: Db2, agent: Db2) -> str:
             "are rejected, and only a manager's AGENT_SCOPE row changes that (RCAC row permissions). Removed after")
 
 
+def workload_management(admin: Db2, agent: Db2) -> str:
+    from hotelops.wlm import workload_check
+
+    r = workload_check()
+    assert len(r["thresholds"]) == 3, r["thresholds"]
+    assert r["normal"][0] and r["manager_bulk"][0], r
+    assert r["runaway"] == (False, "SQL4712N HOTELOPS_AGENT_MAX_COST"), r["runaway"]
+    assert r["bulk"] == (False, "SQL4712N HOTELOPS_AGENT_MAX_ROWS"), r["bulk"]
+    assert r["violations_logged"] >= 2, r
+    return ("the AI login runs in Db2 workload HOTELOPS_AGENT_WL: Db2 stops its triple cross join (cost > 25,000) "
+            "and a bulk dump of every booking (> 1,000 rows) with SQL4712N, and its event monitor logged "
+            f"{r['violations_logged']} violations; the manager's 1,500-row query is not limited")
+
+
 def proposal_guardrail(admin: Db2, agent: Db2) -> str:
     floor = float(admin.scalar("SELECT FLOOR_RATE FROM ROOM_TYPES WHERE CODE = 'STE'"))
     night = (dt.date.fromisoformat(str(admin.scalar("VALUES CURRENT DATE"))) + dt.timedelta(days=10)).isoformat()
@@ -438,6 +452,7 @@ CHECKS: list[tuple[str, str, Callable[[Db2, Db2], str]]] = [
     ("Security", "RCAC column mask on PII", column_mask),
     ("Security", "RCAC row permission (AI consent)", row_permission),
     ("Security", "Property isolation for a hotel chain (RCAC)", property_isolation),
+    ("Security", "Db2 workload management caps the AI login", workload_management),
     ("Security", "EXPLAIN cost guard", explain_cost_guard),
     ("Security", "SQL syntax-tree (AST) guard", ast_guard),
     ("Security", "Agent cannot grant itself autonomy", agent_cannot_self_grant),

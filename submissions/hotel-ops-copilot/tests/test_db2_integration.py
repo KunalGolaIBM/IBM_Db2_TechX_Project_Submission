@@ -110,6 +110,19 @@ def test_property_isolation_keeps_the_agent_inside_its_own_hotel():
     assert ADMIN.scalar("SELECT COUNT(*) FROM PROPERTIES") == r["base_properties"]
 
 
+def test_db2_workload_management_stops_runaway_and_bulk_queries_from_the_agent_only():
+    from hotelops.wlm import workload_check
+
+    r = workload_check()
+    assert r["thresholds"] == {"HOTELOPS_AGENT_MAX_COST": 25000.0, "HOTELOPS_AGENT_MAX_ROWS": 1000.0,
+                               "HOTELOPS_AGENT_MAX_TIME": 30.0}
+    assert r["normal"][0]
+    assert r["runaway"] == (False, "SQL4712N HOTELOPS_AGENT_MAX_COST")
+    assert r["bulk"] == (False, "SQL4712N HOTELOPS_AGENT_MAX_ROWS")
+    assert r["manager_bulk"] == (True, "1500 row(s)")
+    assert r["violations_logged"] >= 2  # Db2's own event monitor recorded both stops
+
+
 def test_demo_group_has_a_second_hotel_the_agent_cannot_see():
     assert ADMIN.scalar("SELECT COUNT(*) FROM PROPERTIES") == 2
     kochi = ADMIN.scalar("SELECT COUNT(*) FROM RESERVATIONS WHERE PROPERTY_ID = 2")

@@ -43,7 +43,7 @@ defaults. Db2's automatic statistics collection fixes this, but only after a del
 freshly loaded database it will **refuse legitimate questions** (about a 94× overestimate here) unless statistics are
 collected at load time.
 
-**Fix:** `setup_db.collect_statistics` runs `RUNSTATS` on every table after loading. **Proof:** `verify.py` check 15 now
+**Fix:** `setup_db.collect_statistics` runs `RUNSTATS` on every table after loading. **Proof:** `verify.py` check 16 now
 costs this exact KPI query and requires it to pass the guard.
 
 ---
@@ -125,7 +125,7 @@ person and an autonomous rule) can apply the same action twice, the net has a ho
 **Fix:** both `SP_APPLY_ACTION` and `SP_ROLLBACK_ACTION` first take the action row's exclusive lock
 (`UPDATE ... SET STATUS = STATUS WHERE ACTION_ID = ?`) and only then read its state, so Db2 serialises them: the second
 session waits, then reads `APPLIED` and stops. **Proof:** `test_simultaneous_approvals_apply_an_action_exactly_once`
-(6 threads), `test_simultaneous_rollbacks_restore_exactly_once` (4 threads), and `verify.py` check 22, which shows a
+(6 threads), `test_simultaneous_rollbacks_restore_exactly_once` (4 threads), and `verify.py` check 23, which shows a
 second approval blocked on the row lock while the first is in flight.
 
 ---
