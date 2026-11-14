@@ -211,26 +211,42 @@ class LlmConfig:
     #: than this is one PortProof would rather not pay for, and the statement
     #: goes to human review instead.
     max_output_tokens: int = 3000
+    #: How the model is reached. ``http`` calls the endpoint from Python.
+    #: ``db2`` calls it from inside the engine, through the external model that
+    #: ``python -m src.setup_model`` registered: Db2 holds the key, makes the
+    #: request and writes the ledger row, and the application holds no key.
+    transport: str = "http"
 
     @property
     def is_tiered(self) -> bool:
         return self.provider == "tiered"
 
     @property
+    def in_db2(self) -> bool:
+        return self.transport == "db2"
+
+    @property
+    def reachable(self) -> bool:
+        """A key in the environment, or a model registered inside Db2."""
+        return bool(self.api_key) or self.in_db2
+
+    @property
     def has_model(self) -> bool:
         """True when a language model can actually be reached."""
-        return self.provider not in ("mock", "rules", "") and bool(self.api_key)
+        return self.provider not in ("mock", "rules", "") and self.reachable
 
     @property
     def is_mock(self) -> bool:
         # A tiered run with no key has no model tier, so it is the rules.
-        return self.provider in ("mock", "rules", "") or (self.is_tiered and not self.api_key)
+        return self.provider in ("mock", "rules", "") or (self.is_tiered and not self.reachable)
 
     @property
     def label(self) -> str:
         """What to show a reader: the model, not the transport."""
         if self.is_tiered:
-            last = self.model if self.api_key else "no model (no API key)"
+            last = self.model if self.reachable else "no model (no API key)"
+            if self.in_db2:
+                last += " called from inside Db2"
             return f"fix memory, then rules, then {last}"
         return "deterministic rules" if self.is_mock else self.model
 
@@ -282,6 +298,7 @@ def llm_config() -> LlmConfig:
         max_repair_attempts=int(os.getenv("MAX_REPAIR_ATTEMPTS", "3")),
         call_budget=int(os.getenv("LLM_CALL_BUDGET", "200")),
         max_output_tokens=int(os.getenv("LLM_MAX_OUTPUT_TOKENS", "3000")),
+        transport=os.getenv("LLM_TRANSPORT", "http").strip().lower() or "http",
         reasoning_effort=os.getenv(
             "LLM_REASONING_EFFORT", "low" if provider in ("gemini", "tiered") else ""
         ).strip(),

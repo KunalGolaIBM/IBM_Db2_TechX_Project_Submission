@@ -692,6 +692,7 @@ def test_a_schema_nobody_wrote_datasets_for_is_proved_end_to_end(app_conn, owner
     from src import db, samples
     from src.counterexample import FIXTURE_SCHEMA
 
+    before = db.fetch_one(owner_conn, "SELECT COUNT(*) FROM SYSCAT.TABLES WHERE TABSCHEMA LIKE 'PPV\\_%' ESCAPE '\\'")
     agent = DatasetAgent()
     pipeline = _sqlite_pipeline(app_conn, owner_conn, agent)
     try:
@@ -702,16 +703,20 @@ def test_a_schema_nobody_wrote_datasets_for_is_proved_end_to_end(app_conn, owner
         pipeline.close()
 
     assert all(r.datasets_used >= 10 for r in results.values())
-    # SQLite's LIKE ignores case and Db2's does not: found on generated data.
-    assert results["hr.name_search"].status == "PROVEN_DIFFERENT"
-    assert results["hr.name_search"].semantic.witness.strategy in ("literal_boundaries", "mixed_case", "like_wildcards")
+    # SQLite's LIKE ignores case and Db2's does not: found on generated data,
+    # and closed by the rule that was written from the model's own repairs.
+    search = results["hr.name_search"]
+    assert search.original_semantic.outcome == "DIFFERENT"
+    assert search.original_semantic.witness.strategy in ("literal_boundaries", "mixed_case", "like_wildcards")
+    assert search.status == "PROVEN_EQUIVALENT"
+    assert search.semantic_repair.rule == "sqlite-case-insensitive-like"
     # Same answer on both engines, with rows to show for it.
     assert results["bank.balance_per_account"].status == "PROVEN_EQUIVALENT"
     assert results["bank.balance_per_account"].semantic.strength == "STRONG"
     # ...and the connection is back where every other caller expects it.
     assert db.fetch_one(owner_conn, "VALUES CURRENT SCHEMA")[0].strip() == FIXTURE_SCHEMA
     left = db.fetch_one(owner_conn, "SELECT COUNT(*) FROM SYSCAT.TABLES WHERE TABSCHEMA LIKE 'PPV\\_%' ESCAPE '\\'")
-    assert int(left[0]) == 0
+    assert int(left[0]) == int(before[0])
 
 
 @pytestmark_db2
@@ -750,7 +755,7 @@ def test_a_model_rewrite_is_accepted_only_because_the_proof_agrees(owner_conn):
 
         def run(*replies):
             model = ScriptedModel(*replies)
-            fix = SemanticRepairLoop(owner_conn, source=source, target=target, model=model).run(
+            fix = SemanticRepairLoop(owner_conn, source=source, target=target, model=model, rules=[]).run(
                 source_sql=sql, db2_sql=sql, dialect="sqlite", before=before)
             return fix, model
 
@@ -879,13 +884,13 @@ def test_a_statement_the_model_failed_to_repair_is_not_sent_to_it_again(owner_co
     try:
         before = prove_semantics(source_sql=sql, db2_sql=sql, source=source, target=target, dialect="sqlite")
         first = ScriptedModel(wrong, wrong)
-        fix = SemanticRepairLoop(owner_conn, source=source, target=target, model=first,
+        fix = SemanticRepairLoop(owner_conn, source=source, target=target, model=first, rules=[],
                                  dead_ends=dead).run(
             source_sql=sql, db2_sql=sql, dialect="sqlite", before=before)
         assert not fix.repaired and len(first.prompts) == 2 and len(dead.seen) == 1
 
         second = ScriptedModel("never asked")
-        again = SemanticRepairLoop(owner_conn, source=source, target=target, model=second,
+        again = SemanticRepairLoop(owner_conn, source=source, target=target, model=second, rules=[],
                                    dead_ends=dead).run(
             source_sql=sql, db2_sql=sql, dialect="sqlite", before=before)
         assert not again.repaired and again.model_skipped and second.prompts == []
@@ -895,7 +900,7 @@ def test_a_statement_the_model_failed_to_repair_is_not_sent_to_it_again(owner_co
         before_other = prove_semantics(source_sql=other, db2_sql=other, source=source,
                                        target=target, dialect="sqlite")
         third = ScriptedModel(wrong, wrong)
-        SemanticRepairLoop(owner_conn, source=source, target=target, model=third,
+        SemanticRepairLoop(owner_conn, source=source, target=target, model=third, rules=[],
                            dead_ends=dead).run(
             source_sql=other, db2_sql=other, dialect="sqlite", before=before_other)
         assert third.prompts
@@ -930,3 +935,41 @@ def test_dead_ends_live_in_db2_and_only_the_procedure_can_write_them(app_conn, o
     finally:
         METER.avoided = avoided
         db.execute(owner_conn, "DELETE FROM PORTPROOF.MODEL_DEAD_END WHERE MODEL = 'test-model-xyz'")
+
+
+# --------------------------------------------------------------------------
+# rules written from what the model kept rediscovering
+# --------------------------------------------------------------------------
+def test_blank_sensitive_equality_adds_a_length_check_to_every_form():
+    from src.semantic_repair import _blank_sensitive_equality as rewrite
+
+    assert rewrite("SELECT 1 FROM t WHERE name = 'a'") == (
+        "SELECT 1 FROM t WHERE (name = 'a' AND LENGTH(name) = LENGTH('a'))")
+    assert rewrite("SELECT 1 FROM t WHERE name <> 'a'") == (
+        "SELECT 1 FROM t WHERE (name <> 'a' OR LENGTH(name) <> LENGTH('a'))")
+    # IN is a list of equalities, and its own output is not rewritten twice.
+    assert rewrite("SELECT 1 FROM t WHERE s IN ('x', 'y')") == (
+        "SELECT 1 FROM t WHERE ((s = 'x' AND LENGTH(s) = LENGTH('x')) OR "
+        "(s = 'y' AND LENGTH(s) = LENGTH('y')))")
+    assert rewrite("SELECT 1 FROM t WHERE s NOT IN ('x')") == (
+        "SELECT 1 FROM t WHERE ((s <> 'x' OR LENGTH(s) <> LENGTH('x')))")
+    assert rewrite("SELECT 1 FROM t WHERE n = 5") == "SELECT 1 FROM t WHERE n = 5"
+
+
+def test_the_new_rules_fire_only_for_the_dialects_they_were_measured_on():
+    from src.semantic_repair import SEMANTIC_RULES
+
+    by_name = {r.name: r.dialect for r in SEMANTIC_RULES}
+    assert by_name["postgres-blank-sensitive-equality"] == "postgres"
+    assert by_name["sqlite-blank-sensitive-equality"] == "sqlite"
+    # PostgreSQL's LIKE is case-sensitive, like Db2's: it must get no LIKE rule.
+    assert not [n for n, d in by_name.items() if d == "postgres" and "like" in n]
+    assert {d for n, d in by_name.items() if n.endswith("case-insensitive-like")} == {
+        "mysql", "tsql", "sqlite"}
+
+
+def test_case_insensitive_like_folds_both_sides():
+    from src.semantic_repair import _case_insensitive_like as rewrite
+
+    assert rewrite("SELECT id FROM t WHERE memo LIKE 'rent%' AND x NOT LIKE '%a'") == (
+        "SELECT id FROM t WHERE UPPER(memo) LIKE UPPER('rent%') AND UPPER(x) NOT LIKE UPPER('%a')")

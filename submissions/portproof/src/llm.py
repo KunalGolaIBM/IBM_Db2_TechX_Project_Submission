@@ -51,6 +51,9 @@ class LlmCall:
     #: True when the provider returned no usage block and the counts are a
     #: characters/4 estimate. Reported, so an estimate is never read as a bill.
     estimated: bool = False
+    #: True when Db2 wrote the ledger row itself, inside ASK_MODEL, so the
+    #: application must not write it a second time.
+    ledgered: bool = False
 
     @property
     def tokens(self) -> int:
@@ -645,6 +648,62 @@ class HttpRepairLLM(LLM):
         return text
 
 
+class Db2RepairLLM(HttpRepairLLM):
+    """The same model, called by Db2 instead of by this process.
+
+    ``PORTPROOF.ASK_MODEL`` runs ``TEXT_GENERATION(... USING PORTPROOF.PP_MODEL)``
+    in the engine and writes the ledger row in the same procedure. This class
+    holds no key and opens no socket to the provider: it binds the prompt and
+    reads the reply. The call budget is passed in and enforced twice, here and
+    by the engine counting its own ledger since this run began.
+    """
+
+    @property
+    def _llm_type(self) -> str:
+        return "portproof-db2"
+
+    def _state(self) -> dict:
+        state = self.__dict__.get("_db2")
+        if state is None:
+            from . import db
+
+            conn = db.connect(role="app")
+            state = {"conn": conn, "since": db.fetch_one(conn, "VALUES CURRENT TIMESTAMP")[0]}
+            self.__dict__["_db2"] = state
+        return state
+
+    def ask(self, system: str, user: str, *, stage: str, case_name: str = "") -> str:
+        from . import db
+
+        budget = llm_config().call_budget
+        if len(METER.calls) >= budget:
+            raise RuntimeError(f"model call budget of {budget} is spent (LLM_CALL_BUDGET)")
+        state = self._state()
+        prompt = f"{system}\n\n{user}"
+        started = time.monotonic()
+
+        def meter(ok: bool, text: str = "") -> None:
+            METER.record(LlmCall(
+                stage=stage, model=self.model, case_name=case_name,
+                prompt_tokens=len(prompt) // 4, completion_tokens=len(text) // 4,
+                latency_ms=int((time.monotonic() - started) * 1000),
+                ok=ok, estimated=True, ledgered=ok,
+            ))
+
+        try:
+            out = db.call_proc(
+                state["conn"], "PORTPROOF.ASK_MODEL",
+                (stage, case_name[:80] or None, prompt, state["since"], budget, None),
+            )
+        except db.Db2Error as exc:
+            meter(False)
+            raise RuntimeError(f"in-database model call failed: SQLCODE={exc.sqlcode} "
+                               f"{str(exc.message)[:160]}") from exc
+        text = out[-1] or ""
+        meter(True, text)
+        return text
+
+
 def _extract_tagged(prompt: str, tag: str) -> str:
     match = re.search(rf"<{tag}>\s*(.*?)\s*</{tag}>", prompt, re.DOTALL)
     return match.group(1).strip() if match else ""
@@ -659,6 +718,8 @@ def build_model(cfg: LlmConfig | None = None) -> "HttpRepairLLM | None":
     cfg = cfg or llm_config()
     if not cfg.has_model:
         return None
+    if cfg.in_db2:
+        return Db2RepairLLM(model=cfg.model)
     return HttpRepairLLM(
         model=cfg.model,
         api_key=cfg.api_key,

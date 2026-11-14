@@ -35,3 +35,4 @@ cryptography==46.0.3             # required by pymysql for MySQL 8's default
 streamlit==1.67.0
 python-dotenv==1.2.4
 pytest==9.2.0
+mcp==1.30.0                      # python -m src.mcp_server: PortProof's proofs as agent tools

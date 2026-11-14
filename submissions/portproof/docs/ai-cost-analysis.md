@@ -148,6 +148,24 @@ output tokens (substitute your provider's rates):
 The last row is the same whether those 10,000 statements run against one
 gigabyte or ten terabytes, and it is paid once.
 
+## 6b. Who makes the call
+
+With `LLM_TRANSPORT=db2` the application does not call the model. Db2 does,
+through `TEXT_GENERATION` inside `PORTPROOF.ASK_MODEL`, and the same procedure
+writes the ledger row. Three consequences for cost control:
+
+- The budget is counted by the engine from its own ledger, and a call past it
+  is refused with `SQLSTATE 75002` before the provider is contacted.
+- The runtime identity cannot reach the model except through that procedure
+  (`SQL0551N` otherwise), so there is no unmetered path.
+- The key is held by Db2 and not by the application.
+
+The trade is precision: Db2 returns the generated text and not the provider's
+usage block, so these rows carry estimated token counts (`ESTIMATED = 1`,
+characters divided by four) and are marked `TRANSPORT = 'DB2'`. Reasoning
+tokens the provider bills are not visible this way; the HTTP transport, which
+records the provider's own counts, remains the one to measure spend with.
+
 ## 7. What this does not claim
 
 - The first run is not free, and it scales with the number of statements. A
@@ -155,8 +173,10 @@ gigabyte or ten terabytes, and it is paid once.
 - Memory is exact. A statement that differs by one literal from a repaired one
   is a new question and pays again. Most of the model's accepted rewrites in the
   cold run were one pattern, Db2's `=` ignoring trailing blanks where the source
-  engine's does not, rediscovered per statement. Promoting a recurring model
-  rewrite into a rule would make the pattern free and is not done yet.
+  engine's does not, rediscovered per statement. That pattern and four others
+  have since been promoted to rules: with no model reachable, the rules now
+  repair 33 of 64 divergences where they repaired 13. Doing that promotion
+  automatically is not done.
 - The model is not deterministic. Between the first two runs it repaired a few
   statements it had failed before. The dead end memory trades that chance away
   for a predictable bill, and `LLM_RETRY_DEAD_ENDS=1` takes it back.

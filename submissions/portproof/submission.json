@@ -46,7 +46,9 @@
       "SYSCAT catalog introspection",
       "One schema per adversarial dataset with SET CURRENT SCHEMA, so each dataset is loaded once and the SQL under test is never rewritten",
       "JSON_EXISTS inside a SQL PL procedure with SIGNAL SQLSTATE to validate a dataset payload at the only write path",
-      "A dataset cache, a per dataset yield log with an aggregating view, a model call ledger and a dead end table, all written only through SQL PL procedures"
+      "A dataset cache, a per dataset yield log with an aggregating view, a model call ledger and a dead end table, all written only through SQL PL procedures",
+      "CREATE EXTERNAL MODEL and TEXT_GENERATION: the repair model is called by Db2 inside a definer rights SQL PL procedure that enforces the call budget with SIGNAL and writes the cost ledger row in the same call, so the application holds no key",
+      "EXPLAIN PLAN and EXPLAIN_STATEMENT.TOTAL_COST to estimate a repair's cost before and after, without executing it"
     ]
   },
   "tech_stack": {
@@ -59,6 +61,7 @@
       "LangChain",
       "LangGraph",
       "langchain-db2",
+      "Model Context Protocol (mcp, FastMCP)",
       "Streamlit",
       "sqlglot with db2-sqlglot-dialect",
       "PostgreSQL 17",
