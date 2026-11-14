@@ -21,6 +21,7 @@ import ibm_db  # noqa: E402
 
 from hotelops.config import PROJECT_ROOT, SCHEMA, load_settings  # noqa: E402
 from hotelops.db import OUT_TEXT, Db2, Db2Error, get_db  # noqa: E402
+from hotelops.nights import pick_nights  # noqa: E402
 
 GREEN, RED, DIM, BOLD, RESET = "\033[32m", "\033[31m", "\033[2m", "\033[1m", "\033[0m"
 if not sys.stdout.isatty():
@@ -150,7 +151,7 @@ def proposal_guardrail(admin: Db2, agent: Db2) -> str:
 
 
 def apply_and_rollback(admin: Db2, agent: Db2) -> str:
-    night = (dt.date.fromisoformat(str(admin.scalar("VALUES CURRENT DATE"))) + dt.timedelta(days=12)).isoformat()
+    night = pick_nights(admin, "STD", 12, (1.02,)).night  # a night where +2% stays inside the price band
     sql = "SELECT RATE FROM RATE_PLAN WHERE ROOM_TYPE_ID = (SELECT ROOM_TYPE_ID FROM ROOM_TYPES WHERE CODE = 'STD') " \
           "AND STAY_DATE = ?"
     before = float(admin.scalar(sql, (night,)))
@@ -176,7 +177,7 @@ def apply_and_rollback(admin: Db2, agent: Db2) -> str:
 
 def concurrent_approval(admin: Db2, agent: Db2) -> str:
     """Two managers approve the same action at once: Db2's row lock makes the second wait for the first."""
-    night = (dt.date.fromisoformat(str(admin.scalar("VALUES CURRENT DATE"))) + dt.timedelta(days=13)).isoformat()
+    night = pick_nights(admin, "STD", 13, (0.98,)).night  # a night where -2% stays inside the price band
     rate = float(admin.scalar("SELECT RATE FROM RATE_PLAN WHERE ROOM_TYPE_ID = (SELECT ROOM_TYPE_ID FROM ROOM_TYPES "
                               "WHERE CODE = 'STD') AND STAY_DATE = ?", (night,)))
     payload = {"room_type_code": "STD", "start_date": night, "end_date": night, "new_rate": round(rate * 0.98, 2)}

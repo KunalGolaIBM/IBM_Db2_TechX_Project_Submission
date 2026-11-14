@@ -75,6 +75,26 @@ def test_ast_accepts_real_db2_agent_queries(sql):
     assert validate_select(sql)
 
 
+def test_guard_parses_with_ibm_db2_dialect():
+    from hotelops.sqlguard import DB2_DIALECT
+    assert type(DB2_DIALECT).__module__.startswith("db2_sqlglot"), type(DB2_DIALECT)
+
+
+@pytest.mark.parametrize("sql", [
+    "SELECT RATE FROM RATE_PLAN FOR SYSTEM_TIME FROM '2026-11-01' TO '2026-11-05'",
+    "SELECT * FROM ROOMS ORDER BY ROOM_NO OFFSET 5 ROWS FETCH NEXT 5 ROWS ONLY",
+    "SELECT REVIEW_ID FROM REVIEW_CHUNKS ORDER BY VECTOR_DISTANCE(EMBEDDING, VECTOR('[0.1,0.2]', 2, FLOAT32), "
+    "COSINE) FETCH FIRST 5 ROWS ONLY",
+    "SELECT * FROM RESERVATIONS WHERE CHECK_IN <= CURRENT DATE + ? DAYS",
+    "SELECT * FROM GUEST_REVIEWS WHERE CREATED_AT >= CURRENT DATE - 1 MONTH",
+    "SELECT * FROM GUEST_REVIEWS WHERE CREATED_AT > CURRENT TIMESTAMP - 2 HOURS",
+    "SELECT TIMESTAMPDIFF(4, CHAR(CURRENT TIMESTAMP - CREATED_AT)) FROM GUEST_REVIEWS",
+    "VALUES CURRENT DATE",
+])
+def test_ast_accepts_more_db2_syntax(sql):
+    assert validate_select(sql)
+
+
 @pytest.mark.parametrize("sql, why", [
     ("SELECT * FROM SYSCAT.TABLES", "SYSCAT"),
     ("SELECT * FROM SYSIBMADM.MON_LOCKWAITS", "SYSIBMADM"),

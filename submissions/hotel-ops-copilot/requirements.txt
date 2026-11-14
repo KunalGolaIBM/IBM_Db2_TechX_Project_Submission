@@ -8,8 +8,9 @@ langchain-google-genai>=2.1
 langchain-db2>=1.0
 # Local embeddings (ONNX, no GPU/torch needed)
 fastembed>=0.6
-# Structural (AST) check of LLM-written SQL
-sqlglot>=25.0
+# Structural (AST) check of LLM-written SQL, parsed with IBM's Db2 dialect for SQLGlot
+sqlglot>=30.8
+db2-sqlglot-dialect>=1.1
 # UI and utilities
 streamlit>=1.40
 pandas>=2.2

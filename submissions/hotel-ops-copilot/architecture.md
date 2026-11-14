@@ -81,7 +81,7 @@ graph TD
 3. **Tool layer (`src/hotelops/tools.py`)**
    * Every tool runs on the **agent** Db2 connection, is timed, and is written to `AGENT_STEPS`.
    * Errors are returned to the LLM as `ERROR: …`, so the agent can fix its SQL and retry.
-   * `run_sql` goes through `sqlguard.validate_select`. It allows only a single SELECT or WITH statement, blocks write keywords outside string literals, parses the query with SQLGlot and refuses any syntax tree that is not exactly one read query on `HOTELOPS` tables (unparseable SQL is refused), and adds an automatic `FETCH FIRST n ROWS ONLY`.
+   * `run_sql` goes through `sqlguard.validate_select`. It allows only a single SELECT or WITH statement, blocks write keywords outside string literals, parses the query with SQLGlot and IBM's Db2 dialect (`db2-sqlglot-dialect`) and refuses any syntax tree that is not exactly one read query on `HOTELOPS` tables (unparseable SQL is refused), and adds an automatic `FETCH FIRST n ROWS ONLY`.
 
 4. **Database layer (IBM Db2 Community Edition 12.1)**: described in the sections below.
 

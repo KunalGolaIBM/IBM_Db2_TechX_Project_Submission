@@ -3,9 +3,10 @@
 Two application layers check every query the agent writes before Db2 sees it:
 
 1. a lexical screen (single statement, starts with SELECT / WITH / VALUES, no write or admin keyword);
-2. an AST check with SQLGlot: the query is parsed into a syntax tree, which must be exactly one read-only
-   query, contain no write / DDL / command node anywhere (including inside CTEs and subqueries), and read only
-   tables in the application schema. Anything that cannot be parsed is refused (fail closed).
+2. an AST check with SQLGlot and IBM's Db2 dialect (``db2-sqlglot-dialect``): the query is parsed into a
+   syntax tree, which must be exactly one read-only query, contain no write / DDL / command node anywhere
+   (including inside CTEs and subqueries), and read only tables in the application schema. Anything that
+   cannot be parsed is refused (fail closed).
 
 The authoritative layers are in Db2 itself: the EXPLAIN cost guard (costguard.py), and the agent's Db2 user,
 which has no write privileges at all.
@@ -16,7 +17,15 @@ import re
 
 import sqlglot
 from sqlglot import exp
+from sqlglot.dialects.dialect import Dialect
 from sqlglot.errors import SqlglotError
+
+# IBM's Db2 dialect for SQLGlot (pip install db2-sqlglot-dialect) registers itself as "db2" through a
+# sqlglot.dialects entry point. It is required: the guard never falls back to a generic SQL grammar.
+try:
+    DB2_DIALECT = Dialect.get_or_raise("db2")
+except ValueError as exc:  # pragma: no cover - only when the package is missing
+    raise ImportError("IBM's Db2 SQLGlot dialect is missing: pip install db2-sqlglot-dialect") from exc
 
 FORBIDDEN = (
     "INSERT", "UPDATE", "DELETE", "MERGE", "DROP", "ALTER", "CREATE", "GRANT",
@@ -29,7 +38,10 @@ _LINE_COMMENT_RE = re.compile(r"--[^\n]*")
 _BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
 _LIMIT_RE = re.compile(r"\bFETCH\s+FIRST\b|\bLIMIT\s+\d+", re.IGNORECASE)
 
-# Db2 syntax SQLGlot does not know. Rewritten only for the structural check; Db2 runs the original text.
+# Db2 syntax that the Db2 dialect (1.1) does not parse yet: CURRENT DATE / TIMESTAMP / TIME special registers
+# inside expressions, labelled durations in most positions (CURRENT DATE + 1 DAY, ... - 2 HOURS, + ? DAYS),
+# FOR BUSINESS_TIME, and a leading "VALUES expr". Rewritten into an equivalent shape only for the structural
+# check; Db2 always runs the original text. tests/test_sqlguard.py pins each case.
 _CURRENT_RE = re.compile(r"\bCURRENT\s+(DATE|TIMESTAMP|TIME)\b", re.IGNORECASE)
 _DURATION_RE = re.compile(
     r"(\d+(?:\.\d+)?|\?|\b[A-Z_][A-Z0-9_.]*\b|\([^()]*\))\s+"
@@ -67,7 +79,7 @@ def _for_parser(sql: str) -> str:
 def check_ast(sql: str, schema: str = APP_SCHEMA) -> exp.Expression:
     """Parse ``sql`` and enforce the read-only shape on the syntax tree. Returns the tree or raises."""
     try:
-        trees = [t for t in sqlglot.parse(_for_parser(sql)) if t is not None]
+        trees = [t for t in sqlglot.parse(_for_parser(sql), read=DB2_DIALECT) if t is not None]
     except SqlglotError as exc:
         raise UnsafeSqlError("the query could not be parsed for verification; write one plain Db2 SELECT "
                              f"({str(exc).splitlines()[0][:80]})") from exc

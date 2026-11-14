@@ -20,7 +20,18 @@ except Exception as exc:  # pragma: no cover - environment dependent
 
 from hotelops import manager  # noqa: E402
 from hotelops.audit import RunContext  # noqa: E402
+from hotelops.nights import in_band, pick_nights  # noqa: E402
 from hotelops.tools import build_tools  # noqa: E402
+
+_USED: dict[str, set[int]] = {}  # nights already taken by a test in this run, per room type
+
+
+def _nights(code, start, factors=(1.0,), **kw):
+    """A night (or window) whose seeded rate leaves room for this test's change, on any run date."""
+    used = _USED.setdefault(code, set())
+    n = pick_nights(ADMIN, code, start, factors, avoid=used, **kw)
+    used.update(range(n.offset, n.offset + len(n.dates)))
+    return n
 
 
 @pytest.fixture()
@@ -100,8 +111,9 @@ def test_proposal_validation_rejects_out_of_band_rate():
 
 
 def test_apply_and_time_travel_rollback_roundtrip():
-    d1 = (dt.date.today() + dt.timedelta(days=30)).isoformat()
-    d2 = (dt.date.today() + dt.timedelta(days=31)).isoformat()
+    # two nights; the new rate (10% under the first night) must be in band and within 30% of both nights
+    d1, d2 = _nights("PRM", 30, span=2, ok=lambda w, lo, hi: in_band(w[0], (0.9,), lo, hi)
+                     and all(abs(w[0] * 0.9 - r) / r <= 0.3 for r in w)).dates
     before = ADMIN.query("SELECT STAY_DATE, RATE FROM RATE_PLAN WHERE ROOM_TYPE_ID = 3 "
                          "AND STAY_DATE BETWEEN ? AND ? ORDER BY STAY_DATE", (d1, d2))
     new_rate = round(before[0]["RATE"] * 0.9, -1)
@@ -126,14 +138,14 @@ def test_apply_and_time_travel_rollback_roundtrip():
 
 
 def test_guardrail_blocks_excessive_change_at_apply_time():
-    d = (dt.date.today() + dt.timedelta(days=40)).isoformat()
-    cur = ADMIN.scalar("SELECT RATE FROM RATE_PLAN WHERE ROOM_TYPE_ID = 1 AND STAY_DATE = ?", (d,))
-    floor = ADMIN.scalar("SELECT FLOOR_RATE FROM ROOM_TYPES WHERE ROOM_TYPE_ID = 1")
-    target = max(floor, round(cur * 0.6, -1))  # ~40% cut, inside band but over the 35% cap
-    if (cur - target) / cur <= 0.35:
-        pytest.skip("seed rate too close to floor for this check")
-    action_id, _ = _propose("RATE_CHANGE", {"room_type_code": "STD", "start_date": d, "end_date": d,
-                                            "new_rate": target})
+    # a 40% swing that is still inside the price band: a cut in high season, a rise in low season
+    n = _nights("STD", 40, ok=lambda w, lo, hi: in_band(w[0], (0.6,), lo, hi) or in_band(w[0], (1.4,), lo, hi))
+    d, cur = n.night, n.rate
+    target = round(cur * 0.6, -1) if in_band(cur, (0.6,), n.floor, n.ceiling) else round(cur * 1.4, -1)
+    assert abs(target - cur) / cur > 0.35
+    action_id, msg = _propose("RATE_CHANGE", {"room_type_code": "STD", "start_date": d, "end_date": d,
+                                              "new_rate": target})
+    assert action_id, msg
     state, msg = manager.approve(action_id, "pytest.manager")
     assert state == "FAILED" and "35%" in msg
 
@@ -143,9 +155,8 @@ def test_change_feed_reconstructs_before_and_after_from_history(tools):
 
     json.loads(tools["what_changed"].invoke({"hours": 720}))  # the tool output is always valid JSON
     # make a known change, then the feed (newest first) must show it with before/after and who
-    today = dt.date.fromisoformat(str(ADMIN.scalar("VALUES CURRENT DATE")))
-    day = (today + dt.timedelta(days=33)).isoformat()
-    cur = float(ADMIN.scalar("SELECT RATE FROM RATE_PLAN WHERE ROOM_TYPE_ID = 2 AND STAY_DATE = ?", (day,)))
+    n = _nights("DLX", 33, (1.05,))
+    day, cur = n.night, n.rate
     manager.set_autonomy("RATE_CHANGE", False, "pytest", "pytest start")
     aid, _ = _propose("RATE_CHANGE", {"room_type_code": "DLX", "start_date": day, "end_date": day,
                                       "new_rate": round(cur * 1.05)})
@@ -209,8 +220,9 @@ def test_cost_guard_refuses_runaway_queries_but_allows_normal_ones(tools):
 
 
 def test_earned_autonomy_applies_only_within_granted_limits_and_stays_reversible():
-    today = dt.date.fromisoformat(str(ADMIN.scalar("VALUES CURRENT DATE")))
-    far, near = (today + dt.timedelta(days=20)).isoformat(), (today + dt.timedelta(days=2)).isoformat()
+    far = _nights("STD", 20, ok=lambda w, lo, hi: in_band(w[0], (1.02, 1.03), lo, hi)
+                  and (in_band(w[0], (1.12,), lo, hi) or in_band(w[0], (0.88,), lo, hi))).night
+    near = _nights("STD", 2, (1.02,), stop=6).night  # inside the 7-day lead time that always needs a human
     rate = lambda d: float(ADMIN.scalar("SELECT RATE FROM RATE_PLAN WHERE ROOM_TYPE_ID = 1 AND STAY_DATE = ?", (d,)))  # noqa: E731
     floor, ceil = ADMIN.query("SELECT FLOOR_RATE, CEILING_RATE FROM ROOM_TYPES WHERE ROOM_TYPE_ID = 1")[0].values()
     cur = rate(far)
@@ -314,9 +326,8 @@ def test_dry_run_flags_stale_evidence_when_rates_change_after_the_proposal():
     from hotelops.preview import preview_action
     from hotelops.provenance import provenance
 
-    today = dt.date.fromisoformat(str(ADMIN.scalar("VALUES CURRENT DATE")))
-    day = (today + dt.timedelta(days=25)).isoformat()
-    cur = float(ADMIN.scalar("SELECT RATE FROM RATE_PLAN WHERE ROOM_TYPE_ID = 1 AND STAY_DATE = ?", (day,)))
+    n = _nights("STD", 25, (1.04, 0.97))
+    day, cur = n.night, n.rate
     manager.set_autonomy("RATE_CHANGE", False, "pytest", "pytest start")
     proposal, _ = _propose("RATE_CHANGE", {"room_type_code": "STD", "start_date": day, "end_date": day,
                                            "new_rate": round(cur * 1.04)})
@@ -334,9 +345,8 @@ def test_dry_run_flags_stale_evidence_when_rates_change_after_the_proposal():
 
 
 def test_daily_autonomy_budget_stops_autonomous_actions():
-    today = dt.date.fromisoformat(str(ADMIN.scalar("VALUES CURRENT DATE")))
-    day = (today + dt.timedelta(days=30)).isoformat()
-    cur = float(ADMIN.scalar("SELECT RATE FROM RATE_PLAN WHERE ROOM_TYPE_ID = 1 AND STAY_DATE = ?", (day,)))
+    n = _nights("STD", 30, (1.02,))
+    day, cur = n.night, n.rate
     manager.set_autonomy("RATE_CHANGE", True, "pytest", "pytest", max_change_pct=5, min_lead_days=7, daily_limit=0)
     aid = None
     try:
@@ -500,9 +510,8 @@ def _race(proc, action_id, n):
 
 
 def _std_rate_action(days_ahead):
-    night = (dt.date.fromisoformat(str(ADMIN.scalar("VALUES CURRENT DATE"))) + dt.timedelta(days=days_ahead))
-    rate = float(ADMIN.scalar("SELECT RATE FROM RATE_PLAN WHERE ROOM_TYPE_ID = (SELECT ROOM_TYPE_ID FROM ROOM_TYPES "
-                              "WHERE CODE = 'STD') AND STAY_DATE = ?", (night.isoformat(),)))
+    n = _nights("STD", days_ahead, (0.97, 0.97 * 0.98))  # a 3% cut, and room for a later 2% cut on top
+    night, rate = dt.date.fromisoformat(n.night), n.rate
     action_id, msg = _propose("RATE_CHANGE", {"room_type_code": "STD", "start_date": night.isoformat(),
                                               "end_date": night.isoformat(), "new_rate": round(rate * 0.97, 2)})
     assert action_id, msg

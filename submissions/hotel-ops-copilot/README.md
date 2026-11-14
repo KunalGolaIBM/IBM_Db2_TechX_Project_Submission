@@ -1,5 +1,7 @@
 # Hotel Ops Copilot: Governed Multi-Agent Hotel Operations on IBM Db2
 
+[![CI](https://github.com/clarkf19/hotel-ops-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/clarkf19/hotel-ops-copilot/actions/workflows/ci.yml)
+
 > **One-line pitch:** A LangGraph team of AI agents that reads a hotel's IBM Db2 database, mines guest reviews with Db2 vector search, and proposes pricing, upgrade and maintenance actions. **Db2 itself** governs the agents: it decides what they may read, re-checks every action in stored procedures before applying it, and can undo any change with temporal time travel.
 
 **🎥 [Watch the demo video](https://youtu.be/umzemf4P65s)**
@@ -8,7 +10,7 @@
 
 ![Db2 dry run catches the agent's overbooking mistake](docs/screenshots/12-dry-run-catches-oversell.png)
 
-| 30/30 | 24/24 | 10,000/10,000 | 28/28 | 157 · 87% | 1 command |
+| 30/30 | 24/24 | 10,000/10,000 | 28/28 | 173 · 87% | 1 command |
 |:---:|:---:|:---:|:---:|:---:|:---:|
 | evaluation questions correct (KPIs, time travel, bitemporal, vector search, policies, Hindi, 9 safety attacks), against ground truth computed in Db2 ([results](docs/eval_results.md)) | red-team attacks blocked, 22 by Db2 itself ([scoreboard](docs/redteam_results.md)) | random proposals fuzzed into the Db2 guardrails, every decision matching an independent oracle ([results](docs/guardrail_fuzz.md)) | live Db2 checks of every claim (`python src/verify.py`, no key) | automated tests, 87% line coverage of the core package, none needing an LLM key | `docker compose up -d` starts Db2 and the app |
 
@@ -85,7 +87,7 @@ After `docker compose up -d` (or `bash scripts/quickstart.sh`), open http://loca
 | **Db2 integration and depth (30%)** | Every guarantee in this project is enforced by Db2, not by the prompt. It uses **vector search** over sentence chunks, **system-period temporal tables** for time-travel rollback, **SQL PL guardrail procedures**, **RCAC column masks and a row permission** (consent), a **least-privilege role** for the AI, an **`EXPLAIN` cost guard** on AI-written SQL, IBM's **`langchain-db2` vector store** for the policy handbook, a **JSON check constraint**, and the agent's audit trail in Db2 tables. A **[red-team scoreboard](docs/redteam_results.md)** shows **24/24 attacks blocked**, 22 of them by Db2 itself. See [IBM Db2 Integration](#ibm-db2-integration) and [`src/sql/`](src/sql) |
 | **Innovation and impact (25%)** | A governed agent: the AI can only *propose*, Db2 **dry-runs** the action, a human approves, Db2 re-checks and applies, and any change can be undone in one click. **Earned autonomy** lets managers grant the AI low-risk actions within limits Db2 enforces. Db2 also defeats a prompt-injection attack hidden in a guest review |
 | **Architecture and AI integration (20%)** | A LangGraph router with three specialist sub-graphs and a composer. Each specialist has a restricted toolset, conversation memory is stored in Db2, and a structured-output router picks the agent. See [architecture.md](architecture.md) for the sequence diagram and a **threat model** that maps every threat to the Db2 control and the test that proves it |
-| **Reproducibility and code quality (15%)** | `docker compose up -d` (Db2 + app, no local Python) or `bash scripts/quickstart.sh`. The code is lint-clean (`ruff check src tests`; config in `ruff.toml`). 157 tests (unit, live Db2, guardrail fuzzing, concurrency races, and the full LangGraph flow driven offline by a scripted model) with **87% line coverage** of the core package and no LLM needed, plus `python src/verify.py` (28 live checks), the data is deterministic, and the app works without an API key (agent runs need one) |
+| **Reproducibility and code quality (15%)** | `docker compose up -d` (Db2 + app, no local Python) or `bash scripts/quickstart.sh`. The code is lint-clean (`ruff check src tests`; config in `ruff.toml`). 173 tests (unit, live Db2, guardrail fuzzing, concurrency races, and the full LangGraph flow driven offline by a scripted model) with **87% line coverage** of the core package and no LLM needed, run by **GitHub Actions CI on every push and every day against a fresh IBM Db2 container** ([workflow](.github/workflows/ci.yml)), plus `python src/verify.py` (28 live checks), the data is deterministic, and the app works without an API key (agent runs need one) |
 | **Measured, not claimed** | [30/30 evaluation questions pass](docs/eval_results.md), against ground truth computed by SQL in Db2 at run time |
 | **Documentation and presentation (10%)** | This README, the [architecture](architecture.md), [evaluation results](docs/eval_results.md), [screenshots](docs/screenshots/) and the [Round 1 proposal deck](docs/Round1_Proposal_Hotel_Ops_Copilot_Deck.pdf) |
 
@@ -240,7 +242,7 @@ The demo data is a **deterministic synthetic 72-room Goa resort**. It has 901 gu
      - If the LLM's structured routing fails, the router falls back to keyword routing.
      - If a specialist ends its turn with no text (which Gemini's thinking mode sometimes does), it is asked once more for a final answer.
      - A client-side rate limiter keeps the briefing route under free-tier request limits.
-  7. **SQL safety:** `run_sql` is protected by [`sqlguard.py`](src/hotelops/sqlguard.py). It allows only a single SELECT or WITH statement, blocks write keywords outside string literals, parses the query with **SQLGlot** and rejects any syntax tree that is not exactly one read query on `HOTELOPS` tables (fail closed), and adds an automatic row limit. Before the query runs, **Db2's optimizer costs it with `EXPLAIN PLAN`** ([`costguard.py`](src/hotelops/costguard.py)). Plans above `SQL_MAX_COST` are refused, and the agent is told to filter or aggregate. The EXPLAIN runs on a manager connection, so the agent identity stays strictly read-only. The real guarantee is Db2's privilege model, so writes fail even if these guards are bypassed.
+  7. **SQL safety:** `run_sql` is protected by [`sqlguard.py`](src/hotelops/sqlguard.py). It allows only a single SELECT or WITH statement, blocks write keywords outside string literals, parses the query with **SQLGlot and IBM's Db2 dialect** ([`db2-sqlglot-dialect`](https://pypi.org/project/db2-sqlglot-dialect/)) and rejects any syntax tree that is not exactly one read query on `HOTELOPS` tables (fail closed), and adds an automatic row limit. Before the query runs, **Db2's optimizer costs it with `EXPLAIN PLAN`** ([`costguard.py`](src/hotelops/costguard.py)). Plans above `SQL_MAX_COST` are refused, and the agent is told to filter or aggregate. The EXPLAIN runs on a manager connection, so the agent identity stays strictly read-only. The real guarantee is Db2's privilege model, so writes fail even if these guards are bypassed.
 
 See [architecture.md](architecture.md) for diagrams and the data flow.
 
@@ -250,7 +252,7 @@ See [architecture.md](architecture.md) for diagrams and the data flow.
 |---|---|---|
 | No secrets in code | Credentials come only from `.env`, which is git-ignored; `.env.example` holds placeholders. CI's validator scans for secrets. | [`.env.example`](.env.example), [`config.py`](src/hotelops/config.py) |
 | Parameterised SQL | Every value goes to Db2 as a `?` parameter marker. The only f-strings in SQL insert fixed column or table names, never user or LLM input. | [`db.py`](src/hotelops/db.py), [`tools.py`](src/hotelops/tools.py) |
-| SQL written by the LLM | Four layers: a lexical screen, a **SQLGlot syntax-tree (AST) check** (exactly one read query, no write or DDL node anywhere, including inside CTEs and subqueries, only `HOTELOPS` tables; unparseable SQL is refused), a row limit, an `EXPLAIN` cost guard that refuses runaway queries before they run, and the agent's Db2 user, which cannot write anything anyway. | [`sqlguard.py`](src/hotelops/sqlguard.py), [`costguard.py`](src/hotelops/costguard.py), [`test_sqlguard.py`](tests/test_sqlguard.py) |
+| SQL written by the LLM | Four layers: a lexical screen, a **SQLGlot syntax-tree (AST) check using IBM's Db2 dialect** (exactly one read query, no write or DDL node anywhere, including inside CTEs and subqueries, only `HOTELOPS` tables; unparseable SQL is refused), a row limit, an `EXPLAIN` cost guard that refuses runaway queries before they run, and the agent's Db2 user, which cannot write anything anyway. | [`sqlguard.py`](src/hotelops/sqlguard.py), [`costguard.py`](src/hotelops/costguard.py), [`test_sqlguard.py`](tests/test_sqlguard.py) |
 | Concurrency | `SP_APPLY_ACTION` and `SP_ROLLBACK_ACTION` take the action row's lock before reading its state, so simultaneous approvals or rollbacks are serialised by Db2 and an action is applied once. The guardrail fuzzer found nothing here; a 6-thread race test did (two managers both applied the same action), and it is fixed and pinned. | [`02_procedures.sql`](src/sql/02_procedures.sql), `test_simultaneous_*` in [`test_db2_integration.py`](tests/test_db2_integration.py) |
 | Input validation | `SP_PROPOSE_ACTION` validates every JSON field, rate band, date window, room, consent and duplicate inside Db2. **10,000/10,000** fuzzed proposals match an independent oracle. | [`02_procedures.sql`](src/sql/02_procedures.sql), [`guardrail_fuzz.md`](docs/guardrail_fuzz.md) |
 | Least-privilege Db2 users | Two identities. The agent role has `SELECT` plus `EXECUTE` on `SP_PROPOSE_ACTION` only; it cannot update, delete, approve or grant. | [`03_security.sql`](src/sql/03_security.sql) |
@@ -268,7 +270,8 @@ See [architecture.md](architecture.md) for diagrams and the data flow.
 - **Database:** IBM Db2 12.1 Community Edition
 - **Agents / AI:** LangGraph, LangChain, Gemini 3.5 Flash (with fallbacks), fastembed (ONNX) with BGE-small
 - **Frontend / UI:** Streamlit, plus a CLI
-- **Tools:** Docker, pytest
+- **SQL safety:** SQLGlot with IBM's Db2 dialect (`db2-sqlglot-dialect`)
+- **Tools:** Docker, pytest, ruff, GitHub Actions
 
 ## Prerequisites
 - **Docker** (Docker Desktop, or Docker Engine in WSL2 or Linux). The machine needs about 4 GB of RAM free for Db2.
@@ -374,8 +377,10 @@ pytest -q tests/
 pytest -q --cov=src/hotelops --cov=src/verify.py   # 87% line coverage of the core package
 python src/redteam.py              # red-team scoreboard -> docs/redteam_results.md (no LLM)
 ```
+- **CI:** [GitHub Actions](.github/workflows/ci.yml) runs on every push and once a day. One job lints and runs every test that needs neither Db2 nor a key; the other starts IBM Db2 Community Edition with `scripts/run_db2.sh` (exactly as in Setup, with random per-run passwords), loads the hotel with `setup_db.py`, then runs the full suite with coverage, `verify.py` and a 1,000-proposal guardrail fuzz. The daily run matters because the demo data is generated relative to "today".
+- `tests/test_nights.py` (no Db2): the live checks used to pick stay dates as "today + N days", so they failed on some dates, e.g. on 14 Nov 2026 "today + 41" was Christmas night, priced above the Standard room's guardrail ceiling. They now pick a night with room for the change ([`nights.py`](src/hotelops/nights.py)), and this test replays every check against every run date in 2026-2027.
 - `tests/test_agents_offline.py` drives the whole LangGraph team (router, three specialists, composer) with a scripted chat model against the real Db2 tools, so routing, tool loops, error feedback and the Db2 refusal of a bad proposal are tested without an API key.
-- `tests/test_sqlguard.py` checks that the guard rejects unsafe SQL at both layers (lexical and SQLGlot AST), including catalog reads hidden in subqueries and writes inside CTEs, and accepts real Db2 queries the agents write (date durations, `FOR SYSTEM_TIME` / `FOR BUSINESS_TIME`).
+- `tests/test_sqlguard.py` checks that the guard rejects unsafe SQL at both layers (lexical and a SQLGlot AST parsed with IBM's Db2 dialect), including catalog reads hidden in subqueries and writes inside CTEs, and accepts real Db2 queries the agents write (date durations, `FOR SYSTEM_TIME` / `FOR BUSINESS_TIME`).
 - `tests/test_db2_integration.py` races 6 managers approving the same action and 4 rolling it back at the same instant from separate Db2 connections: exactly one wins each time.
 - `tests/test_seed.py` checks that the data is deterministic, that no room is double-booked, and that the planted scenarios exist.
 - `tests/test_app_imports.py` parses every source file, including the Streamlit UI that the other tests don't import, so a syntax error can't slip through. `ruff check src tests` lints everything (config in `ruff.toml`).
