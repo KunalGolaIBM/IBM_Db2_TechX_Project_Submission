@@ -28,16 +28,27 @@ def _connect(role: str) -> Db2:
 class Oracle:
     """The guardrail rules, re-implemented in Python from the spec (not from the SQL)."""
 
-    def __init__(self, admin: Db2):
+    def __init__(self, admin: Db2, agent_user: str):
         self.today = dt.date.fromisoformat(str(admin.scalar("VALUES CURRENT DATE")))
-        self.bands = {r["CODE"]: (float(r["FLOOR_RATE"]), float(r["CEILING_RATE"]))
-                      for r in admin.query("SELECT CODE, FLOOR_RATE, CEILING_RATE FROM ROOM_TYPES")}
-        self.rooms = {r["ROOM_NO"] for r in admin.query("SELECT ROOM_NO FROM ROOMS")}
-        self.res = {r["RESERVATION_ID"]: (r["STATUS"], r["AI_CONSENT"]) for r in admin.query(
-            "SELECT X.RESERVATION_ID, X.STATUS, G.AI_CONSENT FROM RESERVATIONS X JOIN GUESTS G "
+        # rule: the agent may only act on the hotels it is scoped to; everything else does not exist for it
+        self.scope = {r["PROPERTY_ID"] for r in admin.query(
+            "SELECT PROPERTY_ID FROM AGENT_SCOPE WHERE AUTH_ID = ?", (agent_user.upper(),))}
+        self.bands = {r["CODE"]: (float(r["FLOOR_RATE"]), float(r["CEILING_RATE"]), r["PROPERTY_ID"])
+                      for r in admin.query("SELECT CODE, FLOOR_RATE, CEILING_RATE, PROPERTY_ID FROM ROOM_TYPES")}
+        self.rooms = {r["ROOM_NO"]: r["PROPERTY_ID"] for r in admin.query("SELECT ROOM_NO, PROPERTY_ID FROM ROOMS")}
+        self.res = {r["RESERVATION_ID"]: (r["STATUS"], r["AI_CONSENT"], r["PROPERTY_ID"]) for r in admin.query(
+            "SELECT X.RESERVATION_ID, X.STATUS, G.AI_CONSENT, X.PROPERTY_ID FROM RESERVATIONS X JOIN GUESTS G "
             "ON G.GUEST_ID = X.GUEST_ID")}
+        self.nightly = [(r["CODE"], str(r["STAY_DATE"]), float(r["RATE"])) for r in admin.query(
+            "SELECT RT.CODE, RP.STAY_DATE, RP.RATE FROM RATE_PLAN RP JOIN ROOM_TYPES RT "
+            "ON RT.ROOM_TYPE_ID = RP.ROOM_TYPE_ID WHERE RP.STAY_DATE BETWEEN CURRENT DATE + 8 DAYS "
+            "AND CURRENT DATE + 60 DAYS ORDER BY RT.CODE, RP.STAY_DATE")]
         self.pending = {(r["ACTION_TYPE"], r["PAYLOAD"]) for r in admin.query(
-            "SELECT ACTION_TYPE, PAYLOAD FROM AGENT_ACTIONS WHERE STATUS = 'PENDING'")}
+            "SELECT ACTION_TYPE, PAYLOAD FROM AGENT_ACTIONS WHERE STATUS = 'PENDING' AND PROPERTY_ID IN "
+            "(SELECT PROPERTY_ID FROM AGENT_SCOPE WHERE AUTH_ID = ?)", (agent_user.upper(),))}
+
+    def _visible_code(self, code) -> bool:
+        return code in self.bands and self.bands[code][2] in self.scope
 
     def decide(self, action_type: str, payload: str) -> str:
         """Expected outcome: REJECTED, DUPLICATE or PENDING (autonomy is off during the fuzz)."""
@@ -51,22 +62,23 @@ class Oracle:
             code, start, end, rate = (p.get(k) for k in ("room_type_code", "start_date", "end_date", "new_rate"))
             if None in (code, start, end, rate):
                 return "REJECTED"
-            if code not in self.bands:
+            if not self._visible_code(code):
                 return "REJECTED"
             start, end = dt.date.fromisoformat(start), dt.date.fromisoformat(end)
             if start < self.today or end < start or end > self.today + dt.timedelta(days=90):
                 return "REJECTED"
-            lo, hi = self.bands[code]
+            lo, hi, _ = self.bands[code]
             if not lo <= float(rate) <= hi:
                 return "REJECTED"
         elif action_type == "ROOM_UPGRADE":
-            status, consent = self.res.get(p.get("reservation_id"), (None, None))
-            if status not in ("CONFIRMED", "CHECKED_IN") or consent != "Y":
+            status, consent, prop = self.res.get(p.get("reservation_id"), (None, None, None))
+            if status not in ("CONFIRMED", "CHECKED_IN") or consent != "Y" or prop not in self.scope:
                 return "REJECTED"
-            if p.get("to_room_type_code") not in self.bands:
+            target = p.get("to_room_type_code")
+            if not self._visible_code(target) or self.bands[target][2] != prop:  # upgrades stay in the same hotel
                 return "REJECTED"
         elif action_type == "MAINTENANCE":
-            if p.get("room_no") not in self.rooms or p.get("priority") not in PRIORITIES:
+            if self.rooms.get(p.get("room_no")) not in self.scope or p.get("priority") not in PRIORITIES:
                 return "REJECTED"
         else:
             return "REJECTED"
@@ -80,10 +92,17 @@ class Oracle:
 def _generate(rng: random.Random, o: Oracle) -> tuple[str, str, str]:
     """One random proposal: (category, action_type, payload_json)."""
     codes = sorted(o.bands)
-    kind = rng.choices(["rate", "upgrade", "maint", "type", "json", "repeat"], [50, 18, 18, 4, 5, 5])[0]
+    kind = rng.choices(["rate", "nudge", "upgrade", "maint", "type", "json", "repeat"], [44, 6, 18, 18, 4, 5, 5])[0]
+    if kind == "nudge" and o.nightly:  # a small change to a real night's rate: what earned autonomy may apply
+        code, night, rate = rng.choice(o.nightly)
+        p = {"room_type_code": code, "start_date": night, "end_date": night,
+             "new_rate": round(rate * (1 + rng.uniform(-0.03, 0.03)), 2)}
+        return "price nudge", "RATE_CHANGE", json.dumps(p)
+    if kind == "nudge":
+        kind = "rate"
     if kind == "rate":
         code = rng.choice(codes + ["XXX", "std", "SUITE"]) if rng.random() < 0.15 else rng.choice(codes)
-        lo, hi = o.bands.get(code, (3000.0, 30000.0))
+        lo, hi, _ = o.bands.get(code, (3000.0, 30000.0, None))
         start = o.today + dt.timedelta(days=rng.choice([rng.randint(-5, 100), 0, 90, 91, -1]))
         end = start + dt.timedelta(days=rng.choice([rng.randint(0, 6), -1, 0]))
         rate = rng.choice([lo, hi, lo - 0.01, hi + 0.01, round(rng.uniform(lo * 0.5, hi * 1.5), 2)])
@@ -114,7 +133,7 @@ def run_fuzz(n: int = 1000, seed: int = 7) -> dict:
     import ibm_db
 
     rng = random.Random(seed)
-    oracle = Oracle(admin)
+    oracle = Oracle(admin, load_settings().db2.agent_user)
     admin.close()
     history: list[tuple[str, str]] = []
     by_cat: Counter = Counter()
@@ -126,9 +145,9 @@ def run_fuzz(n: int = 1000, seed: int = 7) -> dict:
     try:
         for _ in range(n):
             cat, action_type, payload = _generate(rng, oracle)
+            while cat == "repeat" and not history:  # nothing to repeat yet: draw another proposal, so n is exact
+                cat, action_type, payload = _generate(rng, oracle)
             if cat == "repeat":
-                if not history:
-                    continue
                 action_type, payload = rng.choice(history)
             expected = oracle.decide(action_type, payload)
             try:

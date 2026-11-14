@@ -5,14 +5,22 @@ from .config import SCHEMA
 from .db import OUT_TEXT, get_db
 
 
-def list_actions(status: str | None = None) -> list[dict]:
+def list_actions(status: str | None = None, property_id: int | None = None) -> list[dict]:
     sql = ("SELECT ACTION_ID, ACTION_TYPE, STATUS, PAYLOAD, RATIONALE, PROPOSED_BY, PROPOSED_AT, "
-           "DECIDED_BY, DECIDED_AT, RESULT_MESSAGE FROM AGENT_ACTIONS")
-    params: tuple = ()
-    if status:
-        sql += " WHERE STATUS = ?"
-        params = (status,)
-    return get_db("admin").query(sql + " ORDER BY ACTION_ID DESC", params)
+           "DECIDED_BY, DECIDED_AT, RESULT_MESSAGE, PROPERTY_ID FROM AGENT_ACTIONS "
+           "WHERE STATUS = COALESCE(CAST(? AS VARCHAR(12)), STATUS) "
+           "AND PROPERTY_ID = COALESCE(CAST(? AS SMALLINT), PROPERTY_ID)")
+    return get_db("admin").query(sql + " ORDER BY ACTION_ID DESC", (status, property_id))
+
+
+def properties() -> list[dict]:
+    """The hotels of the group, as the manager sees them, with tonight's KPIs."""
+    return get_db("admin").query(
+        "SELECT P.PROPERTY_ID, P.CODE, P.NAME, P.CITY, "
+        "(SELECT COUNT(*) FROM ROOMS R WHERE R.PROPERTY_ID = P.PROPERTY_ID) AS ROOMS, "
+        "K.OCCUPANCY_PCT, K.ADR, K.REVPAR "
+        "FROM PROPERTIES P LEFT JOIN V_DAILY_KPIS K ON K.PROPERTY_ID = P.PROPERTY_ID AND K.STAY_DATE = CURRENT DATE "
+        "ORDER BY P.PROPERTY_ID")
 
 
 def approve(action_id: int, manager: str) -> tuple[str, str]:
@@ -41,12 +49,13 @@ def rate_timeline(room_type_code: str, start_date: str, end_date: str) -> list[d
     )
 
 
-def rates_as_of(timestamp: str, start_date: str, end_date: str) -> list[dict]:
+def rates_as_of(timestamp: str, start_date: str, end_date: str, property_id: int | None = None) -> list[dict]:
     return get_db("admin").query(
         "SELECT RT.CODE, RP.STAY_DATE, RP.RATE FROM RATE_PLAN FOR SYSTEM_TIME AS OF ? RP "
         "JOIN ROOM_TYPES RT ON RT.ROOM_TYPE_ID = RP.ROOM_TYPE_ID "
-        "WHERE RP.STAY_DATE BETWEEN ? AND ? ORDER BY RT.TIER, RP.STAY_DATE",
-        (timestamp, start_date, end_date),
+        "WHERE RP.STAY_DATE BETWEEN ? AND ? AND RP.PROPERTY_ID = COALESCE(CAST(? AS SMALLINT), RP.PROPERTY_ID) "
+        "ORDER BY RT.TIER, RP.STAY_DATE",
+        (timestamp, start_date, end_date, property_id),
     )
 
 

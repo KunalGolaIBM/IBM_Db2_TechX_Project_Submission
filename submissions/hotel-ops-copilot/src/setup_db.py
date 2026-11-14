@@ -120,9 +120,54 @@ def load_data(db) -> dict:
                "CHANGE_REASON = 'Suite rates trimmed after OTA comp-set check' "
                "WHERE ROOM_TYPE_ID IN (5, 6) AND STAY_DATE BETWEEN ? AND ?", peak)
     load_promotions(db, today, ds.scenario)
+    load_second_hotel(db)
     db.execute("REFRESH TABLE MQT_DAILY_KPIS")
     log(f"  refreshed MQT_DAILY_KPIS ({db.scalar('SELECT COUNT(*) FROM MQT_DAILY_KPIS')} nights materialised)")
     return {"today": today, "dataset": ds}
+
+
+SECOND_HOTEL = 2  # Backwater House, Kochi: a second hotel of the group, invisible to the Goa agent
+
+
+def load_second_hotel(db) -> None:
+    """A small second hotel of the group, so the app's hotel switcher has something to switch to.
+
+    It has its own room type codes (LSTD/LDLX/LSTE) and room numbers (K...), 24 rooms, a rate plan and about two
+    thirds of its nights booked. The Goa agent identity is not scoped to it, so Db2 hides all of it from the AI.
+    """
+    p = SECOND_HOTEL
+    db.execute("INSERT INTO PROPERTIES (PROPERTY_ID, CODE, NAME, CITY) VALUES (?, 'KOCHI', 'Backwater House', "
+               "'Kochi')", (p,))
+    db.bulk_insert("INSERT INTO ROOM_TYPES (ROOM_TYPE_ID, CODE, NAME, TIER, BASE_RATE, FLOOR_RATE, CEILING_RATE, "
+                   "MAX_OCCUPANCY, PROPERTY_ID) VALUES (?,?,?,?,?,?,?,?,?)",
+                   [(7, "LSTD", "Lagoon Standard", 1, 4200, 3000, 6500, 2, p),
+                    (8, "LDLX", "Lagoon Deluxe", 2, 5800, 4200, 8800, 2, p),
+                    (9, "LSTE", "Backwater Suite", 3, 9800, 7200, 15000, 3, p)])
+    rooms = ([(f"K{100 + i}", 7, 1, p) for i in range(1, 13)] + [(f"K{200 + i}", 8, 2, p) for i in range(1, 9)]
+             + [(f"K{300 + i}", 9, 3, p) for i in range(1, 5)])
+    db.bulk_insert("INSERT INTO ROOMS (ROOM_NO, ROOM_TYPE_ID, FLOOR_NO, PROPERTY_ID) VALUES (?,?,?,?)", rooms)
+    db.execute("INSERT INTO RATE_PLAN (ROOM_TYPE_ID, STAY_DATE, RATE, PROPERTY_ID) "
+               "SELECT RT.ROOM_TYPE_ID, C.CAL_DATE, RT.BASE_RATE, RT.PROPERTY_ID FROM ROOM_TYPES RT, CALENDAR C "
+               "WHERE RT.PROPERTY_ID = ? AND C.CAL_DATE BETWEEN CURRENT DATE - 30 DAYS AND CURRENT DATE + 90 DAYS",
+               (p,))
+    # two-night stays that start every third night in each room (staggered by room), about 2/3 occupancy
+    db.execute(
+        "INSERT INTO RESERVATIONS (RESERVATION_ID, GUEST_ID, ROOM_TYPE_ID, ROOM_NO, CHECK_IN, CHECK_OUT, CHANNEL, "
+        "STATUS, NIGHTLY_RATE, TOTAL_AMOUNT, BOOKED_AT, PROPERTY_ID) "
+        "SELECT 300000 + ROW_NUMBER() OVER (ORDER BY R.ROOM_NO, C.CAL_DATE), "
+        "       1 + MOD(ROW_NUMBER() OVER (ORDER BY C.CAL_DATE, R.ROOM_NO) * 37, 900), R.ROOM_TYPE_ID, R.ROOM_NO, "
+        "       C.CAL_DATE, C.CAL_DATE + 2 DAYS, "
+        "       CASE MOD(DAYS(C.CAL_DATE), 3) WHEN 0 THEN 'DIRECT' WHEN 1 THEN 'OTA' ELSE 'CORPORATE' END, "
+        "       CASE WHEN C.CAL_DATE + 2 DAYS <= CURRENT DATE THEN 'CHECKED_OUT' "
+        "            WHEN C.CAL_DATE <= CURRENT DATE THEN 'CHECKED_IN' ELSE 'CONFIRMED' END, "
+        "       RT.BASE_RATE, RT.BASE_RATE * 2, "
+        "       TIMESTAMP(MIN(C.CAL_DATE - 14 DAYS, CURRENT DATE - 1 DAY), '10:00:00'), R.PROPERTY_ID "
+        "FROM ROOMS R JOIN ROOM_TYPES RT ON RT.ROOM_TYPE_ID = R.ROOM_TYPE_ID "
+        "CROSS JOIN CALENDAR C "
+        "WHERE R.PROPERTY_ID = ? AND C.CAL_DATE BETWEEN CURRENT DATE - 60 DAYS AND CURRENT DATE + 30 DAYS "
+        "  AND MOD(DAYS(C.CAL_DATE) + INT(SUBSTR(R.ROOM_NO, 2)), 3) = 0", (p,))
+    n = db.scalar("SELECT COUNT(*) FROM RESERVATIONS WHERE PROPERTY_ID = ?", (p,))
+    log(f"  loaded a second hotel of the group (Backwater House, Kochi): {len(rooms)} rooms, {n} reservations")
 
 
 def load_promotions(db, today: dt.date, scenario: dict) -> None:

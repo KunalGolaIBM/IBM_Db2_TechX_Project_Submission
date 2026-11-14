@@ -61,8 +61,11 @@ def admin_db():
 
 
 @st.cache_data(ttl=60, show_spinner="Classifying complaints in Db2…")
-def radar_cached(days: int) -> dict:
-    return complaint_radar(admin_db(), days)
+def radar_cached(days: int, property_id: int) -> dict:
+    return complaint_radar(admin_db(), days, property_id=property_id)
+
+
+AGENT_HOTEL = 1  # the AI agent identity is scoped to this hotel in AGENT_SCOPE (03_security.sql)
 
 
 def df(rows: list[dict]) -> pd.DataFrame:
@@ -161,19 +164,27 @@ with st.sidebar:
     except Db2Error as exc:
         st.error(f"Db2 not reachable: {exc}")
         st.stop()
-    rooms = admin_db().scalar("SELECT COUNT(*) FROM ROOMS")
-    pending = admin_db().scalar("SELECT COUNT(*) FROM AGENT_ACTIONS WHERE STATUS = 'PENDING'")
+    hotels = {h["PROPERTY_ID"]: h for h in admin_db().query(
+        "SELECT PROPERTY_ID, NAME, CITY FROM PROPERTIES ORDER BY PROPERTY_ID")}
+    HOTEL = st.selectbox("Hotel", list(hotels), key="hotel",
+                         format_func=lambda p: f"{hotels[p]['NAME']}, {hotels[p]['CITY']}")
+    HOTEL_NAME, HOTEL_CITY = hotels[HOTEL]["NAME"], hotels[HOTEL]["CITY"]
+    rooms = admin_db().scalar("SELECT COUNT(*) FROM ROOMS WHERE PROPERTY_ID = ?", (HOTEL,))
+    pending = admin_db().scalar("SELECT COUNT(*) FROM AGENT_ACTIONS WHERE STATUS = 'PENDING' AND PROPERTY_ID = ?",
+                                (HOTEL,))
+    mono = "".join(w[0] for w in HOTEL_NAME.split()[:2]).upper()
     st.markdown(
-        '<div class="brand"><div class="mono">SB</div><div><div class="name">Saltwater Bay</div>'
-        f'<div class="sub">Goa · {rooms} rooms · Operations</div></div></div>'
-        f'<div class="duty"><span class="dot"></span>On duty: <b>{MANAGER}</b></div>', unsafe_allow_html=True)
+        f'<div class="brand"><div class="mono">{html.escape(mono)}</div><div><div class="name">'
+        f'{html.escape(HOTEL_NAME)}</div><div class="sub">{html.escape(HOTEL_CITY)} · {rooms} rooms · Operations'
+        f'</div></div></div><div class="duty"><span class="dot"></span>On duty: <b>{MANAGER}</b></div>',
+        unsafe_allow_html=True)
     st.metric("Awaiting your approval", pending)
     today = admin_db().query(
         "SELECT SUM(CASE WHEN CHECK_IN = CURRENT DATE THEN 1 ELSE 0 END) AS ARR, "
         "SUM(CASE WHEN CHECK_OUT = CURRENT DATE THEN 1 ELSE 0 END) AS DEP, "
         "SUM(CASE WHEN CHECK_IN <= CURRENT DATE AND CHECK_OUT > CURRENT DATE THEN 1 ELSE 0 END) AS INH "
-        "FROM RESERVATIONS WHERE STATUS NOT IN ('CANCELLED', 'NO_SHOW') "
-        "AND CHECK_IN <= CURRENT DATE AND CHECK_OUT >= CURRENT DATE")[0]
+        "FROM RESERVATIONS WHERE STATUS NOT IN ('CANCELLED', 'NO_SHOW') AND PROPERTY_ID = ? "
+        "AND CHECK_IN <= CURRENT DATE AND CHECK_OUT >= CURRENT DATE", (HOTEL,))[0]
     st.markdown(
         '<div class="today"><div class="lbl">Today</div><div class="row">'
         f'<div><b>{today["ARR"] or 0}</b><span>Arrivals</span></div>'
@@ -204,7 +215,8 @@ with st.sidebar:
 **Embeddings** `{SETTINGS.embedding_model}` → `VECTOR(384)`"""
         )
 
-tonight = admin_db().query("SELECT OCCUPANCY_PCT FROM V_DAILY_KPIS WHERE STAY_DATE = CURRENT DATE")
+tonight = admin_db().query("SELECT OCCUPANCY_PCT FROM V_DAILY_KPIS WHERE STAY_DATE = CURRENT DATE AND PROPERTY_ID = ?",
+                           (HOTEL,))
 hero_chain = audit_chain_cached()
 hero_red = st.session_state.get("redteam")
 if hero_red is None and REDTEAM_FILE.exists():
@@ -219,15 +231,20 @@ if hero_red:
     hero_chips.append(chip(f"<b>{hero_red['blocked']}/{hero_red['total']}</b> attacks blocked",
                            bad=hero_red["blocked"] < hero_red["total"]))
 st.markdown(
-    '<div class="hero"><div class="eyebrow">Saltwater Bay, Goa · Operations console</div>'
+    f'<div class="hero"><div class="eyebrow">{html.escape(HOTEL_NAME)}, {html.escape(HOTEL_CITY)} · '
+    'Operations console</div>'
     '<div class="title">Hotel Ops Copilot</div>'
     '<div class="tagline">Four AI agents run the hotel\'s day. IBM Db2 decides what they are allowed to do.</div>'
     f'<div class="chips">{"".join(hero_chips)}</div></div>', unsafe_allow_html=True)
 
-tab_chat, tab_approve, tab_time, tab_dash, tab_red, tab_audit, tab_proof = st.tabs(
+if HOTEL != AGENT_HOTEL:
+    st.info(f"You are viewing **{HOTEL_NAME}**. The AI agents work for **{hotels[AGENT_HOTEL]['NAME']}**: Db2 hides "
+            f"every {HOTEL_NAME} room, booking and rate from their login, so the Copilot cannot see or act on this "
+            "hotel. See the **Hotel group** tab.", icon=":material/visibility_off:")
+tab_chat, tab_approve, tab_time, tab_dash, tab_group, tab_red, tab_audit, tab_proof = st.tabs(
     [":material/forum: Copilot", ":material/task_alt: Approvals", ":material/history: Time travel",
-     ":material/monitoring: Dashboard", ":material/shield: Red team", ":material/receipt_long: Audit trail",
-     ":material/fact_check: Proofs"])
+     ":material/monitoring: Dashboard", ":material/domain: Hotel group", ":material/shield: Red team",
+     ":material/receipt_long: Audit trail", ":material/fact_check: Proofs"])
 
 # --------------------------------------------------------------------------- chat
 with tab_chat:
@@ -394,7 +411,7 @@ with tab_approve:
             st.markdown("**Trust history** (time travel on `AUTONOMY_POLICY`: who granted or revoked what, and when)")
             st.dataframe(hist, use_container_width=True, hide_index=True)
 
-    actions = manager.list_actions()
+    actions = manager.list_actions(property_id=HOTEL)
     pending_rows = [a for a in actions if a["STATUS"] == "PENDING"]
     if not pending_rows:
         st.write("No pending actions. Ask the copilot for a morning brief to generate some.")
@@ -470,7 +487,9 @@ with tab_approve:
 with tab_time:
     st.subheader("Rate time travel (system-period temporal table RATE_PLAN)")
     c1, c2, c3 = st.columns(3)
-    code = c1.selectbox("Room type", ["STD", "DLX", "PRM", "FAM", "JST", "STE"], index=5)
+    codes = [r["CODE"] for r in admin_db().query("SELECT CODE FROM ROOM_TYPES WHERE PROPERTY_ID = ? ORDER BY TIER",
+                                                 (HOTEL,))]
+    code = c1.selectbox("Room type", codes, index=len(codes) - 1, key=f"rt{HOTEL}")
     today = dt.date.fromisoformat(str(admin_db().scalar("VALUES CURRENT DATE")))  # Db2's date, not the browser's
     start = c2.date_input("From night", today)
     end = c3.date_input("To night", today + dt.timedelta(days=13))
@@ -493,7 +512,7 @@ with tab_time:
     as_of_date = c1.date_input("As of date", today, key="asofd")
     as_of_time = c2.time_input("As of time", dt.time(23, 59), key="asoft")
     ts = dt.datetime.combine(as_of_date, as_of_time).strftime("%Y-%m-%d %H:%M:%S")
-    grid = df(manager.rates_as_of(ts, start.isoformat(), end.isoformat()))
+    grid = df(manager.rates_as_of(ts, start.isoformat(), end.isoformat(), HOTEL))
     if not grid.empty:
         st.dataframe(grid.pivot(index="STAY_DATE", columns="CODE", values="RATE"), use_container_width=True)
     st.divider()
@@ -504,7 +523,8 @@ with tab_time:
         "P.CHANGE_REASON, P.SYS_START AS RECORDED_AT, "
         "CASE WHEN P.SYS_END >= '9999-01-01' THEN NULL ELSE P.SYS_END END AS SUPERSEDED_AT "
         "FROM PROMOTIONS FOR SYSTEM_TIME FROM '0001-01-01' TO '9999-12-30' P "
-        "JOIN ROOM_TYPES RT ON RT.ROOM_TYPE_ID = P.ROOM_TYPE_ID ORDER BY P.PROMO_ID, P.VALID_FROM, P.SYS_START"))
+        "JOIN ROOM_TYPES RT ON RT.ROOM_TYPE_ID = P.ROOM_TYPE_ID WHERE P.PROPERTY_ID = ? "
+        "ORDER BY P.PROMO_ID, P.VALID_FROM, P.SYS_START", (HOTEL,)))
     if not promos.empty:
         st.dataframe(promos, use_container_width=True, hide_index=True)
         jst = promos[(promos["PROMO_ID"] == 1)]
@@ -536,8 +556,8 @@ with tab_time:
 with tab_dash:
     st.subheader("Next 21 nights")
     kpis = df(admin_db().query(
-        "SELECT STAY_DATE, OCCUPANCY_PCT, ADR, REVPAR FROM V_DAILY_KPIS "
-        "WHERE STAY_DATE BETWEEN CURRENT DATE AND CURRENT DATE + 20 DAYS ORDER BY STAY_DATE"))
+        "SELECT STAY_DATE, OCCUPANCY_PCT, ADR, REVPAR FROM V_DAILY_KPIS WHERE PROPERTY_ID = ? "
+        "AND STAY_DATE BETWEEN CURRENT DATE AND CURRENT DATE + 20 DAYS ORDER BY STAY_DATE", (HOTEL,)))
     if not kpis.empty:
         k = kpis.iloc[0]
         m1, m2, m3 = st.columns(3)
@@ -560,8 +580,8 @@ with tab_dash:
         rule = alt.Chart(pd.DataFrame({"y": [85]})).mark_rule(strokeDash=[4, 4], color="#8d8d8d").encode(y="y:Q")
         st.altair_chart((bars + rule).properties(height=260), use_container_width=True)
     past = df(admin_db().query(
-        "SELECT STAY_DATE, OCCUPANCY_PCT, REVPAR FROM MQT_DAILY_KPIS "
-        "WHERE STAY_DATE BETWEEN CURRENT DATE - 30 DAYS AND CURRENT DATE - 1 DAY ORDER BY STAY_DATE"))
+        "SELECT STAY_DATE, OCCUPANCY_PCT, REVPAR FROM MQT_DAILY_KPIS WHERE PROPERTY_ID = ? "
+        "AND STAY_DATE BETWEEN CURRENT DATE - 30 DAYS AND CURRENT DATE - 1 DAY ORDER BY STAY_DATE", (HOTEL,)))
     if not past.empty:
         st.markdown("**Last 30 nights** · read from the materialized query table `MQT_DAILY_KPIS` "
                     "(precomputed by Db2, `REFRESH DEFERRED`)")
@@ -574,7 +594,8 @@ with tab_dash:
         ).properties(height=170), use_container_width=True)
     by_type = df(admin_db().query(
         "SELECT STAY_DATE, ROOM_TYPE_CODE, DECIMAL(100.0 * ROOMS_SOLD / NULLIF(ROOMS_IN_SERVICE,0), 5, 1) AS OCC "
-        "FROM V_ROOM_TYPE_DAY WHERE STAY_DATE BETWEEN CURRENT DATE AND CURRENT DATE + 20 DAYS"))
+        "FROM V_ROOM_TYPE_DAY WHERE PROPERTY_ID = ? AND STAY_DATE BETWEEN CURRENT DATE AND CURRENT DATE + 20 DAYS",
+        (HOTEL,)))
     if not by_type.empty:
         st.markdown("**Occupancy by room type** · cells at 100% or more are sold out or oversold")
         cells = by_type.assign(Occ=by_type["OCC"].astype(float),
@@ -583,7 +604,7 @@ with tab_dash:
         night_order = cells.sort_values("Date")["Night"].unique().tolist()
         base = alt.Chart(cells).encode(
             x=alt.X("Night:N", sort=night_order, title=None, axis=alt.Axis(labelAngle=-45)),
-            y=alt.Y("ROOM_TYPE_CODE:N", title=None, sort=["STD", "DLX", "PRM", "FAM", "JST", "STE"]))
+            y=alt.Y("ROOM_TYPE_CODE:N", title=None, sort=codes))
         heat = base.mark_rect(cornerRadius=2).encode(
             color=alt.Color("Occ:Q", scale=alt.Scale(scheme="blues", domain=[0, 100]), legend=None),
             stroke=alt.condition("datum.Occ >= 100", alt.value("#da1e28"), alt.value(None)),
@@ -597,7 +618,9 @@ with tab_dash:
     st.caption("One Db2 query classifies every complaint sentence into themes by vector similarity "
                "(`VALUES` anchor vectors × `REVIEW_CHUNKS`, `VECTOR_DISTANCE`, `ROW_NUMBER() OVER`) and "
                "aggregates them by theme, floor and room with `GROUP BY GROUPING SETS`.")
-    radar = radar_cached(30)
+    radar = radar_cached(30, HOTEL)
+    if not radar["themes"]:
+        st.caption(f"No complaint reviews for {HOTEL_NAME} in the last 30 days.")
     if radar["themes"]:
         cells = pd.DataFrame([{"Theme": t["THEME"], "Floor": f"Floor {f['FLOOR_NO']}", "Reviews": f["REVIEWS"]}
                               for t in radar["themes"] for f in t["FLOORS"]])
@@ -623,7 +646,8 @@ with tab_dash:
     trend = df(admin_db().query(
         "SELECT WEEK, DECIMAL(AVG(RATING * 1.0), 3, 2) AS AVG_RATING, COUNT(*) AS REVIEWS FROM ("
         "  SELECT CREATED_AT - (DAYOFWEEK(CREATED_AT) - 1) DAYS AS WEEK, RATING FROM GUEST_REVIEWS "
-        "  WHERE CREATED_AT >= CURRENT DATE - 120 DAYS) W GROUP BY WEEK ORDER BY WEEK"))
+        "  WHERE CREATED_AT >= CURRENT DATE - 120 DAYS AND PROPERTY_ID = ?) W GROUP BY WEEK ORDER BY WEEK",
+        (HOTEL,)))
     if not trend.empty:
         weekly = trend.assign(Rating=trend["AVG_RATING"].astype(float), Week=pd.to_datetime(trend["WEEK"]))
         st.altair_chart(alt.Chart(weekly).mark_line(point=True, color="#0f62fe").encode(
@@ -631,6 +655,80 @@ with tab_dash:
             y=alt.Y("Rating:Q", title="Avg rating (1–5)", scale=alt.Scale(domain=[1, 5])),
             tooltip=[alt.Tooltip("Week:T", format="%d %b %Y"), "Rating", "REVIEWS"],
         ).properties(height=200), use_container_width=True)
+
+# --------------------------------------------------------------------------- hotel group
+with tab_group:
+    st.subheader("One Db2 database, a group of hotels, and an AI that only sees its own")
+    st.caption("Every room type, room, booking, rate, review, ticket and agent action carries a `PROPERTY_ID`. "
+               "The AI's Db2 login is scoped to its hotel in `AGENT_SCOPE`, a table only managers can change, and "
+               "row permissions on 15 tables hide every other hotel from it, in views, time travel and stored "
+               "procedures too.")
+    group = df(manager.properties())
+    if not group.empty:
+        st.dataframe(group.rename(columns={"OCCUPANCY_PCT": "OCC_TONIGHT_%"}), use_container_width=True,
+                     hide_index=True)
+
+    st.markdown("#### Look as the AI")
+    agent_user = SETTINGS.db2.agent_user.upper()
+    count_sql = ("SELECT P.PROPERTY_ID, P.NAME, "
+                 "(SELECT COUNT(*) FROM ROOMS R WHERE R.PROPERTY_ID = P.PROPERTY_ID) AS ROOMS, "
+                 "(SELECT COUNT(*) FROM RESERVATIONS X WHERE X.PROPERTY_ID = P.PROPERTY_ID) AS BOOKINGS, "
+                 "(SELECT COUNT(*) FROM RATE_PLAN RP WHERE RP.PROPERTY_ID = P.PROPERTY_ID) AS RATE_NIGHTS "
+                 "FROM PROPERTIES P ORDER BY P.PROPERTY_ID")
+    g1, g2 = st.columns(2)
+    with g1.container(border=True):
+        st.markdown(f"**Manager** (`{SETTINGS.db2.admin_user.upper()}`) sees")
+        st.dataframe(df(admin_db().query(count_sql)), use_container_width=True, hide_index=True)
+    with g2.container(border=True):
+        st.markdown(f"**AI agent** (`{agent_user}`) sees: the same query, run on its own Db2 login")
+        try:
+            seen = df(get_db("agent").query(count_sql))
+        except Db2Error as exc:
+            seen = df([])
+            st.caption(f"Agent login unavailable: {exc}")
+        st.dataframe(seen, use_container_width=True, hide_index=True)
+        if not seen.empty and len(seen) < len(group):
+            st.caption(f"Db2 returns {len(seen)} of {len(group)} hotels. Nothing in the app filters this: the row "
+                       "permissions do.")
+
+    scope = df(admin_db().query("SELECT S.AUTH_ID, S.PROPERTY_ID, P.NAME, S.GRANTED_BY, S.GRANTED_AT "
+                                "FROM AGENT_SCOPE S JOIN PROPERTIES P ON P.PROPERTY_ID = S.PROPERTY_ID "
+                                "ORDER BY S.AUTH_ID, S.PROPERTY_ID"))
+    st.markdown("**`AGENT_SCOPE`**: which hotels each AI login may see (manager-only table)")
+    st.dataframe(scope, use_container_width=True, hide_index=True)
+    others = [p for p in hotels if p != AGENT_HOTEL]
+    if others:
+        other = others[0]
+        granted = not scope.empty and ((scope["AUTH_ID"] == agent_user) & (scope["PROPERTY_ID"] == other)).any()
+        k1, k2 = st.columns(2)
+        if not granted and k1.button(f"Let the AI see {hotels[other]['NAME']}", icon=":material/key:"):
+            admin_db().execute("INSERT INTO AGENT_SCOPE (AUTH_ID, PROPERTY_ID, GRANTED_BY) VALUES (?, ?, ?)",
+                               (agent_user, other, MANAGER))
+            st.rerun()
+        if granted and k1.button(f"Revoke {hotels[other]['NAME']} from the AI", icon=":material/key_off:",
+                                 type="primary"):
+            admin_db().execute("DELETE FROM AGENT_SCOPE WHERE AUTH_ID = ? AND PROPERTY_ID = ?", (agent_user, other))
+            st.rerun()
+        k2.caption("One row in `AGENT_SCOPE` is the only switch. Grant it and the agent's table above shows the "
+                   "second hotel at once; revoke it and it disappears. The agent itself cannot change this table.")
+        other_room = admin_db().scalar("SELECT MIN(ROOM_NO) FROM ROOMS WHERE PROPERTY_ID = ?", (other,))
+        if other_room and st.button(f"AI tries to raise a ticket for {hotels[other]['NAME']} room {other_room}",
+                                    icon=":material/build:"):
+            from hotelops.chain import _own, _propose_rolled_back
+
+            agent_conn = _own("agent")
+            try:
+                _, msg, _ = _propose_rolled_back(agent_conn, "MAINTENANCE", {
+                    "room_no": other_room, "category": "GENERAL", "priority": "LOW",
+                    "description": "Hotel group demo", "take_out_of_order": False})
+            finally:
+                agent_conn.close()
+            st.session_state.group_try = (other_room, msg)
+        if st.session_state.get("group_try"):
+            room, msg = st.session_state.group_try
+            (st.success if msg.startswith("PENDING") else st.error)(
+                f"`SP_PROPOSE_ACTION` as the AI, room {room}: **{msg}** "
+                "(run in a transaction that was rolled back)", icon=":material/gavel:")
 
 # --------------------------------------------------------------------------- red team
 with tab_red:

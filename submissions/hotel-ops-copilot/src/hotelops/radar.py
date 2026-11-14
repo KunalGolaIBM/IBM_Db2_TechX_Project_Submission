@@ -49,7 +49,8 @@ WITH T (THEME, TV) AS (VALUES {values}),
              FROM REVIEW_CHUNKS C
              JOIN GUEST_REVIEWS R ON R.REVIEW_ID = C.REVIEW_ID
             CROSS JOIN T
-            WHERE R.CREATED_AT >= CURRENT DATE - ? DAYS AND R.RATING <= ?),
+            WHERE R.CREATED_AT >= CURRENT DATE - ? DAYS AND R.RATING <= ?
+              AND R.PROPERTY_ID = COALESCE(CAST(? AS SMALLINT), R.PROPERTY_ID)),
      B AS (SELECT C.*, ROW_NUMBER() OVER (PARTITION BY C.CHUNK_ID ORDER BY C.D) AS RN FROM C),
      M AS (SELECT DISTINCT B.REVIEW_ID, B.THEME FROM B WHERE B.RN = 1 AND B.D <= ?)
 SELECT M.THEME, RM.FLOOR_NO, R.ROOM_NO, COUNT(*) AS REVIEWS,
@@ -61,9 +62,11 @@ SELECT M.THEME, RM.FLOOR_NO, R.ROOM_NO, COUNT(*) AS REVIEWS,
  GROUP BY GROUPING SETS ((M.THEME), (M.THEME, RM.FLOOR_NO), (M.THEME, RM.FLOOR_NO, R.ROOM_NO))"""
 
 
-def complaint_radar(db: Db2, days: int = 30, max_rating: int = 3) -> dict:
-    """Every complaint theme in the window with its volume, floors, top rooms and a LOCALISED/SYSTEMIC call."""
-    rows = db.query(_sql(), (*_anchor_params(), max(1, int(days)), int(max_rating), MAX_DISTANCE))
+def complaint_radar(db: Db2, days: int = 30, max_rating: int = 3, property_id: int | None = None) -> dict:
+    """Every complaint theme in the window with its volume, floors, top rooms and a LOCALISED/SYSTEMIC call.
+
+    ``property_id`` limits a manager's view to one hotel; an agent's view is already limited by Db2 RCAC."""
+    rows = db.query(_sql(), (*_anchor_params(), max(1, int(days)), int(max_rating), property_id, MAX_DISTANCE))
     themes: dict[str, dict] = {}
     for r in rows:
         if r["G_FLOOR"] == 1:  # theme total

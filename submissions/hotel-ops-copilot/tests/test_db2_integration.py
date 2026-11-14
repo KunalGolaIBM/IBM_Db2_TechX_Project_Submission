@@ -92,9 +92,11 @@ def test_property_isolation_keeps_the_agent_inside_its_own_hotel():
 
     r = isolation_check()
     # a second hotel exists for the manager, not for the agent: tables, history and the KPI view
-    assert (r["admin_properties"], r["agent_properties"]) == (2, 1)
+    assert r["agent_properties"] == r["base_agent_properties"] == 1
+    assert r["admin_properties"] == r["base_properties"] + 1
     assert (r["admin_other_rows"], r["agent_other_rows"]) == (1, 0)
-    assert (r["admin_kpi_rows_today"], r["agent_kpi_rows_today"]) == (2, 1)
+    assert r["admin_kpi_rows_today"] == r["base_properties"] + 1 and r["agent_kpi_rows_today"] == 1
+    assert r["agent_kpi_rows_other_hotel"] == 0
     # room type codes are per hotel: the agent's STD is its own hotel's, and its proposal is filed there
     assert (r["admin_std_types"], r["agent_std_types"]) == (2, 1)
     assert r["std_proposal"] == "PENDING" and r["std_proposal_property"] == 1
@@ -105,12 +107,22 @@ def test_property_isolation_keeps_the_agent_inside_its_own_hotel():
     assert r["agent_properties_after_grant"] == 2 and r["agent_sees_other_room_after_grant"] == 1
     assert r["agent_sees_other_room_after_revoke"] == 0 and not r["agent_can_widen_scope"]
     assert r["left_behind"] == 0
-    assert ADMIN.scalar("SELECT COUNT(*) FROM PROPERTIES") == 1
+    assert ADMIN.scalar("SELECT COUNT(*) FROM PROPERTIES") == r["base_properties"]
+
+
+def test_demo_group_has_a_second_hotel_the_agent_cannot_see():
+    assert ADMIN.scalar("SELECT COUNT(*) FROM PROPERTIES") == 2
+    kochi = ADMIN.scalar("SELECT COUNT(*) FROM RESERVATIONS WHERE PROPERTY_ID = 2")
+    assert kochi > 100
+    assert AGENT.scalar("SELECT COUNT(*) FROM RESERVATIONS WHERE PROPERTY_ID = 2") == 0
+    assert AGENT.scalar("SELECT COUNT(*) FROM ROOMS WHERE ROOM_NO LIKE 'K%'") == 0
+    occ = ADMIN.scalar("SELECT OCCUPANCY_PCT FROM V_DAILY_KPIS WHERE PROPERTY_ID = 2 AND STAY_DATE = CURRENT DATE")
+    assert 40 <= float(occ) <= 90  # about two thirds booked
 
 
 def test_upgrade_for_opted_out_guest_is_rejected():
     rows = ADMIN.query("SELECT X.RESERVATION_ID FROM RESERVATIONS X JOIN GUESTS G ON G.GUEST_ID = X.GUEST_ID "
-                       "WHERE G.AI_CONSENT = 'N' AND X.STATUS IN ('CONFIRMED', 'CHECKED_IN') "
+                       "WHERE G.AI_CONSENT = 'N' AND X.STATUS IN ('CONFIRMED', 'CHECKED_IN') AND X.PROPERTY_ID = 1 "
                        "FETCH FIRST 1 ROW ONLY")
     if not rows:
         pytest.skip("no active reservation for an opted-out guest")
@@ -421,7 +433,8 @@ def test_mqt_is_a_materialized_copy_of_the_kpi_view():
                         (SCHEMA,))
     assert kind.strip() == "S"
     diff = ADMIN.scalar(
-        "SELECT COUNT(*) FROM MQT_DAILY_KPIS M JOIN V_DAILY_KPIS V ON V.STAY_DATE = M.STAY_DATE "
+        "SELECT COUNT(*) FROM MQT_DAILY_KPIS M JOIN V_DAILY_KPIS V "
+        "ON V.STAY_DATE = M.STAY_DATE AND V.PROPERTY_ID = M.PROPERTY_ID "
         "WHERE M.STAY_DATE < CURRENT DATE AND (M.OCCUPANCY_PCT <> V.OCCUPANCY_PCT OR M.ROOMS_SOLD <> V.ROOMS_SOLD)")
     assert diff == 0
     assert AGENT.scalar("SELECT COUNT(*) FROM MQT_DAILY_KPIS") > 0

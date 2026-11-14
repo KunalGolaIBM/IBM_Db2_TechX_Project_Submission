@@ -23,9 +23,9 @@ import ibm_db
 from hotelops.config import SCHEMA, load_settings
 from hotelops.db import OUT_TEXT, Db2, Db2Error
 
-PROPERTY = 2
-ROOM_TYPE = 90
-ROOM = "K101"
+PROPERTY = 99  # a temporary hotel (the demo group's real second hotel, Kochi, is property 2)
+ROOM_TYPE = 99
+ROOM = "X101"
 RESERVATION = 990001
 REVIEW = 990001
 
@@ -37,10 +37,10 @@ def _own(role: str) -> Db2:
 
 
 def _add_second_hotel(admin: Db2, today: dt.date) -> None:
-    admin.execute("INSERT INTO PROPERTIES (PROPERTY_ID, CODE, NAME, CITY) VALUES (?, 'KOCHI', 'Backwater House', "
-                  "'Kochi')", (PROPERTY,))
+    admin.execute("INSERT INTO PROPERTIES (PROPERTY_ID, CODE, NAME, CITY) VALUES (?, 'CHECK', 'Isolation Check "
+                  "Hotel', 'Pune')", (PROPERTY,))
     admin.execute("INSERT INTO ROOM_TYPES (ROOM_TYPE_ID, CODE, NAME, TIER, BASE_RATE, FLOOR_RATE, CEILING_RATE, "
-                  "MAX_OCCUPANCY, PROPERTY_ID) VALUES (?, 'STD', 'Lagoon Standard', 1, 4000, 3000, 6000, 2, ?)",
+                  "MAX_OCCUPANCY, PROPERTY_ID) VALUES (?, 'STD', 'Check Standard', 1, 4000, 3000, 6000, 2, ?)",
                   (ROOM_TYPE, PROPERTY))
     admin.execute("INSERT INTO ROOMS (ROOM_NO, ROOM_TYPE_ID, FLOOR_NO, PROPERTY_ID) VALUES (?, ?, 1, ?)",
                   (ROOM, ROOM_TYPE, PROPERTY))
@@ -52,7 +52,7 @@ def _add_second_hotel(admin: Db2, today: dt.date) -> None:
                   (RESERVATION, ROOM_TYPE, ROOM, today.isoformat(), (today + dt.timedelta(days=2)).isoformat(),
                    PROPERTY))
     admin.execute("INSERT INTO GUEST_REVIEWS (REVIEW_ID, RESERVATION_ID, ROOM_NO, SOURCE, RATING, REVIEW_TEXT, "
-                  "CREATED_AT, PROPERTY_ID) VALUES (?, ?, ?, 'DIRECT', 2, 'Kochi: the boat transfer was late.', "
+                  "CREATED_AT, PROPERTY_ID) VALUES (?, ?, ?, 'DIRECT', 2, 'The airport transfer was late.', "
                   "?, ?)", (REVIEW, RESERVATION, ROOM, today.isoformat(), PROPERTY))
 
 
@@ -103,6 +103,8 @@ def isolation_check() -> dict:
     _remove_second_hotel(admin)  # in case an earlier run was interrupted
     try:
         own = pick_nights(agent, "STD", 10)  # the agent's own Standard room: a night priced inside its band
+        seen["base_properties"] = admin.scalar("SELECT COUNT(*) FROM PROPERTIES")
+        seen["base_agent_properties"] = agent.scalar("SELECT COUNT(*) FROM PROPERTIES")
         _add_second_hotel(admin, today)
         seen |= {
             "admin_properties": admin.scalar("SELECT COUNT(*) FROM PROPERTIES"),
@@ -121,6 +123,8 @@ def isolation_check() -> dict:
             "admin_std_types": admin.scalar("SELECT COUNT(*) FROM ROOM_TYPES WHERE CODE = 'STD'"),
             "agent_kpi_rows_today": agent.scalar("SELECT COUNT(*) FROM V_DAILY_KPIS WHERE STAY_DATE = CURRENT DATE"),
             "admin_kpi_rows_today": admin.scalar("SELECT COUNT(*) FROM V_DAILY_KPIS WHERE STAY_DATE = CURRENT DATE"),
+            "agent_kpi_rows_other_hotel": agent.scalar(
+                "SELECT COUNT(*) FROM V_DAILY_KPIS WHERE STAY_DATE = CURRENT DATE AND PROPERTY_ID = ?", (PROPERTY,)),
         }
         _, seen["ticket_other_room"], _ = _propose_rolled_back(
             agent, "MAINTENANCE", {"room_no": ROOM, "category": "GENERAL", "priority": "LOW",
