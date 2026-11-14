@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "IBM Db2 Vector Search Exam Study Assistant & Notes RAG",
+    "slug": "db2-student-notes-rag",
+    "short_description": "Scalable student exam notes RAG application using IBM Db2 Native Vector Search, LangChain (langchain-db2), HuggingFace embeddings, and watsonx.ai Granite for high-accuracy formula retrieval and tutor answers.",
+    "category": "AI / RAG / Data Engineering / Analytics",
+    "repo_url": "https://github.com/prashant-vashishtha/IBM_Db2_TechX_Project_Submission",
+    "demo_url": "",
+    "video_url": ""
+  },
+  "team": {
+    "name": "Db2 Neural Scholar",
+    "members": [
+      {
+        "name": "Prashant Sharma",
+        "github": "prashant-vashishtha",
+        "email": "prashant.sharma@example.com",
+        "role": "Full Stack & AI Engineer"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "IBM Db2 Community Edition (Docker / VS Code Extension)",
+    "connector": "ibm_db / ibm_db_dbi / langchain-db2 (DB2VS)",
+    "features_used": [
+      "Native VECTOR column type",
+      "VECTOR_DISTANCE (COSINE similarity search)",
+      "CLOB data storage for markdown sections",
+      "Exact metadata filtering in SQL queries",
+      "Relational index and vector index optimization"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python"
+    ],
+    "frameworks": [
+      "LangChain",
+      "langchain-db2",
+      "langchain-community",
+      "Streamlit",
+      "Sentence-Transformers"
+    ],
+    "ai_models": [
+      "sentence-transformers/all-mpnet-base-v2 (768-dim embeddings)",
+      "ibm/granite-3-8b-instruct (watsonx.ai)",
+      "Google Gemini 1.5 Flash",
+      "Ollama granite3.3:8b"
+    ]
+  }
+}
+
