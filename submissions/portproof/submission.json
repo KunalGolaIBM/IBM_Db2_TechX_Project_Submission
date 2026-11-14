@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "PortProof: Verified SQL Migration to Db2",
+    "slug": "portproof",
+    "short_description": "Translates PostgreSQL, MySQL, SQL Server and SQLite SQL to Db2 and makes Db2 itself prove the result, first that it compiles through a server side PREPARE, then that it returns the same answers through differential execution against the real source engine over adversarial datasets that a dataset agent builds for any schema. On 125 statements IBM's own translator reported no error; Db2 rejected 17, and 66 more compiled while silently returning different rows. All 17 were repaired and re verified, and 50 of the 66 were repaired and re proved, by a tiered repair that asks Db2's fix memory first, measured rules second and a language model last. The model never reads source data, so its cost does not grow with the database: identical prompts at 2,000 and 2,000,000 source rows, and 80 model calls on the first run fall to 2 by the fourth because Db2 remembers every answer.",
+    "category": "AI / Data Engineering",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/ZENODIUM/IBM_Db2_TechX_Project_Submission/tree/submission/portproof/submissions/portproof"
+  },
+  "team": {
+    "name": "ZENODIUM",
+    "members": [
+      {
+        "name": "Vishnu",
+        "github": "ZENODIUM",
+        "email": "vishnuzeno@gmail.com",
+        "role": "Solo entry: Db2 schema and SQL PL, compile oracle, differential prover over four source engines and its soundness guards, dataset agent with its Db2 cache and yield log, tiered and metered repair (fix memory, rules, model), LangGraph compile repair loop, semantic repair loop, Db2 vector fix memory, Streamlit UI, test suite"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1.5.0 (Docker)",
+    "connector": "ibm_db / ibm_db_dbi / langchain-db2 (DB2VS)",
+    "features_used": [
+      "PREPARE as a compile oracle, server side, with DeferredPrepare=0 so the SQLCODE is the engine's own",
+      "VECTOR(384, FLOAT32) columns and VECTOR_DISTANCE(..., COSINE)",
+      "CREATE VECTOR INDEX ... WITH DISTANCE COSINE, with FETCH APPROX FIRST recall",
+      "Hybrid vector and relational recall evaluated in a single statement",
+      "JSON_VALUE(... RETURNING ...) typed extraction for metadata predicates",
+      "SQL PL stored procedures, including MERGE upsert and a cursor loop with CONTINUE HANDLER FOR NOT FOUND",
+      "HASH(..., 2) SHA-256 certificates computed inside the engine over the proof evidence",
+      "System versioned temporal tables and FOR SYSTEM_TIME AS OF",
+      "MQT with REFRESH IMMEDIATE MAINTAINED BY SYSTEM",
+      "Expression based index on UPPER(CASE_NAME)",
+      "COLLATION_KEY_BIT at UCA strength 1 and strength 3 to reproduce MySQL and PostgreSQL collation on Db2",
+      "CHECK and UNIQUE constraints, FOREIGN KEY ON DELETE CASCADE",
+      "WLM service class, workload matched on CURRENT CLIENT_APPLNAME, SQLROWSRETURNED and ESTIMATEDSQLCOST thresholds",
+      "32K bufferpool and tablespace, required for a 384 dimension vector index key",
+      "Two identity least privilege split enforced by GRANT",
+      "ADMIN_GET_TAB_COMPRESS_INFO and SYSCAT.TABLES compression measurement",
+      "ORGANIZE BY COLUMN (BLU) availability check",
+      "MON_GET_PKG_CACHE_STMT workload hotspots",
+      "Federation: a JDBC wrapper, POSTGRESQL and MYSQL servers, user mappings to read only remote accounts, and nicknames, so one Db2 statement compares the source rows against Db2's own with EXCEPT ALL in both directions",
+      "SYSCAT catalog introspection",
+      "One schema per adversarial dataset with SET CURRENT SCHEMA, so each dataset is loaded once and the SQL under test is never rewritten",
+      "JSON_EXISTS inside a SQL PL procedure with SIGNAL SQLSTATE to validate a dataset payload at the only write path",
+      "A dataset cache, a per dataset yield log with an aggregating view, a model call ledger and a dead end table, all written only through SQL PL procedures",
+      "CREATE EXTERNAL MODEL and TEXT_GENERATION: the repair model is called by Db2 inside a definer rights SQL PL procedure that enforces the call budget with SIGNAL and writes the cost ledger row in the same call, so the application holds no key",
+      "EXPLAIN PLAN and EXPLAIN_STATEMENT.TOTAL_COST to estimate a repair's cost before and after, without executing it"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "SQL",
+      "SQL PL"
+    ],
+    "frameworks": [
+      "LangChain",
+      "LangGraph",
+      "langchain-db2",
+      "Model Context Protocol (mcp, FastMCP)",
+      "Streamlit",
+      "sqlglot with db2-sqlglot-dialect",
+      "PostgreSQL 17",
+      "MySQL 8.4",
+      "SQL Server 2022",
+      "SQLite",
+      "DuckDB",
+      "pytest"
+    ],
+    "ai_models": [
+      "sentence-transformers/all-MiniLM-L6-v2 (local, CPU, 384 dimension embeddings)",
+      "Tiered repair, the default: Db2 fix memory, then a deterministic rule engine, then a language model",
+      "gemini-flash-latest through an OpenAI compatible endpoint as the model tier (optional; any compatible endpoint works, and with no key the first two tiers run alone)"
+    ]
+  }
+}

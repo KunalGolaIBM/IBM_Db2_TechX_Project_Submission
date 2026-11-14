@@ -1,0 +1,16 @@
+# Secrets never enter the repository. The repository root ignores these too;
+# this file repeats it inside the submission so the rule travels with the
+# project if the folder is ever copied out on its own.
+.env
+.env.*
+!.env.example
+
+# Credentials printed by scripts/create_db2_users.sh
+*.secret
+secrets/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/

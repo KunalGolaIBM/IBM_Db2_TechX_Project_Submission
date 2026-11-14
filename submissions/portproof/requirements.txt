@@ -1,0 +1,38 @@
+# PortProof -- pinned to the versions the project was built and tested against
+# (Db2 Community Edition 12.1.5.0, Python 3.12).
+
+# --- IBM Db2 -------------------------------------------------------------
+ibm_db==3.3.0                    # the Db2 driver; every value is bound
+ibm-db-sa==0.4.4                 # SQLAlchemy dialect for Db2
+
+# --- the AI framework (Db2Hack requirement) ------------------------------
+langchain==1.4.9
+langchain-core==1.7.6
+langchain-community==0.4.2
+langchain-db2==1.0.0             # IBM's official LangChain integration: DB2VS
+langgraph==1.2.20                # the bounded repair state machine
+
+# --- translation ---------------------------------------------------------
+sqlglot==30.30.0
+db2-sqlglot-dialect==1.1.0       # IBM's Db2 dialect: the thing PortProof verifies
+
+# --- embeddings (local, CPU, no API key) ---------------------------------
+sentence-transformers==6.2.0
+
+# --- the source engines for differential testing -------------------------
+# A real server where the engine's own semantics decide the answer; the
+# embedded DuckDB as a zero-setup stand-in that declares where it differs.
+duckdb==2.0.0                    # PostgreSQL stand-in, no server needed
+psycopg[binary]==3.2.12          # PostgreSQL, when a real one is reachable
+pymysql==1.1.2                   # MySQL: a *real* one, because MySQL's
+                                 # collation and division semantics live in the
+                                 # engine and cannot be emulated by DuckDB
+pymssql==2.4.6                   # SQL Server: also a real one, for the tsql statements
+cryptography==46.0.3             # required by pymysql for MySQL 8's default
+                                 # caching_sha2_password authentication
+
+# --- app and tooling -----------------------------------------------------
+streamlit==1.67.0
+python-dotenv==1.2.4
+pytest==9.2.0
+mcp==1.30.0                      # python -m src.mcp_server: PortProof's proofs as agent tools
