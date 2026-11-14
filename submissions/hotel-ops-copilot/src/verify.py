@@ -347,6 +347,17 @@ def label_based_access(admin: Db2, agent: Db2) -> str:
             "allergy note is invisible to it) and cannot write; RCAC also hides opted-out guests' notes")
 
 
+def feature_inventory(admin: Db2, agent: Db2) -> str:
+    from hotelops.features import inventory
+
+    rows = inventory(admin)
+    missing = [r["Db2 feature"] for r in rows if r["Objects"] == 0]
+    assert not missing, missing
+    return (f"all {len(rows)} Db2 features are deployed, read from SYSCAT: "
+            f"{sum(r['Objects'] for r in rows)} catalog objects (vectors, temporal, MQT, compression, SQL PL, "
+            "triggers, RCAC, LBAC, workload thresholds, event monitor, ...)")
+
+
 def materialized_view(admin: Db2, agent: Db2) -> str:
     kind = admin.scalar("SELECT TYPE FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TABNAME = 'MQT_DAILY_KPIS'",
                         (SCHEMA,))
@@ -499,6 +510,7 @@ CHECKS: list[tuple[str, str, Callable[[Db2, Db2], str]]] = [
     ("AI quality", "Evaluation set", evaluation),
     ("Db2 integration", "Adaptive row compression", adaptive_compression),  # appended, so earlier numbers stay put
     ("Security", "Label-based access control (LBAC) on guest notes", label_based_access),
+    ("Db2 integration", "Db2 feature inventory from the catalog", feature_inventory),
 ]
 
 

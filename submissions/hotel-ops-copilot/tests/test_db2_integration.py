@@ -135,6 +135,15 @@ def test_lbac_hides_restricted_guest_notes_from_the_agent():
     assert not r["agent_can_write"]
 
 
+def test_every_db2_feature_in_the_inventory_is_deployed():
+    from hotelops.features import inventory
+
+    rows = {r["Db2 feature"]: r for r in inventory(ADMIN)}
+    assert len(rows) == 18 and all(r["Objects"] > 0 for r in rows.values()), rows
+    assert rows["RCAC row permissions (consent, hotel isolation)"]["Objects"] == 17  # no system defaults
+    assert rows["Label-based access control (LBAC)"]["Objects"] == 3
+
+
 def test_demo_group_has_a_second_hotel_the_agent_cannot_see():
     assert ADMIN.scalar("SELECT COUNT(*) FROM PROPERTIES") == 2
     kochi = ADMIN.scalar("SELECT COUNT(*) FROM RESERVATIONS WHERE PROPERTY_ID = 2")

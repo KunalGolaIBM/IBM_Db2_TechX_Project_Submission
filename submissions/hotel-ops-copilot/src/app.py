@@ -241,10 +241,10 @@ if HOTEL != AGENT_HOTEL:
     st.info(f"You are viewing **{HOTEL_NAME}**. The AI agents work for **{hotels[AGENT_HOTEL]['NAME']}**: Db2 hides "
             f"every {HOTEL_NAME} room, booking and rate from their login, so the Copilot cannot see or act on this "
             "hotel. See the **Hotel group** tab.", icon=":material/visibility_off:")
-tab_chat, tab_approve, tab_time, tab_dash, tab_group, tab_red, tab_audit, tab_proof = st.tabs(
+tab_chat, tab_approve, tab_time, tab_dash, tab_group, tab_red, tab_audit, tab_feat, tab_proof = st.tabs(
     [":material/forum: Copilot", ":material/task_alt: Approvals", ":material/history: Time travel",
      ":material/monitoring: Dashboard", ":material/domain: Hotel group", ":material/shield: Red team",
-     ":material/receipt_long: Audit trail", ":material/fact_check: Proofs"])
+     ":material/receipt_long: Audit trail", ":material/database: Db2 features", ":material/fact_check: Proofs"])
 
 # --------------------------------------------------------------------------- chat
 with tab_chat:
@@ -878,6 +878,26 @@ with tab_audit:
         if answer:
             with st.expander("Final answer", expanded=True):
                 st.markdown(answer)
+
+# --------------------------------------------------------------------------- Db2 features
+with tab_feat:
+    from hotelops.features import inventory
+
+    st.subheader("Every IBM Db2 feature this project uses, read live from the Db2 catalog")
+    st.caption("Each row is one query against `SYSCAT` (columns, tables, routines, triggers, controls, security "
+               "policies, workloads, thresholds, event monitors) run now, so it shows what is deployed in this "
+               "database, not what the README says. The last column names the live check on the **Proofs** tab "
+               "that exercises it.")
+    feats = df(inventory(admin_db()))
+    if not feats.empty:
+        used = int((feats["Objects"] > 0).sum())
+        f1, f2, f3 = st.columns(3)
+        f1.metric("Db2 features in use", f"{used} of {len(feats)}")
+        f2.metric("Catalog objects behind them", int(feats["Objects"].sum()))
+        f3.metric("Security features", int(((feats["Area"] == "Security") & (feats["Objects"] > 0)).sum()))
+        st.dataframe(feats, use_container_width=True, hide_index=True,
+                     column_config={"Objects": st.column_config.NumberColumn(width="small"),
+                                    "In the database": st.column_config.TextColumn(width="large")})
 
 # --------------------------------------------------------------------------- proofs
 with tab_proof:

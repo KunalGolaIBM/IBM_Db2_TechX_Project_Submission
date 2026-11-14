@@ -45,7 +45,7 @@
       "Db2 workload management: the AI login runs in its own WORKLOAD with THRESHOLDs on estimated cost, rows returned and run time (STOP EXECUTION), and a THRESHOLD VIOLATIONS event monitor logs every stop",
       "Policy knowledge base in Db2 via IBM langchain-db2 DB2VS",
       "Red-team scoreboard: 24/24 attacks blocked, mostly by Db2 privileges, RCAC and SQL PL guardrails",
-      "python src/verify.py: 32 live checks of every claim against Db2 (no LLM key); guardrail fuzzing with 10,000 random proposals vs an independent oracle (10,000/10,000 agree)"
+      "python src/verify.py: 33 live checks of every claim against Db2 (no LLM key); guardrail fuzzing with 10,000 random proposals vs an independent oracle (10,000/10,000 agree)"
     ]
   },
   "tech_stack": {

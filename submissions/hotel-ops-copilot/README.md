@@ -10,7 +10,7 @@
 
 ![Db2 dry run catches the agent's overbooking mistake](docs/screenshots/12-dry-run-catches-oversell.png)
 
-| 30/30 | 24/24 | 10,000/10,000 | 32/32 | 180 · 87% | 1 command |
+| 30/30 | 24/24 | 10,000/10,000 | 33/33 | 182 · 87% | 1 command |
 |:---:|:---:|:---:|:---:|:---:|:---:|
 | evaluation questions correct (KPIs, time travel, bitemporal, vector search, policies, Hindi, 9 safety attacks), against ground truth computed in Db2 ([results](docs/eval_results.md)) | red-team attacks blocked, 22 by Db2 itself ([scoreboard](docs/redteam_results.md)) | random proposals fuzzed into the Db2 guardrails, every decision matching an independent oracle ([results](docs/guardrail_fuzz.md)) | live Db2 checks of every claim (`python src/verify.py`, no key) | automated tests, 87% line coverage of the core package, none needing an LLM key | `docker compose up -d` starts Db2 and the app |
 
@@ -42,6 +42,7 @@ flowchart TB
 ![Red-team attack console: 24/24 blocked](docs/screenshots/red-team-live.gif)
 
 ### What's new after the pitch
+- **Db2 features tab:** the app reads Db2's own catalog (`SYSCAT`) and shows all **18 IBM Db2 features** in use, backed by 84 catalog objects, each linked to the live check that proves it.
 - **Hotel-chain isolation enforced by Db2:** two demo hotels, a hotel switcher, and a **Hotel group** tab where the same query run as the AI returns only its own hotel; Db2 rejects its actions on the other one ([details](#ibm-db2-integration)).
 - **Measured at chain scale:** 1,000,000 reservations across 40 hotels; one hotel's agent sees 25,000 and gets its KPIs in 187 ms ([benchmark](docs/scale_benchmark.md)).
 - **Contributed upstream to IBM:** fixes to IBM's Db2 SQLGlot dialect, [IBM/db2-sqlglot-plugin#30](https://github.com/IBM/db2-sqlglot-plugin/pull/30).
@@ -52,10 +53,12 @@ flowchart TB
 
 ![Hotel group: the AI's Db2 login sees 1 of 2 hotels and its ticket for a Kochi room is rejected](docs/screenshots/17-hotel-group.png)
 
+![Db2 features: 18 of 18 IBM Db2 features in use, read live from the Db2 catalog](docs/screenshots/19-db2-features.png)
+
 ### 30-second proof: `python src/verify.py`
 ![Proofs tab: every claim checked live against Db2](docs/screenshots/proofs-live.gif)
 
-One command checks every headline claim against the live Db2, with no LLM key, and rolls back anything it writes: Db2 12.1 and native `VECTOR` columns, vector search, IBM `langchain-db2`, temporal tables, the least-privilege agent, RCAC mask and row permission, **property isolation for a hotel chain**, the `EXPLAIN` cost guard, the **SQLGlot syntax-tree guard**, **bitemporal** `BUSINESS_TIME` + `SYSTEM_TIME` promotions, a **materialized query table**, the change feed, the SQL PL and JSON guardrails, guarded apply + rollback, **concurrent approvals serialised by Db2 row locks**, earned autonomy decided inside Db2, CHECK constraints, the hash-chain trigger, the tamper-evident audit chain, an **external anchor that catches a fully rebuilt ledger**, the red team and the evaluation. It also fuzzes the guardrails with 1,000 random proposals. Expected output ends with **`32/32 checks passed`** in about 10 seconds. The same checks run live, one by one, in the app's **Proofs** tab. With Docker: `docker compose exec app python src/verify.py`.
+One command checks every headline claim against the live Db2, with no LLM key, and rolls back anything it writes: Db2 12.1 and native `VECTOR` columns, vector search, IBM `langchain-db2`, temporal tables, the least-privilege agent, RCAC mask and row permission, **property isolation for a hotel chain**, the `EXPLAIN` cost guard, the **SQLGlot syntax-tree guard**, **bitemporal** `BUSINESS_TIME` + `SYSTEM_TIME` promotions, a **materialized query table**, the change feed, the SQL PL and JSON guardrails, guarded apply + rollback, **concurrent approvals serialised by Db2 row locks**, earned autonomy decided inside Db2, CHECK constraints, the hash-chain trigger, the tamper-evident audit chain, an **external anchor that catches a fully rebuilt ledger**, the red team and the evaluation. It also fuzzes the guardrails with 1,000 random proposals. Expected output ends with **`33/33 checks passed`** in about 10 seconds. The same checks run live, one by one, in the app's **Proofs** tab. With Docker: `docker compose exec app python src/verify.py`.
 
 ### What building this taught us about Db2 (measured)
 Hardening an AI agent against Db2, and then running it at 1,000,000 reservations, surfaced seven behaviours anyone putting an LLM on Db2 will hit. Each was measured, fixed and pinned by a test ([details and reproduction](docs/db2_findings.md)):
@@ -106,7 +109,7 @@ After `docker compose up -d` (or `bash scripts/quickstart.sh`), open http://loca
 | **Db2 integration and depth (30%)** | Every guarantee in this project is enforced by Db2, not by the prompt. It uses **vector search** over sentence chunks, **system-period temporal tables** for time-travel rollback, **SQL PL guardrail procedures**, **RCAC column masks and a row permission** (consent), a **least-privilege role** for the AI, an **`EXPLAIN` cost guard** on AI-written SQL, IBM's **`langchain-db2` vector store** for the policy handbook, a **JSON check constraint**, and the agent's audit trail in Db2 tables. A **[red-team scoreboard](docs/redteam_results.md)** shows **24/24 attacks blocked**, 22 of them by Db2 itself. See [IBM Db2 Integration](#ibm-db2-integration) and [`src/sql/`](src/sql) |
 | **Innovation and impact (25%)** | A governed agent: the AI can only *propose*, Db2 **dry-runs** the action, a human approves, Db2 re-checks and applies, and any change can be undone in one click. **Earned autonomy** lets managers grant the AI low-risk actions within limits Db2 enforces. Db2 also defeats a prompt-injection attack hidden in a guest review |
 | **Architecture and AI integration (20%)** | A LangGraph router with three specialist sub-graphs and a composer. Each specialist has a restricted toolset, conversation memory is stored in Db2, and a structured-output router picks the agent. See [architecture.md](architecture.md) for the sequence diagram and a **threat model** that maps every threat to the Db2 control and the test that proves it |
-| **Reproducibility and code quality (15%)** | `docker compose up -d` (Db2 + app, no local Python) or `bash scripts/quickstart.sh`. The code is lint-clean (`ruff check src tests`; config in `ruff.toml`). 180 tests (unit, live Db2, guardrail fuzzing, concurrency races, and the full LangGraph flow driven offline by a scripted model) with **87% line coverage** of the core package and no LLM needed, run by **GitHub Actions CI on every push and every day against a fresh IBM Db2 container** ([workflow](.github/workflows/ci.yml)), plus `python src/verify.py` (28 live checks), the data is deterministic, and the app works without an API key (agent runs need one) |
+| **Reproducibility and code quality (15%)** | `docker compose up -d` (Db2 + app, no local Python) or `bash scripts/quickstart.sh`. The code is lint-clean (`ruff check src tests`; config in `ruff.toml`). 182 tests (unit, live Db2, guardrail fuzzing, concurrency races, and the full LangGraph flow driven offline by a scripted model) with **87% line coverage** of the core package and no LLM needed, run by **GitHub Actions CI on every push and every day against a fresh IBM Db2 container** ([workflow](.github/workflows/ci.yml)), plus `python src/verify.py` (28 live checks), the data is deterministic, and the app works without an API key (agent runs need one) |
 | **Measured, not claimed** | [30/30 evaluation questions pass](docs/eval_results.md), against ground truth computed by SQL in Db2 at run time |
 | **Documentation and presentation (10%)** | This README, the [architecture](architecture.md), [evaluation results](docs/eval_results.md), [screenshots](docs/screenshots/) and the [Round 1 proposal deck](docs/Round1_Proposal_Hotel_Ops_Copilot_Deck.pdf) |
 
@@ -162,7 +165,7 @@ Hotel Ops Copilot is a **multi-agent assistant whose guardrails live in the data
 | 🧠 **Conversation memory in Db2** | Earlier turns of a thread are read back from `AGENT_RUNS`, so follow-ups like "and for suites?" work |
 | 🛡️ **Red-team scoreboard** | 24 attacks a fooled or malicious agent might try. Most of them deliberately bypass the app and use the agent's own Db2 credentials: deleting guests, ₹500 suites, self-approval, dumping PII, bypassing consent, a cross join, the injected review, and price swings over 35%. **All 24 are blocked**, and each shows the layer that stopped it. One click in the 🛡️ Red team tab or `python src/redteam.py`; no LLM is used, and every attack is rolled back |
 | 🎲 **Guardrail fuzzing** | `python src/fuzz_guardrails.py` sends **10,000 random proposals** (boundary values, garbage, unknown types, opted-out guests, repeats) to `SP_PROPOSE_ACTION` with the agent's own credentials and compares every Db2 decision with an independent Python oracle of the rules: **10,000/10,000 agree**. Its first run found a real bug (an over-long field crashed the procedure instead of a clean `REJECTED`), now fixed and pinned by a test |
-| ✅ **Proofs tab** | One click runs all 32 `verify.py` checks live inside the app and shows each one turning green, so a judge without a terminal sees the same evidence |
+| ✅ **Proofs tab** | One click runs all 33 `verify.py` checks live inside the app and shows each one turning green, so a judge without a terminal sees the same evidence |
 | 🔗 **External audit anchor** | A hash chain alone is tamper-*evident*: an insider with DBA rights could edit a step and recompute every later hash. So after every agent run the chain head is copied **outside Db2** (`~/.hotelops/audit_anchors.jsonl`). *Simulate a rebuilt ledger* shows the attack: the in-database chain verifies as intact, but the anchor no longer matches, all inside a rolled-back transaction |
 | 🗓️ **Bitemporal promotions** | `PROMOTIONS` has both **`BUSINESS_TIME`** (which stay nights a discount covers) and **`SYSTEM_TIME`** (when the hotel recorded it), with `PRIMARY KEY (..., BUSINESS_TIME WITHOUT OVERLAPS)`. A revenue manager deepened the Junior Suite offer for Saturday and Sunday only with `UPDATE ... FOR PORTION OF BUSINESS_TIME`; Db2 split the period itself. One query answers *"what was a guest quoted for 21 Nov, as we knew it before the correction?"* (`FOR SYSTEM_TIME AS OF ... FOR BUSINESS_TIME AS OF ...`), and the agents use it through the `promotion_on` tool |
 | 📦 **Materialized query table** | `MQT_DAILY_KPIS` (`REFRESH DEFERRED`, `ENABLE QUERY OPTIMIZATION`) materialises the KPI view for history and trends; the dashboard's 30-night history reads from it |
@@ -294,7 +297,7 @@ See [architecture.md](architecture.md) for diagrams and the data flow.
 | LLM output | The AI can only *propose*. Every action is dry-run in a rolled-back transaction, re-checked by `SP_APPLY_ACTION`, approved by a human, and can be undone. | [`02_procedures.sql`](src/sql/02_procedures.sql) |
 | Audit | Every agent step is SHA-256 hash-chained by a Db2 trigger and anchored outside Db2, so tampering, even a fully rebuilt ledger, is detected. | [`audit.py`](src/hotelops/audit.py) |
 
-**Proof:** `python src/redteam.py` blocks **24/24 attacks** (22 by Db2 itself), and `python src/verify.py` passes **32/32** live checks, with no LLM key needed for either.
+**Proof:** `python src/redteam.py` blocks **24/24 attacks** (22 by Db2 itself), and `python src/verify.py` passes **33/33** live checks, with no LLM key needed for either.
 
 ---
 
@@ -404,7 +407,7 @@ python src/cli.py rollback 1
 ## Testing & Verification
 
 ```bash
-python src/verify.py                # 32 live-Db2 checks of every claim (no LLM)
+python src/verify.py                # 33 live-Db2 checks of every claim (no LLM)
 python src/fuzz_guardrails.py      # 10,000 random proposals vs an independent oracle -> docs/guardrail_fuzz.md
 pytest -q tests/
 pytest -q --cov=src/hotelops --cov=src/verify.py   # 87% line coverage of the core package
@@ -447,7 +450,7 @@ All screenshots are from real Gemini runs against the live Db2 database.
 
 | | |
 |---|---|
-| **Proofs tab.** One click runs all 32 `verify.py` checks against the live Db2, each turning green, ending in *all checks passed · nothing changed in the database* (the screenshot was taken when there were 26 checks; there are now 28) ![Proofs](docs/screenshots/15-proofs.png) | **Bitemporal promotions.** `BUSINESS_TIME` (which nights) + `SYSTEM_TIME` (when recorded): rm.priya's correction split the offer for Sat–Sun, and Db2 still answers *"18% off today, but 10% as originally recorded"* ![Bitemporal](docs/screenshots/16-bitemporal-promotions.png) |
+| **Proofs tab.** One click runs all 33 `verify.py` checks against the live Db2, each turning green, ending in *all checks passed · nothing changed in the database* (the screenshot was taken when there were 26 checks; there are now 28) ![Proofs](docs/screenshots/15-proofs.png) | **Bitemporal promotions.** `BUSINESS_TIME` (which nights) + `SYSTEM_TIME` (when recorded): rm.priya's correction split the offer for Sat–Sun, and Db2 still answers *"18% off today, but 10% as originally recorded"* ![Bitemporal](docs/screenshots/16-bitemporal-promotions.png) |
 | **Earned autonomy.** The manager grants the AI price nudges up to ±5% for nights 7+ days out. Db2 applied a +3% change on its own and kept a +15% change for human approval ![Earned autonomy](docs/screenshots/13-earned-autonomy.png) | **Stale evidence.** A revenue manager repriced a night after the AI proposed its cut. Db2 time travel (`AS OF` the proposal vs now) flags that the AI reasoned from rates that no longer apply ![Stale evidence](docs/screenshots/14-stale-evidence.png) |
 | **Db2 catches the agent's mistake.** The agent claimed Deluxe was under 90% sold, cited POL-ENG-01, and proposed blocking room 307. The dry run shows **Deluxe OVERSOLD on 17–18 Nov** and five bookings to move, all before anyone approves ![Dry run catches oversell](docs/screenshots/12-dry-run-catches-oversell.png) | **Red-team scoreboard: 24/24 blocked.** One click runs every attack against the live Db2, and 22 of them are stopped by Db2 itself ![Red team](docs/screenshots/11-red-team-scoreboard.png) |
 | **Morning brief.** One click runs Analyst → Guest experience → Operations → Composer. The result covers KPIs, complaint themes and six actions queued for approval. This run took 16 LLM calls and 33 Db2 tool calls, all logged in `AGENT_RUNS` ![Morning brief](docs/screenshots/01-morning-brief.png) | **Live agent trace.** Routing to the briefing team, then the analyst's Db2 tool calls (SQL, change feed, occupancy outlook) with their timings, as they happen ![Live trace](docs/screenshots/03-live-agent-trace.png) |
