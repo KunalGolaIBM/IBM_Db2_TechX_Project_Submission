@@ -318,6 +318,21 @@ def bitemporal(admin: Db2, agent: Db2) -> str:
             f"{then:.0f}% as the hotel recorded it originally (what a guest was quoted)")
 
 
+COMPRESSED = ("AGENT_STEPS", "RATE_PLAN", "RATE_PLAN_HISTORY", "RESERVATIONS", "RESERVATIONS_HISTORY")
+
+
+def adaptive_compression(admin: Db2, agent: Db2) -> str:
+    modes = {r["TABNAME"]: r["ROWCOMPMODE"] for r in admin.query(
+        "SELECT TABNAME, ROWCOMPMODE FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TABNAME IN (?, ?, ?, ?, ?)",
+        (SCHEMA, *COMPRESSED))}
+    assert all(modes.get(t) == "A" for t in COMPRESSED), modes
+    est = admin.scalar("SELECT PCTPAGESSAVED_ADAPTIVE FROM TABLE(SYSPROC.ADMIN_GET_TAB_COMPRESS_INFO(?, "
+                       "'RESERVATIONS')) T WHERE OBJECT_TYPE = 'DATA'", (SCHEMA,))
+    assert est and int(est) > 30, est
+    return (f"{len(COMPRESSED)} growing tables use COMPRESS YES ADAPTIVE; Db2 estimates {est}% of RESERVATIONS data "
+            "pages saved (ADMIN_GET_TAB_COMPRESS_INFO)")
+
+
 def materialized_view(admin: Db2, agent: Db2) -> str:
     kind = admin.scalar("SELECT TYPE FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TABNAME = 'MQT_DAILY_KPIS'",
                         (SCHEMA,))
@@ -468,6 +483,7 @@ CHECKS: list[tuple[str, str, Callable[[Db2, Db2], str]]] = [
     ("Governance", "External anchor catches a rebuilt ledger", external_anchor),
     ("Governance", "Red-team scoreboard", red_team),
     ("AI quality", "Evaluation set", evaluation),
+    ("Db2 integration", "Adaptive row compression", adaptive_compression),  # last, so earlier numbers stay put
 ]
 
 

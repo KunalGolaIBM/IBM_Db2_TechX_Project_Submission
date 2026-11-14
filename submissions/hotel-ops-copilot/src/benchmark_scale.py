@@ -72,6 +72,16 @@ def drop_schema(db: Db2) -> None:
             db.execute(f"ALTER TABLE {BENCH}.{t} DROP VERSIONING")
         except Db2Error:
             pass
+    # drop object by object, retrying what an earlier pass could not (e.g. AGENT_SCOPE, used by permissions)
+    for _ in range(4):
+        objs = db.query("SELECT TABNAME, TYPE FROM SYSCAT.TABLES WHERE TABSCHEMA = ?", (BENCH,))
+        if not objs:
+            break
+        for o in objs:
+            try:
+                db.execute(f"DROP {'VIEW' if o['TYPE'].strip() == 'V' else 'TABLE'} {BENCH}.{o['TABNAME']}")
+            except Db2Error:
+                pass
     try:
         db.call("SYSPROC.ADMIN_DROP_SCHEMA", BENCH, None, "ERRSCHEMA", "ERRTABLE")
     except Db2Error as exc:
@@ -89,14 +99,19 @@ def build(db: Db2, n: int) -> dict:
     for name in ("01_schema.sql", "04_extensions.sql"):
         db.run_script((SQL_DIR / name).read_text(encoding="utf-8"))
     log("  schema built from 01_schema.sql + 04_extensions.sql")
+    # Loading 1,000,000 rows into the compressed temporal table fills Db2 Community's default transaction log on
+    # a laptop, so the benchmark loads it uncompressed and reports Db2's own compression estimate for it.
+    for t in ("RESERVATIONS", "RESERVATIONS_HISTORY"):
+        db.execute(f"ALTER TABLE {t} COMPRESS NO")
     # A hotel group: property 1 comes from 01_schema.sql, add the others; each hotel gets the six room types
     db.execute(f"INSERT INTO PROPERTIES (PROPERTY_ID, CODE, NAME, CITY) SELECT N, 'H' || TRIM(CHAR(N)), "
                f"'Hotel ' || TRIM(CHAR(N)), 'City ' || TRIM(CHAR(N)) FROM (SELECT A.D * 10 + B.D AS N "
                f"FROM {DIGITS} A(D), {DIGITS} B(D)) T WHERE N BETWEEN 2 AND {HOTELS}")
+    # Goa's six room types are the template for every hotel of the group
     db.execute("INSERT INTO ROOM_TYPES (ROOM_TYPE_ID, CODE, NAME, TIER, BASE_RATE, FLOOR_RATE, CEILING_RATE, "
                "MAX_OCCUPANCY, PROPERTY_ID) SELECT (P.PROPERTY_ID - 1) * 6 + T.ROOM_TYPE_ID, T.CODE, T.NAME, T.TIER, "
                "T.BASE_RATE, T.FLOOR_RATE, T.CEILING_RATE, T.MAX_OCCUPANCY, P.PROPERTY_ID "
-               "FROM HOTELOPS.ROOM_TYPES T CROSS JOIN PROPERTIES P")
+               "FROM HOTELOPS.ROOM_TYPES T CROSS JOIN PROPERTIES P WHERE T.PROPERTY_ID = 1")
     # room or reservation N belongs to hotel 1 + MOD(N, HOTELS) and to one of that hotel's six room types
     db.execute(f"INSERT INTO ROOMS (ROOM_NO, ROOM_TYPE_ID, FLOOR_NO, PROPERTY_ID) "
                f"SELECT 'R' || TRIM(CHAR(N)), MOD(N, {HOTELS}) * 6 + 1 + MOD(N / {HOTELS}, 6), "
@@ -149,6 +164,16 @@ def measure(db: Db2) -> list[tuple[str, str, str]]:
               "CURRENT DATE - 30 DAYS AND CURRENT DATE - 1 DAY")
     mqt_30 = kpi_30.replace("V_DAILY_KPIS", "MQT_DAILY_KPIS")
 
+    comp = db.query("SELECT T.TABNAME, C.PCTPAGESSAVED_ADAPTIVE, I.DATA_OBJECT_P_SIZE "
+                    "FROM SYSCAT.TABLES T, TABLE(SYSPROC.ADMIN_GET_TAB_COMPRESS_INFO(T.TABSCHEMA, T.TABNAME)) C, "
+                    "TABLE(SYSPROC.ADMIN_GET_TAB_INFO(T.TABSCHEMA, T.TABNAME)) I "
+                    "WHERE T.TABSCHEMA = ? AND T.TABNAME = 'RESERVATIONS' AND C.OBJECT_TYPE = 'DATA'", (BENCH,))
+    if comp:
+        c = comp[0]
+        rows.append(("Adaptive row compression for `RESERVATIONS` (`COMPRESS YES ADAPTIVE` in the demo schema)",
+                     f"{c['PCTPAGESSAVED_ADAPTIVE']}% of data pages saved (Db2 estimate)",
+                     f"`ADMIN_GET_TAB_COMPRESS_INFO` on the {int(c['DATA_OBJECT_P_SIZE']) / 1024:,.0f} MB uncompressed "
+                     "table; loaded uncompressed here because the laptop's default transaction log is small"))
     cost_one = explain_cost(db, kpi_one)
     rows.append(("EXPLAIN cost guard: the agent's \"occupancy tonight\" query", f"{cost_one:,.0f} timerons",
                  f"{'passes' if cost_one <= max_cost() else 'REFUSED by'} the {max_cost():,.0f}-timeron guard"))
@@ -244,6 +269,17 @@ def measure_tenancy(db: Db2) -> list[tuple[str, str, str]]:
     db.execute(f"CALL SYSPROC.ADMIN_CMD('RUNSTATS ON TABLE {BENCH}.AGENT_SCOPE')")
 
     agent = connect_agent()
+    # With Db2 workload management on (03_security.sql), the agent's live-view KPI query at this volume is
+    # stopped by the cost threshold. Record that, then lift the thresholds only while timing, and restore them.
+    try:
+        agent.query(KPI_30)
+        wlm_stop = "ran"
+    except Db2Error as exc:
+        wlm_stop = "stopped (SQL4712N)" if "SQL4712N" in str(exc) else f"failed: {str(exc)[:60]}"
+    wlm = [r["THRESHOLDNAME"] for r in db.query("SELECT THRESHOLDNAME FROM SYSCAT.THRESHOLDS WHERE ENABLED = 'Y' "
+                                                "AND THRESHOLDNAME LIKE 'HOTELOPS_AGENT_%'")]
+    for t in wlm:
+        db.execute(f"ALTER THRESHOLD {t} DISABLE")
     try:
         total = db.scalar("SELECT COUNT(*) FROM RESERVATIONS")
         visible = agent.scalar("SELECT COUNT(*) FROM RESERVATIONS")
@@ -256,7 +292,13 @@ def measure_tenancy(db: Db2) -> list[tuple[str, str, str]]:
         agent_t = timed(agent, KPI_30, runs=3)
         all_after = timed(db, KPI_30, runs=3)
     finally:
+        for t in wlm:
+            db.execute(f"ALTER THRESHOLD {t} ENABLE")
         agent.close()
+    if wlm:
+        rows.append(("Db2 workload management on the agent login, same 30-night live-view query", wlm_stop,
+                     "Db2's cost threshold stops it at this volume (thresholds lifted only for the timings below); "
+                     "the agent reads history from the MQT instead"))
 
     rows.append(("Hotel group: row permissions on 4 tables (`ROOM_TYPES`, `ROOMS`, `RESERVATIONS`, `RATE_PLAN`)",
                  f"activated in {activate:.1f} s", f"{HOTELS} hotels; the agent identity is scoped to hotel "

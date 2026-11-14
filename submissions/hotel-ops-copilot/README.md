@@ -10,7 +10,7 @@
 
 ![Db2 dry run catches the agent's overbooking mistake](docs/screenshots/12-dry-run-catches-oversell.png)
 
-| 30/30 | 24/24 | 10,000/10,000 | 30/30 | 178 · 87% | 1 command |
+| 30/30 | 24/24 | 10,000/10,000 | 31/31 | 178 · 87% | 1 command |
 |:---:|:---:|:---:|:---:|:---:|:---:|
 | evaluation questions correct (KPIs, time travel, bitemporal, vector search, policies, Hindi, 9 safety attacks), against ground truth computed in Db2 ([results](docs/eval_results.md)) | red-team attacks blocked, 22 by Db2 itself ([scoreboard](docs/redteam_results.md)) | random proposals fuzzed into the Db2 guardrails, every decision matching an independent oracle ([results](docs/guardrail_fuzz.md)) | live Db2 checks of every claim (`python src/verify.py`, no key) | automated tests, 87% line coverage of the core package, none needing an LLM key | `docker compose up -d` starts Db2 and the app |
 
@@ -43,9 +43,10 @@ flowchart TB
 
 ### What's new after the pitch
 - **Hotel-chain isolation enforced by Db2:** two demo hotels, a hotel switcher, and a **Hotel group** tab where the same query run as the AI returns only its own hotel; Db2 rejects its actions on the other one ([details](#ibm-db2-integration)).
-- **Measured at chain scale:** 1,000,000 reservations across 40 hotels; one hotel's agent sees 25,000 and gets its KPIs in 135 ms ([benchmark](docs/scale_benchmark.md)).
+- **Measured at chain scale:** 1,000,000 reservations across 40 hotels; one hotel's agent sees 25,000 and gets its KPIs in 187 ms ([benchmark](docs/scale_benchmark.md)).
 - **Contributed upstream to IBM:** fixes to IBM's Db2 SQLGlot dialect, [IBM/db2-sqlglot-plugin#30](https://github.com/IBM/db2-sqlglot-plugin/pull/30).
 - **Db2 workload management for the AI login:** Db2 itself stops the agent's runaway queries (cost > 25,000), bulk dumps (> 1,000 rows) and long runs (> 30 s) with `SQL4712N`, and an event monitor records every stop; managers are not limited.
+- **Db2 adaptive row compression** on the growing tables (bookings, rates, their history, the AI audit steps): Db2 estimates 69% of booking data pages saved.
 - **CI on every push and daily** against a fresh IBM Db2 container (badge above); date-dependent tests fixed.
 
 ![Hotel group: the AI's Db2 login sees 1 of 2 hotels and its ticket for a Kochi room is rejected](docs/screenshots/17-hotel-group.png)
@@ -53,7 +54,7 @@ flowchart TB
 ### 30-second proof: `python src/verify.py`
 ![Proofs tab: every claim checked live against Db2](docs/screenshots/proofs-live.gif)
 
-One command checks every headline claim against the live Db2, with no LLM key, and rolls back anything it writes: Db2 12.1 and native `VECTOR` columns, vector search, IBM `langchain-db2`, temporal tables, the least-privilege agent, RCAC mask and row permission, **property isolation for a hotel chain**, the `EXPLAIN` cost guard, the **SQLGlot syntax-tree guard**, **bitemporal** `BUSINESS_TIME` + `SYSTEM_TIME` promotions, a **materialized query table**, the change feed, the SQL PL and JSON guardrails, guarded apply + rollback, **concurrent approvals serialised by Db2 row locks**, earned autonomy decided inside Db2, CHECK constraints, the hash-chain trigger, the tamper-evident audit chain, an **external anchor that catches a fully rebuilt ledger**, the red team and the evaluation. It also fuzzes the guardrails with 1,000 random proposals. Expected output ends with **`30/30 checks passed`** in about 10 seconds. The same checks run live, one by one, in the app's **Proofs** tab. With Docker: `docker compose exec app python src/verify.py`.
+One command checks every headline claim against the live Db2, with no LLM key, and rolls back anything it writes: Db2 12.1 and native `VECTOR` columns, vector search, IBM `langchain-db2`, temporal tables, the least-privilege agent, RCAC mask and row permission, **property isolation for a hotel chain**, the `EXPLAIN` cost guard, the **SQLGlot syntax-tree guard**, **bitemporal** `BUSINESS_TIME` + `SYSTEM_TIME` promotions, a **materialized query table**, the change feed, the SQL PL and JSON guardrails, guarded apply + rollback, **concurrent approvals serialised by Db2 row locks**, earned autonomy decided inside Db2, CHECK constraints, the hash-chain trigger, the tamper-evident audit chain, an **external anchor that catches a fully rebuilt ledger**, the red team and the evaluation. It also fuzzes the guardrails with 1,000 random proposals. Expected output ends with **`31/31 checks passed`** in about 10 seconds. The same checks run live, one by one, in the app's **Proofs** tab. With Docker: `docker compose exec app python src/verify.py`.
 
 ### What building this taught us about Db2 (measured)
 Hardening an AI agent against Db2, and then running it at 1,000,000 reservations, surfaced seven behaviours anyone putting an LLM on Db2 will hit. Each was measured, fixed and pinned by a test ([details and reproduction](docs/db2_findings.md)):
@@ -64,25 +65,27 @@ Hardening an AI agent against Db2, and then running it at 1,000,000 reservations
 | An `EXPLAIN` cost guard for AI-written SQL is only as good as the **statistics** | a normal KPI query: **177,163** timerons on fresh tables vs **1,876** after `RUNSTATS` (94×), so the guard refused legitimate questions | `RUNSTATS` at setup; `verify.py` check 16 |
 | `JSON_VALUE ... RETURNING VARCHAR(n)` **raises `SQL0137N`** on an over-long value instead of failing cleanly | found by our guardrail fuzzer on its first run (`"PENTHOUSE"` into `VARCHAR(8)`) | wide variables + validation; **10,000/10,000** fuzzed decisions now match the oracle |
 | The Db2 Community container **won't restart**: `DBI20187E` on `fencedid` | a restart loop after a WSL reboot | `scripts/fix_db2_restart.sh` |
-| A fixed `EXPLAIN` cost limit **does not scale with the data**; the MQT is what keeps the agent inside it | at **1,000,000 reservations** in a 40-hotel group the agent's "occupancy tonight" query costs **809,270** timerons on the live view (refused) but **1,298** on `MQT_DAILY_KPIS`, which is also **362× faster** for 30 nights of history (4.6 ms vs 1,676 ms) | [scale benchmark](docs/scale_benchmark.md), `python src/benchmark_scale.py` |
+| A fixed `EXPLAIN` cost limit **does not scale with the data**; the MQT is what keeps the agent inside it | at **1,000,000 reservations** in a 40-hotel group the agent's "occupancy tonight" query costs **806,068** timerons on the live view (refused, and Db2's own workload threshold stops it for the agent login) but **1,298** on `MQT_DAILY_KPIS`, which is also **537× faster** for 30 nights of history (8.9 ms vs 4,754 ms) | [scale benchmark](docs/scale_benchmark.md), `python src/benchmark_scale.py` |
 | A SQL PL **"read the status, then act"** procedure is not serialised under cursor stability, so **two managers could apply the same approved action** | 4 simultaneous approvals: **2 applied it**, the rate was written twice | lock the action row before reading it; 6-thread and 4-thread race tests + `verify.py` check 23 |
 | IBM's Db2 SQLGlot dialect (`db2-sqlglot-dialect` 1.1) **silently changes the meaning of common Db2 date SQL**: `SELECT CURRENT DATE` becomes `SELECT CURRENT AS DATE`, `d + 3 DAYS` becomes `d + 3 AS DAYS`, and `FOR SYSTEM_TIME` is written as invalid `FOR TIMESTAMP` | only **7 of 16** real agent queries parsed natively | pinned rewrites in `sqlguard.py`; **fixed upstream** in [IBM/db2-sqlglot-plugin#30](https://github.com/IBM/db2-sqlglot-plugin/pull/30) (16/16 parse) |
 
 **Upstream contribution.** The last finding is fixed at the source: our pull request to IBM's Db2 dialect for SQLGlot, [IBM/db2-sqlglot-plugin#30](https://github.com/IBM/db2-sqlglot-plugin/pull/30), makes Db2 special registers, labeled durations and `FOR SYSTEM_TIME` / `FOR BUSINESS_TIME` queries parse correctly, with tests.
 
 ### Measured at 1,000,000 reservations
-`python src/benchmark_scale.py` rebuilds the same schema in a separate throwaway schema, loads a **group of 40 hotels** (12,000 rooms) with **1,000,000 reservations** inside Db2 (46 s), measures it, then switches on the property row permissions and connects as an agent scoped to one hotel ([full results](docs/scale_benchmark.md)):
+`python src/benchmark_scale.py` rebuilds the same schema in a separate throwaway schema, loads a **group of 40 hotels** (12,000 rooms) with **1,000,000 reservations** inside Db2 (58 s), measures it, then switches on the property row permissions and connects as an agent scoped to one hotel ([full results](docs/scale_benchmark.md)):
 
 | At 1M reservations, 40 hotels | Measured |
 |---|---|
-| 30 nights of KPIs: live view vs MQT | 1,676 ms vs **4.6 ms** (362× faster) |
-| Time travel `AS OF` before a 38,512-row change | **26 ms** |
-| Change feed pairing 38,512 changes from history | 230 ms |
-| Verify a 50,000-step SHA-256 audit chain inside Db2 | **306 ms** (intact) |
+| 30 nights of KPIs: live view vs MQT | 4,754 ms vs **8.9 ms** (537× faster) |
+| Time travel `AS OF` before a 38,512-row change | **46 ms** |
+| Change feed pairing 38,512 changes from history | 291 ms |
+| Verify a 50,000-step SHA-256 audit chain inside Db2 | **423 ms** (intact) |
 | `EXPLAIN` guard on a runaway self cross join | 79 billion timerons, refused before it runs |
 | Reservations one hotel's agent can see (RCAC) | **25,000 of 1,000,000**, 0 rows of the other 39 hotels |
-| That agent's 30-night KPI history | **135 ms**, identical to the manager's figures for that hotel (48 ms with a hand-written `WHERE`) |
-| Manager's group-wide KPI history, before → after RCAC | 1.8 → 5.2 s, so group-wide history should come from the MQT (4.6 ms) |
+| That agent's 30-night KPI history | **187 ms**, identical to the manager's figures for that hotel (68 ms with a hand-written `WHERE`) |
+| Manager's group-wide KPI history, before → after RCAC | 2.9 → 7.9 s, so group-wide history should come from the MQT (8.9 ms) |
+| Adaptive row compression for `RESERVATIONS` | **72%** of data pages saved (Db2's `ADMIN_GET_TAB_COMPRESS_INFO` on 128 MB) |
+| Db2 workload management, agent's live-view KPI query | **stopped** by the cost threshold (`SQL4712N`) |
 
 ### 5-minute judge tour
 After `docker compose up -d` (or `bash scripts/quickstart.sh`), open http://localhost:8501. Steps 1–4 need **no API key**.
@@ -157,7 +160,7 @@ Hotel Ops Copilot is a **multi-agent assistant whose guardrails live in the data
 | 🧠 **Conversation memory in Db2** | Earlier turns of a thread are read back from `AGENT_RUNS`, so follow-ups like "and for suites?" work |
 | 🛡️ **Red-team scoreboard** | 24 attacks a fooled or malicious agent might try. Most of them deliberately bypass the app and use the agent's own Db2 credentials: deleting guests, ₹500 suites, self-approval, dumping PII, bypassing consent, a cross join, the injected review, and price swings over 35%. **All 24 are blocked**, and each shows the layer that stopped it. One click in the 🛡️ Red team tab or `python src/redteam.py`; no LLM is used, and every attack is rolled back |
 | 🎲 **Guardrail fuzzing** | `python src/fuzz_guardrails.py` sends **10,000 random proposals** (boundary values, garbage, unknown types, opted-out guests, repeats) to `SP_PROPOSE_ACTION` with the agent's own credentials and compares every Db2 decision with an independent Python oracle of the rules: **10,000/10,000 agree**. Its first run found a real bug (an over-long field crashed the procedure instead of a clean `REJECTED`), now fixed and pinned by a test |
-| ✅ **Proofs tab** | One click runs all 30 `verify.py` checks live inside the app and shows each one turning green, so a judge without a terminal sees the same evidence |
+| ✅ **Proofs tab** | One click runs all 31 `verify.py` checks live inside the app and shows each one turning green, so a judge without a terminal sees the same evidence |
 | 🔗 **External audit anchor** | A hash chain alone is tamper-*evident*: an insider with DBA rights could edit a step and recompute every later hash. So after every agent run the chain head is copied **outside Db2** (`~/.hotelops/audit_anchors.jsonl`). *Simulate a rebuilt ledger* shows the attack: the in-database chain verifies as intact, but the anchor no longer matches, all inside a rolled-back transaction |
 | 🗓️ **Bitemporal promotions** | `PROMOTIONS` has both **`BUSINESS_TIME`** (which stay nights a discount covers) and **`SYSTEM_TIME`** (when the hotel recorded it), with `PRIMARY KEY (..., BUSINESS_TIME WITHOUT OVERLAPS)`. A revenue manager deepened the Junior Suite offer for Saturday and Sunday only with `UPDATE ... FOR PORTION OF BUSINESS_TIME`; Db2 split the period itself. One query answers *"what was a guest quoted for 21 Nov, as we knew it before the correction?"* (`FOR SYSTEM_TIME AS OF ... FOR BUSINESS_TIME AS OF ...`), and the agents use it through the `promotion_on` tool |
 | 📦 **Materialized query table** | `MQT_DAILY_KPIS` (`REFRESH DEFERRED`, `ENABLE QUERY OPTIMIZATION`) materialises the KPI view for history and trends; the dashboard's 30-night history reads from it |
@@ -189,6 +192,8 @@ The demo data is a **deterministic synthetic 72-room Goa resort**. It has 901 gu
   | `V_DAILY_KPIS`, `V_ROOM_TYPE_DAY`, `V_REVIEW_SUMMARY` | Views + `COMMENT ON` | A semantic layer for text-to-SQL (occupancy %, ADR, RevPAR) |
   | `CALENDAR` | Recursive CTE | Date dimension |
   | `POLICY_KB` | **`VECTOR(384, FLOAT32)`** via IBM `langchain-db2` `DB2VS` | Operations policy handbook ([`data/policies.md`](data/policies.md)), searched by meaning and cited in proposals |
+  | `RESERVATIONS`, `RATE_PLAN` (+ `_HISTORY`), `AGENT_STEPS` | **`COMPRESS YES ADAPTIVE`** | Adaptive row compression on the tables that grow; the dictionary is built automatically. Db2 estimates 69% of booking pages saved (live check 31) |
+  | `HOTELOPS_AGENT_WL` workload + 3 thresholds, event monitor | **Db2 workload management** | The AI login's runaway, bulk and long queries are stopped by Db2 (`SQL4712N`) and logged |
   | `SYSTOOLS.EXPLAIN_*` | `EXPLAIN PLAN` | Optimizer cost estimate for every agent-written query before it runs |
 
 - **Key queries and operations:**
@@ -286,7 +291,7 @@ See [architecture.md](architecture.md) for diagrams and the data flow.
 | LLM output | The AI can only *propose*. Every action is dry-run in a rolled-back transaction, re-checked by `SP_APPLY_ACTION`, approved by a human, and can be undone. | [`02_procedures.sql`](src/sql/02_procedures.sql) |
 | Audit | Every agent step is SHA-256 hash-chained by a Db2 trigger and anchored outside Db2, so tampering, even a fully rebuilt ledger, is detected. | [`audit.py`](src/hotelops/audit.py) |
 
-**Proof:** `python src/redteam.py` blocks **24/24 attacks** (22 by Db2 itself), and `python src/verify.py` passes **30/30** live checks, with no LLM key needed for either.
+**Proof:** `python src/redteam.py` blocks **24/24 attacks** (22 by Db2 itself), and `python src/verify.py` passes **31/31** live checks, with no LLM key needed for either.
 
 ---
 
@@ -396,7 +401,7 @@ python src/cli.py rollback 1
 ## Testing & Verification
 
 ```bash
-python src/verify.py                # 30 live-Db2 checks of every claim (no LLM)
+python src/verify.py                # 31 live-Db2 checks of every claim (no LLM)
 python src/fuzz_guardrails.py      # 10,000 random proposals vs an independent oracle -> docs/guardrail_fuzz.md
 pytest -q tests/
 pytest -q --cov=src/hotelops --cov=src/verify.py   # 87% line coverage of the core package
@@ -439,7 +444,7 @@ All screenshots are from real Gemini runs against the live Db2 database.
 
 | | |
 |---|---|
-| **Proofs tab.** One click runs all 30 `verify.py` checks against the live Db2, each turning green, ending in *all checks passed · nothing changed in the database* (the screenshot was taken when there were 26 checks; there are now 28) ![Proofs](docs/screenshots/15-proofs.png) | **Bitemporal promotions.** `BUSINESS_TIME` (which nights) + `SYSTEM_TIME` (when recorded): rm.priya's correction split the offer for Sat–Sun, and Db2 still answers *"18% off today, but 10% as originally recorded"* ![Bitemporal](docs/screenshots/16-bitemporal-promotions.png) |
+| **Proofs tab.** One click runs all 31 `verify.py` checks against the live Db2, each turning green, ending in *all checks passed · nothing changed in the database* (the screenshot was taken when there were 26 checks; there are now 28) ![Proofs](docs/screenshots/15-proofs.png) | **Bitemporal promotions.** `BUSINESS_TIME` (which nights) + `SYSTEM_TIME` (when recorded): rm.priya's correction split the offer for Sat–Sun, and Db2 still answers *"18% off today, but 10% as originally recorded"* ![Bitemporal](docs/screenshots/16-bitemporal-promotions.png) |
 | **Earned autonomy.** The manager grants the AI price nudges up to ±5% for nights 7+ days out. Db2 applied a +3% change on its own and kept a +15% change for human approval ![Earned autonomy](docs/screenshots/13-earned-autonomy.png) | **Stale evidence.** A revenue manager repriced a night after the AI proposed its cut. Db2 time travel (`AS OF` the proposal vs now) flags that the AI reasoned from rates that no longer apply ![Stale evidence](docs/screenshots/14-stale-evidence.png) |
 | **Db2 catches the agent's mistake.** The agent claimed Deluxe was under 90% sold, cited POL-ENG-01, and proposed blocking room 307. The dry run shows **Deluxe OVERSOLD on 17–18 Nov** and five bookings to move, all before anyone approves ![Dry run catches oversell](docs/screenshots/12-dry-run-catches-oversell.png) | **Red-team scoreboard: 24/24 blocked.** One click runs every attack against the live Db2, and 22 of them are stopped by Db2 itself ![Red team](docs/screenshots/11-red-team-scoreboard.png) |
 | **Morning brief.** One click runs Analyst → Guest experience → Operations → Composer. The result covers KPIs, complaint themes and six actions queued for approval. This run took 16 LLM calls and 33 Db2 tool calls, all logged in `AGENT_RUNS` ![Morning brief](docs/screenshots/01-morning-brief.png) | **Live agent trace.** Routing to the briefing team, then the analyst's Db2 tool calls (SQL, change feed, occupancy outlook) with their timings, as they happen ![Live trace](docs/screenshots/03-live-agent-trace.png) |

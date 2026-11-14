@@ -40,10 +40,11 @@
       "Agent run and step audit trail stored in Db2, tamper-evident via a SHA-256 hash chain (trigger + HASH + LAG verification), plus an external anchor of the chain head that catches a fully rebuilt ledger",
       "Earned autonomy: AUTONOMY_POLICY temporal table; the decision is made inside SP_PROPOSE_ACTION",
       "EXPLAIN PLAN cost guard on agent-written SQL (SYSTOOLS explain tables)",
+      "Adaptive row compression (COMPRESS YES ADAPTIVE) on reservations, rates, their history tables and the agent audit steps",
       "Db2 workload management: the AI login runs in its own WORKLOAD with THRESHOLDs on estimated cost, rows returned and run time (STOP EXECUTION), and a THRESHOLD VIOLATIONS event monitor logs every stop",
       "Policy knowledge base in Db2 via IBM langchain-db2 DB2VS",
       "Red-team scoreboard: 24/24 attacks blocked, mostly by Db2 privileges, RCAC and SQL PL guardrails",
-      "python src/verify.py: 30 live checks of every claim against Db2 (no LLM key); guardrail fuzzing with 10,000 random proposals vs an independent oracle (10,000/10,000 agree)"
+      "python src/verify.py: 31 live checks of every claim against Db2 (no LLM key); guardrail fuzzing with 10,000 random proposals vs an independent oracle (10,000/10,000 agree)"
     ]
   },
   "tech_stack": {

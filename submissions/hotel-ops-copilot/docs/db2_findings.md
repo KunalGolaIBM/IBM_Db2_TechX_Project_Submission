@@ -85,18 +85,18 @@ and starts it again.
 
 **What happened.** `python src/benchmark_scale.py` loads the same schema with **1,000,000 reservations** for a group
 of 40 hotels in a separate schema. There, the agent's ordinary question "what is tonight's occupancy?" against the
-live view `V_DAILY_KPIS` costs **809,270 timerons**, so a 25,000-timeron guard would refuse it, although it is not a
+live view `V_DAILY_KPIS` costs **806,068 timerons**, so a 25,000-timeron guard would refuse it, although it is not a
 runaway query. Asked of the materialized query table `MQT_DAILY_KPIS`, the same question costs **1,298 timerons**.
 (With a single hotel's six room types the figures were 142,782 vs 71 timerons and 221 ms vs 0.4 ms.)
 
 | At 1M reservations, 40 hotels | Live view | MQT |
 |---|---|---|
-| "Occupancy tonight": `EXPLAIN` cost | 809,270 timerons (refused) | **1,298** timerons (allowed) |
-| 30 nights of KPI history | 1,676 ms | **4.6 ms** |
+| "Occupancy tonight": `EXPLAIN` cost | 806,068 timerons (refused) | **1,298** timerons (allowed) |
+| 30 nights of KPI history | 4,754 ms | **8.9 ms** |
 
 **Hotel chain.** With the property row permissions switched on, an agent scoped to one hotel sees 25,000 of the
-1,000,000 reservations and gets its 30-night KPI history in 135 ms, with exactly the manager's figures for that hotel
-(48 ms with a hand-written `WHERE PROPERTY_ID = 7`). The manager's group-wide query goes from 1.8 s to 5.2 s, because
+1,000,000 reservations and gets its 30-night KPI history in 187 ms, with exactly the manager's figures for that hotel
+(68 ms with a hand-written `WHERE PROPERTY_ID = 7`). The manager's group-wide query goes from 2.9 s to 7.9 s, because
 Db2 applies the permission inside the view's correlated subqueries; writing the permission so the role test runs once
 per query did not help. Group-wide history therefore belongs on the MQT, which has its own permission.
 
