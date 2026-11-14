@@ -32,6 +32,7 @@
       "Bitemporal table PROMOTIONS: BUSINESS_TIME + SYSTEM_TIME, BUSINESS_TIME WITHOUT OVERLAPS key, UPDATE ... FOR PORTION OF BUSINESS_TIME, and FOR SYSTEM_TIME AS OF ... FOR BUSINESS_TIME AS OF queries",
       "Materialized query table MQT_DAILY_KPIS (REFRESH DEFERRED, ENABLE QUERY OPTIMIZATION) for KPI history",
       "Row and Column Access Control: column masks for PII and a row permission enforcing AI-processing consent",
+      "Hotel-chain property isolation: PROPERTY_ID on 15 tables with composite foreign keys, and RCAC row permissions (history tables and the MQT included) against a manager-only AGENT_SCOPE table, so each AI identity sees and acts on its own hotel only",
       "Roles and least-privilege GRANTs for the AI agent identity",
       "JSON_VALUE and a JSON_EXISTS check constraint on action payloads",
       "Analytic views, GROUP BY ROLLUP, ROW_NUMBER() OVER, recursive CTE calendar",
@@ -41,7 +42,7 @@
       "EXPLAIN PLAN cost guard on agent-written SQL (SYSTOOLS explain tables)",
       "Policy knowledge base in Db2 via IBM langchain-db2 DB2VS",
       "Red-team scoreboard: 24/24 attacks blocked, mostly by Db2 privileges, RCAC and SQL PL guardrails",
-      "python src/verify.py: 28 live checks of every claim against Db2 (no LLM key); guardrail fuzzing with 10,000 random proposals vs an independent oracle (10,000/10,000 agree)"
+      "python src/verify.py: 29 live checks of every claim against Db2 (no LLM key); guardrail fuzzing with 10,000 random proposals vs an independent oracle (10,000/10,000 agree)"
     ]
   },
   "tech_stack": {

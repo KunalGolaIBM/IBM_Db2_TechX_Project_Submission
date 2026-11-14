@@ -2,7 +2,7 @@
 #
 #   unit  - lint + every test that needs neither Db2 nor an LLM key (~2 min)
 #   db2   - starts IBM Db2 Community Edition, loads the hotel, then runs the full suite against the live
-#           database, the 28 live proofs (python src/verify.py) and a 1,000-proposal guardrail fuzz
+#           database, the 29 live proofs (python src/verify.py) and a 1,000-proposal guardrail fuzz
 #
 # It also runs every day: the demo data is generated relative to "today", so a daily run proves the
 # checks hold on any date. No API keys are used; the Db2 passwords are random per run and never stored.
@@ -93,7 +93,7 @@ jobs:
         run: python src/setup_db.py
       - name: Full test suite against the live Db2 (with coverage)
         run: python -m pytest -q -rs --cov=src/hotelops --cov=src/verify.py --cov-report=term
-      - name: 28 live proofs (python src/verify.py)
+      - name: 29 live proofs (python src/verify.py)
         run: python src/verify.py
       - name: Guardrail fuzz (1,000 random proposals vs an independent oracle)
         run: python src/fuzz_guardrails.py 1000

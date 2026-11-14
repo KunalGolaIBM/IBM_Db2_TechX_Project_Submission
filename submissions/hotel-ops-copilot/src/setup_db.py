@@ -33,6 +33,7 @@ DROP_ORDER = [
     "TABLE REVIEW_CHUNKS", "TABLE GUEST_REVIEWS", "TABLE RATE_PLAN", "TABLE RATE_PLAN_HISTORY",
     "TABLE RESERVATIONS", "TABLE RESERVATIONS_HISTORY", "TABLE GUESTS",
     "TABLE ROOMS", "TABLE ROOMS_HISTORY", "TABLE ROOM_TYPES", "TABLE CALENDAR",
+    "TABLE AGENT_SCOPE", "TABLE PROPERTIES",
 ]
 
 
@@ -47,11 +48,18 @@ def drop_all(db) -> None:
             db.execute(f"ALTER TABLE {SCHEMA}.{t} DROP VERSIONING")
         except Db2Error:
             pass
-    for stmt in ["MASK GUEST_EMAIL_MASK", "MASK GUEST_PHONE_MASK", "PERMISSION GUEST_CONSENT_ROWS", *DROP_ORDER]:
-        try:
-            db.execute(f"DROP {stmt}")
-        except Db2Error:
-            pass
+    remaining = ["MASK GUEST_EMAIL_MASK", "MASK GUEST_PHONE_MASK", "PERMISSION GUEST_CONSENT_ROWS", *DROP_ORDER]
+    for _ in range(3):  # a later pass drops what an earlier one could not (e.g. AGENT_SCOPE, used by permissions)
+        failed = []
+        for stmt in remaining:
+            try:
+                db.execute(f"DROP {stmt}")
+            except Db2Error as exc:
+                if "SQL0204N" not in str(exc):  # SQL0204N: already gone
+                    failed.append(stmt)
+        if not failed:
+            break
+        remaining = failed
     try:
         db.execute("DROP ROLE HOTELOPS_AGENT")
     except Db2Error:
@@ -73,7 +81,7 @@ def apply_security(db, agent_user: str) -> None:
     n = db.run_script((SQL_DIR / "03_security.sql").read_text(encoding="utf-8"),
                       {"AGENT_USER": agent_user.upper()},
                       ignore_sqlstates=("SQL0556N",))  # revoke of privilege not held
-    log(f"  03_security.sql: {n} statements (role, grants, column masks, row permission)")
+    log(f"  03_security.sql: {n} statements (role, grants, column masks, consent and property row permissions)")
     from hotelops.costguard import ensure_explain_tables
 
     if ensure_explain_tables(db):
@@ -87,7 +95,8 @@ def load_data(db) -> dict:
     log(f"Generated dataset anchored on {today}: {len(ds.rooms)} rooms, {len(ds.guests)} guests, "
         f"{len(ds.reservations)} reservations, {len(ds.reviews)} reviews")
 
-    db.bulk_insert("INSERT INTO ROOM_TYPES VALUES (?,?,?,?,?,?,?,?)", ds.room_types)
+    db.bulk_insert("INSERT INTO ROOM_TYPES (ROOM_TYPE_ID, CODE, NAME, TIER, BASE_RATE, FLOOR_RATE, CEILING_RATE, "
+                   "MAX_OCCUPANCY) VALUES (?,?,?,?,?,?,?,?)", ds.room_types)
     db.bulk_insert("INSERT INTO ROOMS (ROOM_NO, ROOM_TYPE_ID, FLOOR_NO) VALUES (?,?,?)", ds.rooms)
     db.bulk_insert("INSERT INTO GUESTS (GUEST_ID, FULL_NAME, EMAIL, PHONE, COUNTRY, LOYALTY_TIER) "
                    "VALUES (?,?,?,?,?,?)", ds.guests)

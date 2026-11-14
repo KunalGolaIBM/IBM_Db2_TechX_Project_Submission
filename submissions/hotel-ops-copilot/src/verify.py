@@ -134,6 +134,22 @@ def temporal_tables(admin: Db2, agent: Db2) -> str:
             "queryable with FOR SYSTEM_TIME")
 
 
+def property_isolation(admin: Db2, agent: Db2) -> str:
+    from hotelops.chain import isolation_check
+
+    r = isolation_check()
+    assert r["agent_properties"] == 1 and r["admin_properties"] == 2, r
+    assert r["agent_other_rows"] == 0 and r["admin_other_rows"] == 1, r
+    assert r["agent_std_types"] == 1 and r["agent_kpi_rows_today"] == 1, r
+    assert r["ticket_other_room"].startswith("REJECTED") and r["upgrade_other_booking"].startswith("REJECTED"), r
+    assert r["std_proposal"] == "PENDING" and r["std_proposal_property"] == 1, r
+    assert r["agent_sees_other_room_after_grant"] == 1 and r["agent_sees_other_room_after_revoke"] == 0, r
+    assert not r["agent_can_widen_scope"] and r["left_behind"] == 0, r
+    return ("a second hotel of the group is invisible to the Goa agent (rooms, rates, bookings, reviews, history, "
+            "KPIs); its proposals for that hotel are rejected and its 'STD' means its own hotel; only a "
+            "manager's AGENT_SCOPE row changes that (RCAC row permissions). Removed afterwards")
+
+
 def proposal_guardrail(admin: Db2, agent: Db2) -> str:
     floor = float(admin.scalar("SELECT FLOOR_RATE FROM ROOM_TYPES WHERE CODE = 'STE'"))
     night = (dt.date.fromisoformat(str(admin.scalar("VALUES CURRENT DATE"))) + dt.timedelta(days=10)).isoformat()
@@ -420,6 +436,7 @@ CHECKS: list[tuple[str, str, Callable[[Db2, Db2], str]]] = [
     ("Security", "Least-privilege agent identity", least_privilege),
     ("Security", "RCAC column mask on PII", column_mask),
     ("Security", "RCAC row permission (AI consent)", row_permission),
+    ("Security", "Property isolation for a hotel chain (RCAC)", property_isolation),
     ("Security", "EXPLAIN cost guard", explain_cost_guard),
     ("Security", "SQL syntax-tree (AST) guard", ast_guard),
     ("Security", "Agent cannot grant itself autonomy", agent_cannot_self_grant),
