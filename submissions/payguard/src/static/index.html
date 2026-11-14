@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1c2e" />
+  <meta name="description" content="Check if a seller is safe before you pay. Share a screenshot, get an answer in seconds." />
+  <title>PayGuard - check before you pay</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/static/icon-192.png" />
+  <link rel="apple-touch-icon" href="/static/icon-192.png" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="top">
+    <a class="logo" href="#check" aria-label="PayGuard home">
+      <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><path d="M16 2.5 5 7v8.2c0 7 4.7 12.6 11 14.3 6.3-1.7 11-7.3 11-14.3V7L16 2.5Z" fill="currentColor"/><path d="m11 16.2 3.4 3.4 6.8-7.2" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <b>PayGuard</b>
+    </a>
+    <nav class="main" aria-label="Main">
+      <a href="#check" data-view="check" class="active">Check a seller</a>
+      <a href="#agent" data-view="agent">Shopping agent</a>
+      <a href="#report" data-view="report">Report a scam</a>
+      <a href="/market" class="ext">For platforms</a>
+      <a href="#dashboard" data-view="dashboard">Dashboard</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ================= CHECK ================= -->
+    <section class="view active" id="view-check">
+      <div class="hero">
+        <span class="eyebrow">● Free scam check · English &amp; Pidgin</span>
+        <h1>Is this seller safe to pay?</h1>
+        <p class="lede">Share a screenshot of the chat. PayGuard reads it and tells you in seconds if it's a scam, before your money leaves.</p>
+      </div>
+
+      <form class="checker" id="checker" autocomplete="off">
+        <div class="checker-head">
+          <span>What did the seller send you?</span>
+          <div class="seg" role="group" aria-label="Answer language">
+            <button type="button" data-lang="en" class="on">English</button>
+            <button type="button" data-lang="pcm">Pidgin</button>
+          </div>
+        </div>
+
+        <label class="drop" id="drop">
+          <input type="file" id="file" accept="image/*" class="sr" />
+          <div class="empty">
+            <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M9 7h6M9 11h6M9 15h3"/></svg></div>
+            <strong>Add a screenshot of the chat</strong>
+            <small>Tap to choose<span class="keys-hint"> · drag it here · or press <span class="keys">Ctrl</span> + <span class="keys">V</span></span></small>
+          </div>
+          <div class="thumb">
+            <img id="thumb-img" alt="Your screenshot" />
+            <div><strong>Screenshot ready</strong><small id="thumb-name"></small></div>
+            <button type="button" class="btn ghost" id="remove-img">Remove</button>
+          </div>
+        </label>
+
+        <div class="or">or paste the message</div>
+        <textarea class="paste" id="text" placeholder="e.g. &quot;Bro the PS5 is ₦350k, send it as friends and family to my OPay 0000012345…&quot;"></textarea>
+
+        <div class="actions-row">
+          <div class="examples">Try:
+            <button type="button" class="chip" data-ex="ig">Instagram vendor</button>
+            <button type="button" class="chip" data-ex="phish">"PayPal" e-mail</button>
+            <button type="button" class="chip" data-ex="job">Job offer</button>
+            <button type="button" class="chip" data-ex="safe">Real shop</button>
+          </div>
+          <button class="btn primary" id="check-btn" type="submit">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3 4 6.5v5.7c0 4.6 3.4 8.4 8 9.8 4.6-1.4 8-5.2 8-9.8V6.5L12 3Z"/></svg>
+            Check now
+          </button>
+        </div>
+        <div class="loading" id="loading"><div class="scan"></div><span id="loading-text">Reading the chat…</span></div>
+      </form>
+
+      <section class="result" id="result" aria-live="polite"></section>
+
+      <div class="install" id="install">
+        <p><b>Install PayGuard</b> to check straight from WhatsApp: screenshot → Share → PayGuard.</p>
+        <button class="btn" id="install-btn" type="button">Install</button>
+      </div>
+
+      <section class="how" id="how">
+        <div><b>1</b><h3>Screenshot the chat</h3><p>From WhatsApp, Instagram, Jiji, e-mail or SMS. Or paste the text.</p></div>
+        <div><b>2</b><h3>PayGuard checks it</h3><p>Against scams reported by other buyers and the tricks scammers use.</p></div>
+        <div><b>3</b><h3>Pay, or walk away</h3><p>Safe? Pay with PayPal protection. Scam? Report it and warn your friends.</p></div>
+      </section>
+    </section>
+
+    <!-- ================= AGENT ================= -->
+    <section class="view" id="view-agent">
+      <div class="page-head">
+        <h1>Let the agent buy it for you</h1>
+        <p>Say what you want to buy. The agent checks the seller first, and only opens PayPal if it's safe. You approve every payment.</p>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <textarea id="agent-input" rows="5" class="inline-input">Buy the PS5 from FastDeals NG for $210. Their email is fastdeals.ng@mail.example and they said "send it as friends and family to avoid fees, only 2 left".</textarea>
+          <div class="examples" style="margin:10px 0 14px">Try:
+            <button type="button" class="chip" data-agent="Order 3 CSC 301 textbooks from Akwa Books for $45, pay orders@akwa-books.example with goods and services.">Safe order</button>
+            <button type="button" class="chip" data-agent="Pay $150 to ticketsplug@mail.example for 2 sold-out concert tickets, they want friends and family only.">Ticket seller</button>
+          </div>
+          <button class="btn primary block" id="agent-btn">Run agent</button>
+        </div>
+        <div class="card steps" id="agent-steps"><p class="note">The agent's steps appear here.</p></div>
+      </div>
+      <section class="result" id="agent-result" style="max-width:none"></section>
+    </section>
+
+    <!-- ================= REPORT ================= -->
+    <section class="view" id="view-report">
+      <div class="page-head">
+        <h1>Report a scammer</h1>
+        <p>Your report protects the next buyer. Three reports put a number, account or e-mail on the PayGuard blocklist automatically.</p>
+      </div>
+      <form class="card" id="report-form" style="max-width:720px">
+        <div class="row">
+          <label class="f">Type
+            <select name="entity_type"><option value="account">Bank account number</option><option value="phone">Phone number</option><option value="email">E-mail</option><option value="domain">Website</option><option value="wallet">Crypto wallet</option></select></label>
+          <label class="f">Number / address<input name="value" required placeholder="e.g. 0000012345" /></label>
+        </div>
+        <div class="row">
+          <label class="f">What kind of scam?
+            <select name="category">
+              <option value="off_platform">Paid, never delivered</option><option value="payment_method">Friends &amp; Family / no protection</option>
+              <option value="phishing">Asked for OTP / PIN / login</option><option value="advance_fee">Asked for a fee first</option>
+              <option value="fake_alert">Fake alert / screenshot</option><option value="overpayment">Overpayment trick</option>
+              <option value="crypto">Crypto</option><option value="gift_card">Gift cards</option><option value="impersonation">Pretended to be a bank / brand</option>
+            </select></label>
+          <label class="f">Money lost (USD, optional)<input name="amount" type="number" min="0" step="0.01" value="0" /></label>
+        </div>
+        <label class="f">What happened?<textarea name="narrative" rows="4" required minlength="10" placeholder="Short description in your own words"></textarea></label>
+        <button class="btn primary" type="submit">Submit report</button>
+        <p id="report-out" class="note"></p>
+      </form>
+    </section>
+
+    <!-- ================= DASHBOARD (judges / analysts) ================= -->
+    <section class="view" id="view-dashboard">
+      <div class="page-head">
+        <h1>Fraud intelligence dashboard</h1>
+        <p>For analysts and judges: live numbers from IBM Db2, and plain-English questions turned into guarded Db2 SQL.</p>
+      </div>
+      <div class="status" id="status"></div>
+      <div class="kpis">
+        <div class="kpi"><span>Checks</span><b id="k-screen">–</b></div>
+        <div class="kpi bad"><span>Blocked</span><b id="k-block">–</b></div>
+        <div class="kpi warn"><span>Warned</span><b id="k-review">–</b></div>
+        <div class="kpi good"><span>Money protected</span><b id="k-money">–</b></div>
+      </div>
+      <div class="card">
+        <h2>Ask the fraud database</h2>
+        <div class="examples" id="quick" style="margin-bottom:10px"></div>
+        <div class="row" style="align-items:center">
+          <input id="analyst-input" class="inline-input" placeholder="e.g. Which payment method has the highest average risk?" style="margin:0" />
+          <button class="btn primary" id="analyst-btn" style="flex:none">Ask</button>
+        </div>
+        <div id="analyst-out" style="margin-top:12px"></div>
+      </div>
+      <div class="grid2">
+        <div class="card"><h2>Top scam types</h2><div id="cat-bars"></div></div>
+        <div class="card"><h2>Most reported contacts</h2><div id="top-entities"></div></div>
+      </div>
+      <div class="card"><h2>Recent checks</h2><div id="recent" style="overflow-x:auto"></div></div>
+      <p class="note" id="kb"></p>
+    </section>
+  </main>
+
+  <footer>PayGuard by JRsolvy · IBM Db2 vector search · Gemini · PayPal sandbox · Demo data is fictional.</footer>
+  <div class="toast" id="toast"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

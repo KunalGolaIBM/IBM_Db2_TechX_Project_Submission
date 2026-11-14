@@ -1,0 +1,16 @@
+{
+  "cpu": "11th Gen Intel Core i5-1135G7 @ 2.40GHz",
+  "physical_cores": 4,
+  "logical_processors": 8,
+  "ram_bytes": 8216137728,
+  "python": "3.12.10",
+  "locust": "2.47.0",
+  "db2": "12.1.5.0",
+  "docker_image": "icr.io/db2_community/db2@sha256:2de8151713c261843868c5c3411b57be6ae79d99d70a5b3022337836776bfda6",
+  "final_database_snapshot": {
+    "patterns": 25,
+    "entities": 14,
+    "reports": 14,
+    "examples": 90
+  }
+}

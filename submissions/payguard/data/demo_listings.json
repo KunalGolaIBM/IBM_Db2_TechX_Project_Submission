@@ -1,0 +1,19 @@
+{
+  "ps5": {
+    "platform": "MarketSquare", "seller_name": "FastDeals NG", "seller_email": "fastdeals.ng@mail.example",
+    "seller_account_number": "0000012345", "seller_account_age_days": 3,
+    "listing_title": "PlayStation 5 Slim, brand new (sealed)", "amount": 210, "currency": "USD",
+    "market_price": 480, "payment_method": "friends_family",
+    "chat": [
+      {"sender": "buyer", "text": "Hi, is the PS5 still available?"},
+      {"sender": "seller", "text": "Yes bro, brand new. Only 2 left and many people are interested."},
+      {"sender": "seller", "text": "No pay on delivery. Send it as friends and family to avoid fees, or transfer to my OPay 0000012345. Account name is different, don't mind."}
+    ]
+  },
+  "books": {
+    "platform": "MarketSquare", "seller_name": "Akwa Books", "seller_email": "orders@akwa-books.example",
+    "seller_account_age_days": 912, "listing_title": "CSC 301 textbooks (set of 3)",
+    "amount": 45, "currency": "USD", "market_price": 50, "payment_method": "goods_services",
+    "chat": [{"sender": "seller", "text": "Yes, all three books are in stock. $45 including delivery within Uyo. Please pay through the PayPal button here so you're covered."}]
+  }
+}

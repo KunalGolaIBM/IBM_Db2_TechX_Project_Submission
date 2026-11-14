@@ -1,0 +1,102 @@
+{
+  "backend": "db2",
+  "embedder": "local-hash-v1",
+  "matrix_rows": [
+    "actual_scam",
+    "actual_safe"
+  ],
+  "matrix_columns": [
+    "flagged",
+    "allowed"
+  ],
+  "confusion_matrix": [
+    [
+      5,
+      5
+    ],
+    [
+      0,
+      5
+    ]
+  ],
+  "precision": 1.0,
+  "recall": 0.5,
+  "false_positive_rate": 0.0,
+  "predictions": [
+    {
+      "label": "bank_phishing",
+      "verdict": "BLOCK",
+      "score": 91
+    },
+    {
+      "label": "fake_job",
+      "verdict": "REVIEW",
+      "score": 49
+    },
+    {
+      "label": "fake_job",
+      "verdict": "ALLOW",
+      "score": 0
+    },
+    {
+      "label": "fake_job",
+      "verdict": "ALLOW",
+      "score": 21
+    },
+    {
+      "label": "other_scam",
+      "verdict": "ALLOW",
+      "score": 0
+    },
+    {
+      "label": "other_scam",
+      "verdict": "ALLOW",
+      "score": 0
+    },
+    {
+      "label": "other_scam",
+      "verdict": "ALLOW",
+      "score": 0
+    },
+    {
+      "label": "other_scam",
+      "verdict": "REVIEW",
+      "score": 47
+    },
+    {
+      "label": "other_scam",
+      "verdict": "BLOCK",
+      "score": 74
+    },
+    {
+      "label": "investment_scam",
+      "verdict": "REVIEW",
+      "score": 40
+    },
+    {
+      "label": "safe",
+      "verdict": "ALLOW",
+      "score": 0
+    },
+    {
+      "label": "safe",
+      "verdict": "ALLOW",
+      "score": 0
+    },
+    {
+      "label": "safe",
+      "verdict": "ALLOW",
+      "score": 0
+    },
+    {
+      "label": "safe",
+      "verdict": "ALLOW",
+      "score": 0
+    },
+    {
+      "label": "safe",
+      "verdict": "ALLOW",
+      "score": 0
+    }
+  ]
+}

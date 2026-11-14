@@ -1,0 +1,9 @@
+{
+  "requests": 2524,
+  "failures": 0,
+  "requests_per_second": 43.69,
+  "p50_ms": 1100,
+  "p95_ms": 1500,
+  "source": "Final Locust console output; total_rps rounded by Locust to 2 decimals",
+  "command": "python -m locust -f loadtest/locustfile.py --headless -u 50 -r 10 -t 60s --host http://127.0.0.1:8000 --csv .artifacts/before --only-summary"
+}

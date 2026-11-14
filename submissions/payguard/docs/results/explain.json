@@ -1,0 +1,224 @@
+{
+  "server": {
+    "service_level": "DB2 v12.1.5.0"
+  },
+  "vector_index_capability": "deferred: vector index unsupported; exact region-filtered search",
+  "plans": [
+    {
+      "query": "entity_lookup",
+      "sql": "SELECT V.ENTITY_TYPE, V.ENTITY_VALUE, V.STATUS, V.REPORT_COUNT, V.REPORTED_LOSS, V.LAST_REPORT_AT,\n                       E.NOTES\n                FROM PG_V_ENTITY_RISK V JOIN PG_ENTITIES E ON E.ID = V.ID\n                WHERE (V.ENTITY_TYPE = ? AND V.ENTITY_VALUE = ?)",
+      "operators": [
+        {
+          "operator_id": 1,
+          "operator_type": "RETURN",
+          "total_cost": 21.377195358276367
+        },
+        {
+          "operator_id": 2,
+          "operator_type": "NLJOIN",
+          "total_cost": 21.377119064331055
+        },
+        {
+          "operator_id": 3,
+          "operator_type": "GRPBY ",
+          "total_cost": 14.607036590576172
+        },
+        {
+          "operator_id": 4,
+          "operator_type": "NLJOIN",
+          "total_cost": 14.60696792602539
+        },
+        {
+          "operator_id": 5,
+          "operator_type": "FETCH ",
+          "total_cost": 6.7700042724609375
+        },
+        {
+          "operator_id": 6,
+          "operator_type": "IXSCAN",
+          "total_cost": 0.0037215694319456816
+        },
+        {
+          "operator_id": 7,
+          "operator_type": "FETCH ",
+          "total_cost": 7.836963176727295
+        },
+        {
+          "operator_id": 8,
+          "operator_type": "IXSCAN",
+          "total_cost": 0.0039302147924900055
+        },
+        {
+          "operator_id": 9,
+          "operator_type": "FETCH ",
+          "total_cost": 6.770004749298096
+        },
+        {
+          "operator_id": 10,
+          "operator_type": "IXSCAN",
+          "total_cost": 0.0037215694319456816
+        }
+      ],
+      "objects": [
+        {
+          "object_type": "IX",
+          "object_schema": "DB2INST1",
+          "object_name": "PG_UQ_ENTITY"
+        },
+        {
+          "object_type": "TA",
+          "object_schema": "DB2INST1",
+          "object_name": "PG_ENTITIES"
+        },
+        {
+          "object_type": "IX",
+          "object_schema": "DB2INST1",
+          "object_name": "PG_IX_REPORT_ENTITY"
+        },
+        {
+          "object_type": "TA",
+          "object_schema": "DB2INST1",
+          "object_name": "PG_REPORTS"
+        },
+        {
+          "object_type": "IX",
+          "object_schema": "SYSIBM  ",
+          "object_name": "SQL261109221641610"
+        },
+        {
+          "object_type": "+V",
+          "object_schema": "DB2INST1",
+          "object_name": "PG_V_ENTITY_RISK"
+        }
+      ]
+    },
+    {
+      "query": "velocity",
+      "sql": "SELECT COUNT(*) AS ATTEMPTS,\n                       COALESCE(SUM(CASE WHEN VERDICT = 'BLOCK' THEN 1 ELSE 0 END), 0) AS BLOCKED,\n                       COALESCE(SUM(AMOUNT), 0) AS TOTAL_AMOUNT\n                FROM PG_SCREENINGS\n                WHERE PAYEE_EMAIL = ? AND CREATED_AT > CURRENT TIMESTAMP - ? HOURS",
+      "operators": [
+        {
+          "operator_id": 1,
+          "operator_type": "RETURN",
+          "total_cost": 22.043136596679688
+        },
+        {
+          "operator_id": 2,
+          "operator_type": "GRPBY ",
+          "total_cost": 22.042984008789062
+        },
+        {
+          "operator_id": 3,
+          "operator_type": "FETCH ",
+          "total_cost": 22.041975021362305
+        },
+        {
+          "operator_id": 4,
+          "operator_type": "IXSCAN",
+          "total_cost": 13.539106369018555
+        }
+      ],
+      "objects": [
+        {
+          "object_type": "IX",
+          "object_schema": "DB2INST1",
+          "object_name": "PG_IX_SCREEN_PAYEE"
+        },
+        {
+          "object_type": "TA",
+          "object_schema": "DB2INST1",
+          "object_name": "PG_SCREENINGS"
+        }
+      ]
+    },
+    {
+      "query": "vector_patterns",
+      "sql": "SELECT ID, TITLE, CATEGORY, CHANNEL, REGION, SEVERITY, DESCRIPTION, RED_FLAGS, ADVICE,\n                       VECTOR_DISTANCE(EMBEDDING, VECTOR(CAST(? AS CLOB(100000)), 768, FLOAT32), COSINE) AS DISTANCE\n                FROM PG_SCAM_PATTERNS\n                WHERE REGION IN ('GLOBAL', ?)\n                ORDER BY DISTANCE\n                FETCH FIRST 3 ROWS ONLY",
+      "operators": [
+        {
+          "operator_id": 1,
+          "operator_type": "RETURN",
+          "total_cost": 28.14845848083496
+        },
+        {
+          "operator_id": 2,
+          "operator_type": "TBSCAN",
+          "total_cost": 28.14845848083496
+        },
+        {
+          "operator_id": 3,
+          "operator_type": "SORT  ",
+          "total_cost": 28.14826011657715
+        },
+        {
+          "operator_id": 4,
+          "operator_type": "FETCH ",
+          "total_cost": 28.146493911743164
+        },
+        {
+          "operator_id": 5,
+          "operator_type": "RIDSCN",
+          "total_cost": 0.008379573002457619
+        },
+        {
+          "operator_id": 6,
+          "operator_type": "SORT  ",
+          "total_cost": 0.008268123492598534
+        },
+        {
+          "operator_id": 7,
+          "operator_type": "IXSCAN",
+          "total_cost": 0.007810177747160196
+        }
+      ],
+      "objects": [
+        {
+          "object_type": "IX",
+          "object_schema": "DB2INST1",
+          "object_name": "PG_IX_PATTERN_REGION"
+        },
+        {
+          "object_type": "TA",
+          "object_schema": "DB2INST1",
+          "object_name": "PG_SCAM_PATTERNS"
+        }
+      ]
+    }
+  ],
+  "indexes": [
+    {
+      "indname": "PG_UQ_ENTITY",
+      "tabname": "PG_ENTITIES",
+      "indextype": "REG "
+    },
+    {
+      "indname": "SQL261109221641610",
+      "tabname": "PG_ENTITIES",
+      "indextype": "REG "
+    },
+    {
+      "indname": "PG_IX_REPORT_ENTITY",
+      "tabname": "PG_REPORTS",
+      "indextype": "REG "
+    },
+    {
+      "indname": "PG_IX_PATTERN_REGION",
+      "tabname": "PG_SCAM_PATTERNS",
+      "indextype": "REG "
+    },
+    {
+      "indname": "PG_IX_SCREEN_PAYEE",
+      "tabname": "PG_SCREENINGS",
+      "indextype": "REG "
+    },
+    {
+      "indname": "PG_IX_SCREEN_RECENT",
+      "tabname": "PG_SCREENINGS",
+      "indextype": "REG "
+    },
+    {
+      "indname": "PG_IX_SCREEN_VERDICT",
+      "tabname": "PG_SCREENINGS",
+      "indextype": "REG "
+    }
+  ]
+}

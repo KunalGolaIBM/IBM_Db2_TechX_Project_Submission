@@ -1,0 +1,1 @@
+"""PayGuard adapters layer."""

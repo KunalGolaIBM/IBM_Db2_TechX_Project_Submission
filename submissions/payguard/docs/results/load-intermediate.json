@@ -1,0 +1,8 @@
+{
+  "requests": 3943,
+  "failures": 0,
+  "requests_per_second": 68.09335149343717,
+  "p50_ms": 580,
+  "p95_ms": 1500,
+  "average_ms": 705.6203562263023
+}

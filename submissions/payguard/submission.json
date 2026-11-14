@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "PayGuard - AI Payment Firewall on IBM Db2",
+    "slug": "payguard",
+    "short_description": "Screens payments before they are sent: rule signals, a Db2 scam knowledge base with VECTOR search, and a LangChain-integrated Gemini investigator agent whose tools are Db2 queries. Only safe payments reach PayPal checkout.",
+    "category": "AI / RAG / Agents / Fraud Analytics",
+    "demo_url": "",
+    "video_url": "https://youtu.be/Xl68sUC8XLY",
+    "repo_url": "https://github.com/Josebert2001/payguard"
+  },
+  "team": {
+    "name": "JRsolvy",
+    "members": [
+      {
+        "name": "Sunday Robert (Josebert)",
+        "github": "Josebert2001",
+        "email": "robertsunday333@gmail.com",
+        "role": "Full-stack, Db2 integration, AI agent"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition 12.1.2+ (Docker)",
+    "connector": "ibm_db / ibm_db_dbi / LangChain DB2VS (langchain-db2)",
+    "features_used": [
+      "VECTOR(768, FLOAT32) columns",
+      "VECTOR_DISTANCE cosine similarity search",
+      "Hybrid vector + relational filtering",
+      "MERGE upserts with auto-escalation",
+      "FINAL TABLE generated keys",
+      "Views for analytics",
+      "Indexes, CHECK and UNIQUE constraints, foreign keys",
+      "SYSCAT catalog introspection for text-to-SQL",
+      "SCAM_EXAMPLES: idempotent CSV ingestion and LangChain DB2VS cosine retrieval"
+    ]
+  },
+  "tech_stack": {
+    "languages": [
+      "Python",
+      "JavaScript",
+      "SQL"
+    ],
+    "frameworks": [
+      "FastAPI",
+      "Custom Gemini tool-calling agent",
+      "PayPal JS SDK",
+      "LangChain StructuredTool and RunnableLambda",
+      "IBM langchain-db2 DB2VS"
+    ],
+    "ai_models": [
+      "Google Gemini 2.5 Flash",
+      "gemini-embedding-001 (optional)",
+      "local feature-hashing embeddings"
+    ]
+  }
+}
