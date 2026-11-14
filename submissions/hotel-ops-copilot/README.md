@@ -42,6 +42,9 @@ flowchart TB
 ![Red-team attack console: 24/24 blocked](docs/screenshots/red-team-live.gif)
 
 ### What's new after the pitch
+
+![Live: Db2 hides the second hotel from the AI's login, a manager grants and revokes it, Db2 rejects the AI's ticket for a Kochi room, then the Db2 features scoreboard](docs/screenshots/hotel-group-live.gif)
+
 - **Db2 features tab:** the app reads Db2's own catalog (`SYSCAT`) and shows all **18 IBM Db2 features** in use, backed by 84 catalog objects, each linked to the live check that proves it.
 - **Hotel-chain isolation enforced by Db2:** two demo hotels, a hotel switcher, and a **Hotel group** tab where the same query run as the AI returns only its own hotel; Db2 rejects its actions on the other one ([details](#ibm-db2-integration)).
 - **Measured at chain scale:** 1,000,000 reservations across 40 hotels; one hotel's agent sees 25,000 and gets its KPIs in 187 ms ([benchmark](docs/scale_benchmark.md)).
