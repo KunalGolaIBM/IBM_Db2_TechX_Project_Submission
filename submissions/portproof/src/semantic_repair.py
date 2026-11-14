@@ -85,6 +85,61 @@ _LISTAGG_CAST_RE = re.compile(
 )
 
 
+_STRING_IN_RE = re.compile(
+    r"(?P<lhs>[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)"
+    r"\s+(?P<neg>NOT\s+)?IN\s*\(\s*(?P<items>'(?:''|[^'])*'(?:\s*,\s*'(?:''|[^'])*')*)\s*\)",
+    re.IGNORECASE,
+)
+_STRING_ITEM_RE = re.compile(r"'(?:''|[^'])*'")
+_STRING_LIKE_RE = re.compile(
+    r"(?P<lhs>[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)"
+    r"\s+(?P<neg>NOT\s+)?LIKE\s+(?P<rhs>'(?:''|[^'])*')",
+    re.IGNORECASE,
+)
+
+
+def _rewrite_string_comparisons(sql: str, one: Callable[[str, str, str], str]) -> str:
+    """Apply ``one(lhs, '=' or '<>', literal)`` to every string comparison.
+
+    ``x IN ('a', 'b')`` is a list of equalities and is rewritten as one, which
+    is what the first version of these rules missed: it handled ``=`` and left
+    ``IN`` comparing the way Db2 does.
+    """
+
+    def rewrite_in(match: re.Match[str]) -> str:
+        lhs, negated = match.group("lhs"), bool(match.group("neg"))
+        items = _STRING_ITEM_RE.findall(match.group("items"))
+        parts = [one(lhs, "<>" if negated else "=", item) for item in items]
+        return "(" + (" AND " if negated else " OR ").join(parts) + ")"
+
+    def rewrite_eq(match: re.Match[str]) -> str:
+        op = "=" if match.group("op") == "=" else "<>"
+        return one(match.group("lhs"), op, match.group("rhs"))
+
+    # Equalities first: the IN expansion writes equalities of its own, and
+    # they must not be rewritten a second time.
+    return _STRING_IN_RE.sub(rewrite_in, _STRING_EQ_RE.sub(rewrite_eq, sql))
+
+
+def _has_string_comparison(sql: str) -> bool:
+    return bool(_STRING_EQ_RE.search(sql) or _STRING_IN_RE.search(sql))
+
+
+def _case_insensitive_like(sql: str) -> str:
+    """LIKE the way MySQL, SQL Server and SQLite decide it: letter case ignored.
+
+    Db2's LIKE is case-sensitive, so ``name LIKE '%SMITH%'`` misses 'Asha Smith'
+    there and finds it on the other three. Folding both sides is the rewrite
+    the model proposed for this on the first live run, statement by statement.
+    """
+
+    def rewrite(match: re.Match[str]) -> str:
+        negated = "NOT " if match.group("neg") else ""
+        return f"UPPER({match.group('lhs')}) {negated}LIKE UPPER({match.group('rhs')})"
+
+    return _STRING_LIKE_RE.sub(rewrite, sql)
+
+
 def _collate_string_equality(sql: str) -> str:
     """Make string equality case-insensitive, the way MySQL's default is.
 
@@ -104,15 +159,14 @@ def _collate_string_equality(sql: str) -> str:
     against four and five bytes against four.
     """
 
-    def rewrite(match: re.Match[str]) -> str:
-        lhs, op, rhs = match.group("lhs"), match.group("op"), match.group("rhs")
+    def one(lhs: str, op: str, rhs: str) -> str:
         key = f"COLLATION_KEY_BIT(%s, '{UCA_CASE_INSENSITIVE}')"
         size = "CHARACTER_LENGTH(%s, CODEUNITS32)"
         if op == "=":
             return f"({key % lhs} = {key % rhs} AND {size % lhs} = {size % rhs})"
         return f"({key % lhs} <> {key % rhs} OR {size % lhs} <> {size % rhs})"
 
-    return _STRING_EQ_RE.sub(rewrite, sql)
+    return _rewrite_string_comparisons(sql, one)
 
 
 def _collate_string_equality_tsql(sql: str) -> str:
@@ -124,12 +178,33 @@ def _collate_string_equality_tsql(sql: str) -> str:
     strength 1.
     """
 
-    def rewrite(match: re.Match[str]) -> str:
-        lhs, op, rhs = match.group("lhs"), match.group("op"), match.group("rhs")
+    def one(lhs: str, op: str, rhs: str) -> str:
         key = f"COLLATION_KEY_BIT(RTRIM(%s), '{UCA_CASE_INSENSITIVE_ACCENT_SENSITIVE}')"
         return f"{key % lhs} {op} {key % rhs}"
 
-    return _STRING_EQ_RE.sub(rewrite, sql)
+    return _rewrite_string_comparisons(sql, one)
+
+
+def _blank_sensitive_equality(sql: str) -> str:
+    """String equality the way PostgreSQL and SQLite decide it: blanks count.
+
+    Db2 compares a VARCHAR to a string by padding the shorter one with blanks,
+    so ``'Asha Smith ' = 'Asha Smith'`` is true on Db2 and false on PostgreSQL
+    and SQLite. Requiring the lengths to match as well removes exactly the rows
+    that differ only by padding.
+
+    This rule was written by reading what the model did. On the first live run
+    it rediscovered this one rewrite for statement after statement, and each
+    rediscovery was a paid call. As a rule it is free, and the model is left
+    for the divergences that do not have a rule yet.
+    """
+
+    def one(lhs: str, op: str, rhs: str) -> str:
+        if op == "=":
+            return f"({lhs} = {rhs} AND LENGTH({lhs}) = LENGTH({rhs}))"
+        return f"({lhs} <> {rhs} OR LENGTH({lhs}) <> LENGTH({rhs}))"
+
+    return _rewrite_string_comparisons(sql, one)
 
 
 def _mysql_decimal_division(sql: str) -> str:
@@ -301,7 +376,26 @@ class SemanticRule:
     rewrite: Callable[[str], str]
 
 
+_BLANKS_COUNT = (
+    "{engine} treats trailing blanks as part of a string; Db2 pads the shorter "
+    "side before comparing a VARCHAR, so 'x ' = 'x' is true there"
+)
+
 SEMANTIC_RULES: list[SemanticRule] = [
+    SemanticRule(
+        name="postgres-blank-sensitive-equality",
+        dialect="postgres",
+        because=_BLANKS_COUNT.format(engine="PostgreSQL"),
+        detect=_has_string_comparison,
+        rewrite=_blank_sensitive_equality,
+    ),
+    SemanticRule(
+        name="sqlite-blank-sensitive-equality",
+        dialect="sqlite",
+        because=_BLANKS_COUNT.format(engine="SQLite"),
+        detect=_has_string_comparison,
+        rewrite=_blank_sensitive_equality,
+    ),
     SemanticRule(
         name="sqlserver-case-insensitive-collation",
         dialect="tsql",
@@ -309,7 +403,7 @@ SEMANTIC_RULES: list[SemanticRule] = [
             "SQL Server's default collation makes string equality ignore "
             "letter case and trailing blanks; Db2's ignores neither"
         ),
-        detect=lambda sql: bool(_STRING_EQ_RE.search(sql)),
+        detect=_has_string_comparison,
         rewrite=_collate_string_equality_tsql,
     ),
     SemanticRule(
@@ -319,9 +413,23 @@ SEMANTIC_RULES: list[SemanticRule] = [
             "MySQL's default collation (utf8mb4_0900_ai_ci) makes string "
             "equality case-insensitive; Db2's is case-sensitive"
         ),
-        detect=lambda sql: bool(_STRING_EQ_RE.search(sql)),
+        detect=_has_string_comparison,
         rewrite=_collate_string_equality,
     ),
+    *[
+        SemanticRule(
+            name=f"{label}-case-insensitive-like",
+            dialect=dialect,
+            because=f"{engine}'s LIKE ignores letter case; Db2's does not",
+            detect=lambda sql: bool(_STRING_LIKE_RE.search(sql)),
+            rewrite=_case_insensitive_like,
+        )
+        for label, dialect, engine in (
+            ("mysql", "mysql", "MySQL"),
+            ("sqlserver", "tsql", "SQL Server"),
+            ("sqlite", "sqlite", "SQLite"),
+        )
+    ],
     SemanticRule(
         name="mysql-decimal-division",
         dialect="mysql",

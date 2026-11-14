@@ -234,6 +234,13 @@ class Namespaced:
         """Back to the namespace the engine was opened on."""
         self._ns_switch(None)
 
+    def forget(self, variant: Variant) -> None:
+        """Drop one dataset's namespace. For datasets that are tried once."""
+        namespace = self._spaces().pop(variant.fingerprint, None)
+        if namespace is not None:
+            self._ns_switch(None)
+            self._ns_drop(namespace)
+
     def drop_namespaces(self) -> None:
         spaces = self._spaces()
         try:

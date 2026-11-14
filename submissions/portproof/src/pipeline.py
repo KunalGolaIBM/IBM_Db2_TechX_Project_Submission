@@ -37,6 +37,8 @@ from .counterexample import (
 )
 from .datasets import DatasetAgent, QueryFeatures
 from .llm import METER, DeadEnds
+from . import costgate
+from .minimise import Minimal, minimise as minimise_witness
 from .federation import Corroboration, corroborate
 from .fixmemory import FixMemory
 from .repair import RepairLoop, RepairOutcome
@@ -76,6 +78,17 @@ class StatementResult:
     escalated: bool = False
     rescued: bool = False
     model_calls: int = 0
+    #: For a statement left PROVEN DIFFERENT: the fewest rows found on which
+    #: the two engines still disagree. See :mod:`src.minimise`.
+    minimal: "Minimal | None" = None
+    #: Db2's estimated cost (timerons) of the statement before and after a
+    #: meaning repair. None when the Explain tables are not installed.
+    cost_before: float | None = None
+    cost_after: float | None = None
+
+    @property
+    def cost_ratio(self) -> float | None:
+        return costgate.ratio(self.cost_before, self.cost_after)
 
     @property
     def case_name(self) -> str:
@@ -93,6 +106,11 @@ class StatementResult:
 @dataclass
 class MigrationReport:
     results: list[StatementResult] = field(default_factory=list)
+
+    @property
+    def median_minimal_rows(self) -> int:
+        sizes = sorted(r.minimal.rows_after for r in self.results if r.minimal is not None)
+        return sizes[len(sizes) // 2] if sizes else 0
     source_engine: str = ""
     #: How many adversarial datasets were *available*. Not a claim about how
     #: many any given statement was actually checked on -- that is per
@@ -245,7 +263,13 @@ class MigrationReport:
             f"(by fix memory {self.semantic_fixed_by('memory')}, "
             f"by rules {self.semantic_fixed_by('rules')}, by the model "
             f"{self.semantic_fixed_by('model')})",
+            f"  repairs Db2 estimates at {costgate.SLOWER_RATIO:.0f}x the cost or more: "
+            f"{sum(1 for r in self.results if (r.cost_ratio or 0) >= costgate.SLOWER_RATIO)} "
+            f"of {sum(1 for r in self.results if r.cost_ratio is not None)} estimated",
             f"PROVEN DIFFERENT         : {self.proven_different}",
+            f"  of those, counterexample shrunk: "
+            f"{sum(1 for r in self.results if r.minimal is not None)} "
+            f"(median {self.median_minimal_rows} row(s) left)",
             f"order not determined by the SQL: {self.unstable}",
             f"vacuous (agreed on nothing): {self.vacuous}",
             f"inconclusive             : {self.inconclusive}",
@@ -277,7 +301,10 @@ class Pipeline:
         semantic_repair: bool = True,
         dataset_agent: DatasetAgent | None = None,
         variants: Sequence[Variant] | None = None,
+        minimise: bool = True,
     ):
+        #: Shrink the counterexample of every statement left PROVEN DIFFERENT.
+        self.minimise = minimise
         self.app_conn = app_conn
         self.owner_conn = owner_conn
         ensure_fixture_schema(owner_conn)
@@ -310,6 +337,8 @@ class Pipeline:
     def _flush_model_calls(self) -> None:
         """Write this statement's model calls to the Db2 ledger."""
         for call in METER.unflushed():
+            if call.ledgered:  # Db2 wrote this one itself, inside ASK_MODEL
+                continue
             try:
                 db.call_proc(
                     self.app_conn,
@@ -600,6 +629,17 @@ class Pipeline:
                             statement, result, fix.verdict, variants, source
                         )
                         result.semantic = verdict
+                        # Correct is not the same as affordable: ask Db2 what
+                        # the rewrite did to the plan, against the same tables.
+                        if variants:
+                            try:
+                                activate(self.target, variants[0])
+                                result.cost_before = costgate.estimate(
+                                    self.owner_conn, pre_semantic_sql)
+                                result.cost_after = costgate.estimate(
+                                    self.owner_conn, result.db2_sql or "")
+                            except Exception:  # the estimate is advisory
+                                pass
 
                 # Only once no rewrite worked is instability the useful answer.
                 # A statement that is both unstable and fixable gets the fix; a
@@ -626,6 +666,22 @@ class Pipeline:
                     "UNSTABLE": "UNSTABLE",
                     "VACUOUS": "VACUOUS",
                 }.get(verdict.outcome, "COMPILES")
+
+                # A divergence nobody could repair goes to a person, so it is
+                # handed over as the few rows that show it and not the dataset
+                # that happened to contain them.
+                if result.status == "PROVEN_DIFFERENT" and self.minimise and verdict.witness:
+                    held = next((v for v in variants
+                                 if v.fingerprint == verdict.witness.fingerprint), None)
+                    if held is not None:
+                        try:
+                            result.minimal = minimise_witness(
+                                source_sql=statement.sql, db2_sql=result.db2_sql or "",
+                                source=source, target=self.target, witness=held,
+                                dialect=statement.dialect,
+                            )
+                        except Exception:  # never let the shrink change a verdict
+                            result.minimal = None
 
         self._record_translation(result)
         result.compile_cert = self._record_verdict(
@@ -656,6 +712,13 @@ class Pipeline:
                 "notes": result.semantic.notes,
                 **result.semantic.evidence(),
             }
+            if result.minimal is not None:
+                detail["minimal_counterexample"] = result.minimal.as_detail()
+            if result.cost_ratio is not None:
+                detail["estimated_cost"] = {
+                    "before": round(result.cost_before, 2),
+                    "after": round(result.cost_after, 2),
+                }
             if result.semantically_repaired and result.semantic_repair is not None:
                 detail["semantic_repair"] = {
                     "rule": result.semantic_repair.rule,

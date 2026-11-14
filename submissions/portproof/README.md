@@ -13,6 +13,7 @@
 - [IBM Db2 Integration](#ibm-db2-integration)
 - [AI and LLM Architecture](#ai-and-llm-architecture)
 - [AI Cost and Scale](#ai-cost-and-scale)
+- [From a Corpus to a Migration](#from-a-corpus-to-a-migration)
 - [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
 - [Setup and Installation](#setup-and-installation)
@@ -308,6 +309,120 @@ What does grow with the source is one aggregate query per table, run by the sour
 
 ---
 
+## From a Corpus to a Migration
+
+Six additions made after the finals pitch, each one measured against the live engines. They move PortProof from proving a list somebody wrote to proving what an application actually sends, and from a verdict to something an engineer or a pipeline can act on.
+
+| Addition | What it does | Measured |
+|---|---|---|
+| Workload capture | Reads the statements from the source engine's own record, most executed first | MySQL 9 kept of 419 read, SQL Server 2 of 53, PostgreSQL 4 of 193 |
+| Rules learned from the model | Five rewrites the model kept rediscovering are now rules | Meaning repairs with no model: 13 → 33 of 64 |
+| Counterexample minimisation | Shrinks a failing dataset to the fewest rows that still disagree | 28 of 31 shrunk, median 2 rows left |
+| Cost check | Db2's optimizer estimate before and after a repair | 1 of 33 repairs flagged: 6.8 → 42.4 timerons, 6.3x |
+| Model called inside Db2 | `TEXT_GENERATION` through a procedure that writes the bill in the same call | Run with no key in the application: 3 calls made and ledgered by Db2, a budget of 3 held, 1 repair proved |
+| CI gate, JSON report, MCP server | Exit code 2 holds a branch; verdicts as JSON; four tools for an agent | Proof over stdio in 12 s |
+
+The whole workload again with all of it switched on, the fifth run against the same Db2:
+
+| | Run 1 (cold) | Run 5 |
+|---|---|---|
+| Proven equivalent, of 125 | 106 | 112 |
+| Proven different | 16 | 11, every one shrunk, median 2 rows left |
+| Model calls | 80 | 0 (11 avoided as known dead ends) |
+| Wall time | 1,365 s | 146 s |
+| Repairs at 2x the estimated cost or more | not measured | 0 of 51 |
+| `--fail-on different` | not available | exit 2, naming the 11 |
+
+Run 5 is warm: 49 of its 51 meaning repairs were replayed from Db2's fix memory and proved again. The rules only figure in the table above is the cold measure of the new rules.
+
+### The workload comes from the source
+
+```bash
+python -m src.main --dialect mysql --capture --tables customers,orders,order_items --top 50
+python -m src.main --dialect sqlite --sql-file app_queries.sql --tables customers,orders
+```
+
+`src/capture.py` reads `performance_schema.events_statements_summary_by_digest` on MySQL, `sys.dm_exec_query_stats` on SQL Server and `pg_stat_statements` on PostgreSQL, ordered by execution count. A statement is kept only if it is one read only query, parses in the source dialect, and reads nothing outside the tables named. The schema is then read from the source catalogue and datasets are generated for it, exactly as for the sample schemas. Nothing is written to the source.
+
+One limit is the source's, and is counted, not hidden: PostgreSQL stores `WHERE id = $1`, not the literal, so 150 of the 193 statements it held could not be replayed and were reported as such. Those need the server log or a `.sql` file.
+
+### What the model learns becomes a rule
+
+The first live run had the model repair 37 divergences. Reading its accepted rewrites back out of Db2's fix memory showed the same five shapes again and again, so they are now rules in `src/semantic_repair.py`, each one accepted by the same differential proof as any other repair:
+
+| Rule | Source behaviour Db2 does not share | Rewrite |
+|---|---|---|
+| `mysql-`, `sqlserver-`, `sqlite-case-insensitive-like` | `LIKE` ignores case | `UPPER(col) LIKE UPPER(pattern)` |
+| `postgres-`, `sqlite-blank-sensitive-equality` | `'a ' = 'a'` is false; Db2 pads and says true | adds `AND LENGTH(col) = LENGTH(literal)` |
+| collation rules, extended | `IN ('a', 'b')` under a case insensitive collation | expanded to `COLLATION_KEY_BIT` equalities |
+
+Rules only, on the 125 statements, with no model reachable: 33 of 64 divergences repaired and proved, where the same tier repaired 13 before.
+
+### A verdict becomes a bug report
+
+A statement left `PROVEN DIFFERENT` used to come with the dataset that exposed it, typically 10 to 40 rows across four tables. `src/minimise.py` now deletes rows by delta debugging, re running both engines after each cut, until no row can be removed without the disagreement disappearing. On the 31 statements left different in the rules only run, 28 were shrunk, to a median of 2 rows. The result is stored in the ledger and printed:
+
+```
+smallest input that still disagrees: 1 row(s), down from 13 (13 trials on both engines)
+  orders: ('13', '3', '10.00', 'PAID', '2026-03-01 08:00:00', '4')
+  source returns [('13', '2')]
+  db2 returns    [('13', '2.5')]
+```
+
+It costs at most 40 extra proofs per failing statement and nothing for a statement that agrees. `--no-minimise` turns it off.
+
+### A correct repair can still be a slow one
+
+The collation rewrites wrap a column in a function, which is how an index stops being used. The differential proof cannot see that. So after a meaning repair is accepted, `src/costgate.py` runs `EXPLAIN PLAN` on the statement before and after and reads `TOTAL_COST` from `EXPLAIN_STATEMENT`. Nothing is executed. A repair at twice the estimate or more is called out in the report: of 33 repairs, one, the MySQL collation rewrite of a join, 6.8 to 42.4 timerons.
+
+The estimate is over PortProof's small proof datasets, so it says the plan got more expensive, not by how much in production. It needs the Explain tables, which the schema owner cannot create for itself; `scripts/create_explain_tables.sh` does it once. Without them the check is absent and nothing else changes.
+
+### The model is called from inside Db2
+
+Db2 12.1.5 can register an external model and call it in SQL. With `LLM_TRANSPORT=db2`, PortProof's model tier is this, and nothing else:
+
+```sql
+CALL PORTPROOF.ASK_MODEL(stage, case_name, prompt, run_started, budget, ?)
+-- inside: TEXT_GENERATION(P_PROMPT USING PORTPROOF.PP_MODEL), then INSERT INTO PORTPROOF.LLM_CALL
+```
+
+Three properties follow, and each is tested:
+
+- **The application holds no key.** `python -m src.setup_model` gives the key to Db2 once, as the owner. The runtime process runs with `LLM_API_KEY` empty and opens no socket to the provider.
+- **A model call that is not on the bill cannot be made.** The runtime identity has `EXECUTE` on the procedure and nothing on the model: calling `TEXT_GENERATION` directly is `SQL0551N`. The procedure writes the ledger row in the same unit of work as the call.
+- **The budget is enforced by the engine.** The procedure counts its own ledger since the run began and signals `SQLSTATE 75002` when the ceiling is reached, before the model is called.
+
+The cost of this transport is stated in the ledger too: Db2 returns the text and not the provider's usage block, so token counts for these rows are estimates (`ESTIMATED = 1`, `TRANSPORT = 'DB2'`), where the HTTP transport records the provider's own counts.
+
+### A gate for a pipeline, and tools for an agent
+
+```bash
+python -m src.main --fail-on different --report-json verdicts.json   # exit 2 if anything is PROVEN DIFFERENT
+python -m src.main --fail-on unproven                                 # exit 2 unless everything is PROVEN EQUIVALENT
+python -m src.mcp_server                                              # MCP over stdio
+```
+
+The JSON report carries, per statement, the status, both SQL texts, which tier repaired it, the evidence strength, the minimal counterexample, the cost estimates and the certificates.
+
+The MCP server (`src/mcp_server.py`) gives an agent that converts SQL four questions it can put to Db2: `check_compiles`, `prove_statement`, `estimate_cost`, `ledger_summary`. All four are read only; what the agent sends passes the same single query guard as a model's own output before it reaches a connection, and its questions do not teach the fix memory. To register it with an MCP client:
+
+```json
+{ "mcpServers": { "portproof": { "command": "python", "args": ["-m", "src.mcp_server"], "cwd": "submissions/portproof" } } }
+```
+
+### Where this sits among other tools
+
+| Tool | Converts | Checks the result by | Gap PortProof fills |
+|---|---|---|---|
+| IBM Database Conversion Workbench, Db2 Bridge | Schema, data, code to Db2 | Compiling on the target, row counts | Whether a converted query returns the same rows |
+| AWS DMS Schema Conversion, Google DMS, SSMA | Schema and code, with a generative model for what rules miss | Compiling, assessment reports | The model's output is not executed against the source |
+| Datafold Migration Agent | SQL between warehouses, with a model | Diffing the outputs of both systems on production data | Needs the migrated data in place; no adversarial inputs, no Db2 target |
+| VeriEQL, other bounded provers | Nothing; checks equivalence symbolically | An SMT solver over a SQL subset | One dialect's semantics at a time; no collation, no real engine |
+
+PortProof is the piece between conversion and cut over: it takes what any of these converters emit and asks both real engines.
+
+---
+
 ## Tech Stack
 
 - **Core:** Python 3.12
@@ -385,6 +500,16 @@ bash scripts/create_vector_index.sh db2spike testdb
 python -m src.main --dialect postgres --limit 1
 bash scripts/create_federation.sh db2spike testdb pppg ppmysql
 python -m src.main --federation
+
+# 9. Optional: the Explain tables, so a repair's cost is estimated by Db2
+#    before and after. Run as the instance owner because the schema owner
+#    cannot call SYSINSTALLOBJECTS (SQL0551N).
+bash scripts/create_explain_tables.sh db2spike testdb
+
+# 10. Optional: register the model inside Db2 (CREATE EXTERNAL MODEL) and
+#     create PORTPROOF.ASK_MODEL. Reads LLM_API_KEY once, as the owner; after
+#     this the application can run with LLM_TRANSPORT=db2 and no key at all.
+python -m src.setup_model
 ```
 
 ---
@@ -395,7 +520,7 @@ python -m src.main --federation
 cp .env.example .env
 ```
 
-Then fill in the passwords `scripts/create_db2_users.sh` printed, plus the source engine passwords if you started them, and `GEMINI_API_KEY` if you want the model tier. `LLM_CALL_BUDGET`, `LLM_MAX_OUTPUT_TOKENS` and `LLM_REASONING_EFFORT` cap what the model tier may spend. Every setting is documented in `.env.example`, including why `DB2_SCHEMA` is reported but not honoured.
+Then fill in the passwords `scripts/create_db2_users.sh` printed, plus the source engine passwords if you started them, and `GEMINI_API_KEY` if you want the model tier. `LLM_CALL_BUDGET`, `LLM_MAX_OUTPUT_TOKENS` and `LLM_REASONING_EFFORT` cap what the model tier may spend. `LLM_TRANSPORT=db2` makes Db2 call the model, after `python -m src.setup_model`; the default, `http`, calls it from the application. Every setting is documented in `.env.example`, including why `DB2_SCHEMA` is reported but not honoured.
 
 > **Security warning:** never commit `.env`. It is gitignored, and during development it was kept outside the repository entirely.
 
@@ -426,6 +551,16 @@ python -m src.main --yield
 # The experiment behind the cost claim: same queries, growing source tables
 python -m src.cost_scaling --engine postgres --sizes 1000 100000 1000000
 
+# The workload from the source engine's own statement record, or from a file
+python -m src.main --dialect mysql --capture --tables customers,orders --top 50
+python -m src.main --dialect sqlite --sql-file app_queries.sql --tables customers,orders
+
+# A CI gate and a machine readable report
+python -m src.main --fail-on different --report-json verdicts.json
+
+# PortProof's proofs as tools for an agent (MCP over stdio)
+python -m src.mcp_server
+
 # Compile proof only, which is fast
 python -m src.main --no-prove
 
@@ -450,12 +585,13 @@ streamlit run src/app.py
 pytest -q
 ```
 
-The suite has five parts, 236 tests, and does not mock the database. It never calls a real model: `tests/conftest.py` pins the rules, and the model tiers are driven by a scripted fake so every path they can take is exercised for free.
+The suite has six parts, 259 tests, and does not mock the database. It never calls a real model: `tests/conftest.py` pins the rules, and the model tiers are driven by a scripted fake so every path they can take is exercised for free.
 
 - `tests/test_unit.py`, pure functions: value canonicalisation, the rewrite rules, the read only guard, the translator.
 - `tests/test_soundness.py`, the things that decide whether a verdict can be believed. Every test here exists because PortProof once got that answer wrong, and the docstrings say which answer.
 - `tests/test_integration.py`, against a live Db2, a live PostgreSQL, a live MySQL and a live SQL Server. Marked `db2` and skipped automatically when the engines are unreachable, so the suite is still green on a laptop with nothing running.
 - `tests/test_agent.py`, the dataset agent, the tiers and the cost controls: generated datasets are legal for their schema on every engine, a model's dataset is refused with a reason when it is wrong, the cache answers before the model does, a proved rewrite replays from memory with no call, a dead end is not asked twice, the call budget stops the model, and the runtime identity cannot write the cache or the cost ledger except through the procedures.
+- `tests/test_features.py`, the additions after the pitch: capture keeps only read only statements over the named tables, the gate's exit code for each policy, the JSON report, the optimizer estimate, a counterexample that is smaller and still disagrees, Db2 refusing a model call once the budget is spent (`75002`), the runtime identity refused the model outside the ledger (`SQL0551N`), and the MCP tools refusing anything that is not a query.
 - `tests/test_ui.py`, the Streamlit app driven headlessly through `AppTest`, so the UI is covered by the same command.
 
 The regressions pinned by name, because each one would have invalidated the results:
@@ -572,6 +708,14 @@ Two more, once it connects. Without a user mapping for the connecting identity, 
 
 **Only `SQL_ATTR_INFO_APPLNAME` feeds `CURRENT CLIENT_APPLNAME`.** `SQL_ATTR_INFO_PROGRAMNAME` populates a different monitor element. Setting the wrong one leaves the special register empty, every connection matches the default workload, and a WLM threshold that is correct in every other respect silently never fires.
 
+**`CREATE EXTERNAL MODEL` works on Community Edition against an OpenAI compatible endpoint, with three things the documentation does not lead with.** `REASONING_EFFORT LOW` is accepted by the DDL and then every `TEXT_GENERATION` call fails with `SQL16402N` against Gemini's endpoint; without the option the same model answers. The owner of a model cannot `GRANT USAGE ON EXTERNAL MODEL` to another user (`SQL0551N`), so the only way to let an application identity use it without `DBADM` is a definer rights SQL PL procedure, which is also the right design, because the procedure can write the bill. And the key given in the DDL is not returned by `SYSCAT.EXTERNALMODELS`, `EXTERNALMODELAUTH` or `EXTERNALMODELOPTIONS`.
+
+**`EXPLAIN PLAN` needs tables the schema owner cannot create.** It fails with `SQL0219N` until the Explain tables exist in the session user's schema; `SYSPROC.SYSINSTALLOBJECTS` fails for a non `DBADM` owner with `SQL0551N`; and once the instance owner has created them in the owner's schema, the owner still gets `SQL0551N` on its own schema's tables until they are granted. The tables are looked up under `SESSION_USER`, not `CURRENT SCHEMA`.
+
+**Workload history differs by engine in the one way that matters for replay.** MySQL's `QUERY_SAMPLE_TEXT` and SQL Server's plan cache keep literals. PostgreSQL's `pg_stat_statements` replaces them with `$n`, so most of its record cannot be executed as is.
+
+**On Windows, an MCP stdio server must import native modules before it starts serving.** A tool call runs on a worker thread while another thread is blocked reading stdin, and the first import of numpy from that worker never returned. Importing the pipeline at module load fixed it.
+
 ---
 
 ## Known Limitations and Future Roadmap
@@ -584,7 +728,7 @@ Stated plainly, because a prover that oversells itself is the thing this project
 - **One statement at a time.** Stored procedures, triggers, multi statement transactions and cursor logic are out of scope. The unit of proof is a single read only query.
 - **The workload is 125 statements, not a customer schema.** 65 written to be adversarial, and 60 ordinary queries over two schemas the agent had to discover. Larger by design than before and still small.
 - **`DB2_SCHEMA` is reported and not honoured.** The schema name is baked into the DDL, the procedure names and the grants. PortProof warns when the variable disagrees instead of pretending it moves anything.
-- **The model's share of the work is real and it is not free.** Most output tokens are the model's reasoning, and a first run pays for every statement the cheaper tiers could not settle. Reruns are cheap because Db2 remembers both the repairs and the dead ends, but only for the exact statement: a near duplicate pays again. Promoting a rewrite the model keeps rediscovering into a rule is the obvious next step and is not done.
+- **The model's share of the work is real and it is not free.** Most output tokens are the model's reasoning, and a first run pays for every statement the cheaper tiers could not settle. Reruns are cheap because Db2 remembers both the repairs and the dead ends, but only for the exact statement: a near duplicate pays again. Five rewrites the model kept rediscovering have been promoted to rules; doing that automatically, from the fix memory, is not done.
 - **Db2 `VARCHAR(n)` counts bytes.** A generated accented value that fits a source `VARCHAR(10)` in characters can be refused by Db2 (`SQL0302N`). The agent sizes those values in bytes and discards any dataset an engine refuses, so this narrows coverage and never produces a false verdict.
 - **Dataset namespaces can be left behind.** Each dataset lives in its own schema or database on each engine and is dropped when the run ends. A run that is killed leaves them, named `ppv_...`, until the next run.
 - **Some divergences remain unrepaired**, and the report says which and why. Decimal division scale is the recurring one: PostgreSQL numeric division and Db2 DECIMAL division carry different trailing digits. Those are findings, not bugs to patch over.
@@ -592,11 +736,13 @@ Stated plainly, because a prover that oversells itself is the thing this project
 
 **Next steps**
 
-- A cost regression gate: compare `EXPLAIN` estimates before and after a repair, so a rewrite that is correct and catastrophically slow is caught too.
-- Counterexample minimisation: shrink a failing dataset to the smallest rows that still disagree, which turns a verdict into a bug report.
+- Done since the pitch: the cost check on `EXPLAIN` estimates, counterexample minimisation, workload capture, the CI gate, the MCP server and the in engine model call. See [From a Corpus to a Migration](#from-a-corpus-to-a-migration).
+- An Oracle source, proved twice: against a standard Db2 database and against one created with `DB2_COMPATIBILITY_VECTOR=ORA`, to measure which divergences the compatibility mode removes. Not started: the vector only applies to a database created after it is set, so it needs a second Db2 database and an Oracle engine, and it was not worth destabilising the measured setup for.
+- The PARROT cross dialect benchmark (598 curated pairs, Db2 among its dialects). Not run: its pairs come from 38 other benchmarks and each needs that benchmark's schema and data loaded on both engines before a pair can be executed, which is a data engineering task of its own.
+- Procedural code and DML. The unit of proof is still one read only query; a procedure needs state comparison after execution, not result comparison.
 - Full federated differential execution: translate the source statement into a Db2 statement over nicknames as well as over local tables, so the two answers are produced and compared by one optimiser.
 - Widen the workload from a public benchmark such as BIRD Mini-Dev, to report the same measurements at a larger scale.
-- Promote recurring model rewrites into measured rules, so the pattern becomes free for every statement and not only for the one that was repaired.
+- Mine the fix memory for recurring model rewrites and propose rules from them automatically.
 
 ### Fit with IBM's migration tooling
 

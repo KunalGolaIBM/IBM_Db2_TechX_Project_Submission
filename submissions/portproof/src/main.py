@@ -16,7 +16,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from . import db, federation, samples
+from . import costgate, db, federation, samples
 from .config import llm_config, runtime_config, setup_config
 from .corpus import DIALECTS, ORIGINAL_VARIANTS, VARIANTS, statements_for
 from .datasets import DatasetAgent, DatasetStore
@@ -44,7 +44,9 @@ def _print_report(report: MigrationReport) -> None:
 
     stages = METER.by_stage()
     if stages:
-        print("\n  model calls by stage (tokens as the provider counted them):")
+        counted = ("estimated from text length; Db2 made the calls"
+                   if any(c.estimated for c in METER.calls) else "as the provider counted them")
+        print(f"\n  model calls by stage (tokens {counted}):")
         for stage, (calls, prompt, completion) in sorted(stages.items()):
             print(f"    {stage:16} {calls:3} call(s)  {prompt:7} in  {completion:7} out")
 
@@ -70,6 +72,15 @@ def _print_report(report: MigrationReport) -> None:
                 print(f"    dataset: {witness.variant} -- {witness.targets}")
                 print(f"    source rows: {witness.source_rows[:3]}")
                 print(f"    db2 rows   : {witness.db2_rows[:3]}")
+            small = result.minimal
+            if small is not None:
+                print(f"    smallest input that still disagrees: {small.rows_after} row(s), "
+                      f"down from {small.rows_before} ({small.trials} trials on both engines)")
+                for table, rows in small.rows.items():
+                    for row in rows[:4]:
+                        print(f"      {table}: {tuple(str(v) for v in row)}")
+                print(f"      source returns {small.source_rows[:3]}")
+                print(f"      db2 returns    {small.db2_rows[:3]}")
             if result.semantic_cert:
                 print(f"    certificate: {result.semantic_cert}")
 
@@ -115,6 +126,11 @@ def _print_report(report: MigrationReport) -> None:
                 )
             print(f"    now    : {result.semantic.headline if result.semantic else ''}")
             print(f"    db2 sql: {(result.db2_sql or '')[:150]}")
+            if result.cost_ratio is not None:
+                flag = ("  <-- correct, and estimated much slower"
+                        if result.cost_ratio >= costgate.SLOWER_RATIO else "")
+                print(f"    cost   : {result.cost_before:.1f} -> {result.cost_after:.1f} timerons "
+                      f"by Db2's estimate ({result.cost_ratio:.1f}x){flag}")
 
     repaired = [r for r in report.results if r.repaired]
     if repaired:
@@ -222,6 +238,84 @@ def _print_physical(advice: dict) -> None:
         print("  package cache: no monitored statements visible to this user")
 
 
+def _captured_workload(args, pipeline, agent) -> list:
+    """The source's own statements, over a schema read from its catalogue."""
+    from . import capture
+    from .datasets import introspect, profile
+
+    engine = pipeline.sources.get(args.dialect)
+    if engine is None:
+        raise SystemExit(f"no {args.dialect} source engine is reachable")
+    tables = tuple(t.strip() for t in args.tables.split(",") if t.strip())
+    if args.sql_file:
+        taken = capture.from_file(args.sql_file, args.dialect, tables)
+    else:
+        try:
+            taken = capture.from_engine(engine, args.dialect, tables, top=args.top)
+        except ValueError as exc:
+            raise SystemExit(f"  capture failed: {exc}")
+    print(f"  captured     : {taken.summary()}")
+    schema = introspect(engine, "captured", tables=tables)
+    prof = profile(engine, schema)
+    agent.register("captured", args.dialect, schema, prof)
+    print(
+        f"  discovered   : {args.dialect}/captured -- {len(schema.tables)} tables, "
+        f"{sum(len(t.columns) for t in schema.tables)} columns, "
+        f"{prof.total_rows} rows profiled (fingerprint {schema.fingerprint})"
+    )
+    return taken.statements("captured")
+
+
+def _gate(report, fail_on: str) -> int:
+    """The exit code for a CI job: 0 passes the branch, 2 holds it."""
+    if fail_on == "none":
+        return 0
+    if fail_on == "different":
+        held = [r for r in report.results if r.status in ("PROVEN_DIFFERENT", "COMPILE_FAIL")]
+    else:
+        held = [r for r in report.results if r.status != "PROVEN_EQUIVALENT"]
+    if held:
+        print(f"\n  GATE ({fail_on}): {len(held)} statement(s) hold the migration:")
+        for r in held[:20]:
+            print(f"    {r.case_name:38} {r.status}")
+        return 2
+    print(f"\n  GATE ({fail_on}): passed")
+    return 0
+
+
+def _write_json(report, path: str) -> None:
+    import json
+
+    rows = []
+    for r in report.results:
+        witness = r.semantic.witness if r.semantic else None
+        rows.append({
+            "case": r.case_name,
+            "dialect": r.statement.dialect,
+            "status": r.status,
+            "source_sql": r.statement.sql,
+            "db2_sql": r.db2_sql,
+            "first_sqlcode": r.first_sqlcode,
+            "compile_repaired_by": r.repair.fixed_by if r.repair and r.repaired else None,
+            "meaning_repaired_by": r.semantic_repair.rule
+            if r.semantic_repair and r.semantic_repair.repaired else None,
+            "evidence": r.semantic.strength if r.semantic else None,
+            "datasets": r.datasets_used,
+            "witness_dataset": witness.variant if witness and not witness.agreed else None,
+            "minimal_counterexample": r.minimal.as_detail() if r.minimal else None,
+            "estimated_cost_before": r.cost_before,
+            "estimated_cost_after": r.cost_after,
+            "compile_certificate": r.compile_cert,
+            "semantic_certificate": r.semantic_cert,
+        })
+    counts: dict[str, int] = {}
+    for row in rows:
+        counts[row["status"]] = counts.get(row["status"], 0) + 1
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump({"statements": len(rows), "by_status": counts, "results": rows},
+                  handle, indent=2, default=str)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="portproof", description=__doc__)
     parser.add_argument("--dialect", choices=[*DIALECTS, "all"], default="all")
@@ -246,6 +340,32 @@ def main(argv: list[str] | None = None) -> int:
         help="with --datasets agent, prove each statement on only its N "
         "best-ranked datasets (0 = all of them)",
     )
+    parser.add_argument(
+        "--capture", action="store_true",
+        help="take the workload from the source engine's own statement record "
+        "(needs one --dialect and --tables)",
+    )
+    parser.add_argument(
+        "--sql-file", default="",
+        help="take the workload from a .sql file, one statement per ';' "
+        "(needs one --dialect and --tables)",
+    )
+    parser.add_argument(
+        "--tables", default="",
+        help="comma-separated tables of the schema being migrated; with --capture "
+        "or --sql-file, only statements over these tables are proved",
+    )
+    parser.add_argument("--top", type=int, default=50,
+                        help="with --capture, the N most executed statements (default 50)")
+    parser.add_argument(
+        "--fail-on", choices=["none", "different", "unproven"], default="none",
+        help="exit 2 if any statement is PROVEN DIFFERENT (different), or if any "
+        "is not PROVEN EQUIVALENT (unproven). For a CI gate on a migration branch",
+    )
+    parser.add_argument("--report-json", default="",
+                        help="also write the per-statement verdicts to this file as JSON")
+    parser.add_argument("--no-minimise", action="store_true",
+                        help="do not shrink the counterexample of a PROVEN DIFFERENT statement")
     parser.add_argument("--cost", action="store_true", help="print the model-call ledger and exit")
     parser.add_argument(
         "--yield", dest="show_yield", action="store_true",
@@ -311,6 +431,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  fix memory   : unavailable ({str(exc)[:70]})")
             memory = None
 
+    captured_mode = bool(args.capture or args.sql_file)
+    if captured_mode:
+        if args.dialect == "all" or not args.tables.strip():
+            parser.error("--capture and --sql-file need one --dialect and --tables")
+        args.workload = "captured"
     agent: DatasetAgent | None = None
     if args.datasets == "agent" or args.workload != "corpus":
         agent = DatasetAgent(
@@ -327,12 +452,16 @@ def main(argv: list[str] | None = None) -> int:
         learn=not args.no_learn,
         dataset_agent=agent,
         variants=ORIGINAL_VARIANTS if args.datasets == "original" else VARIANTS,
+        minimise=not args.no_minimise,
     )
     print(f"  source engines: {pipeline.source_engines}")
+    status = 0
     try:
         dialect = None if args.dialect == "all" else args.dialect
-        statements = [] if args.workload == "samples" else statements_for(dialect)
-        if args.workload != "corpus" and agent is not None:
+        statements = [] if args.workload in ("samples", "captured") else statements_for(dialect)
+        if captured_mode:
+            statements = _captured_workload(args, pipeline, agent)
+        elif args.workload != "corpus" and agent is not None:
             # Play the customer: put two schemas in each source engine, then
             # find them again through the engine's own catalogue.
             sources = {
@@ -352,6 +481,10 @@ def main(argv: list[str] | None = None) -> int:
             statements=statements,
         )
         _print_report(report)
+        if args.report_json:
+            _write_json(report, args.report_json)
+            print(f"\n  verdicts written to {args.report_json}")
+        status = _gate(report, args.fail_on)
         if not args.no_escalate:
             escalated = pipeline.escalate_stalled()
             print(
@@ -366,7 +499,7 @@ def main(argv: list[str] | None = None) -> int:
         pipeline.close()
 
     print(f"\nLedger written to Db2. Read it with:  python -m src.main --ledger")
-    return 0
+    return status
 
 
 if __name__ == "__main__":

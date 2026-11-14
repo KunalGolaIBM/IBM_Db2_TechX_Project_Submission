@@ -372,7 +372,12 @@ The runtime identity holds no `INSERT` on any table. It can only `CALL`:
 | `src/semantic_repair.py` | The measured rewrite rules, the memory and model tiers, and the loop that re proves every candidate. |
 | `src/federation.py` | The federated cross check: nicknames, the cast reconciliation, and Db2's own symmetric difference over the two copies of the data. |
 | `src/repair.py` | The LangGraph compile repair state machine and its three tiers. |
-| `src/llm.py` | `RuleRepairLLM` and `HttpRepairLLM`, both as LangChain models, and the usage meter with the call budget every model call passes through. |
+| `src/llm.py` | `RuleRepairLLM`, `HttpRepairLLM` and `Db2RepairLLM` (the same model called by Db2 through `PORTPROOF.ASK_MODEL`), all as LangChain models, and the usage meter with the call budget every model call passes through. |
+| `src/setup_model.py` | Registers the model inside Db2 with `CREATE EXTERNAL MODEL` and installs `ASK_MODEL`. The only code that hands Db2 the key. |
+| `src/capture.py` | The workload from the source's own record: MySQL digests, SQL Server's plan cache, `pg_stat_statements`, or a `.sql` file, filtered to read only statements over the named tables. |
+| `src/minimise.py` | Delta debugging over a failing dataset: the fewest rows on which the two engines still disagree. |
+| `src/costgate.py` | `EXPLAIN PLAN` before and after a meaning repair, and the ratio of the two estimates. |
+| `src/mcp_server.py` | Four read only tools over the Model Context Protocol, for an agent that converts SQL. |
 | `src/embeddings.py` | Local sentence transformer embeddings, plus a deterministic fallback for tests. |
 | `src/fixmemory.py` | Db2 as the vector store, through `langchain-db2` `DB2VS`, with the Db2 native hybrid recall and the vector index. |
 | `src/physical.py` | Compression, columnar and package cache measurements, taken from the engine. |
@@ -380,6 +385,31 @@ The runtime identity holds no `INSERT` on any table. It can only `CALL`:
 | `src/setup_db.py` | Idempotent installer for the schema, procedures, grants, MQT, vector store and WLM leash. |
 | `src/main.py` | The command line. |
 | `src/app.py` | The Streamlit UI. |
+
+---
+
+## After the verdict
+
+Four things happen around the five stages, none of which can change a verdict.
+
+```mermaid
+flowchart LR
+  SRC[(Source engine<br/>statement record)] -->|capture.py| W[Workload]
+  W --> P[Five stages]
+  P -->|PROVEN DIFFERENT| M[minimise.py<br/>fewest rows that disagree]
+  P -->|meaning repaired| C[costgate.py<br/>EXPLAIN before and after]
+  P --> L[(Db2 ledger)]
+  M --> L
+  C --> L
+  L --> G["fail-on gate<br/>JSON report"]
+  A[Agent] -->|MCP| S[mcp_server.py] --> P
+  P -.model tier.-> Q[ASK_MODEL in Db2<br/>TEXT_GENERATION + ledger row]
+```
+
+- **Capture** decides what is proved, never how. A captured statement goes through the same guard and the same stages as a corpus statement.
+- **Minimisation** runs only after a statement is already `PROVEN DIFFERENT`, and every candidate it keeps is one both engines were run on again. It cannot turn a difference into an agreement; if no smaller dataset disagrees, the original stands.
+- **The cost check** compiles and never executes. It annotates an accepted repair and does not reject one: slower and right is a decision for a person.
+- **The in engine model call** changes who makes the call and who holds the key, not what is done with the answer. A reply from `ASK_MODEL` passes the same read only guard, the same `PREPARE` and the same differential proof as a reply over HTTP.
 
 ---
 
