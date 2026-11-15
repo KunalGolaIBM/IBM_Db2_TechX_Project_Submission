@@ -1,0 +1,757 @@
+@import "tailwindcss";
+
+@theme {
+  /* ===== ODYSSEY LANDING — CINEMATIC DARK SPACE PALETTE ===== */
+
+  /* Core backgrounds */
+  --color-ody-bg:           #050817;   /* midnight navy / near-black */
+  --color-ody-surface:      #101A35;   /* deep space blue — cards, panels */
+  --color-ody-surface-warm: #0D1628;   /* slightly warmer alternative surface */
+
+  /* Text */
+  --color-ody-ink:          #E8E7E2;   /* cool off-white — primary text */
+  --color-ody-ink-muted:    #9698A8;   /* muted lavender-grey — body / secondary */
+  --color-ody-ink-dim:      #545669;   /* very dim — placeholders, hints */
+
+  /* Borders */
+  --color-ody-border:        rgba(49, 75, 115, 0.45);  /* muted cosmic blue */
+  --color-ody-border-subtle: rgba(49, 75, 115, 0.22);  /* ultra-thin lines */
+
+  /* Accent — copper & gold */
+  --color-ody-copper:        #B96F5C;  /* warm copper — important accents, active */
+  --color-ody-copper-deep:   #9A5544;  /* darker copper for hover */
+  --color-ody-copper-glow:   rgba(185, 111, 92, 0.18);
+  --color-ody-gold:          #E5B76A;  /* soft celestial gold — highlights, CTAs */
+  --color-ody-gold-deep:     #C9973E;  /* darker gold for hover */
+  --color-ody-gold-glow:     rgba(229, 183, 106, 0.15);
+
+  /* Legacy journey/progress (kept for app components) */
+  --color-ody-journey:       #314B73;  /* muted cosmic blue — borders, inactive */
+  --color-ody-journey-deep:  #243755;
+  --color-ody-journey-light: rgba(49, 75, 115, 0.12);
+  --color-ody-progress:      #E5B76A;  /* repurposed to gold in new direction */
+  --color-ody-achievement:   #B96F5C;  /* repurposed to copper */
+
+  /* Hero-specific */
+  --color-hero-text:         #E8E7E2;
+  --color-hero-text-muted:   #9698A8;
+  --color-hero-text-dim:     #545669;
+  --color-hero-base:         #050817;
+  --color-hero-deep:         #020510;
+
+  /* ===== PRODUCT APP — COSMIC DARK THEME (unchanged) ===== */
+  --color-app-bg:              #03060D;
+  --color-app-surface:         #081321;
+  --color-app-surface-raised:  #0C1A2E;
+  --color-app-surface-overlay: #0F2040;
+
+  --color-app-text:       #E8E2D9;
+  --color-app-text-muted: #7A8FA6;
+  --color-app-text-dim:   #4A5A6E;
+
+  --color-app-border:        rgba(30, 60, 100, 0.35);
+  --color-app-border-subtle: rgba(20, 45, 80, 0.2);
+
+  --color-app-mission:       #B87A55;
+  --color-app-mission-light: rgba(184, 122, 85, 0.15);
+  --color-app-mission-glow:  rgba(184, 122, 85, 0.08);
+  --color-app-gold:          #D6A84F;
+  --color-app-gold-light:    rgba(214, 168, 79, 0.15);
+  --color-app-gold-glow:     rgba(214, 168, 79, 0.08);
+
+  --color-app-success: #4A8C6A;
+  --color-app-danger:  #A83B3B;
+  --color-app-warning: #C8883A;
+
+  /* Status colours that were hardcoded in the pages (light theme overrides them for contrast) */
+  --color-status-urgent: #E07070;
+  --color-status-low:    #7A8FA6;
+
+  /* ===== LEGACY brand tokens (preserved for app components) ===== */
+  --color-brand-bg:               #FCFBF7;
+  --color-brand-surface:          #FFFFFF;
+  --color-brand-muted:            #F4F0E6;
+  --color-brand-text:             #2C2A29;
+  --color-brand-text-muted:       #6B6661;
+  --color-brand-border:           #E6DFD3;
+  --color-brand-accent:           #5F6F52;
+  --color-brand-accent-secondary: #B85C38;
+  --color-brand-success:          #4E6E58;
+  --color-brand-warning:          #E69A3B;
+  --color-brand-danger:           #C24B38;
+  --color-brand-sky:              #E3ECE7;
+
+  /* Typography */
+  --font-display: 'Playfair Display', Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+
+  /* Border Radius */
+  --radius-brand-sm: 6px;
+  --radius-brand:    10px;
+  --radius-brand-lg: 16px;
+
+  /* Shadows */
+  --shadow-brand:      0 4px 20px -2px rgba(44, 42, 41, 0.08), 0 2px 8px -1px rgba(44, 42, 41, 0.04);
+  --shadow-brand-hover: 0 12px 30px -4px rgba(44, 42, 41, 0.12), 0 4px 12px -2px rgba(44, 42, 41, 0.06);
+  --shadow-ody:        0 2px 24px -4px rgba(5, 8, 23, 0.6);
+  --shadow-ody-lg:     0 8px 48px -8px rgba(5, 8, 23, 0.8);
+  --shadow-gold:       0 4px 24px -4px rgba(229, 183, 106, 0.25);
+  --shadow-copper:     0 4px 24px -4px rgba(185, 111, 92, 0.25);
+  --color-theme-toggle-bg: rgba(255, 255, 255, 0.04);
+}
+
+/* ===== APP SURFACES (theme-aware) =====
+   These classes replace the dark inline backgrounds the pages used to carry. The dark values below
+   are exactly the values that were inline, so the dark theme is unchanged; the light theme restyles
+   each class once, in the Lunar Atlas section further down. */
+.app-navigation       { background-color: rgba(8, 19, 33, 0.85); }
+.app-panel            { background: rgba(8, 19, 33, 0.85); }
+.app-panel-deep       { background: rgba(5, 8, 23, 0.85); }
+.app-panel-inset      { background: rgba(5, 8, 23, 0.6); }
+.app-spotlight        { background: linear-gradient(135deg, rgba(18, 32, 58, 0.95) 0%, rgba(8, 19, 33, 0.98) 100%); }
+.app-spotlight-strong { background: linear-gradient(135deg, rgba(18, 32, 58, 0.96) 0%, rgba(8, 19, 33, 0.98) 100%); }
+.app-console          { background: radial-gradient(ellipse 120% 50% at 50% 0%, rgba(18, 32, 58, 0.97) 0%, rgba(5, 8, 23, 1) 65%); }
+.app-focus-surface    { background: radial-gradient(ellipse 90% 80% at 50% 20%, rgba(13, 26, 48, 0.9) 0%, rgba(8, 19, 33, 0.95) 100%); }
+.app-panel[aria-pressed='true'] { background: rgba(184, 122, 85, 0.1); }
+
+/* Locked or completed items are dimmed in the dark theme; the light theme restyles them instead
+   (see below), because faded text cannot reach the contrast ratio it needs. */
+.app-dimmed { opacity: 0.55; }
+
+/* ===== LIGHT THEME: LUNAR ATLAS =====
+   Crisp celestial blues, clean neutral surfaces, champagne accents and high-contrast type. The dark
+   values above are intentionally untouched. Colours follow a 70-20-10 balance: neutral surfaces,
+   navy and blue, and sparing accents.
+
+   Contrast: text shades are the Lunar Atlas colours darkened where needed to reach WCAG AA
+   (4.5:1 for text, 3:1 for UI shapes) on the surfaces they sit on. Tints used only as fills
+   (champagne gold, celestial blue, sage, terracotta) keep the original shade, and a deeper "-ink"
+   shade is used wherever the same hue has to carry text. */
+[data-theme='light'] {
+  /* Lunar Atlas palette */
+  --lunar-bg: #F5F6F4;              /* main background */
+  --lunar-bg-alt: #EEEFEA;          /* secondary background */
+  --lunar-card: #FFFFFF;            /* cards */
+  --lunar-sidebar: #F8F9F7;         /* sidebar / raised surface */
+  --lunar-ink: #182338;             /* primary text, navy (14.5:1 on the background) */
+  --lunar-ink-2: #5A6475;           /* secondary text (5.5:1); #737D8D was 3.8:1 */
+  --lunar-ink-3: #5C6779;           /* muted text and hints (5.3:1); #9AA3AF was 2.4:1 */
+  --lunar-blue: #647FA6;            /* celestial blue, for fills and large shapes */
+  --lunar-blue-ink: #456088;        /* celestial blue as text and button fill (5.9:1; white on it 6.4:1) */
+  --lunar-blue-light: #EAF0F7;      /* light blue surfaces */
+  --lunar-gold: #D5A96B;            /* champagne gold, fills */
+  --lunar-gold-ink: #86601F;        /* champagne gold as text (5.2:1) */
+  --lunar-gold-light: #F8F1E5;      /* light gold surfaces */
+  --lunar-terracotta: #B97865;      /* dusty terracotta, fills */
+  --lunar-terracotta-ink: #96563F;  /* terracotta as text (5.2:1) */
+  --lunar-sage: #829B87;            /* muted sage, fills */
+  --lunar-sage-ink: #3A7352;        /* sage as text (5.1:1) */
+  --lunar-danger-ink: #9B3030;
+  --lunar-locked: #DCE1E6;          /* locked checkpoints */
+  --lunar-border: #E3E7E9;          /* card border */
+  --lunar-divider: #E8EBE8;
+  --lunar-input-border: #7A8696;    /* controls need 3:1 against the surface (3.4:1) */
+  --lunar-shadow: 0 2px 8px rgba(24, 35, 56, 0.05);
+  --lunar-shadow-hover: 0 6px 18px rgba(24, 35, 56, 0.09);
+  --lunar-radius-card: 16px;
+  --lunar-radius-button: 10px;
+
+  /* Landing tokens */
+  --color-ody-bg: var(--lunar-bg);
+  --color-ody-surface: var(--lunar-card);
+  --color-ody-surface-warm: var(--lunar-bg-alt);
+  --color-ody-ink: var(--lunar-ink);
+  --color-ody-ink-muted: var(--lunar-ink-2);
+  --color-ody-ink-dim: var(--lunar-ink-3);
+  --color-ody-border: var(--lunar-border);
+  --color-ody-border-subtle: var(--lunar-divider);
+  --color-ody-copper: var(--lunar-terracotta-ink);
+  --color-ody-copper-deep: #7F4733;
+  --color-ody-copper-glow: rgba(185, 120, 101, 0.16);
+  --color-ody-gold: var(--lunar-gold-ink);
+  --color-ody-gold-deep: var(--lunar-gold-ink);
+  --color-ody-gold-glow: rgba(213, 169, 107, 0.2);
+  --color-ody-journey: var(--lunar-blue-ink);
+  --color-ody-journey-deep: #364F73;
+  --color-ody-journey-light: var(--lunar-blue-light);
+  --color-ody-progress: var(--lunar-sage-ink);
+  --color-ody-achievement: var(--lunar-gold-ink);
+
+  /* Application tokens */
+  --color-app-bg: var(--lunar-bg);
+  --color-app-surface: var(--lunar-card);
+  --color-app-surface-raised: var(--lunar-sidebar);
+  --color-app-surface-overlay: var(--lunar-card);
+  --color-app-text: var(--lunar-ink);
+  --color-app-text-muted: var(--lunar-ink-2);
+  --color-app-text-dim: var(--lunar-ink-3);
+  --color-app-border: var(--lunar-border);
+  --color-app-border-subtle: var(--lunar-divider);
+  --color-app-mission: var(--lunar-blue-ink);
+  --color-app-mission-light: var(--lunar-blue-light);
+  --color-app-mission-glow: rgba(69, 96, 136, 0.1);
+  --color-app-gold: var(--lunar-gold-ink);
+  --color-app-gold-light: var(--lunar-gold-light);
+  --color-app-gold-glow: rgba(213, 169, 107, 0.22);
+  --color-app-success: var(--lunar-sage-ink);
+  --color-app-danger: var(--lunar-danger-ink);
+  --color-app-warning: #8A5A12;
+  --color-status-urgent: var(--lunar-danger-ink);
+  --color-status-low: #566173;
+  --color-theme-toggle-bg: var(--lunar-card);
+}
+
+[data-theme='light'] body,
+[data-theme='light'] body.app-mode {
+  background: var(--lunar-bg);
+  color: var(--lunar-ink);
+}
+
+/* Landing: the hero image stays as it is; the surrounding atmosphere becomes a quiet neutral. */
+[data-theme='light'] .landing-page {
+  background: var(--lunar-bg) !important;
+}
+
+[data-theme='light'] .landing-page > canvas,
+[data-theme='light'] .landing-page > .fixed {
+  display: none;
+}
+
+[data-theme='light'] .hero-edge-overlays {
+  display: none;
+}
+
+[data-theme='light'] .hero-supporting-text {
+  color: #FFFFFF !important;
+  text-shadow: none !important;
+}
+
+/* Landing sections run from the main background through the secondary one to light blue */
+[data-theme='light'] #how-it-works {
+  background: linear-gradient(180deg, var(--lunar-bg) 0%, var(--lunar-bg-alt) 100%) !important;
+  color: var(--lunar-ink);
+}
+
+[data-theme='light'] #how-it-works + .landing-light-section {
+  background: linear-gradient(180deg, var(--lunar-bg-alt) 0%, var(--lunar-blue-light) 100%) !important;
+  color: var(--lunar-ink);
+}
+
+[data-theme='light'] #final-cta {
+  background: linear-gradient(180deg, var(--lunar-blue-light) 0%, var(--lunar-bg) 100%) !important;
+  border-top: 1px solid var(--lunar-border);
+  color: var(--lunar-ink);
+}
+
+[data-theme='light'] .landing-atmosphere {
+  display: none;
+}
+
+/* Landing navigation */
+[data-theme='light'] #landing-nav {
+  background: rgba(248, 249, 247, 0.85) !important;
+  border-color: var(--lunar-border) !important;
+  box-shadow: var(--lunar-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+[data-theme='light'] #landing-nav a,
+[data-theme='light'] #landing-nav button {
+  color: var(--lunar-ink-2);
+}
+
+[data-theme='light'] #landing-nav a:first-child {
+  color: var(--lunar-ink);
+}
+
+[data-theme='light'] #landing-nav [style*='linear-gradient'],
+[data-theme='light'] .landing-page [style*='linear-gradient(135deg, var(--color-ody-copper) 0%, var(--color-ody-gold) 100%)'] {
+  background: var(--lunar-ink) !important;
+  color: #FFFFFF !important;
+  box-shadow: var(--lunar-shadow) !important;
+}
+
+[data-theme='light'] #landing-nav .md\:hidden > div {
+  background: rgba(248, 249, 247, 0.97) !important;
+  border-color: var(--lunar-border) !important;
+}
+
+/* Landing cards and steps */
+[data-theme='light'] .landing-light-section [style*='rgba(16,26,53'],
+[data-theme='light'] .landing-light-section [style*='rgba(16, 26, 53'] {
+  background: var(--lunar-card) !important;
+  border-color: var(--lunar-border) !important;
+  box-shadow: var(--lunar-shadow) !important;
+}
+
+[data-theme='light'] .landing-light-section [style*='radial-gradient(circle'] {
+  background: var(--lunar-blue-light) !important;
+  border-color: rgba(69, 96, 136, 0.3) !important;
+}
+
+[data-theme='light'] .landing-light-section [style*='linear-gradient(90deg, rgba(150,152,168'],
+[data-theme='light'] .landing-light-section [style*='linear-gradient(180deg, rgba(150,152,168'] {
+  background: linear-gradient(90deg, rgba(69, 96, 136, 0.3) 0%, rgba(69, 96, 136, 0.45) 50%, rgba(213, 169, 107, 0.7) 100%) !important;
+}
+
+/* ---- Application ---- */
+
+/* Navigation: translucent sidebar surface */
+[data-theme='light'] .app-navigation {
+  background-color: rgba(248, 249, 247, 0.9);
+  border-bottom-color: var(--lunar-border) !important;
+  box-shadow: var(--lunar-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Surfaces. Inline styles on these elements still carry the dark borders and shadows, so the
+   light values below need !important for those two properties only. */
+[data-theme='light'] .app-card,
+[data-theme='light'] .app-card-raised,
+[data-theme='light'] .app-panel,
+[data-theme='light'] .app-panel-deep,
+[data-theme='light'] .app-console,
+[data-theme='light'] .app-focus-surface {
+  background: var(--lunar-card);
+  border-color: var(--lunar-border) !important;
+  border-radius: var(--lunar-radius-card);
+  box-shadow: var(--lunar-shadow) !important;
+}
+
+[data-theme='light'] .app-card-raised {
+  background: var(--lunar-sidebar);
+}
+
+[data-theme='light'] .app-panel-inset {
+  background: var(--lunar-bg-alt);
+  border-color: var(--lunar-border) !important;
+}
+
+/* Mission cards and highlighted cards: light gold */
+[data-theme='light'] .app-spotlight,
+[data-theme='light'] .app-spotlight-strong {
+  background: var(--lunar-gold-light);
+  border-color: rgba(213, 169, 107, 0.6) !important;
+  box-shadow: var(--lunar-shadow) !important;
+}
+
+/* Selected card: light blue, with a blue border so selection does not rely on colour alone
+   (the card also carries aria-pressed) */
+[data-theme='light'] body.app-mode .app-panel[aria-pressed='true'] {
+  background: var(--lunar-blue-light);
+  border-color: var(--lunar-blue-ink) !important;
+  box-shadow: 0 0 0 1px var(--lunar-blue-ink) !important;
+}
+
+[data-theme='light'] body.app-mode .app-panel:not([aria-pressed='true'])[role='button']:hover {
+  box-shadow: var(--lunar-shadow-hover) !important;
+}
+
+/* The console keeps a visible state: a gold border while running, a sage one when completed */
+[data-theme='light'] .app-console[style*='--color-ody-gold'] {
+  border-color: var(--lunar-gold) !important;
+}
+
+[data-theme='light'] .app-console[style*='--color-app-success'] {
+  border-color: var(--lunar-sage) !important;
+}
+
+/* Inputs */
+[data-theme='light'] .app-input {
+  background-color: var(--lunar-card);
+  border-color: var(--lunar-input-border);
+  color: var(--lunar-ink);
+  border-radius: var(--lunar-radius-button);
+}
+
+[data-theme='light'] .app-input:hover {
+  border-color: var(--lunar-ink-2);
+}
+
+[data-theme='light'] .app-input:focus {
+  border-color: var(--lunar-blue-ink);
+  box-shadow: 0 0 0 3px rgba(69, 96, 136, 0.2);
+}
+
+[data-theme='light'] .app-input:disabled {
+  background-color: var(--lunar-bg-alt);
+  color: var(--lunar-ink-3);
+  cursor: not-allowed;
+}
+
+[data-theme='light'] .app-input::placeholder {
+  color: var(--lunar-ink-3);
+}
+
+/* Remaining inline dark surfaces (older markup that has no semantic class yet) */
+[data-theme='light'] body.app-mode [style*='rgba(8,19,33'],
+[data-theme='light'] body.app-mode [style*='rgba(8, 19, 33'],
+[data-theme='light'] body.app-mode [style*='rgba(5,8,23'],
+[data-theme='light'] body.app-mode [style*='rgba(5, 8, 23'],
+[data-theme='light'] body.app-mode [style*='rgba(13,26,48'],
+[data-theme='light'] body.app-mode [style*='rgba(13, 26, 48'] {
+  background: var(--lunar-card) !important;
+  border-color: var(--lunar-border) !important;
+  box-shadow: var(--lunar-shadow) !important;
+}
+
+[data-theme='light'] body.app-mode [style*='rgba(30,60,100'],
+[data-theme='light'] body.app-mode [style*='rgba(30, 60, 100'],
+[data-theme='light'] body.app-mode [style*='rgba(49,75,115'],
+[data-theme='light'] body.app-mode [style*='rgba(49, 75, 115'] {
+  border-color: var(--lunar-border) !important;
+}
+
+[data-theme='light'] body.app-mode [style*='#E8E2D9'],
+[data-theme='light'] body.app-mode [style*='#E8E7E2'] {
+  color: var(--lunar-ink) !important;
+}
+
+/* Buttons. Primary: navy with white text. Secondary and active navigation: light blue with
+   celestial blue text. The pages style their buttons inline with the mission token, so these
+   rules pick them out by that. */
+[data-theme='light'] button[style*='background-color: var(--color-app-mission)'],
+[data-theme='light'] a[style*='background-color: var(--color-app-mission)'],
+[data-theme='light'] button[style*='linear-gradient'][style*='color: rgb(5, 8, 23)'] {
+  background: var(--lunar-ink) !important;
+  color: #FFFFFF !important;
+  border-radius: var(--lunar-radius-button);
+  box-shadow: var(--lunar-shadow);
+}
+
+[data-theme='light'] button[style*='background-color: var(--color-app-mission)']:hover:not(:disabled),
+[data-theme='light'] a[style*='background-color: var(--color-app-mission)']:hover,
+[data-theme='light'] button[style*='linear-gradient'][style*='color: rgb(5, 8, 23)']:hover:not(:disabled) {
+  background: #2A3A58 !important;
+  box-shadow: var(--lunar-shadow-hover);
+}
+
+[data-theme='light'] button[style*='background-color: var(--color-app-mission)']:disabled,
+[data-theme='light'] button[style*='linear-gradient'][style*='color: rgb(5, 8, 23)']:disabled {
+  background: var(--lunar-locked) !important;
+  color: var(--lunar-ink-3) !important;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Locked and completed items: full-contrast text on a grey-blue surface, with the state also shown by the
+   strike-through (tasks) and the greyed icon (achievements). Completed tasks read as muted sage. */
+[data-theme='light'] .app-dimmed {
+  opacity: 1;
+  background-color: var(--lunar-bg-alt) !important;
+}
+
+[data-theme='light'] .app-dimmed [style*='line-through'] {
+  color: var(--lunar-sage-ink) !important;
+}
+
+/* The journey route and its rail: champagne gold lines (the checkpoints carry the state) */
+[data-theme='light'] [style*='stroke: var(--color-app-gold)'] {
+  stroke: var(--lunar-gold) !important;
+  filter: none !important;
+}
+
+[data-theme='light'] [style*='border-left: 2px solid var(--color-app-gold)'] {
+  border-left-color: var(--lunar-gold) !important;
+}
+
+[data-theme='light'] button[style*='var(--color-app-mission-light)']:not(:disabled):hover,
+[data-theme='light'] a[style*='var(--color-app-mission-light)']:hover {
+  background: #DDE7F2 !important;
+}
+
+/* Journey checkpoints: current = celestial blue, completed = champagne gold, locked = grey-blue.
+   The shape and outline also differ (solid, ring, dashed), so state is not carried by colour alone. */
+[data-theme='light'] [data-node='latest'] {
+  background-color: var(--lunar-blue-ink) !important;
+  border-color: var(--lunar-blue-ink) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 0 0 4px rgba(69, 96, 136, 0.18) !important;
+}
+
+[data-theme='light'] [data-node='latest'] > span {
+  border-color: var(--lunar-blue) !important;
+}
+
+[data-theme='light'] [data-node='done'] {
+  background-color: var(--lunar-gold-light) !important;
+  border-color: var(--lunar-gold) !important;
+  color: var(--lunar-gold-ink) !important;
+  box-shadow: none !important;
+}
+
+[data-theme='light'] [data-node='next'] {
+  background-color: var(--lunar-locked) !important;
+  border-color: var(--lunar-ink-3) !important;
+  color: var(--lunar-ink-2) !important;
+}
+
+/* Theme switch: a short colour fade on the shell and its main surfaces. Only colours transition,
+   so layout and interactions are unaffected; reduced-motion users get none (see below). */
+body,
+.app-navigation,
+.app-card,
+.app-card-raised,
+.app-panel-deep,
+.app-panel-inset,
+.app-spotlight,
+.app-spotlight-strong {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ─── Box-sizing ───────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ─── Global base ──────────────────────────────────────────────── */
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: var(--color-ody-bg);
+  color: var(--color-ody-ink);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  font-size: 16px;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+@media (max-width: 768px) {
+  html { font-size: 15px; }
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-ody-gold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─── Typography utilities ─────────────────────────────────────── */
+@utility text-display {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+@utility text-h1 {
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+@utility text-h2 {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  line-height: 1.25;
+}
+
+@utility text-h3 {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  line-height: 1.3;
+}
+
+@utility text-body {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+@utility text-small {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+@utility text-label {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* ─── Landing — Extended Typography ───────────────────────────── */
+@utility text-hero {
+  font-family: var(--font-display);
+  font-size: clamp(2.75rem, 6vw, 5rem);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  font-weight: 500;
+}
+
+@utility text-section-heading {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  font-weight: 500;
+}
+
+@utility text-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* ─── Glass-panel utility ──────────────────────────────────────── */
+@utility glass-panel {
+  background: rgba(16, 26, 53, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(49, 75, 115, 0.35);
+}
+
+@utility glass-panel-light {
+  background: rgba(16, 26, 53, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(49, 75, 115, 0.22);
+}
+
+/* ─── Landing Keyframes ────────────────────────────────────────── */
+@keyframes landing-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-12px); }
+}
+
+@keyframes landing-fade-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes landing-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes landing-draw-path {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes landing-pulse-glow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%       { opacity: 0.75; transform: scale(1.15); }
+}
+
+@keyframes landing-scroll-hint {
+  0%, 100% { opacity: 0.35; transform: translateY(0); }
+  50%       { opacity: 0.7;  transform: translateY(5px); }
+}
+
+@keyframes landing-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+/* ─── Scroll-reveal ────────────────────────────────────────────── */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.scroll-reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.scroll-reveal-delay-1 { transition-delay: 0.1s; }
+.scroll-reveal-delay-2 { transition-delay: 0.2s; }
+.scroll-reveal-delay-3 { transition-delay: 0.3s; }
+.scroll-reveal-delay-4 { transition-delay: 0.4s; }
+
+/* ─── App-mode body override ───────────────────────────────────── */
+body.app-mode {
+  background-color: var(--color-app-bg);
+  color: var(--color-app-text);
+}
+
+/* ─── Cosmic app animations ────────────────────────────────────── */
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.3; }
+  50%       { opacity: 1; }
+}
+
+@keyframes cosmic-drift {
+  0%   { transform: translateY(0) translateX(0); }
+  33%  { transform: translateY(-8px) translateX(5px); }
+  66%  { transform: translateY(4px) translateX(-4px); }
+  100% { transform: translateY(0) translateX(0); }
+}
+
+@keyframes focus-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(184, 122, 85, 0.3); }
+  50%       { box-shadow: 0 0 0 8px rgba(184, 122, 85, 0); }
+}
+
+@keyframes timer-tick {
+  0%, 49%   { opacity: 1; }
+  50%, 99%  { opacity: 0.4; }
+  100%      { opacity: 1; }
+}
+
+.star-twinkle { animation: star-twinkle var(--duration, 3s) ease-in-out infinite; }
+.focus-pulse  { animation: focus-pulse 2s ease-in-out infinite; }
+.timer-blink  { animation: timer-tick 1s step-end infinite; }
+
+/* ─── App surface utilities ────────────────────────────────────── */
+.app-card {
+  background-color: var(--color-app-surface);
+  border: 1px solid var(--color-app-border);
+  border-radius: 10px;
+}
+
+.app-card-raised {
+  background-color: var(--color-app-surface-raised);
+  border: 1px solid var(--color-app-border);
+  border-radius: 10px;
+}
+
+.mission-accent { color: var(--color-app-mission); }
+.gold-accent    { color: var(--color-app-gold); }
+
+.app-input {
+  background-color: var(--color-app-bg);
+  border: 1px solid var(--color-app-border);
+  border-radius: 8px;
+  color: var(--color-app-text);
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.app-input:focus {
+  outline: none;
+  border-color: var(--color-app-mission);
+  box-shadow: 0 0 0 3px var(--color-app-mission-glow);
+}
+
+.app-input::placeholder {
+  color: var(--color-app-text-dim);
+}
