@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": {
+    "title": "Odyssey - Db2 Productivity Planner",
+    "slug": "odyssey",
+    "short_description": "An AI-assisted productivity application that turns free-form captures into actionable plans and stores structured work in IBM Db2.",
+    "category": "AI / Productivity / Data Engineering",
+    "demo_url": "",
+    "video_url": "",
+    "repo_url": "https://github.com/aaliya1719/Odyssey"
+  },
+  "team": {
+    "name": "Odyssey Team",
+    "members": [
+      {
+        "name": "Vi-kaash",
+        "github": "Vi-kaash",
+        "email": "",
+        "role": "Application, AI, and Db2 integration"
+      }
+    ]
+  },
+  "ibm_db2": {
+    "edition": "Db2 Community Edition or IBM Db2 on Cloud",
+    "connector": "ibm-db prepared statements",
+    "features_used": [
+      "Relational task storage",
+      "Parameterized inserts",
+      "Timestamp indexing"
+    ]
+  },
+  "tech_stack": {
+    "languages": ["TypeScript", "Python", "SQL"],
+    "frameworks": ["React", "Vite", "LangChain"],
+    "ai_models": ["OpenAI-compatible chat model", "Optional Gemini via existing Supabase Edge Function"]
+  }
+}
