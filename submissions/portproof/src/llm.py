@@ -1,0 +1,750 @@
+"""The repair models.
+
+Two LangChain ``LLM`` implementations are provided:
+
+* :class:`RuleRepairLLM` -- **not a language model.** It is a small deterministic
+  rewrite engine covering the dialect gaps PortProof has actually measured
+  against Db2 12.1.5. It is the default (``LLM_PROVIDER=mock``) so the whole
+  project runs with no API key and so tests are reproducible. Every rule here
+  was derived from a real SQLCODE observed on a real Db2, and each one is
+  re-verified by Db2 after it fires -- a rule that produces invalid SQL is
+  rejected exactly like a model's output would be.
+* :class:`HttpRepairLLM` -- a real language model, over any OpenAI-compatible
+  chat endpoint. ``LLM_PROVIDER=gemini`` points it at Google's compatibility
+  surface and needs only ``GEMINI_API_KEY``; ``LLM_PROVIDER=http`` takes an
+  explicit ``LLM_BASE_URL`` for Groq, watsonx or a local server.
+
+Both are plugged into the same LangChain chain in :mod:`src.repair`, so the
+pipeline does not know or care which one answered.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import re
+import time
+import urllib.error
+import urllib.request
+from dataclasses import dataclass, field
+from typing import Any, Callable
+
+from langchain_core.callbacks.manager import CallbackManagerForLLMRun
+from langchain_core.language_models.llms import LLM
+
+from .config import LlmConfig, llm_config
+
+# --------------------------------------------------------------------------
+# metering
+# --------------------------------------------------------------------------
+@dataclass(frozen=True)
+class LlmCall:
+    """One request to a language model, as the provider itself counted it."""
+
+    stage: str
+    model: str
+    case_name: str
+    prompt_tokens: int
+    completion_tokens: int
+    latency_ms: int
+    ok: bool
+    #: True when the provider returned no usage block and the counts are a
+    #: characters/4 estimate. Reported, so an estimate is never read as a bill.
+    estimated: bool = False
+    #: True when Db2 wrote the ledger row itself, inside ASK_MODEL, so the
+    #: application must not write it a second time.
+    ledgered: bool = False
+
+    @property
+    def tokens(self) -> int:
+        return self.prompt_tokens + self.completion_tokens
+
+
+@dataclass
+class UsageMeter:
+    """Every model call this process made. The cost analysis is a sum over it."""
+
+    calls: list[LlmCall] = field(default_factory=list)
+    _flushed: int = 0
+    #: Model calls not made because Db2 already records the model failing there.
+    avoided: int = 0
+
+    def record(self, call: LlmCall) -> None:
+        self.calls.append(call)
+
+    def unflushed(self) -> list[LlmCall]:
+        """Calls not yet written to ``PORTPROOF.LLM_CALL``."""
+        pending = self.calls[self._flushed :]
+        self._flushed = len(self.calls)
+        return pending
+
+    def by_stage(self) -> dict[str, tuple[int, int, int]]:
+        """``stage -> (calls, prompt tokens, completion tokens)``."""
+        out: dict[str, tuple[int, int, int]] = {}
+        for call in self.calls:
+            n, p, c = out.get(call.stage, (0, 0, 0))
+            out[call.stage] = (n + 1, p + call.prompt_tokens, c + call.completion_tokens)
+        return out
+
+    @property
+    def total_tokens(self) -> int:
+        return sum(call.tokens for call in self.calls)
+
+    def reset(self) -> None:
+        self.calls.clear()
+        self._flushed = 0
+        self.avoided = 0
+
+
+#: Process-wide, because the question it answers is "what did this run cost".
+METER = UsageMeter()
+
+
+class DeadEnds:
+    """``PORTPROOF.MODEL_DEAD_END``: questions a model already failed in full.
+
+    The fix memory makes a solved statement free the second time. This makes an
+    unsolved one free the second time too: without it, every rerun pays the
+    model again to fail on exactly the statements it failed on before. Set
+    ``LLM_RETRY_DEAD_ENDS=1`` to ask again anyway, after changing model.
+    """
+
+    def __init__(self, conn) -> None:
+        self.conn = conn
+        self.retry = os.environ.get("LLM_RETRY_DEAD_ENDS", "").strip() in ("1", "true", "yes")
+
+    @staticmethod
+    def subject(*parts: str) -> str:
+        return hashlib.sha256("\x00".join(parts).encode("utf-8")).hexdigest()
+
+    def known(self, stage: str, model: str, *parts: str) -> bool:
+        if self.retry:
+            return False
+        from . import db
+
+        try:
+            row = db.fetch_one(
+                self.conn,
+                "SELECT 1 FROM PORTPROOF.MODEL_DEAD_END "
+                "WHERE SUBJECT_SHA = ? AND STAGE = ? AND MODEL = ?",
+                (self.subject(*parts), stage, model[:80]),
+            )
+        except db.Db2Error:  # an older schema without the table
+            return False
+        if row:
+            METER.avoided += 1
+        return bool(row)
+
+    def record(self, stage: str, model: str, case_name: str, attempts: int, *parts: str) -> None:
+        from . import db
+
+        try:
+            db.call_proc(
+                self.conn, "PORTPROOF.RECORD_DEAD_END",
+                (self.subject(*parts), stage, model[:80], case_name[:80] or None, attempts),
+            )
+        except db.Db2Error:
+            pass
+
+
+# --------------------------------------------------------------------------
+# deterministic rewrite rules
+# --------------------------------------------------------------------------
+Rule = tuple[str, Callable[[str], str]]
+
+_STRFTIME_TO_DB2 = [
+    ("%Y", "YYYY"), ("%m", "MM"), ("%d", "DD"),
+    ("%H", "HH24"), ("%M", "MI"), ("%S", "SS"),
+]
+
+
+def _balanced_args(text: str, start: int) -> tuple[list[str], int] | None:
+    """Split the argument list of a call whose '(' is at ``start``."""
+    if start >= len(text) or text[start] != "(":
+        return None
+    depth, current, args, in_str = 0, [], [], False
+    for index in range(start, len(text)):
+        char = text[index]
+        if char == "'" and text[index - 1 : index] != "\\":
+            in_str = not in_str
+            current.append(char)
+            continue
+        if in_str:
+            current.append(char)
+            continue
+        if char == "(":
+            depth += 1
+            if depth == 1:
+                continue
+        elif char == ")":
+            depth -= 1
+            if depth == 0:
+                args.append("".join(current).strip())
+                return args, index + 1
+        if depth == 1 and char == ",":
+            args.append("".join(current).strip())
+            current = []
+            continue
+        current.append(char)
+    return None
+
+
+def _rewrite_calls(sql: str, func: str, build: Callable[[list[str]], str | None]) -> str:
+    """Rewrite every call to ``func`` using ``build(args)``."""
+    pattern = re.compile(rf"\b{func}\s*\(", re.IGNORECASE)
+    out, cursor = [], 0
+    while True:
+        match = pattern.search(sql, cursor)
+        if not match:
+            out.append(sql[cursor:])
+            return "".join(out)
+        parsed = _balanced_args(sql, match.end() - 1)
+        if parsed is None:
+            out.append(sql[cursor : match.end()])
+            cursor = match.end()
+            continue
+        args, after = parsed
+        replacement = build(args)
+        if replacement is None:
+            out.append(sql[cursor:after])
+        else:
+            out.append(sql[cursor : match.start()])
+            out.append(replacement)
+        cursor = after
+
+
+def _fix_group_concat(sql: str) -> str:
+    """GROUP_CONCAT is MySQL's. Db2 spells it LISTAGG ... WITHIN GROUP."""
+
+    def build(args: list[str]) -> str | None:
+        if not args:
+            return None
+        head = args[0]
+        separator = args[1] if len(args) > 1 else "','"
+        order_by = ""
+        inline = re.search(r"\bORDER\s+BY\b(.*)$", head, re.IGNORECASE | re.DOTALL)
+        if inline:
+            order_by = f" WITHIN GROUP (ORDER BY {inline.group(1).strip()})"
+            head = head[: inline.start()].strip()
+        if not separator.startswith("'"):
+            head, separator = head, "','"
+        return f"LISTAGG({head}, {separator}){order_by}"
+
+    return _rewrite_calls(sql, "GROUP_CONCAT", build)
+
+
+def _fix_nulls_in_within_group(sql: str) -> str:
+    """Db2 rejects ``NULLS FIRST``/``NULLS LAST`` inside ``WITHIN GROUP``.
+
+    Measured on CE 12.1.5: ``ORDER BY email NULLS FIRST`` compiles at the top
+    level, while ``LISTAGG(sku, ',') WITHIN GROUP (ORDER BY sku NULLS LAST)``
+    fails with SQL0109N -- "clause is not supported in the context where it is
+    used: NULLS". So this is not a rule about the keyword, it is a rule about
+    *where* the keyword appears, and a blanket strip would silently change the
+    meaning of the top-level ordering it is legal in.
+
+    Removing it inside ``WITHIN GROUP`` is meaning-preserving: an ordered-set
+    aggregate's ordering applies to the values it aggregates, and aggregate
+    functions ignore NULLs, so there are no NULLs left for the clause to place.
+
+    sqlglot emits it for every MySQL ``ORDER BY`` (MySQL sorts NULLs first in
+    ASC), so any ``GROUP_CONCAT`` with an ordering at all hits this.
+    """
+    out, cursor = [], 0
+    pattern = re.compile(r"\bWITHIN\s+GROUP\s*\(", re.IGNORECASE)
+    while True:
+        match = pattern.search(sql, cursor)
+        if not match:
+            out.append(sql[cursor:])
+            return "".join(out)
+        parsed = _balanced_args(sql, match.end() - 1)
+        if parsed is None:  # pragma: no cover - unbalanced SQL
+            out.append(sql[cursor : match.end()])
+            cursor = match.end()
+            continue
+        args, after = parsed
+        body = ", ".join(args)
+        cleaned = re.sub(r"\s+NULLS\s+(?:FIRST|LAST)\b", "", body, flags=re.IGNORECASE)
+        out.append(sql[cursor : match.start()])
+        out.append(f"WITHIN GROUP ({cleaned})")
+        cursor = after
+
+
+def _fix_array_agg(sql: str) -> str:
+    """Db2 has no array type in this context; aggregate to a string instead."""
+
+    def build(args: list[str]) -> str | None:
+        if not args:
+            return None
+        return f"LISTAGG(CAST({args[0]} AS VARCHAR(200)), ',')"
+
+    return _rewrite_calls(sql, "ARRAY_AGG", build)
+
+
+def _fix_concat(sql: str) -> str:
+    """Db2's CONCAT takes exactly two arguments; || takes any number."""
+
+    def build(args: list[str]) -> str | None:
+        if len(args) <= 2:
+            return None
+        return "(" + " || ".join(args) + ")"
+
+    return _rewrite_calls(sql, "CONCAT", build)
+
+
+def _fix_timestamp_trunc(sql: str) -> str:
+    def build(args: list[str]) -> str | None:
+        if len(args) != 2:
+            return None
+        unit = args[1].strip().strip("'").upper()
+        return f"TRUNC_TIMESTAMP({args[0]}, '{unit}')"
+
+    return _rewrite_calls(sql, "TIMESTAMP_TRUNC", build)
+
+
+def _fix_json_extract(sql: str) -> str:
+    def build(args: list[str]) -> str | None:
+        if len(args) != 2:
+            return None
+        return f"JSON_VALUE({args[0]}, {args[1]})"
+
+    return _rewrite_calls(sql, "JSON_EXTRACT_SCALAR", build)
+
+
+def _fix_regexp_i_like(sql: str) -> str:
+    def build(args: list[str]) -> str | None:
+        if len(args) < 2:
+            return None
+        return f"REGEXP_LIKE({args[0]}, {args[1]}, 'i')"
+
+    return _rewrite_calls(sql, "REGEXP_I_LIKE", build)
+
+
+def _fix_count_filter(sql: str) -> str:
+    """``agg(x) FILTER (WHERE p)`` becomes ``agg(CASE WHEN p THEN x END)``."""
+    pattern = re.compile(
+        r"\b(COUNT|SUM|AVG|MIN|MAX)\s*\(\s*(\*|[^()]*?)\s*\)\s*FILTER\s*\(",
+        re.IGNORECASE,
+    )
+    while True:
+        match = pattern.search(sql)
+        if not match:
+            return sql
+        # match.end() - 1 is the '(' that opens the FILTER clause.
+        parsed = _balanced_args(sql, match.end() - 1)
+        if parsed is None:
+            return sql
+        args, after = parsed
+        predicate = re.sub(r"^\s*WHERE\s+", "", args[0], flags=re.IGNORECASE)
+        agg, target = match.group(1), match.group(2).strip()
+        inner = "1" if target == "*" else target
+        sql = sql[: match.start()] + f"{agg}(CASE WHEN {predicate} THEN {inner} END)" + sql[after:]
+
+
+def _fix_with_recursive(sql: str) -> str:
+    """Db2 infers recursion; the RECURSIVE keyword is a syntax error."""
+    return re.sub(r"\bWITH\s+RECURSIVE\b", "WITH", sql, flags=re.IGNORECASE)
+
+
+def _fix_lowercase_quoted_identifiers(sql: str) -> str:
+    """Db2 folds unquoted names to upper case.
+
+    MySQL backticks become double quotes, which makes the name
+    case-*sensitive* and lower case -- so it no longer matches the table Db2
+    actually created. Dropping the quotes restores the intent.
+    """
+    return re.sub(r'"([a-z_][a-z0-9_]*)"', r"\1", sql)
+
+
+def _fix_strftime_format(sql: str) -> str:
+    def replace(match: re.Match[str]) -> str:
+        literal = match.group(0)
+        for src, dst in _STRFTIME_TO_DB2:
+            literal = literal.replace(src, dst)
+        return literal
+
+    return re.sub(r"'[^']*%[A-Za-z][^']*'", replace, sql)
+
+
+def _select_items(sql: str) -> list[tuple[str, str | None]]:
+    """The top-level select list as ``(expression, alias)`` pairs."""
+    select = re.search(r"\bSELECT\b(.*?)\bFROM\b", sql, re.IGNORECASE | re.DOTALL)
+    if not select:
+        return []
+    items: list[tuple[str, str | None]] = []
+    depth = 0
+    buffer: list[str] = []
+    for char in select.group(1) + ",":
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+        if char == "," and depth == 0:
+            text = "".join(buffer).strip()
+            buffer = []
+            if not text:
+                continue
+            alias = re.search(
+                r"^(.*?)\s+AS\s+([A-Za-z_][A-Za-z0-9_]*)\s*$", text, re.IGNORECASE | re.DOTALL
+            )
+            if alias:
+                items.append((alias.group(1).strip(), alias.group(2)))
+            else:
+                items.append((text, None))
+            continue
+        buffer.append(char)
+    return items
+
+
+def _fix_group_by_ordinal(sql: str) -> str:
+    """Db2 does not accept an ordinal in GROUP BY; PostgreSQL and MySQL do."""
+    items = _select_items(sql)
+    if not items:
+        return sql
+
+    def rewrite(match: re.Match[str]) -> str:
+        parts = [p.strip() for p in match.group(2).split(",")]
+        if not any(p.isdigit() for p in parts):
+            return match.group(0)
+        resolved = []
+        for part in parts:
+            if part.isdigit() and 1 <= int(part) <= len(items):
+                resolved.append(items[int(part) - 1][0])
+            else:
+                resolved.append(part)
+        return match.group(1) + ", ".join(resolved) + " "
+
+    return re.sub(
+        r"(\bGROUP\s+BY\s+)([0-9,\s]+?)(?=\bORDER\b|\bHAVING\b|\bFETCH\b|$)",
+        rewrite,
+        sql,
+        flags=re.IGNORECASE,
+    )
+
+
+def _fix_group_by_alias(sql: str) -> str:
+    """Db2 cannot GROUP BY a select-list alias; inline the expression."""
+    aliases = {
+        alias.upper(): expression
+        for expression, alias in _select_items(sql)
+        if alias and not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", expression)
+    }
+    if not aliases:
+        return sql
+
+    def rewrite_group_by(match: re.Match[str]) -> str:
+        body = match.group(2)
+        parts = [p.strip() for p in body.split(",")]
+        new_parts = [aliases.get(p.upper(), p) for p in parts]
+        # Keep a trailing space: the lookahead consumes none, so without it the
+        # next keyword would be glued on ("GROUP BY 1ORDER BY 1").
+        return match.group(1) + ", ".join(new_parts) + " "
+
+    return re.sub(
+        r"(\bGROUP\s+BY\s+)([A-Za-z0-9_,\s]+?)(?=\bORDER\b|\bHAVING\b|\bFETCH\b|$)",
+        rewrite_group_by,
+        sql,
+        flags=re.IGNORECASE,
+    )
+
+
+def _fix_untyped_date_arithmetic(sql: str) -> str:
+    """``'2026-03-01' - '7' DAY`` needs a real date and an integer count."""
+    sql = re.sub(
+        r"'(\d{4}-\d{2}-\d{2})'\s*([-+])\s*'(\d+)'\s+(DAY|MONTH|YEAR)S?\b",
+        lambda m: f"DATE('{m.group(1)}') {m.group(2)} {m.group(3)} {m.group(4)}",
+        sql,
+        flags=re.IGNORECASE,
+    )
+    return re.sub(
+        r"([-+])\s*'(\d+)'\s+(DAY|MONTH|YEAR)S?\b",
+        lambda m: f"{m.group(1)} {m.group(2)} {m.group(3)}",
+        sql,
+        flags=re.IGNORECASE,
+    )
+
+
+def _fix_leading_underscore_identifiers(sql: str) -> str:
+    """Db2 identifiers may not begin with an underscore.
+
+    sqlglot names its generated helpers ``_t`` and ``_row_number``, which Db2
+    rejects (SQL20521N) when it meets them.
+    """
+    return re.sub(r"(?<![A-Za-z0-9_])_([A-Za-z][A-Za-z0-9_]*)", r"pp_\1", sql)
+
+
+#: Applied in order. Each is named so the ledger can record what fired.
+RULES: list[Rule] = [
+    ("rename-leading-underscore-identifiers", _fix_leading_underscore_identifiers),
+    ("group_concat->listagg", _fix_group_concat),
+    # Must run after group_concat->listagg, which is what creates the
+    # WITHIN GROUP this cleans up.
+    ("drop-nulls-clause-in-within-group", _fix_nulls_in_within_group),
+    ("array_agg->listagg", _fix_array_agg),
+    ("concat->||", _fix_concat),
+    ("timestamp_trunc->trunc_timestamp", _fix_timestamp_trunc),
+    ("json_extract_scalar->json_value", _fix_json_extract),
+    ("regexp_i_like->regexp_like", _fix_regexp_i_like),
+    ("filter->case", _fix_count_filter),
+    ("drop-recursive-keyword", _fix_with_recursive),
+    ("unquote-lowercase-identifiers", _fix_lowercase_quoted_identifiers),
+    ("strftime->db2-format", _fix_strftime_format),
+    ("inline-group-by-alias", _fix_group_by_alias),
+    ("resolve-group-by-ordinal", _fix_group_by_ordinal),
+    ("typed-date-arithmetic", _fix_untyped_date_arithmetic),
+]
+
+
+def apply_rules(sql: str) -> tuple[str, list[str]]:
+    """Apply every rule, reporting which ones changed the statement."""
+    fired: list[str] = []
+    for name, rule in RULES:
+        try:
+            candidate = rule(sql)
+        except Exception:  # a rule must never crash the pipeline
+            continue
+        if candidate and candidate != sql:
+            fired.append(name)
+            sql = candidate
+    return sql, fired
+
+
+# --------------------------------------------------------------------------
+# LangChain models
+# --------------------------------------------------------------------------
+class RuleRepairLLM(LLM):
+    """Deterministic repair, exposed through the LangChain ``LLM`` interface."""
+
+    last_rules: list[str] = []
+
+    @property
+    def _llm_type(self) -> str:
+        return "portproof-rules"
+
+    def _call(
+        self,
+        prompt: str,
+        stop: list[str] | None = None,
+        run_manager: CallbackManagerForLLMRun | None = None,
+        **kwargs: Any,
+    ) -> str:
+        candidate = _extract_tagged(prompt, "FAILING_DB2_SQL")
+        if not candidate:
+            return ""
+        repaired, fired = apply_rules(candidate)
+        object.__setattr__(self, "last_rules", fired)
+        return repaired
+
+
+class HttpRepairLLM(LLM):
+    """Any OpenAI-compatible chat-completions endpoint."""
+
+    model: str = "llama-3.3-70b-versatile"
+    api_key: str = ""
+    base_url: str = "https://api.groq.com/openai/v1"
+    timeout: int = 45
+    #: Which statement the next call is for, so the ledger can attribute it.
+    case_name: str = ""
+    #: Retries on HTTP 429/503 only, with a growing pause: a rate limit is the
+    #: provider asking for time, not a wrong answer.
+    max_retries: int = 4
+
+    @property
+    def _llm_type(self) -> str:
+        return "portproof-http"
+
+    def _call(
+        self,
+        prompt: str,
+        stop: list[str] | None = None,
+        run_manager: CallbackManagerForLLMRun | None = None,
+        **kwargs: Any,
+    ) -> str:
+        return self.ask(
+            "You rewrite SQL so that IBM Db2 accepts it. "
+            "Reply with the corrected SQL statement only: no prose, "
+            "no markdown fences, no explanation.",
+            prompt,
+            stage="COMPILE_REPAIR",
+            case_name=self.case_name,
+        )
+
+    def ask(self, system: str, user: str, *, stage: str, case_name: str = "") -> str:
+        """One metered chat completion. Every model call in PortProof is this."""
+        budget = llm_config().call_budget
+        if len(METER.calls) >= budget:
+            raise RuntimeError(f"model call budget of {budget} is spent (LLM_CALL_BUDGET)")
+        document = {
+            "model": self.model,
+            "temperature": 0,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+        }
+        settings = llm_config()
+        if settings.reasoning_effort:
+            document["reasoning_effort"] = settings.reasoning_effort
+        if settings.max_output_tokens:
+            document["max_tokens"] = settings.max_output_tokens
+        payload = json.dumps(document).encode("utf-8")
+        request = urllib.request.Request(
+            f"{self.base_url.rstrip('/')}/chat/completions",
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+            },
+        )
+        started = time.monotonic()
+
+        def meter(ok: bool, body: dict | None = None, text: str = "") -> None:
+            usage = (body or {}).get("usage") or {}
+            prompt_tokens = usage.get("prompt_tokens")
+            total = usage.get("total_tokens")
+            completion = usage.get("completion_tokens")
+            estimated = prompt_tokens is None
+            if estimated:
+                prompt_tokens = (len(system) + len(user)) // 4
+                completion = len(text) // 4
+            elif total is not None:
+                # The total includes any reasoning tokens the provider bills
+                # for and does not itemise, so it is the honest output count.
+                completion = max(int(completion or 0), int(total) - int(prompt_tokens))
+            METER.record(
+                LlmCall(
+                    stage=stage,
+                    model=self.model,
+                    case_name=case_name,
+                    prompt_tokens=int(prompt_tokens or 0),
+                    completion_tokens=int(completion or 0),
+                    latency_ms=int((time.monotonic() - started) * 1000),
+                    ok=ok,
+                    estimated=estimated,
+                )
+            )
+
+        body = None
+        for attempt in range(self.max_retries + 1):
+            try:
+                with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                    body = json.loads(response.read().decode("utf-8"))
+                break
+            except urllib.error.HTTPError as exc:
+                if exc.code in (429, 503) and attempt < self.max_retries:
+                    time.sleep(min(60, 4 * 2**attempt))
+                    continue
+                meter(False)
+                raise RuntimeError(f"LLM request failed: HTTP {exc.code}") from exc
+            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+                meter(False)
+                raise RuntimeError(f"LLM request failed: {exc}") from exc
+        try:
+            text = body["choices"][0]["message"]["content"] or ""
+        except (KeyError, IndexError, TypeError) as exc:  # pragma: no cover
+            meter(False, body)
+            raise RuntimeError(f"Unexpected LLM response shape: {body}") from exc
+        meter(True, body, text)
+        return text
+
+
+class Db2RepairLLM(HttpRepairLLM):
+    """The same model, called by Db2 instead of by this process.
+
+    ``PORTPROOF.ASK_MODEL`` runs ``TEXT_GENERATION(... USING PORTPROOF.PP_MODEL)``
+    in the engine and writes the ledger row in the same procedure. This class
+    holds no key and opens no socket to the provider: it binds the prompt and
+    reads the reply. The call budget is passed in and enforced twice, here and
+    by the engine counting its own ledger since this run began.
+    """
+
+    @property
+    def _llm_type(self) -> str:
+        return "portproof-db2"
+
+    def _state(self) -> dict:
+        state = self.__dict__.get("_db2")
+        if state is None:
+            from . import db
+
+            conn = db.connect(role="app")
+            state = {"conn": conn, "since": db.fetch_one(conn, "VALUES CURRENT TIMESTAMP")[0]}
+            self.__dict__["_db2"] = state
+        return state
+
+    def ask(self, system: str, user: str, *, stage: str, case_name: str = "") -> str:
+        from . import db
+
+        budget = llm_config().call_budget
+        if len(METER.calls) >= budget:
+            raise RuntimeError(f"model call budget of {budget} is spent (LLM_CALL_BUDGET)")
+        state = self._state()
+        prompt = f"{system}\n\n{user}"
+        started = time.monotonic()
+
+        def meter(ok: bool, text: str = "") -> None:
+            METER.record(LlmCall(
+                stage=stage, model=self.model, case_name=case_name,
+                prompt_tokens=len(prompt) // 4, completion_tokens=len(text) // 4,
+                latency_ms=int((time.monotonic() - started) * 1000),
+                ok=ok, estimated=True, ledgered=ok,
+            ))
+
+        try:
+            out = db.call_proc(
+                state["conn"], "PORTPROOF.ASK_MODEL",
+                (stage, case_name[:80] or None, prompt, state["since"], budget, None),
+            )
+        except db.Db2Error as exc:
+            meter(False)
+            raise RuntimeError(f"in-database model call failed: SQLCODE={exc.sqlcode} "
+                               f"{str(exc.message)[:160]}") from exc
+        text = out[-1] or ""
+        meter(True, text)
+        return text
+
+
+def _extract_tagged(prompt: str, tag: str) -> str:
+    match = re.search(rf"<{tag}>\s*(.*?)\s*</{tag}>", prompt, re.DOTALL)
+    return match.group(1).strip() if match else ""
+
+
+def build_model(cfg: LlmConfig | None = None) -> "HttpRepairLLM | None":
+    """The language model, or None when none is configured.
+
+    Used by the tiers that only make sense with a real model (semantic repair
+    and dataset proposal), which simply do not run without one.
+    """
+    cfg = cfg or llm_config()
+    if not cfg.has_model:
+        return None
+    if cfg.in_db2:
+        return Db2RepairLLM(model=cfg.model)
+    return HttpRepairLLM(
+        model=cfg.model,
+        api_key=cfg.api_key,
+        base_url=cfg.base_url or "https://api.groq.com/openai/v1",
+    )
+
+
+def build_llm(cfg: LlmConfig | None = None) -> LLM:
+    cfg = cfg or llm_config()
+    if cfg.provider in ("mock", "rules", ""):
+        return RuleRepairLLM()
+    if cfg.provider == "tiered":
+        return build_model(cfg) or RuleRepairLLM()
+    if cfg.provider in ("http", "gemini"):
+        if not cfg.api_key:
+            raise RuntimeError(
+                f"LLM_PROVIDER={cfg.provider} needs an API key. Set LLM_API_KEY, or "
+                "GEMINI_API_KEY for the gemini provider, in .env or .env.local. Use "
+                "LLM_PROVIDER=mock to run without any key."
+            )
+        return HttpRepairLLM(
+            model=cfg.model,
+            api_key=cfg.api_key,
+            base_url=cfg.base_url or "https://api.groq.com/openai/v1",
+        )
+    raise RuntimeError(
+        f"Unknown LLM_PROVIDER {cfg.provider!r} (use 'tiered', 'mock', 'gemini' or 'http')"
+    )
