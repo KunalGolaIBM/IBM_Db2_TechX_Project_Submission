@@ -2,16 +2,23 @@
 
     streamlit run src/app.py
 
-Three tabs, one per claim:
+Five tabs:
 
 1. **Translate & Prove** -- IBM's dialect translates, Db2 ``PREPARE`` judges, and
    a bounded repair loop fixes what Db2 rejected, re-verifying every attempt.
-2. **Semantic Proof** -- the statement that *compiles* is then run against six
-   adversarial datasets on both engines, and divergence is shown as a witness
-   you can read, not a score.
-3. **Ledger & Engine** -- the Db2 side: the append-only verdict ledger with
+2. **Semantic Proof** -- the statement that *compiles* is then run against
+   twelve adversarial datasets on both engines. A divergence is shown as a
+   witness, shrunk to the fewest rows that still disagree, with Db2's own
+   estimate of what the statement costs.
+3. **Migrate a Workload** -- a whole workload at once: the corpus, the
+   statements the source engine itself recorded, or an uploaded ``.sql`` file.
+   Every statement is repaired and proved, the result is held against a gate
+   policy, and the verdicts download as the same JSON the command line writes.
+4. **Ledger & Engine** -- the Db2 side: the append-only verdict ledger with
    engine-computed SHA-256 certificates, the MQT rollup Db2 maintains itself,
    temporal time travel, the vector fix-memory, and measured physical advice.
+5. **Model & Agents** -- what the model tier has cost, read from Db2; whether
+   Db2 or this process makes the call; and the MCP tools an agent can use.
 
 Nothing here is a mock. Every number on screen came back from Db2 in this
 session.
@@ -28,18 +35,30 @@ import streamlit as st
 # ``streamlit run src/app.py`` executes this file as a top-level script, not as
 # a package member, so relative imports would fail. Put the project root on the
 # path and import absolutely, which keeps `streamlit run src/app.py` working
-# from the submission directory without a wrapper script.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# from the project directory without a wrapper script.
+#
+# Streamlit also puts this file's own directory, src/, first on the path. That
+# makes every module in it importable under its bare name, and src/datasets.py
+# then shadows the Hugging Face `datasets` package: sentence-transformers fails
+# to import, fix-memory recall raises, and the repair loop quietly falls through
+# to the model for repairs Db2 already holds. So src/ comes off the path.
+_HERE = Path(__file__).resolve().parent
+sys.path[:] = [p for p in sys.path if p and Path(p).resolve() != _HERE]
+sys.path.insert(0, str(_HERE.parent))
 
-from src import db, physical, translate  # noqa: E402
+from src import capture, costgate, db, physical, samples, translate  # noqa: E402
 from src.config import llm_config, runtime_config, setup_config  # noqa: E402
-from src.corpus import BASE, CORPUS, DIALECTS, VARIANTS, Statement  # noqa: E402
+from src.corpus import BASE, CORPUS, DIALECTS, VARIANTS, Statement, statements_for  # noqa: E402
 from src.counterexample import (  # noqa: E402
+    FIXTURE_SCHEMA,
     Db2Target,
     available_sources,
     ensure_fixture_schema,
     prove_semantics,
 )
+from src.datasets import DatasetAgent, DatasetStore  # noqa: E402
+from src.llm import METER, build_model  # noqa: E402
+from src.minimise import minimise  # noqa: E402
 from src.embeddings import LocalEmbeddings  # noqa: E402
 from src.fixmemory import FixMemory  # noqa: E402
 from src.repair import RepairLoop  # noqa: E402
@@ -222,8 +241,13 @@ def _connections():
 
 
 @st.cache_resource(show_spinner="Loading the local embedding model...")
+def _embeddings():
+    return LocalEmbeddings()
+
+
+@st.cache_resource(show_spinner="Loading the local embedding model...")
 def _memory(_app_conn):
-    return FixMemory(_app_conn, embeddings=LocalEmbeddings())
+    return FixMemory(_app_conn, embeddings=_embeddings())
 
 
 @st.cache_resource(show_spinner="Starting the source engines...")
@@ -244,6 +268,27 @@ def _prover(_owner_conn):
 
 def _code(sql: str, *, language: str = "sql") -> None:
     st.code(sql.strip() or "--", language=language)
+
+
+def _show_minimal(smallest) -> None:
+    """The fewest rows on which the two engines still disagree."""
+    st.markdown("#### The smallest input that still disagrees")
+    st.caption(
+        f"{smallest.rows_after} row(s), down from {smallest.rows_before}, found by "
+        f"deleting rows and re-running both engines {smallest.trials} times. Every row "
+        "left is needed: remove any one and the engines agree."
+    )
+    st.dataframe(
+        [{"table": table, **{f"c{i}": v for i, v in enumerate(row)}}
+         for table, rows in smallest.rows.items() for row in rows],
+        width="stretch",
+        hide_index=True,
+    )
+    ml, mr = st.columns(2)
+    with ml:
+        _rows_table(smallest.source_rows, "source returns")
+    with mr:
+        _rows_table(smallest.db2_rows, "Db2 returns")
 
 
 def _rows_table(rows, caption: str) -> None:
@@ -300,8 +345,9 @@ c4.metric(
     delta_color="off",
 )
 
-tab_prove, tab_semantic, tab_ledger = st.tabs(
-    ["1 · Translate & Prove", "2 · Semantic Proof", "3 · Ledger & Engine"]
+tab_prove, tab_semantic, tab_workload, tab_ledger, tab_model = st.tabs(
+    ["1 · Translate & Prove", "2 · Semantic Proof", "3 · Migrate a Workload",
+     "4 · Ledger & Engine", "5 · Model & Agents"]
 )
 
 
@@ -344,10 +390,10 @@ def _pick_statement(key: str) -> Statement | None:
 with tab_prove:
     st.subheader("IBM's translator is silent. Db2 is not.")
     st.markdown(
-        f"`db2-sqlglot-dialect` raises an error for **0** of the {len(CORPUS)} "
-        "corpus statements. Db2 then rejects **14** of them. That gap is the bug class "
-        "PortProof exists to close: a *silent* failure, which no linter catches "
-        "because nothing complained."
+        "On the measured workload of 125 statements, `db2-sqlglot-dialect` raised "
+        "an error for **none** of them and Db2 then rejected **17**. That gap is the "
+        "bug class PortProof exists to close: a *silent* failure, which no linter "
+        "catches because nothing complained."
     )
 
     statement = _pick_statement("prove")
@@ -585,6 +631,8 @@ with tab_semantic:
                 ],
                 width="stretch",
                 hide_index=True,
+                # Every dataset on screen at once: the table is the evidence.
+                height=36 * (len(verdict.instances) + 1) + 3,
             )
 
             if verdict.witness is not None:
@@ -602,9 +650,265 @@ with tab_semantic:
                 with wr:
                     _rows_table(verdict.witness.db2_rows, "Db2 returned")
 
+                held = next((v for v in VARIANTS
+                             if v.fingerprint == verdict.witness.fingerprint), None)
+                if held is not None:
+                    with st.spinner("shrinking the dataset to the rows that matter..."):
+                        try:
+                            smallest = minimise(
+                                source_sql=statement.sql, db2_sql=db2_sql, source=source,
+                                target=target, witness=held, dialect=statement.dialect,
+                            )
+                        except Exception as exc:  # the shrink never changes a verdict
+                            smallest = None
+                            st.caption(f"could not shrink the counterexample: {str(exc)[:120]}")
+                    if smallest is not None:
+                        _show_minimal(smallest)
+
+            db.execute(owner_conn, f"SET CURRENT SCHEMA {FIXTURE_SCHEMA}")
+            cost = costgate.estimate(owner_conn, db2_sql)
+            if cost is not None:
+                st.caption(
+                    f"Db2's optimizer estimates the Db2 statement at **{cost:,.1f} timerons** "
+                    "(`EXPLAIN PLAN`, compiled and not executed)."
+                )
+
 
 # --------------------------------------------------------------------------
-# tab 3 -- the Db2 side
+# tab 3 -- a whole workload, gated
+# --------------------------------------------------------------------------
+GATE_POLICY = {
+    "different": "hold if anything is PROVEN DIFFERENT or does not compile",
+    "unproven": "hold unless everything is PROVEN EQUIVALENT",
+    "none": "report only",
+}
+
+
+def _run_workload(kind: str, dialect: str, limit: int, tables: tuple[str, ...],
+                  top: int, uploaded: str, fail_on: str) -> dict:
+    """One migration run, on connections of its own, closed when it ends."""
+    from src.main import held_by, verdicts
+    from src.pipeline import Pipeline
+
+    cfg = llm_config()
+    run_app = db.connect(runtime_config(), role="app")
+    db.execute(run_app, "SET CURRENT SCHEMA PORTPROOF")
+    run_owner = db.connect(setup_config(), role="setup")
+    METER.reset()
+    started = time.time()
+    taken = None
+    try:
+        try:
+            memory = FixMemory(run_app, embeddings=_embeddings())
+            remembered = f"{memory.count()} verified repairs in Db2's fix memory"
+        except Exception as exc:
+            memory = None
+            remembered = f"fix memory unavailable ({str(exc)[:80]})"
+        agent = DatasetAgent(store=DatasetStore(run_app), model=build_model(cfg), builtin=VARIANTS)
+        pipeline = Pipeline(app_conn=run_app, owner_conn=run_owner, memory=memory,
+                            dataset_agent=agent, variants=VARIANTS)
+        try:
+            if kind == "corpus":
+                statements = statements_for(dialect)
+            elif kind == "samples":
+                samples.discover({dialect: pipeline.sources[dialect]}, agent)
+                statements = samples.statements((dialect,))
+            else:
+                engine = pipeline.sources.get(dialect)
+                if engine is None:
+                    raise ValueError(f"no {dialect} source engine is reachable")
+                if kind == "captured":
+                    taken = capture.from_engine(engine, dialect, tables, top=top)
+                else:
+                    taken = capture.from_text(uploaded, dialect, tables, origin="the uploaded file")
+                statements, _, _ = capture.workload(engine, agent, taken, tables)
+            report = pipeline.run(statements=statements[: max(1, limit)])
+        finally:
+            pipeline.close()
+    finally:
+        for conn in (run_app, run_owner):
+            try:
+                import ibm_db
+
+                ibm_db.close(conn)
+            except Exception:  # pragma: no cover
+                pass
+    return {
+        "report": report,
+        "verdicts": verdicts(report),
+        "held": held_by(report, fail_on),
+        "fail_on": fail_on,
+        "captured": taken.summary() if taken is not None else None,
+        "remembered": remembered,
+        "seconds": time.time() - started,
+        "model_calls": len(METER.calls),
+    }
+
+
+def _repaired_by(r) -> str:
+    parts = []
+    if r.repair and r.repaired:
+        parts.append(f"compile: {r.repair.fixed_by}")
+    if r.semantic_repair and r.semantic_repair.repaired:
+        parts.append(f"meaning: {r.semantic_repair.rule}")
+    return ", ".join(parts)
+
+
+with tab_workload:
+    st.subheader("A migration is a workload, not a statement")
+    st.markdown(
+        "Prove every statement an application sends, then hold the result against a "
+        "policy, the way a CI job would. The statements can come from the corpus, from "
+        "the record the source engine keeps of what it ran, or from a `.sql` file."
+    )
+
+    w1, w2 = st.columns([3, 2])
+    with w1:
+        kind = st.radio(
+            "workload",
+            ["corpus", "samples", "captured", "file"],
+            format_func={
+                "corpus": "the corpus",
+                "samples": "a discovered schema (hr, bank)",
+                "captured": "captured from the source engine",
+                "file": "an uploaded .sql file",
+            }.get,
+            horizontal=True,
+            key="wl_kind",
+        )
+    with w2:
+        wl_dialect = st.selectbox(
+            "source dialect",
+            [d for d in DIALECTS if not (kind == "captured" and d == "sqlite")],
+            key="wl_dialect",
+        )
+
+    tables: tuple[str, ...] = ()
+    uploaded = ""
+    top = 50
+    if kind in ("captured", "file"):
+        raw = st.text_input(
+            "tables being migrated",
+            value="customers, orders, order_items, events",
+            key="wl_tables",
+            help="Only statements that read nothing but these tables are proved.",
+        )
+        tables = tuple(t.strip() for t in raw.split(",") if t.strip())
+    if kind == "captured":
+        top = st.slider("most executed statements to take", 5, 200, 50, key="wl_top")
+        st.caption(
+            {
+                "mysql": "Read from `performance_schema.events_statements_summary_by_digest`.",
+                "tsql": "Read from `sys.dm_exec_query_stats` and `sys.dm_exec_sql_text`.",
+                "postgres": "Read from `pg_stat_statements`. PostgreSQL keeps `$1` in place of "
+                "literals, so statements that had literals are counted and set aside.",
+            }.get(wl_dialect, "")
+        )
+    if kind == "file":
+        upload = st.file_uploader("SQL file, one statement per `;`", type=["sql", "txt"],
+                                  key="wl_upload")
+        if upload is not None:
+            uploaded = upload.getvalue().decode("utf-8", errors="replace")
+
+    g1, g2 = st.columns([3, 2])
+    with g1:
+        fail_on = st.radio(
+            "gate", list(GATE_POLICY), format_func=GATE_POLICY.get, key="wl_gate",
+        )
+    with g2:
+        limit = st.number_input("at most this many statements", 1, 200, 12, key="wl_limit")
+
+    if st.button("Migrate and prove", type="primary", key="go_workload"):
+        if kind == "file" and not uploaded.strip():
+            st.warning("Upload a .sql file first.")
+        else:
+            with st.spinner("translating, compiling, repairing and proving every statement..."):
+                try:
+                    st.session_state["workload_run"] = _run_workload(
+                        kind, wl_dialect, int(limit), tables, int(top), uploaded, fail_on
+                    )
+                except Exception as exc:
+                    st.session_state.pop("workload_run", None)
+                    st.error(f"the run did not complete: {str(exc)[:300]}")
+
+    run = st.session_state.get("workload_run")
+    if run is not None:
+        report = run["report"]
+        st.caption(f"repairs: {run['remembered']}, consulted before the rules and the model")
+        if run["captured"]:
+            st.caption(f"captured: {run['captured']}")
+        m1, m2, m3, m4, m5, m6 = st.columns(6)
+        m1.metric("statements", report.total)
+        m2.metric("silent failures", report.silent_failures)
+        m3.metric("proven equivalent", report.proven_equivalent)
+        m4.metric("proven different", report.proven_different)
+        m5.metric("model calls", run["model_calls"])
+        m6.metric("wall time", f"{run['seconds']:.0f}s")
+
+        if run["fail_on"] == "none":
+            st.info("Gate: report only. A CI job would exit 0.")
+        elif run["held"]:
+            st.error(
+                f"**Gate holds the migration.** {len(run['held'])} statement(s) fail the "
+                f"policy \"{GATE_POLICY[run['fail_on']]}\". A CI job would exit 2."
+            )
+        else:
+            st.success(f"**Gate passes.** Policy: {GATE_POLICY[run['fail_on']]}. Exit 0.")
+
+        st.dataframe(
+            [
+                {
+                    "case": r.case_name,
+                    "status": r.status,
+                    "repaired by": _repaired_by(r),
+                    "evidence": r.semantic.strength if r.semantic else "",
+                    "datasets": r.datasets_used,
+                    "est. cost before → after": (
+                        f"{r.cost_before:,.1f} → {r.cost_after:,.1f}"
+                        if r.cost_before is not None and r.cost_after is not None else ""
+                    ),
+                    "smallest counterexample": (
+                        f"{r.minimal.rows_after} of {r.minimal.rows_before} rows" if r.minimal else ""
+                    ),
+                }
+                for r in report.results
+            ],
+            width="stretch",
+            hide_index=True,
+            height=36 * (len(report.results) + 1) + 3,
+        )
+
+        slower = [r for r in report.results if (r.cost_ratio or 0) >= costgate.SLOWER_RATIO]
+        for r in slower:
+            st.warning(
+                f"`{r.case_name}`: the repair is proved correct and Db2 estimates it at "
+                f"{r.cost_ratio:.1f}x the cost ({r.cost_before:,.1f} → {r.cost_after:,.1f} "
+                "timerons). Correct and slower is a decision for a person."
+            )
+
+        for r in report.results:
+            if r.status == "PROVEN_DIFFERENT" and r.minimal is not None:
+                with st.expander(f"{r.case_name}: the smallest input that still disagrees"):
+                    _code(r.db2_sql or "")
+                    _show_minimal(r.minimal)
+
+        import json
+
+        st.download_button(
+            "Download the verdicts as JSON",
+            json.dumps(run["verdicts"], indent=2, default=str),
+            file_name="portproof-verdicts.json",
+            mime="application/json",
+            key="wl_download",
+        )
+        st.caption(
+            "The same file `python -m src.main --report-json` writes, and the same gate as "
+            f"`--fail-on {run['fail_on']}`."
+        )
+
+
+# --------------------------------------------------------------------------
+# tab 4 -- the Db2 side
 # --------------------------------------------------------------------------
 with tab_ledger:
     st.subheader("What Db2 is doing that an app layer could not")
@@ -746,3 +1050,119 @@ with tab_ledger:
             )
         else:
             st.caption("package cache: nothing monitored is visible to this identity")
+
+
+# --------------------------------------------------------------------------
+# tab 5 -- the model tier and the agent interface
+# --------------------------------------------------------------------------
+with tab_model:
+    st.subheader("The model is the last tier, and Db2 keeps the bill")
+    st.markdown(
+        "A repair is proposed by the cheapest tier that has one: Db2's fix memory, then "
+        "measured rules, then a language model. Every model call is written to "
+        "`PORTPROOF.LLM_CALL` through a procedure, by an identity that cannot edit the table."
+    )
+
+    registered = db.fetch_one(
+        owner_conn,
+        "SELECT COUNT(*) FROM SYSCAT.PROCEDURES WHERE PROCSCHEMA = 'PORTPROOF' "
+        "AND PROCNAME = 'ASK_MODEL'",
+    )
+    k1, k2, k3 = st.columns(3)
+    k1.metric(
+        "who calls the model",
+        "Db2" if cfg.in_db2 else "this process",
+        "TEXT_GENERATION in ASK_MODEL" if cfg.in_db2 else "HTTP, key in the environment",
+        delta_color="off",
+    )
+    k2.metric("model", cfg.model or "none", cfg.provider, delta_color="off")
+    k3.metric(
+        "in-engine model",
+        "registered" if registered and int(registered[0]) else "not registered",
+        "python -m src.setup_model",
+        delta_color="off",
+    )
+
+    st.markdown("#### What the model has cost, read from Db2")
+    spend = db.fetch_all(
+        app_conn,
+        "SELECT STAGE, TRANSPORT, COUNT(*), SUM(PROMPT_TOKENS), SUM(COMPLETION_TOKENS), "
+        "       AVG(LATENCY_MS), MAX(ESTIMATED) "
+        "  FROM PORTPROOF.LLM_CALL GROUP BY STAGE, TRANSPORT ORDER BY STAGE, TRANSPORT",
+    )
+    if spend:
+        st.dataframe(
+            [
+                {
+                    "stage": str(stage).strip(),
+                    "called by": "Db2" if str(transport).strip() == "DB2" else "application",
+                    "calls": int(calls),
+                    "tokens in": int(tin or 0),
+                    "tokens out": int(tout or 0),
+                    "mean latency (ms)": int(latency or 0),
+                    "token counts": "estimated" if estimated else "provider's own",
+                }
+                for stage, transport, calls, tin, tout, latency, estimated in spend
+            ],
+            width="stretch",
+            hide_index=True,
+        )
+    else:
+        st.info("No model call has been made yet.")
+    dead = db.fetch_one(app_conn, "SELECT COUNT(*) FROM PORTPROOF.MODEL_DEAD_END")
+    st.caption(
+        f"{int(dead[0]) if dead else 0} question(s) the model was asked and failed are recorded "
+        "in `PORTPROOF.MODEL_DEAD_END`, so they are not paid for again."
+    )
+
+    with st.expander("how Db2 makes the call", expanded=cfg.in_db2):
+        st.markdown(
+            "With `LLM_TRANSPORT=db2` the application holds no key. It calls one procedure; "
+            "the procedure checks the budget against its own ledger, calls the model, and "
+            "writes the ledger row in the same unit of work. The runtime identity has "
+            "`EXECUTE` on the procedure and nothing on the model, so calling "
+            "`TEXT_GENERATION` directly fails with `SQL0551N`."
+        )
+        _code(
+            """CALL PORTPROOF.ASK_MODEL(stage, case_name, prompt, run_started, budget, ?)
+
+-- inside the procedure
+IF (SELECT COUNT(*) FROM PORTPROOF.LLM_CALL WHERE CREATED_AT >= P_SINCE) >= P_BUDGET THEN
+  SIGNAL SQLSTATE '75002' SET MESSAGE_TEXT = 'model call budget is spent';
+END IF;
+SET P_REPLY = TEXT_GENERATION(P_PROMPT USING PORTPROOF.PP_MODEL);
+INSERT INTO PORTPROOF.LLM_CALL (...) VALUES (..., 'DB2', 1);"""
+        )
+
+    st.markdown("#### Tools for an agent (MCP)")
+    st.markdown(
+        "`python -m src.mcp_server` gives an agent that writes or converts SQL four questions "
+        "it can put to Db2. All four are read only. What an agent sends passes the same "
+        "single-query guard as a model's own output before it reaches a connection."
+    )
+    from src import mcp_server
+
+    st.dataframe(
+        [{"tool": tool.__name__, "what it answers": (tool.__doc__ or "").strip().splitlines()[0]}
+         for tool in mcp_server.TOOLS],
+        width="stretch",
+        hide_index=True,
+    )
+    _code(
+        """{ "mcpServers": { "portproof": {
+    "command": "python", "args": ["-m", "src.mcp_server"],
+    "cwd": "<path to>/portproof" } } }""",
+        language="json",
+    )
+
+    st.markdown("##### Ask a tool what an agent would")
+    tool_name = st.selectbox("tool", ["check_compiles", "estimate_cost"], key="mcp_tool")
+    tool_sql = st.text_area(
+        "Db2 SQL",
+        value="SELECT c.name, COUNT(*) FROM customers c JOIN orders o ON o.customer_id = c.id "
+        "GROUP BY c.name",
+        height=90,
+        key="mcp_sql",
+    )
+    if st.button("Call the tool", key="go_mcp"):
+        st.json(getattr(mcp_server, tool_name)(tool_sql))

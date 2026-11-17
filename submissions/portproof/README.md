@@ -573,7 +573,7 @@ python -m src.main --ledger
 # Ask Db2 itself whether the source rows and its own copies match
 python -m src.main --federation
 
-# The three tab UI
+# The five tab UI
 streamlit run src/app.py
 ```
 
@@ -585,14 +585,14 @@ streamlit run src/app.py
 pytest -q
 ```
 
-The suite has six parts, 259 tests, and does not mock the database. It never calls a real model: `tests/conftest.py` pins the rules, and the model tiers are driven by a scripted fake so every path they can take is exercised for free.
+The suite has six parts, 263 tests, and does not mock the database. It never calls a real model: `tests/conftest.py` pins the rules, and the model tiers are driven by a scripted fake so every path they can take is exercised for free.
 
 - `tests/test_unit.py`, pure functions: value canonicalisation, the rewrite rules, the read only guard, the translator.
 - `tests/test_soundness.py`, the things that decide whether a verdict can be believed. Every test here exists because PortProof once got that answer wrong, and the docstrings say which answer.
 - `tests/test_integration.py`, against a live Db2, a live PostgreSQL, a live MySQL and a live SQL Server. Marked `db2` and skipped automatically when the engines are unreachable, so the suite is still green on a laptop with nothing running.
 - `tests/test_agent.py`, the dataset agent, the tiers and the cost controls: generated datasets are legal for their schema on every engine, a model's dataset is refused with a reason when it is wrong, the cache answers before the model does, a proved rewrite replays from memory with no call, a dead end is not asked twice, the call budget stops the model, and the runtime identity cannot write the cache or the cost ledger except through the procedures.
 - `tests/test_features.py`, the later additions: capture keeps only read only statements over the named tables, the gate's exit code for each policy, the JSON report, the optimizer estimate, a counterexample that is smaller and still disagrees, Db2 refusing a model call once the budget is spent (`75002`), the runtime identity refused the model outside the ledger (`SQL0551N`), and the MCP tools refusing anything that is not a query.
-- `tests/test_ui.py`, the Streamlit app driven headlessly through `AppTest`, so the UI is covered by the same command.
+- `tests/test_ui.py`, the Streamlit app driven headlessly through `AppTest`, so the UI is covered by the same command: all five tabs, a workload migrated and gated, the model ledger, an MCP tool refusing a write, and the app not shadowing installed packages with its own modules.
 
 The regressions pinned by name, because each one would have invalidated the results:
 
@@ -613,7 +613,7 @@ The regressions pinned by name, because each one would have invalidated the resu
 
 ## Screenshots and Demo
 
-All seven are in `docs/screenshots/`, captured from the running app against a live Db2. Nothing in them is mocked up: every SQLCODE, every verdict and every number was produced by the engine at the moment the shot was taken.
+All nine are in `docs/screenshots/`, captured from the running app against a live Db2, with the default `tiered` repair policy. Nothing in them is mocked up: every SQLCODE, every verdict and every number was produced by the engine at the moment the shot was taken.
 
 ### 1. A silent failure, caught by the engine
 
@@ -625,7 +625,7 @@ Two panels, side by side, and the contrast between them is the whole project. On
 
 ![The bounded repair loop and the rules that fired at each attempt](docs/screenshots/02-repair-loop.png)
 
-Attempt 0 is labelled "as translated" and carries no rules, because no rule can be responsible for the translator's own output. Each later row shows the candidate, the rules that fired, the SQLCODE Db2 answered with, and how many verified precedents were recalled from the Db2 fix memory to ground the rewrite. The loop is auditable rather than a black box, and it is bounded, so it cannot spin.
+Attempt 0 is labelled "as translated" and carries no rules, because no rule can be responsible for the translator's own output. Each later row says which tier proposed it (fix memory, rules or the model), the rules that fired and the SQLCODE Db2 answered with. Here Db2's fix memory held an earlier verified repair of this exact statement, recalled at cosine distance 0, so the repair cost no rule and no model call and was still compiled again before it counted. The loop is auditable rather than a black box, and it is bounded, so it cannot spin.
 
 ### 3. A counterexample, and the evidence behind the verdict
 
@@ -634,6 +634,8 @@ Attempt 0 is labelled "as translated" and carries no rules, because no rule can 
 `mysql/case_insensitive_eq` against a real MySQL. Both statements compile, both run, and MySQL returns a row where Db2 returns none, because MySQL's default collation is case insensitive. This is the exact statement that an earlier version of PortProof certified as equivalent, when DuckDB stood in for MySQL and two empty results matched.
 
 The tiles under the verdict are the evidence rather than the conclusion: instances run, how many of those agreed on actual rows, total rows compared, and how many genuinely distinct inputs they represent. The table below lists every adversarial dataset with what it stresses and whether it agreed, and the `ties_and_duplicates` row shows the vacuity detector working: both engines returned nothing there, so its evidence column reads "none (both empty)" instead of counting as a pass.
+
+Under the counterexample, the smallest input that still disagrees: the 13 rows of the witness dataset shrunk to one customer, with both engines run again after every deletion. Below it, Db2's optimizer estimate for the statement, from `EXPLAIN PLAN`.
 
 ### 4. The ledger, with certificates the application cannot forge
 
@@ -658,6 +660,18 @@ The failing SQL and Db2's error message are embedded locally, then matched again
 ![Compression measured by ADMIN_GET_TAB_COMPRESS_INFO and package cache hotspots](docs/screenshots/07-physical-advice.png)
 
 63.4 percent fewer pages, measured by `ADMIN_GET_TAB_COMPRESS_INFO`, with Db2's own estimator agreeing at 63 percent and putting the ceiling at 74. Underneath, the hottest statements in the package cache from `MON_GET_PKG_CACHE_STMT`, which are real executions rather than a prediction. Where the grants for those routines are missing, this panel says the number is not measurable instead of inventing one.
+
+### 8. A whole workload, held against a gate
+
+![Twelve MySQL statements migrated, proved and held against a CI gate policy](docs/screenshots/08-workload-gate.png)
+
+The twelve MySQL corpus statements, translated, compiled, repaired and proved in one run. Six were silent failures, and all six were repaired, five from Db2's fix memory and one by a rule, so the run made no model call and took 14 seconds. Two needed their meaning repaired as well, also from memory, and the cost column shows Db2's estimate before and after each meaning repair. The gate is the same one as `--fail-on different`, and the button downloads the same JSON as `--report-json`. The workload can also come from the source engine's own statement record or from an uploaded `.sql` file.
+
+### 9. The model's bill, and the tools an agent can use
+
+![The model call ledger by stage and transport, and the MCP tools](docs/screenshots/09-model-and-agents.png)
+
+Every model call PortProof has made, summed by Db2 from `PORTPROOF.LLM_CALL`, split by who made it: the application over HTTP, with the provider's own token counts, or Db2 itself through `TEXT_GENERATION` inside `ASK_MODEL`, with estimated counts. Under it, the four MCP tools with one of them called live: `estimate_cost` returns Db2's optimizer estimate for a join, in timerons.
 
 ---
 
@@ -836,7 +850,7 @@ Every dependency is pinned in `requirements.txt`. All of it is used as a publish
 | `psycopg` | LGPL 3.0 | PostgreSQL client. Used unmodified as a library. |
 | `pymysql` | MIT | MySQL client. |
 | `cryptography` | Apache 2.0 or BSD 3-Clause | Required by `pymysql` for MySQL 8 `caching_sha2_password`. |
-| `streamlit` | Apache 2.0 | The three tab UI. |
+| `streamlit` | Apache 2.0 | The five tab UI. |
 | `python-dotenv` | BSD 3-Clause | Reads `.env`. |
 | `pytest` | MIT | The test suite. |
 | Oracle MySQL Connector/J 8.4.0 | GPL 2.0 with the Universal FOSS Exception | Downloaded at setup time by `scripts/create_federation.sh`, into the Db2 container, never committed. Needed because IBM's bundled MySQL federation driver refuses MySQL Community Server. |

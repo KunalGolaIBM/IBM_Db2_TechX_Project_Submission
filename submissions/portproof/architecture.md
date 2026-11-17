@@ -42,7 +42,7 @@ The same structure as Mermaid, for anyone who would rather read it as text:
 graph TD
     subgraph UI["Interface"]
         CLI["src/main.py<br/>command line"]
-        APP["src/app.py<br/>Streamlit, three tabs"]
+        APP["src/app.py<br/>Streamlit, five tabs"]
     end
 
     subgraph PIPE["src/pipeline.py"]

@@ -44,12 +44,14 @@ def test_header_shows_the_least_privilege_identity_not_the_owner():
     assert owner.value.strip() == "PPOWN"
 
 
-def test_all_three_tabs_are_present():
+def test_all_five_tabs_are_present():
     app = _run()
     headings = " ".join(h.value for h in app.subheader)
     assert "Db2 is not" in headings  # tab 1
     assert "Compiling proves nothing" in headings  # tab 2
-    assert "an app layer could not" in headings  # tab 3
+    assert "a workload, not a statement" in headings  # tab 3
+    assert "an app layer could not" in headings  # tab 4
+    assert "Db2 keeps the bill" in headings  # tab 5
 
 
 def test_the_ledger_tab_renders_rows_db2_returned():
@@ -104,3 +106,47 @@ def test_a_silent_failure_is_shown_as_one_and_then_repaired():
     successes = " ".join(s.value for s in app.success)
     assert "translator reported no problem" in successes
     assert "Repaired in" in successes and "Db2 re-verified it" in successes
+
+
+def test_a_workload_is_migrated_proved_and_gated():
+    """Tab 3 end to end: a small SQLite workload, the gate, the JSON download."""
+    app = AppTest.from_file(APP, default_timeout=TIMEOUT).run()
+    app.selectbox(key="wl_dialect").set_value("sqlite").run()
+    app.number_input(key="wl_limit").set_value(3).run()
+    app.button(key="go_workload").click().run()
+    assert not app.exception, [str(e.value) for e in app.exception]
+
+    labels = {m.label: m.value for m in app.metric}
+    assert labels["statements"] == "3"
+    gate = " ".join(x.value for x in [*app.success, *app.error])
+    assert "Gate passes" in gate or "Gate holds the migration" in gate, gate
+    assert any("smallest counterexample" in df.value.columns for df in app.dataframe)
+
+
+def test_the_model_tab_reads_the_bill_from_db2_and_lists_the_agent_tools():
+    app = _run()
+    labels = {m.label for m in app.metric}
+    assert {"who calls the model", "in-engine model"} <= labels
+    tools = next(df.value for df in app.dataframe if "tool" in df.value.columns)
+    assert set(tools["tool"]) == {"check_compiles", "prove_statement", "estimate_cost",
+                                  "ledger_summary"}
+
+
+def test_an_agent_tool_refuses_a_write_in_the_ui_too():
+    app = AppTest.from_file(APP, default_timeout=TIMEOUT).run()
+    app.text_area(key="mcp_sql").set_value("DROP TABLE customers").run()
+    app.button(key="go_mcp").click().run()
+    assert not app.exception, [str(e.value) for e in app.exception]
+    assert "refused_before_db2" in str(app.json[0].value)
+
+
+def test_the_app_does_not_shadow_installed_packages_with_its_own_modules():
+    """`streamlit run src/app.py` puts src/ on the path, where src/datasets.py
+    once hid the `datasets` package sentence-transformers needs. Fix-memory
+    recall then failed and every repair Db2 already held went to the model."""
+    import importlib.util
+
+    _run()
+    spec = importlib.util.find_spec("datasets")
+    src = str(Path(APP).parent)
+    assert spec is None or not str(spec.origin).startswith(src), spec.origin

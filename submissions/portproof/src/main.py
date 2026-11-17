@@ -241,7 +241,6 @@ def _print_physical(advice: dict) -> None:
 def _captured_workload(args, pipeline, agent) -> list:
     """The source's own statements, over a schema read from its catalogue."""
     from . import capture
-    from .datasets import introspect, profile
 
     engine = pipeline.sources.get(args.dialect)
     if engine is None:
@@ -255,25 +254,29 @@ def _captured_workload(args, pipeline, agent) -> list:
         except ValueError as exc:
             raise SystemExit(f"  capture failed: {exc}")
     print(f"  captured     : {taken.summary()}")
-    schema = introspect(engine, "captured", tables=tables)
-    prof = profile(engine, schema)
-    agent.register("captured", args.dialect, schema, prof)
+    statements, schema, prof = capture.workload(engine, agent, taken, tables)
     print(
         f"  discovered   : {args.dialect}/captured -- {len(schema.tables)} tables, "
         f"{sum(len(t.columns) for t in schema.tables)} columns, "
         f"{prof.total_rows} rows profiled (fingerprint {schema.fingerprint})"
     )
-    return taken.statements("captured")
+    return statements
+
+
+def held_by(report, fail_on: str) -> list:
+    """The statements that hold a migration under a gate policy."""
+    if fail_on == "none":
+        return []
+    if fail_on == "different":
+        return [r for r in report.results if r.status in ("PROVEN_DIFFERENT", "COMPILE_FAIL")]
+    return [r for r in report.results if r.status != "PROVEN_EQUIVALENT"]
 
 
 def _gate(report, fail_on: str) -> int:
     """The exit code for a CI job: 0 passes the branch, 2 holds it."""
     if fail_on == "none":
         return 0
-    if fail_on == "different":
-        held = [r for r in report.results if r.status in ("PROVEN_DIFFERENT", "COMPILE_FAIL")]
-    else:
-        held = [r for r in report.results if r.status != "PROVEN_EQUIVALENT"]
+    held = held_by(report, fail_on)
     if held:
         print(f"\n  GATE ({fail_on}): {len(held)} statement(s) hold the migration:")
         for r in held[:20]:
@@ -283,9 +286,8 @@ def _gate(report, fail_on: str) -> int:
     return 0
 
 
-def _write_json(report, path: str) -> None:
-    import json
-
+def verdicts(report) -> dict:
+    """The per-statement verdicts, as the JSON report carries them."""
     rows = []
     for r in report.results:
         witness = r.semantic.witness if r.semantic else None
@@ -311,9 +313,14 @@ def _write_json(report, path: str) -> None:
     counts: dict[str, int] = {}
     for row in rows:
         counts[row["status"]] = counts.get(row["status"], 0) + 1
+    return {"statements": len(rows), "by_status": counts, "results": rows}
+
+
+def _write_json(report, path: str) -> None:
+    import json
+
     with open(path, "w", encoding="utf-8") as handle:
-        json.dump({"statements": len(rows), "by_status": counts, "results": rows},
-                  handle, indent=2, default=str)
+        json.dump(verdicts(report), handle, indent=2, default=str)
 
 
 def main(argv: list[str] | None = None) -> int:

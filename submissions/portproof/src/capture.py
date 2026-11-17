@@ -190,10 +190,30 @@ def from_engine(engine: Any, dialect: str, tables: Sequence[str], top: int = 50)
     return _filter(Captured(dialect=dialect, origin=origin), rows, tables, top)
 
 
-def from_file(path: str | Path, dialect: str, tables: Sequence[str], top: int = 500) -> Captured:
-    """Statements from a ``.sql`` file, one per ``;``. Repeats count as executions."""
-    text = Path(path).read_text(encoding="utf-8")
+def from_text(text: str, dialect: str, tables: Sequence[str], *, origin: str = "pasted SQL",
+              top: int = 500) -> Captured:
+    """Statements from SQL text, one per ``;``. Repeats count as executions."""
     text = re.sub(r"--[^\n]*", "", text)
     parts = [p for p in (s.strip() for s in text.split(";")) if p]
-    return _filter(Captured(dialect=dialect, origin=str(Path(path).name)),
-                   [(p, 1) for p in parts], tables, top)
+    return _filter(Captured(dialect=dialect, origin=origin), [(p, 1) for p in parts], tables, top)
+
+
+def from_file(path: str | Path, dialect: str, tables: Sequence[str], top: int = 500) -> Captured:
+    """Statements from a ``.sql`` file, one per ``;``. Repeats count as executions."""
+    return from_text(Path(path).read_text(encoding="utf-8"), dialect, tables,
+                     origin=str(Path(path).name), top=top)
+
+
+def workload(engine: Any, agent: Any, captured: Captured, tables: Sequence[str],
+             schema_name: str = "captured") -> tuple[list[Statement], Any, Any]:
+    """Make a captured workload provable: read its schema back out of the source
+    catalogue, profile it, and register both with the dataset agent.
+
+    Returns the statements, the discovered schema and its profile.
+    """
+    from .datasets import introspect, profile
+
+    schema = introspect(engine, schema_name, tables=tuple(tables))
+    prof = profile(engine, schema)
+    agent.register(schema_name, captured.dialect, schema, prof)
+    return captured.statements(schema_name), schema, prof
