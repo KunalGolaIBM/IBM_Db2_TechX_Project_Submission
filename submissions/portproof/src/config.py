@@ -108,7 +108,7 @@ def runtime_config() -> Db2Config:
 def setup_config() -> Db2Config:
     """The schema owner, used only by setup and by adversarial-fixture creation.
 
-    Falls back to the runtime identity so a judge can run everything with a
+    Falls back to the runtime identity so anyone can run everything with a
     single account if they prefer.
     """
     if os.getenv("DB2_SETUP_USER", "").strip():

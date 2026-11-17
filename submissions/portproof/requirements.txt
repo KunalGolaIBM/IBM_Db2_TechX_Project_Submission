@@ -5,7 +5,7 @@
 ibm_db==3.3.0                    # the Db2 driver; every value is bound
 ibm-db-sa==0.4.4                 # SQLAlchemy dialect for Db2
 
-# --- the AI framework (Db2Hack requirement) ------------------------------
+# --- the AI framework -----------------------------------------------------
 langchain==1.4.9
 langchain-core==1.7.6
 langchain-community==0.4.2

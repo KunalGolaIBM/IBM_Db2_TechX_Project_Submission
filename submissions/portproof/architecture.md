@@ -35,7 +35,7 @@ Source: [`docs/architecture/portproof-architecture.svg`](docs/architecture/portp
 
 A five-page standalone version of this document, with the diagram, is at
 [`docs/architecture/PortProof-architecture-document.pdf`](docs/architecture/PortProof-architecture-document.pdf).
-The pitch deck is at [`docs/PortProof-pitch.pdf`](docs/PortProof-pitch.pdf).
+The slide deck is at [`docs/PortProof-pitch.pdf`](docs/PortProof-pitch.pdf).
 The same structure as Mermaid, for anyone who would rather read it as text:
 
 ```mermaid

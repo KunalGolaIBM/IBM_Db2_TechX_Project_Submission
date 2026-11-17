@@ -1,6 +1,6 @@
 """Local sentence-transformer embeddings.
 
-Runs on CPU, needs no API key and costs nothing, so a judge can reproduce the
+Runs on CPU, needs no API key and costs nothing, so anyone can reproduce the
 vector parts of PortProof offline. The model is loaded lazily, so importing this
 module stays cheap for the unit tests that never embed anything.
 """

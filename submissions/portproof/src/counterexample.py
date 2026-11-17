@@ -313,7 +313,7 @@ def unfaithful(source: Any, sql: str) -> str:
 
 
 class DuckDbSource(Namespaced):
-    """Embedded PostgreSQL stand-in, so judges need no server.
+    """Embedded PostgreSQL stand-in, so a first run needs no server.
 
     DuckDB implements PostgreSQL's dialect closely and is the zero-setup default.
     It is a *stand-in*, and this class says where the stand-in ends:

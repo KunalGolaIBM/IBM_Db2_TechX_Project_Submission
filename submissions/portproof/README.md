@@ -1,6 +1,6 @@
 # PortProof
 
-> **One line pitch:** PortProof translates PostgreSQL, MySQL, SQL Server and SQLite into Db2 and then makes Db2 itself prove the result, first that it compiles and then that it returns the same answers, so a migration is finished when the engine says so rather than when a tool stops complaining.
+> **In one line:** PortProof translates PostgreSQL, MySQL, SQL Server and SQLite into Db2 and then makes Db2 itself prove the result, first that it compiles and then that it returns the same answers, so a migration is finished when the engine says so rather than when a tool stops complaining.
 
 **AI proposes. Db2 proves.**
 
@@ -311,7 +311,7 @@ What does grow with the source is one aggregate query per table, run by the sour
 
 ## From a Corpus to a Migration
 
-Six additions made after the finals pitch, each one measured against the live engines. They move PortProof from proving a list somebody wrote to proving what an application actually sends, and from a verdict to something an engineer or a pipeline can act on.
+Six additions made after the first release, each one measured against the live engines. They move PortProof from proving a list somebody wrote to proving what an application actually sends, and from a verdict to something an engineer or a pipeline can act on.
 
 | Addition | What it does | Measured |
 |---|---|---|
@@ -450,7 +450,7 @@ Every version in `requirements.txt` is pinned to what the project was built and 
 ## Setup and Installation
 
 ```bash
-# 1. Go to the submission directory
+# 1. Go to the project directory
 cd submissions/portproof
 
 # 2. Install dependencies
@@ -591,7 +591,7 @@ The suite has six parts, 259 tests, and does not mock the database. It never cal
 - `tests/test_soundness.py`, the things that decide whether a verdict can be believed. Every test here exists because PortProof once got that answer wrong, and the docstrings say which answer.
 - `tests/test_integration.py`, against a live Db2, a live PostgreSQL, a live MySQL and a live SQL Server. Marked `db2` and skipped automatically when the engines are unreachable, so the suite is still green on a laptop with nothing running.
 - `tests/test_agent.py`, the dataset agent, the tiers and the cost controls: generated datasets are legal for their schema on every engine, a model's dataset is refused with a reason when it is wrong, the cache answers before the model does, a proved rewrite replays from memory with no call, a dead end is not asked twice, the call budget stops the model, and the runtime identity cannot write the cache or the cost ledger except through the procedures.
-- `tests/test_features.py`, the additions after the pitch: capture keeps only read only statements over the named tables, the gate's exit code for each policy, the JSON report, the optimizer estimate, a counterexample that is smaller and still disagrees, Db2 refusing a model call once the budget is spent (`75002`), the runtime identity refused the model outside the ledger (`SQL0551N`), and the MCP tools refusing anything that is not a query.
+- `tests/test_features.py`, the later additions: capture keeps only read only statements over the named tables, the gate's exit code for each policy, the JSON report, the optimizer estimate, a counterexample that is smaller and still disagrees, Db2 refusing a model call once the budget is spent (`75002`), the runtime identity refused the model outside the ledger (`SQL0551N`), and the MCP tools refusing anything that is not a query.
 - `tests/test_ui.py`, the Streamlit app driven headlessly through `AppTest`, so the UI is covered by the same command.
 
 The regressions pinned by name, because each one would have invalidated the results:
@@ -736,7 +736,7 @@ Stated plainly, because a prover that oversells itself is the thing this project
 
 **Next steps**
 
-- Done since the pitch: the cost check on `EXPLAIN` estimates, counterexample minimisation, workload capture, the CI gate, the MCP server and the in engine model call. See [From a Corpus to a Migration](#from-a-corpus-to-a-migration).
+- Done since the first release: the cost check on `EXPLAIN` estimates, counterexample minimisation, workload capture, the CI gate, the MCP server and the in engine model call. See [From a Corpus to a Migration](#from-a-corpus-to-a-migration).
 - An Oracle source, proved twice: against a standard Db2 database and against one created with `DB2_COMPATIBILITY_VECTOR=ORA`, to measure which divergences the compatibility mode removes. Not started: the vector only applies to a database created after it is set, so it needs a second Db2 database and an Oracle engine, and it was not worth destabilising the measured setup for.
 - The PARROT cross dialect benchmark (598 curated pairs, Db2 among its dialects). Not run: its pairs come from 38 other benchmarks and each needs that benchmark's schema and data loaded on both engines before a pair can be executed, which is a data engineering task of its own.
 - Procedural code and DML. The unit of proof is still one read only query; a procedure needs state comparison after execution, not result comparison.
