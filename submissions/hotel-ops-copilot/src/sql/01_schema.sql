@@ -1,0 +1,381 @@
+-- Hotel Ops Copilot - core schema (IBM Db2 12.1+)
+-- Statements are separated by a line containing only "@" so that the same
+-- loader can run DDL and SQL PL procedures.
+-- The growing tables (reservations, rates, their history and the AI audit steps) use Db2 adaptive row
+-- compression (COMPRESS YES ADAPTIVE): Db2 builds the dictionary automatically as they grow.
+
+-- ---------------------------------------------------------------------------
+-- Hotel chain: every operational row belongs to a property. Each AI agent identity is
+-- scoped to its own hotel by Db2 row permissions (03_security.sql, AGENT_SCOPE); composite
+-- foreign keys keep a row's PROPERTY_ID consistent with its room type and room.
+-- ---------------------------------------------------------------------------
+CREATE TABLE PROPERTIES (
+    PROPERTY_ID    SMALLINT     NOT NULL PRIMARY KEY,
+    CODE           VARCHAR(8)   NOT NULL UNIQUE,
+    NAME           VARCHAR(60)  NOT NULL,
+    CITY           VARCHAR(40)  NOT NULL
+)
+@
+COMMENT ON TABLE PROPERTIES IS 'Hotels of the group. Every room type, room, reservation, rate, review, ticket and agent action carries a PROPERTY_ID; an AI agent sees only the properties it is scoped to.'
+@
+INSERT INTO PROPERTIES (PROPERTY_ID, CODE, NAME, CITY) VALUES (1, 'GOA', 'Saltwater Bay', 'Goa')
+@
+-- ---------------------------------------------------------------------------
+-- Reference data
+-- ---------------------------------------------------------------------------
+CREATE TABLE ROOM_TYPES (
+    ROOM_TYPE_ID   SMALLINT      NOT NULL PRIMARY KEY,
+    CODE           VARCHAR(8)    NOT NULL,
+    NAME           VARCHAR(40)   NOT NULL,
+    TIER           SMALLINT      NOT NULL,
+    BASE_RATE      DECIMAL(10,2) NOT NULL,
+    FLOOR_RATE     DECIMAL(10,2) NOT NULL,
+    CEILING_RATE   DECIMAL(10,2) NOT NULL,
+    MAX_OCCUPANCY  SMALLINT      NOT NULL,
+    PROPERTY_ID    SMALLINT      NOT NULL DEFAULT 1 REFERENCES PROPERTIES,
+    CONSTRAINT CK_RT_BAND CHECK (FLOOR_RATE <= BASE_RATE AND BASE_RATE <= CEILING_RATE),
+    CONSTRAINT UQ_RT_CODE UNIQUE (PROPERTY_ID, CODE),
+    CONSTRAINT UQ_RT_PROPERTY UNIQUE (ROOM_TYPE_ID, PROPERTY_ID)
+)
+@
+COMMENT ON TABLE ROOM_TYPES IS 'Room categories of each property (CODE is unique per property). TIER orders categories for upgrades (1 = lowest). FLOOR_RATE/CEILING_RATE are the revenue guardrails any rate change must respect.'
+@
+CREATE TABLE ROOMS (
+    ROOM_NO        VARCHAR(6)  NOT NULL PRIMARY KEY,
+    ROOM_TYPE_ID   SMALLINT    NOT NULL REFERENCES ROOM_TYPES,
+    FLOOR_NO       SMALLINT    NOT NULL,
+    STATUS         VARCHAR(12) NOT NULL DEFAULT 'IN_SERVICE',
+    PROPERTY_ID    SMALLINT    NOT NULL DEFAULT 1,
+    SYS_START      TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN,
+    SYS_END        TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW END,
+    TRANS_ID       TIMESTAMP(12) GENERATED ALWAYS AS TRANSACTION START ID IMPLICITLY HIDDEN,
+    PERIOD SYSTEM_TIME (SYS_START, SYS_END),
+    CONSTRAINT CK_ROOM_STATUS CHECK (STATUS IN ('IN_SERVICE', 'OUT_OF_ORDER')),
+    CONSTRAINT FK_ROOM_PROPERTY FOREIGN KEY (ROOM_TYPE_ID, PROPERTY_ID) REFERENCES ROOM_TYPES (ROOM_TYPE_ID, PROPERTY_ID),
+    CONSTRAINT UQ_ROOM_PROPERTY UNIQUE (ROOM_NO, PROPERTY_ID)
+)
+@
+CREATE TABLE ROOMS_HISTORY LIKE ROOMS
+@
+ALTER TABLE ROOMS ADD VERSIONING USE HISTORY TABLE ROOMS_HISTORY
+@
+COMMENT ON TABLE ROOMS IS 'Physical rooms. STATUS = OUT_OF_ORDER rooms cannot be sold. System-period temporal: every status change is versioned.'
+@
+CREATE TABLE GUESTS (
+    GUEST_ID       INTEGER      NOT NULL PRIMARY KEY,
+    FULL_NAME      VARCHAR(80)  NOT NULL,
+    EMAIL          VARCHAR(120) NOT NULL,
+    PHONE          VARCHAR(20),
+    COUNTRY        VARCHAR(40),
+    LOYALTY_TIER   VARCHAR(10)  NOT NULL DEFAULT 'NONE',
+    AI_CONSENT     CHAR(1)      NOT NULL DEFAULT 'Y',
+    CONSTRAINT CK_LOYALTY CHECK (LOYALTY_TIER IN ('NONE', 'SILVER', 'GOLD', 'PLATINUM')),
+    CONSTRAINT CK_AI_CONSENT CHECK (AI_CONSENT IN ('Y', 'N'))
+)
+@
+COMMENT ON TABLE GUESTS IS 'Guest master. EMAIL and PHONE are masked by Db2 column access control for the AI agent user. Guests with AI_CONSENT = N are hidden from the agent by a Db2 row permission.'
+@
+COMMENT ON COLUMN GUESTS.AI_CONSENT IS 'Y = guest allows AI-assisted processing of their profile; N = consent withdrawn (DPDP Act 2023). Enforced by row permission GUEST_CONSENT_ROWS.'
+@
+-- ---------------------------------------------------------------------------
+-- Transactions
+-- ---------------------------------------------------------------------------
+CREATE TABLE RESERVATIONS (
+    RESERVATION_ID INTEGER       NOT NULL PRIMARY KEY,
+    GUEST_ID       INTEGER       NOT NULL REFERENCES GUESTS,
+    ROOM_TYPE_ID   SMALLINT      NOT NULL REFERENCES ROOM_TYPES,
+    ROOM_NO        VARCHAR(6)    REFERENCES ROOMS,
+    CHECK_IN       DATE          NOT NULL,
+    CHECK_OUT      DATE          NOT NULL,
+    ADULTS         SMALLINT      NOT NULL DEFAULT 2,
+    CHANNEL        VARCHAR(12)   NOT NULL,
+    STATUS         VARCHAR(12)   NOT NULL,
+    NIGHTLY_RATE   DECIMAL(10,2) NOT NULL,
+    TOTAL_AMOUNT   DECIMAL(12,2) NOT NULL,
+    BOOKED_AT      TIMESTAMP     NOT NULL,
+    SPECIAL_NOTE   VARCHAR(400),
+    PROPERTY_ID    SMALLINT      NOT NULL DEFAULT 1,
+    SYS_START      TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN,
+    SYS_END        TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW END,
+    TRANS_ID       TIMESTAMP(12) GENERATED ALWAYS AS TRANSACTION START ID IMPLICITLY HIDDEN,
+    PERIOD SYSTEM_TIME (SYS_START, SYS_END),
+    CONSTRAINT CK_RES_DATES   CHECK (CHECK_OUT > CHECK_IN),
+    CONSTRAINT CK_RES_CHANNEL CHECK (CHANNEL IN ('DIRECT', 'OTA', 'CORPORATE', 'WALK_IN')),
+    CONSTRAINT CK_RES_STATUS  CHECK (STATUS IN ('CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'CANCELLED', 'NO_SHOW')),
+    CONSTRAINT FK_RES_TYPE_PROPERTY FOREIGN KEY (ROOM_TYPE_ID, PROPERTY_ID) REFERENCES ROOM_TYPES (ROOM_TYPE_ID, PROPERTY_ID),
+    CONSTRAINT FK_RES_ROOM_PROPERTY FOREIGN KEY (ROOM_NO, PROPERTY_ID) REFERENCES ROOMS (ROOM_NO, PROPERTY_ID)
+)
+COMPRESS YES ADAPTIVE
+@
+CREATE TABLE RESERVATIONS_HISTORY LIKE RESERVATIONS
+@
+ALTER TABLE RESERVATIONS_HISTORY COMPRESS YES ADAPTIVE
+@
+ALTER TABLE RESERVATIONS ADD VERSIONING USE HISTORY TABLE RESERVATIONS_HISTORY
+@
+CREATE INDEX IX_RES_STAY ON RESERVATIONS (CHECK_IN, CHECK_OUT, ROOM_TYPE_ID)
+@
+CREATE INDEX IX_RES_GUEST ON RESERVATIONS (GUEST_ID)
+@
+COMMENT ON TABLE RESERVATIONS IS 'Bookings. A reservation occupies its room on every date D with CHECK_IN <= D < CHECK_OUT. CANCELLED and NO_SHOW do not occupy rooms. CHANNEL in DIRECT/OTA/CORPORATE/WALK_IN. System-period temporal.'
+@
+COMMENT ON COLUMN RESERVATIONS.NIGHTLY_RATE IS 'Rate paid per night in INR'
+@
+-- Daily sell rate per room type. System-period temporal so that every change
+-- (by a human or by an approved agent action) can be audited and rolled back.
+CREATE TABLE RATE_PLAN (
+    ROOM_TYPE_ID     SMALLINT      NOT NULL REFERENCES ROOM_TYPES,
+    STAY_DATE        DATE          NOT NULL,
+    RATE             DECIMAL(10,2) NOT NULL,
+    UPDATED_BY       VARCHAR(40)   NOT NULL DEFAULT 'SYSTEM',
+    CHANGE_REASON    VARCHAR(400),
+    SOURCE_ACTION_ID INTEGER,
+    PROPERTY_ID      SMALLINT      NOT NULL DEFAULT 1,
+    SYS_START        TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN,
+    SYS_END          TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW END,
+    TRANS_ID         TIMESTAMP(12) GENERATED ALWAYS AS TRANSACTION START ID IMPLICITLY HIDDEN,
+    PERIOD SYSTEM_TIME (SYS_START, SYS_END),
+    PRIMARY KEY (ROOM_TYPE_ID, STAY_DATE),
+    CONSTRAINT FK_RATE_PROPERTY FOREIGN KEY (ROOM_TYPE_ID, PROPERTY_ID) REFERENCES ROOM_TYPES (ROOM_TYPE_ID, PROPERTY_ID)
+)
+COMPRESS YES ADAPTIVE
+@
+CREATE TABLE RATE_PLAN_HISTORY LIKE RATE_PLAN
+@
+ALTER TABLE RATE_PLAN_HISTORY COMPRESS YES ADAPTIVE
+@
+ALTER TABLE RATE_PLAN ADD VERSIONING USE HISTORY TABLE RATE_PLAN_HISTORY
+@
+COMMENT ON TABLE RATE_PLAN IS 'Current public sell rate (INR) per room type per stay date. System-period temporal: query past values with FOR SYSTEM_TIME AS OF.'
+@
+-- Guest reviews with sentence embeddings stored in a native Db2 VECTOR column.
+CREATE TABLE GUEST_REVIEWS (
+    REVIEW_ID      INTEGER       NOT NULL PRIMARY KEY,
+    RESERVATION_ID INTEGER       REFERENCES RESERVATIONS,
+    ROOM_NO        VARCHAR(6),
+    SOURCE         VARCHAR(20)   NOT NULL,
+    RATING         SMALLINT      NOT NULL,
+    REVIEW_TEXT    VARCHAR(2000) NOT NULL,
+    CREATED_AT     DATE          NOT NULL,
+    EMBEDDING      VECTOR(384, FLOAT32),
+    PROPERTY_ID    SMALLINT      NOT NULL DEFAULT 1 REFERENCES PROPERTIES,
+    CONSTRAINT CK_RATING CHECK (RATING BETWEEN 1 AND 5),
+    CONSTRAINT FK_REVIEW_ROOM_PROPERTY FOREIGN KEY (ROOM_NO, PROPERTY_ID) REFERENCES ROOMS (ROOM_NO, PROPERTY_ID),
+    CONSTRAINT UQ_REVIEW_PROPERTY UNIQUE (REVIEW_ID, PROPERTY_ID)
+)
+@
+CREATE INDEX IX_REVIEW_DATE ON GUEST_REVIEWS (CREATED_AT)
+@
+COMMENT ON TABLE GUEST_REVIEWS IS 'Guest reviews (RATING 1-5). EMBEDDING is a 384-d BGE vector of the whole review; sentence-level vectors are in REVIEW_CHUNKS.'
+@
+-- Sentence-level chunks: one vector per sentence so that a single complaint
+-- inside a mostly-positive review is still found precisely.
+CREATE TABLE REVIEW_CHUNKS (
+    CHUNK_ID    INTEGER      NOT NULL PRIMARY KEY,
+    REVIEW_ID   INTEGER      NOT NULL REFERENCES GUEST_REVIEWS ON DELETE CASCADE,
+    SEQ         SMALLINT     NOT NULL,
+    CHUNK_TEXT  VARCHAR(600) NOT NULL,
+    EMBEDDING   VECTOR(384, FLOAT32) NOT NULL,
+    PROPERTY_ID SMALLINT     NOT NULL DEFAULT 1,
+    CONSTRAINT FK_CHUNK_PROPERTY FOREIGN KEY (REVIEW_ID, PROPERTY_ID) REFERENCES GUEST_REVIEWS (REVIEW_ID, PROPERTY_ID)
+        ON DELETE CASCADE
+)
+@
+CREATE INDEX IX_CHUNK_REVIEW ON REVIEW_CHUNKS (REVIEW_ID)
+@
+COMMENT ON TABLE REVIEW_CHUNKS IS 'One row per review sentence with its 384-d embedding (VECTOR). Semantic search ranks reviews by their best-matching sentence.'
+@
+CREATE TABLE MAINTENANCE_TICKETS (
+    TICKET_ID        INTEGER NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    ROOM_NO          VARCHAR(6) NOT NULL REFERENCES ROOMS,
+    CATEGORY         VARCHAR(30) NOT NULL,
+    PRIORITY         VARCHAR(8)  NOT NULL,
+    DESCRIPTION      VARCHAR(1000) NOT NULL,
+    STATUS           VARCHAR(12) NOT NULL DEFAULT 'OPEN',
+    SOURCE_ACTION_ID INTEGER,
+    CREATED_AT       TIMESTAMP NOT NULL DEFAULT CURRENT TIMESTAMP,
+    PROPERTY_ID      SMALLINT  NOT NULL DEFAULT 1,
+    CONSTRAINT CK_TKT_PRIORITY CHECK (PRIORITY IN ('LOW', 'MEDIUM', 'HIGH', 'URGENT')),
+    CONSTRAINT CK_TKT_STATUS CHECK (STATUS IN ('OPEN', 'IN_PROGRESS', 'DONE', 'CANCELLED')),
+    CONSTRAINT FK_TKT_ROOM_PROPERTY FOREIGN KEY (ROOM_NO, PROPERTY_ID) REFERENCES ROOMS (ROOM_NO, PROPERTY_ID)
+)
+@
+COMMENT ON TABLE MAINTENANCE_TICKETS IS 'Engineering work orders for rooms.'
+@
+-- Calendar dimension (today - 180 days .. today + 120 days)
+CREATE TABLE CALENDAR (
+    CAL_DATE    DATE NOT NULL PRIMARY KEY,
+    DAY_NAME    VARCHAR(9) NOT NULL,
+    IS_WEEKEND  SMALLINT NOT NULL
+)
+@
+INSERT INTO CALENDAR (CAL_DATE, DAY_NAME, IS_WEEKEND)
+WITH D (N) AS (
+    SELECT -180 FROM SYSIBM.SYSDUMMY1
+    UNION ALL
+    SELECT N + 1 FROM D WHERE N < 120
+)
+SELECT CURRENT DATE + N DAYS,
+       DAYNAME(CURRENT DATE + N DAYS),
+       CASE WHEN DAYOFWEEK(CURRENT DATE + N DAYS) IN (1, 6, 7) THEN 1 ELSE 0 END
+FROM D
+@
+COMMENT ON TABLE CALENDAR IS 'One row per date. IS_WEEKEND = 1 for Friday, Saturday, Sunday nights.'
+@
+-- ---------------------------------------------------------------------------
+-- Agent memory, governance and audit (all stored in Db2)
+-- ---------------------------------------------------------------------------
+CREATE TABLE AGENT_RUNS (
+    RUN_ID        VARCHAR(36)   NOT NULL PRIMARY KEY,
+    THREAD_ID     VARCHAR(36),
+    USER_QUESTION VARCHAR(4000) NOT NULL,
+    ROUTE         VARCHAR(20),
+    FINAL_ANSWER  CLOB(1M),
+    MODEL         VARCHAR(60),
+    STATUS        VARCHAR(12)   NOT NULL DEFAULT 'RUNNING',
+    STARTED_AT    TIMESTAMP     NOT NULL DEFAULT CURRENT TIMESTAMP,
+    FINISHED_AT   TIMESTAMP,
+    LLM_CALLS     INTEGER
+)
+@
+CREATE INDEX IX_RUNS_THREAD ON AGENT_RUNS (THREAD_ID, STARTED_AT)
+@
+COMMENT ON TABLE AGENT_RUNS IS 'One row per question. THREAD_ID groups a conversation; earlier turns are replayed to the agents as memory.'
+@
+CREATE TABLE AGENT_STEPS (
+    STEP_ID     BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    RUN_ID      VARCHAR(36) NOT NULL REFERENCES AGENT_RUNS ON DELETE CASCADE,
+    AGENT       VARCHAR(20) NOT NULL,
+    TOOL_NAME   VARCHAR(60) NOT NULL,
+    TOOL_INPUT  CLOB(64K),
+    TOOL_OUTPUT CLOB(256K),
+    OK          SMALLINT NOT NULL DEFAULT 1,
+    LATENCY_MS  INTEGER,
+    CREATED_AT  TIMESTAMP NOT NULL DEFAULT CURRENT TIMESTAMP,
+    ROW_HASH    CHAR(64)
+)
+COMPRESS YES ADAPTIVE
+@
+CREATE INDEX IX_STEPS_RUN ON AGENT_STEPS (RUN_ID)
+@
+-- Tamper-evident audit trail: every step is chained to the previous one with a
+-- SHA-256 computed inside Db2. Editing or deleting any past step breaks the chain,
+-- which hotelops.audit.verify_audit_chain() detects with one LAG() query.
+CREATE TRIGGER TRG_STEPS_HASH_CHAIN
+    NO CASCADE BEFORE INSERT ON AGENT_STEPS
+    REFERENCING NEW AS N
+    FOR EACH ROW
+    SET N.ROW_HASH = HEX(HASH(COALESCE((SELECT S.ROW_HASH FROM AGENT_STEPS S ORDER BY S.STEP_ID DESC FETCH FIRST 1 ROW ONLY), 'GENESIS') || '|' || TRIM(CHAR(N.STEP_ID)) || '|' || N.RUN_ID || '|' || N.AGENT || '|' || N.TOOL_NAME || '|' || TRIM(CHAR(N.OK)) || '|' || CAST(SUBSTR(COALESCE(N.TOOL_INPUT, ''), 1, 2000) AS VARCHAR(8000)) || '|' || CAST(SUBSTR(COALESCE(N.TOOL_OUTPUT, ''), 1, 2000) AS VARCHAR(8000)), 2))
+@
+COMMENT ON COLUMN AGENT_STEPS.ROW_HASH IS 'SHA-256 of the previous step hash plus this step (hash chain); any later edit or deletion breaks the chain'
+@
+CREATE TABLE AGENT_ACTIONS (
+    ACTION_ID      INTEGER NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    RUN_ID         VARCHAR(36),
+    ACTION_TYPE    VARCHAR(20)   NOT NULL,
+    PAYLOAD        VARCHAR(4000) NOT NULL,
+    RATIONALE      VARCHAR(2000) NOT NULL,
+    STATUS         VARCHAR(12)   NOT NULL DEFAULT 'PENDING',
+    PROPOSED_BY    VARCHAR(40)   NOT NULL,
+    PROPOSED_AT    TIMESTAMP     NOT NULL DEFAULT CURRENT TIMESTAMP,
+    DECIDED_BY     VARCHAR(40),
+    DECIDED_AT     TIMESTAMP,
+    APPLIED_AT     TIMESTAMP(12),
+    RESULT_MESSAGE VARCHAR(1000),
+    PROPERTY_ID    SMALLINT      NOT NULL DEFAULT 1 REFERENCES PROPERTIES,
+    CONSTRAINT CK_ACT_TYPE  CHECK (ACTION_TYPE IN ('RATE_CHANGE', 'ROOM_UPGRADE', 'MAINTENANCE')),
+    CONSTRAINT CK_ACT_STATUS CHECK (STATUS IN ('PENDING', 'APPLIED', 'REJECTED', 'ROLLED_BACK', 'FAILED')),
+    CONSTRAINT CK_ACT_JSON   CHECK (JSON_EXISTS(PAYLOAD, '$'))
+)
+@
+COMMENT ON TABLE AGENT_ACTIONS IS 'Actions proposed by AI agents. Agents can only create PENDING rows through SP_PROPOSE_ACTION; a human manager approves via SP_APPLY_ACTION. PAYLOAD is JSON.'
+@
+-- ---------------------------------------------------------------------------
+-- Earned autonomy: which low-risk action types the AI may apply without a
+-- human, within which limits. Only the manager can change it (the agent role
+-- has SELECT only). System-period temporal, so every grant or revocation of
+-- trust is itself auditable with time travel.
+-- ---------------------------------------------------------------------------
+CREATE TABLE AUTONOMY_POLICY (
+    ACTION_TYPE     VARCHAR(20)  NOT NULL PRIMARY KEY,
+    ENABLED         CHAR(1)      NOT NULL DEFAULT 'N',
+    MAX_CHANGE_PCT  DECIMAL(5,2),
+    MIN_LEAD_DAYS   SMALLINT,
+    MAX_PRIORITY    VARCHAR(8),
+    DAILY_LIMIT     SMALLINT     NOT NULL DEFAULT 5,
+    GRANTED_BY      VARCHAR(40)  NOT NULL DEFAULT 'SYSTEM',
+    REASON          VARCHAR(400),
+    SYS_START       TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN,
+    SYS_END         TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW END,
+    TRANS_ID        TIMESTAMP(12) GENERATED ALWAYS AS TRANSACTION START ID IMPLICITLY HIDDEN,
+    PERIOD SYSTEM_TIME (SYS_START, SYS_END),
+    CONSTRAINT CK_AUT_TYPE    CHECK (ACTION_TYPE IN ('RATE_CHANGE', 'MAINTENANCE')),
+    CONSTRAINT CK_AUT_ENABLED CHECK (ENABLED IN ('Y', 'N')),
+    CONSTRAINT CK_AUT_PCT     CHECK (MAX_CHANGE_PCT IS NULL OR MAX_CHANGE_PCT BETWEEN 0 AND 15),
+    CONSTRAINT CK_AUT_PRIO    CHECK (MAX_PRIORITY IS NULL OR MAX_PRIORITY IN ('LOW', 'MEDIUM')),
+    CONSTRAINT CK_AUT_LIMIT   CHECK (DAILY_LIMIT BETWEEN 0 AND 50)
+)
+@
+CREATE TABLE AUTONOMY_POLICY_HISTORY LIKE AUTONOMY_POLICY
+@
+ALTER TABLE AUTONOMY_POLICY ADD VERSIONING USE HISTORY TABLE AUTONOMY_POLICY_HISTORY
+@
+COMMENT ON TABLE AUTONOMY_POLICY IS 'Earned autonomy granted by managers: action types the AI may apply without approval, with limits. Room upgrades and taking rooms out of order always need a human. Temporal: every change of trust is versioned.'
+@
+INSERT INTO AUTONOMY_POLICY (ACTION_TYPE, ENABLED, MAX_CHANGE_PCT, MIN_LEAD_DAYS, MAX_PRIORITY, DAILY_LIMIT, REASON)
+VALUES ('RATE_CHANGE', 'N', 5.00, 7, NULL, 5, 'Off by default: small price nudges for nights at least a week out'),
+       ('MAINTENANCE', 'N', NULL, NULL, 'MEDIUM', 10, 'Off by default: routine tickets that keep the room in service')
+@
+-- ---------------------------------------------------------------------------
+-- Analytics views (semantic layer for text-to-SQL)
+-- ---------------------------------------------------------------------------
+CREATE VIEW V_ROOM_TYPE_DAY AS
+SELECT C.CAL_DATE AS STAY_DATE,
+       C.DAY_NAME,
+       C.IS_WEEKEND,
+       RT.PROPERTY_ID,
+       RT.ROOM_TYPE_ID,
+       RT.CODE AS ROOM_TYPE_CODE,
+       RT.NAME AS ROOM_TYPE_NAME,
+       (SELECT COUNT(*) FROM ROOMS R
+         WHERE R.ROOM_TYPE_ID = RT.ROOM_TYPE_ID AND R.STATUS = 'IN_SERVICE') AS ROOMS_IN_SERVICE,
+       (SELECT COUNT(*) FROM RESERVATIONS X
+         WHERE X.ROOM_TYPE_ID = RT.ROOM_TYPE_ID
+           AND X.CHECK_IN <= C.CAL_DATE AND X.CHECK_OUT > C.CAL_DATE
+           AND X.STATUS NOT IN ('CANCELLED', 'NO_SHOW')) AS ROOMS_SOLD,
+       (SELECT COALESCE(SUM(X.NIGHTLY_RATE), 0) FROM RESERVATIONS X
+         WHERE X.ROOM_TYPE_ID = RT.ROOM_TYPE_ID
+           AND X.CHECK_IN <= C.CAL_DATE AND X.CHECK_OUT > C.CAL_DATE
+           AND X.STATUS NOT IN ('CANCELLED', 'NO_SHOW')) AS ROOM_REVENUE,
+       RP.RATE AS CURRENT_SELL_RATE
+FROM CALENDAR C
+CROSS JOIN ROOM_TYPES RT
+LEFT JOIN RATE_PLAN RP ON RP.ROOM_TYPE_ID = RT.ROOM_TYPE_ID AND RP.STAY_DATE = C.CAL_DATE
+@
+COMMENT ON TABLE V_ROOM_TYPE_DAY IS 'One row per stay date per room type: rooms in service, rooms sold, room revenue (INR) and the current sell rate. Use for occupancy and pricing questions by room type.'
+@
+CREATE VIEW V_DAILY_KPIS AS
+SELECT PROPERTY_ID,
+       STAY_DATE,
+       DAY_NAME,
+       IS_WEEKEND,
+       SUM(ROOMS_IN_SERVICE) AS ROOMS_IN_SERVICE,
+       SUM(ROOMS_SOLD) AS ROOMS_SOLD,
+       SUM(ROOM_REVENUE) AS ROOM_REVENUE,
+       DECIMAL(100.0 * SUM(ROOMS_SOLD) / NULLIF(SUM(ROOMS_IN_SERVICE), 0), 5, 1) AS OCCUPANCY_PCT,
+       DECIMAL(SUM(ROOM_REVENUE) / NULLIF(SUM(ROOMS_SOLD), 0), 10, 2) AS ADR,
+       DECIMAL(SUM(ROOM_REVENUE) / NULLIF(SUM(ROOMS_IN_SERVICE), 0), 10, 2) AS REVPAR
+FROM V_ROOM_TYPE_DAY
+GROUP BY PROPERTY_ID, STAY_DATE, DAY_NAME, IS_WEEKEND
+@
+COMMENT ON TABLE V_DAILY_KPIS IS 'Hotel-wide KPIs per stay date (one row per property and date; an AI agent only sees its own hotel): OCCUPANCY_PCT, ADR (average daily rate) and REVPAR (revenue per available room), in INR.'
+@
+CREATE VIEW V_REVIEW_SUMMARY AS
+SELECT R.PROPERTY_ID, R.REVIEW_ID, R.CREATED_AT, R.RATING, R.SOURCE, R.ROOM_NO,
+       RM.FLOOR_NO, RT.CODE AS ROOM_TYPE_CODE, R.REVIEW_TEXT
+FROM GUEST_REVIEWS R
+LEFT JOIN ROOMS RM ON RM.ROOM_NO = R.ROOM_NO
+LEFT JOIN ROOM_TYPES RT ON RT.ROOM_TYPE_ID = RM.ROOM_TYPE_ID
+@
+COMMENT ON TABLE V_REVIEW_SUMMARY IS 'Reviews joined with room floor and room type, without the embedding column.'
+@
