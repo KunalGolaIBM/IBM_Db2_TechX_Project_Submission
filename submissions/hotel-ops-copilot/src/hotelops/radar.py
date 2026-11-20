@@ -29,7 +29,7 @@ THEME_ANCHORS = {
     "Staff attitude": "The staff were rude and unhelpful.",
 }
 MAX_DISTANCE = 0.32
-LOCALISED_SHARE = 0.6  # 1-2 rooms hold >= 60% of a theme's reviews -> treat as an equipment fault
+LOCALISED_SHARE = 0.5  # 1-2 rooms hold at least half of a theme's reviews -> treat as an equipment fault
 
 
 @lru_cache(maxsize=1)
@@ -62,6 +62,15 @@ SELECT M.THEME, RM.FLOOR_NO, R.ROOM_NO, COUNT(*) AS REVIEWS,
  GROUP BY GROUPING SETS ((M.THEME), (M.THEME, RM.FLOOR_NO), (M.THEME, RM.FLOOR_NO, R.ROOM_NO))"""
 
 
+def hot_rooms(rooms: list[dict], total: int) -> list[dict]:
+    """The 1-2 rooms behind a LOCALISED theme, or [] when the theme is SYSTEMIC.
+
+    ``rooms`` is sorted by complaint count. A theme is localised when its top 1-2 rooms with repeat
+    complaints (>= 2 each) hold >= LOCALISED_SHARE of its reviews; a stray repeat elsewhere doesn't change that."""
+    hot = [r for r in rooms[:2] if r["REVIEWS"] >= 2]
+    return hot if hot and total and sum(r["REVIEWS"] for r in hot) / total >= LOCALISED_SHARE else []
+
+
 def complaint_radar(db: Db2, days: int = 30, max_rating: int = 3, property_id: int | None = None) -> dict:
     """Every complaint theme in the window with its volume, floors, top rooms and a LOCALISED/SYSTEMIC call.
 
@@ -80,8 +89,8 @@ def complaint_radar(db: Db2, days: int = 30, max_rating: int = 3, property_id: i
         rooms = sorted(({"ROOM_NO": r["ROOM_NO"], "REVIEWS": r["REVIEWS"], "AVG_RATING": r["AVG_RATING"]}
                         for r in rows if r["THEME"] == name and r["G_ROOM"] == 0),
                        key=lambda x: (-x["REVIEWS"], x["ROOM_NO"]))
-        hot = [r for r in rooms[:3] if r["REVIEWS"] >= 2]  # rooms with repeated complaints
-        localised = bool(hot) and sum(r["REVIEWS"] for r in hot) / total >= LOCALISED_SHARE and len(hot) <= 2
+        hot = hot_rooms(rooms, total)
+        localised = bool(hot)
         room_list = ", ".join(f"{r['ROOM_NO']} ({r['REVIEWS']})" for r in hot)
         out.append({
             "THEME": name, "REVIEWS": total, "AVG_RATING": info["total"]["AVG_RATING"],
